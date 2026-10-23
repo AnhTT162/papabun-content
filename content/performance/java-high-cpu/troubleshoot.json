@@ -1,0 +1,160 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "catalog-api CPU 100% sau deploy",
+  "symptom": "Khoảng 30 phút sau khi deploy v2.14.0, CPU của các pod catalog-api leo lên 100%, p99 latency từ 180ms lên hơn 12 giây và lỗi 5xx tăng. Lượng request không đổi.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Service: catalog-api, 4 pod x 2 vCPU, JDK 17.0.12, Spring Boot 3.2\nDeploy v2.14.0 lúc 09:10 (thêm validate tên sản phẩm khi người bán cập nhật)\n\ntime   CPU    p99      5xx    RPS   heap used\n09:00  34%    180ms    0.1%   850   1.3G / 3G\n09:30  52%    410ms    0.2%   860   1.4G / 3G\n09:40  100%   9.8s     4.6%   865   1.4G / 3G\n09:45  100%   12.4s    7.8%   870   1.4G / 3G\n\nPod catalog-api-7d9f-x2k4p: CPU 2.00 / limit 2.00",
+      "evidenceFormat": "monospace",
+      "question": "Việc đầu tiên bạn làm là gì?",
+      "choices": [
+        {
+          "label": "Vào một pod đang 100% CPU, chạy `top -H -p <pid>` để xem thread nào nóng",
+          "quality": "good",
+          "feedback": "Đúng hướng: CPU luôn do thread cụ thể tiêu thụ. Biết thread nào nóng là đã thu hẹp được phần lớn phạm vi, và bạn vẫn giữ nguyên hiện trường.",
+          "next": "hot-threads"
+        },
+        {
+          "label": "Chạy `jstat -gcutil` để loại trừ GC trước",
+          "quality": "ok",
+          "feedback": "Hợp lý vì GC là nguyên nhân CPU cao phổ biến. Nhưng heap used đang ổn định ở 1.4G / 3G, nên khả năng GC thấp; `top -H` sẽ trả lời cả câu hỏi GC lẫn code trong một lệnh.",
+          "next": "gc-check"
+        },
+        {
+          "label": "Restart toàn bộ pod cho hệ thống ổn định lại",
+          "quality": "poor",
+          "feedback": "Restart có thể là biện pháp cầm máu, nhưng làm trước khi chụp thread dump là xoá mất bằng chứng. Nếu bắt buộc phải restart, ít nhất chụp `top -H` và thread dump của một pod trước.",
+          "next": "restarted"
+        },
+        {
+          "label": "Tăng `-Xmx` từ 3G lên 6G",
+          "quality": "poor",
+          "feedback": "Chưa có bằng chứng nào về bộ nhớ: heap used ổn định và còn nhiều chỗ trống. Đổi cấu hình khi chưa biết nguyên nhân chỉ thêm biến số. Hãy xem GC thực sự thế nào.",
+          "next": "gc-check"
+        }
+      ]
+    },
+    {
+      "id": "restarted",
+      "evidence": "09:52  kubectl rollout restart deployment/catalog-api\n09:55  CPU 30%   p99 170ms   5xx 0.1%\n10:14  CPU 100% trên 2/4 pod, p99 8.7s\nKhông còn thread dump, GC log hay profile nào của lần sự cố đầu.",
+      "evidenceFormat": "monospace",
+      "question": "Sự cố quay lại sau 20 phút. Bây giờ bạn làm gì?",
+      "choices": [
+        {
+          "label": "Lần này giữ nguyên pod đang nóng, chạy `top -H -p <pid>` trong pod đó",
+          "quality": "good",
+          "feedback": "Đúng. Sự cố lặp lại chứng tỏ nguyên nhân nằm trong code hoặc dữ liệu, không phải trạng thái tạm thời. Phải thu bằng chứng khi nó đang xảy ra.",
+          "next": "hot-threads"
+        },
+        {
+          "label": "Scale từ 4 lên 8 pod",
+          "quality": "poor",
+          "feedback": "Pod mới cũng sẽ lên 100% khi gặp đúng loại request gây lỗi. Thêm máy chỉ mua thêm thời gian, không cho biết nguyên nhân. Cuối cùng vẫn phải tìm thread nóng.",
+          "next": "hot-threads"
+        },
+        {
+          "label": "Xem `jstat -gcutil` trên pod đang nóng",
+          "quality": "ok",
+          "feedback": "Có thu bằng chứng, tốt hơn restart tiếp. Nhưng `top -H` cho biết luôn thread nóng là GC hay code.",
+          "next": "gc-check"
+        }
+      ]
+    },
+    {
+      "id": "gc-check",
+      "evidence": "$ kubectl exec catalog-api-7d9f-x2k4p -- jstat -gcutil 1 1000 5\n  S0     S1     E      O      M     CCS    YGC     YGCT     FGC    FGCT     CGC    CGCT       GCT\n  0.00 100.00  37.41  44.12  96.83  93.20    214    1.873     0    0.000     6    0.041    1.914\n  0.00 100.00  41.05  44.12  96.83  93.20    214    1.873     0    0.000     6    0.041    1.914\n  0.00 100.00  44.67  44.12  96.83  93.20    214    1.873     0    0.000     6    0.041    1.914\n  0.00 100.00  48.30  44.12  96.83  93.20    214    1.873     0    0.000     6    0.041    1.914\n  0.00 100.00  51.92  44.12  96.83  93.20    214    1.873     0    0.000     6    0.041    1.914\n\n$ tail -3 /var/log/app/gc.log\n[2026-10-20T09:44:51.204+0700][2081.337s][info][gc] GC(212) Pause Young (Normal) (G1 Evacuation Pause) 1620M->1318M(3072M) 9.412ms\n[2026-10-20T09:45:58.871+0700][2149.004s][info][gc] GC(213) Pause Young (Normal) (G1 Evacuation Pause) 1622M->1320M(3072M) 8.977ms\n[2026-10-20T09:47:03.119+0700][2213.252s][info][gc] GC(214) Pause Young (Normal) (G1 Evacuation Pause) 1624M->1321M(3072M) 9.105ms",
+      "evidenceFormat": "monospace",
+      "question": "Bạn kết luận gì từ số liệu GC?",
+      "choices": [
+        {
+          "label": "GC khoẻ: không có Full GC, Young GC ~9ms mỗi phút, Old gen 44% đứng yên. Chuyển sang tìm thread nóng bằng `top -H`",
+          "quality": "good",
+          "feedback": "Đọc đúng. FGC = 0, GCT gần như không tăng, mỗi lần Young GC thu hồi ~300M. CPU không đi vào GC, vậy nó đi vào thread ứng dụng.",
+          "next": "hot-threads"
+        },
+        {
+          "label": "S1 đang 100%, Survivor bị đầy nên cần tăng heap",
+          "quality": "poor",
+          "feedback": "Với G1, `jstat` thường báo một survivor 100% vì G1 chỉ cấp số survivor region vừa đủ cho dữ liệu vừa được copy sau Young GC. Đó không phải dấu hiệu thiếu bộ nhớ, và CPU vẫn chưa được giải thích.",
+          "next": "hot-threads"
+        },
+        {
+          "label": "Đổi sang ZGC để giảm thời gian GC",
+          "quality": "poor",
+          "feedback": "GC chỉ chiếm ~9ms mỗi phút, đổi collector không thay đổi gì. Cần tìm xem CPU đang đi đâu.",
+          "next": "hot-threads"
+        }
+      ]
+    },
+    {
+      "id": "hot-threads",
+      "evidence": "$ kubectl exec catalog-api-7d9f-x2k4p -- top -H -b -n 1 -p 1 | head -12\ntop - 09:47:21 up 3 days,  2:11,  0 users,  load average: 6.12, 5.87, 4.01\nThreads:  87 total,   2 running,  85 sleeping,   0 stopped,   0 zombie\n%Cpu(s): 98.7 us,  0.9 sy,  0.0 ni,  0.2 id,  0.0 wa,  0.0 hi,  0.2 si,  0.0 st\n\n    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND\n   4123 app       20   0 5832104   1.9g  24312 R  99.7  24.6  31:12.40 http-nio-8080-e\n   4131 app       20   0 5832104   1.9g  24312 R  99.3  24.6  18:47.03 http-nio-8080-e\n     41 app       20   0 5832104   1.9g  24312 S   0.7  24.6   0:52.11 GC Thread#0\n   4127 app       20   0 5832104   1.9g  24312 S   0.3  24.6   0:04.88 http-nio-8080-e\n     27 app       20   0 5832104   1.9g  24312 S   0.0  24.6   1:20.44 C2 CompilerThre",
+      "evidenceFormat": "monospace",
+      "question": "Hai Tomcat worker thread chiếm trọn 2 vCPU. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Đổi TID 4123 và 4131 sang hex, chụp `jcmd 1 Thread.print` 3 lần cách nhau 5 giây rồi tìm `nid` tương ứng",
+          "quality": "good",
+          "feedback": "Chuẩn. Service chạy JDK 17 nên `nid` trong dump là hex. Chụp nhiều lần để phân biệt thread kẹt ở một chỗ với thread chỉ tình cờ đang chạy.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Chạy async-profiler 30 giây và xem flame graph",
+          "quality": "ok",
+          "feedback": "Cũng tìm ra thủ phạm: flame graph sẽ có một tháp rất cao trong `java.util.regex`. Với vài thread kẹt hẳn như ở đây, thread dump nhanh hơn và không cần cài thêm công cụ vào pod.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Chụp heap dump bằng `jmap -dump`",
+          "quality": "poor",
+          "feedback": "Heap dump trả lời câu hỏi về bộ nhớ, không cho biết thread đang chạy code gì. Nó còn dừng JVM vài giây tới vài chục giây với heap 3G. Thread dump mới là công cụ đúng.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "GC Thread#0 có trong danh sách, chắc là GC",
+          "quality": "poor",
+          "feedback": "GC Thread#0 chỉ dùng 0.7% CPU. Hai thread chiếm 99% đều là `http-nio-8080-exec-*`, tức thread xử lý request.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump",
+      "evidence": "$ for i in 1 2 3; do jcmd 1 Thread.print > /tmp/dump-$i.txt; sleep 5; done\n$ printf '%x %x\\n' 4123 4131\n101b 1023\n$ grep -A 200 'nid=0x101b' /tmp/dump-1.txt\n\"http-nio-8080-exec-7\" #52 daemon prio=5 os_prio=0 cpu=1872410.37ms elapsed=2213.90s tid=0x00007f2a3c01e800 nid=0x101b runnable  [0x00007f29e17fc000]\n   java.lang.Thread.State: RUNNABLE\n\tat java.util.regex.Pattern$CharPropertyGreedy.match(java.base@17.0.12/Pattern.java:4296)\n\tat java.util.regex.Pattern$GroupHead.match(java.base@17.0.12/Pattern.java:4787)\n\tat java.util.regex.Pattern$Loop.match(java.base@17.0.12/Pattern.java:4924)\n\tat java.util.regex.Pattern$GroupTail.match(java.base@17.0.12/Pattern.java:4846)\n\tat java.util.regex.Pattern$Ques.match(java.base@17.0.12/Pattern.java:4227)\n\tat java.util.regex.Pattern$CharPropertyGreedy.match(java.base@17.0.12/Pattern.java:4296)\n\t... (cùng 5 frame trên lặp lại 34 lần)\n\tat java.util.regex.Pattern$Loop.matchInit(java.base@17.0.12/Pattern.java:4943)\n\tat java.util.regex.Pattern$Prolog.match(java.base@17.0.12/Pattern.java:4867)\n\tat java.util.regex.Pattern$Begin.match(java.base@17.0.12/Pattern.java:3672)\n\tat java.util.regex.Matcher.match(java.base@17.0.12/Matcher.java:1755)\n\tat java.util.regex.Matcher.matches(java.base@17.0.12/Matcher.java:712)\n\tat com.example.catalog.validation.DisplayNameValidator.isValid(DisplayNameValidator.java:21)\n\tat com.example.catalog.product.ProductService.updateTitle(ProductService.java:88)\n\tat com.example.catalog.product.ProductController.update(ProductController.java:54)\n\ndump-2 và dump-3: nid=0x101b (exec-7) và nid=0x1023 (exec-12) vẫn RUNNABLE ở DisplayNameValidator.isValid, cpu= tăng thêm ~5000ms sau mỗi 5 giây.\n\n$ grep -E 'exec-(7|12)\\]' /var/log/app/app.log | tail -2\n2026-10-20 09:16:08.412 INFO  [http-nio-8080-exec-7]  c.e.catalog.product.ProductController : PUT /api/products/88213/title title=\"Combo2026SieuSaleGiamGia50PhanTramFreeshipToanQuoc!!!\"\n2026-10-20 09:28:33.957 INFO  [http-nio-8080-exec-12] c.e.catalog.product.ProductController : PUT /api/products/90417/title title=\"AoKhoacGioNamChongNuocChinhHangBaoHanh12Thang!!\"",
+      "evidenceFormat": "monospace",
+      "question": "Nguyên nhân gốc là gì?",
+      "choices": [
+        {
+          "label": "Regex trong `DisplayNameValidator` bị catastrophic backtracking với tên dài không có khoảng trắng",
+          "quality": "good",
+          "feedback": "Đúng. Stack đệ quy sâu trong `Pattern$Loop`/`GroupTail`, cùng một chỗ ở cả 3 dump, `cpu=` tăng đều, và hai request bắt đầu đúng lúc thread bắt đầu nóng (TIME+ 31 và 18 phút) đều có title dài liền không khoảng trắng.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Deadlock giữa hai Tomcat thread",
+          "quality": "poor",
+          "feedback": "Thread deadlock ở trạng thái `BLOCKED` và không tốn CPU. Ở đây cả hai đều `RUNNABLE` với `cpu=` tăng liên tục.",
+          "next": "root-cause"
+        },
+        {
+          "label": "JIT đang compile lại `Pattern` sau deploy",
+          "quality": "poor",
+          "feedback": "JIT chạy trên thread `C2 CompilerThread*`, ở đây chỉ 0% CPU. Thread nóng là Tomcat worker đang thực thi regex.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Lượng request tăng đột biến làm quá tải",
+          "quality": "poor",
+          "feedback": "RPS gần như không đổi (850 → 870). Chỉ 2 thread nóng, các worker khác đang rảnh: đây là vài request rất đắt, không phải quá tải.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: regex bị [[catastrophic-backtracking|catastrophic backtracking]] trong `DisplayNameValidator` (mới thêm ở v2.14.0).**\n\n```java\n// \"Tên sản phẩm gồm tối đa 20 từ, cách nhau bằng khoảng trắng\"\nPattern.compile(\"^([\\\\p{L}\\\\p{N}]+\\\\s?){1,20}$\")\n```\n\nVì `\\s?` là tuỳ chọn, một chuỗi chữ liền như `Combo2026...` có thể bị chia thành các \"từ\" theo rất nhiều cách (`C|ombo...`, `Co|mbo...`, `C|o|mbo...`). Input không khớp (kết thúc bằng `!!!`) buộc engine thử **gần như mọi cách chia** trước khi trả `false`: số bước tăng theo cấp số nhân với độ dài. Đo trên JDK hiện tại, 28 ký tự liền mất khoảng 3,5 giây, mỗi ký tự thêm làm thời gian gấp đôi; tên 50 ký tự sẽ cần hàng tháng. Mỗi request như vậy giữ trọn một core và một Tomcat thread. Java regex không có timeout và bỏ qua `interrupt()`, nên thread chỉ dừng khi restart.\n\nNhiều engine (kể cả `java.util.regex` ở các bản JDK gần đây) đã tối ưu vài mẫu kinh điển như `(a+)+`, nhưng vòng lặp có giới hạn `{m,n}` như trên vẫn bùng nổ. Không nên dựa vào tối ưu của engine.\n\n**Sửa ngay**: rollback v2.14.0 (hoặc tắt validate bằng feature flag), rồi restart các pod còn thread kẹt.\n\n**Sửa đúng**: viết pattern không mơ hồ, mỗi lần lặp phải bắt đầu bằng đúng một khoảng trắng, và giới hạn độ dài trước khi match:\n\n```java\nprivate static final int MAX_LENGTH = 120;\nprivate static final Pattern DISPLAY_NAME =\n        Pattern.compile(\"^[\\\\p{L}\\\\p{N}]+(\\\\s[\\\\p{L}\\\\p{N}]+){0,19}$\");\n\nboolean isValid(String title) {\n    return title != null\n            && title.length() <= MAX_LENGTH\n            && DISPLAY_NAME.matcher(title).matches();\n}\n```\n\n**Phòng ngừa**:\n- Unit test với input đối kháng (chuỗi dài không khớp) bọc trong `assertTimeoutPreemptively`.\n- Review mọi regex có lượng từ lồng nhau (`(x+)+`, `(x+y?){m,n}`) hoặc nhánh chồng lấn (`(a|a)*`); dùng possessive `++` hay atomic group `(?>...)` khi phù hợp.\n- Luôn giới hạn độ dài input từ người dùng trước khi chạy regex.\n- Alert theo CPU từng pod và theo số Tomcat thread bận, và có runbook chụp `top -H` + thread dump trước khi restart.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

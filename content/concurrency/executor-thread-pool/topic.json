@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "executor-thread-pool",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "ExecutorService & Thread Pool",
+  "summary": "Các tham số của ThreadPoolExecutor, thứ tự core → queue → thread thêm → reject, vì sao Executors.newFixed/newCached nguy hiểm, cách chọn kích thước, shutdown, và virtual thread của Java 21.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 15,
+  "prerequisites": [],
+  "terms": ["thread-pool", "core-pool-size", "maximum-pool-size", "keep-alive-time", "work-queue", "rejection-policy", "backpressure", "cpu-bound", "io-bound", "littles-law", "virtual-thread", "pinning", "bulkhead"],
+  "references": [
+    { "title": "Javadoc ThreadPoolExecutor (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ThreadPoolExecutor.html" },
+    { "title": "Javadoc Executors (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Executors.html" },
+    { "title": "JEP 444: Virtual Threads", "url": "https://openjdk.org/jeps/444" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pool core = 10, max = 50, dùng `LinkedBlockingQueue` mặc định. Tải tăng gấp 10 thì có bao nhiêu thread?\" Vẫn là 10: queue không giới hạn không bao giờ đầy nên thread thêm không bao giờ được tạo. Muốn pool co giãn thật thì queue phải có giới hạn." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

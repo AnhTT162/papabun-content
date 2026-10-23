@@ -17,6 +17,10 @@ TERM_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
 IMAGE_RE = re.compile(r"\]\((images/[^)\s]+)\)")
 IMAGE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.(png|jpg|jpeg|gif|svg|webp)$")
 LAYERED_SECTIONS = ["Quick", "Interview", "Deep"]
+# Khớp với DiagramLayout trong app (node cao 52pt, khung 300pt, node rộng tối thiểu 56pt).
+DIAGRAM_ROW = 0.25
+DIAGRAM_MIN_DX = 0.24
+DIAGRAM_MAX_LABEL = 20
 
 # type -> (đuôi file yêu cầu, schema của file). None: block inline.
 FILE_BLOCKS = {
@@ -273,6 +277,16 @@ class Repo:
             for end in ("from", "to"):
                 if edge[end] not in node_ids:
                     self.error(path, "edge '%s'.%s: không có node '%s'" % (edge["id"], end, edge[end]))
+        # Trên điện thoại khung sơ đồ chỉ rộng ~340pt: hai node cùng hàng cần cách nhau đủ xa.
+        nodes = data["nodes"]
+        for i, a in enumerate(nodes):
+            for b in nodes[i + 1:]:
+                if abs(a["y"] - b["y"]) < DIAGRAM_ROW and abs(a["x"] - b["x"]) < DIAGRAM_MIN_DX:
+                    self.error(path, "node '%s' và '%s' quá gần nhau: cùng hàng (|y| chênh < %.2f) thì x phải chênh >= %.2f"
+                               % (a["id"], b["id"], DIAGRAM_ROW, DIAGRAM_MIN_DX))
+        for edge in data["edges"]:
+            if len(edge.get("label", "")) > DIAGRAM_MAX_LABEL:
+                self.error(path, "edge '%s': nhãn dài quá %d ký tự, sẽ che node trên điện thoại" % (edge["id"], DIAGRAM_MAX_LABEL))
         known = node_ids | edge_ids
         for i, step in enumerate(data["steps"]):
             for ref in step["show"] + step.get("highlight", []):

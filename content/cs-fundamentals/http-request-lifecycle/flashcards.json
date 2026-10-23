@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "dns-order", "front": "DNS lookup tìm câu trả lời theo thứ tự nào?", "back": "Cache trình duyệt → cache OS → recursive resolver; resolver đi root → TLD → authoritative nếu chưa cache. Kết quả được cache theo TTL." },
+    { "id": "tcp-handshake-rtt", "front": "TCP three-way handshake gồm những gói nào và tốn bao nhiêu RTT?", "back": "SYN → SYN-ACK → ACK, tốn 1 RTT trước khi client gửi được dữ liệu." },
+    { "id": "tls13-rtt", "front": "TLS 1.3 full handshake tốn bao nhiêu RTT, so với TLS 1.2?", "back": "TLS 1.3 tốn 1 RTT, TLS 1.2 tốn 2 RTT. TLS 1.3 còn có 0-RTT khi kết nối lại." },
+    { "id": "sni", "front": "SNI trong TLS handshake dùng để làm gì?", "back": "Client gửi tên miền trong ClientHello để server biết cần trả chứng chỉ nào khi một IP phục vụ nhiều domain." },
+    { "id": "keep-alive-default", "front": "HTTP/1.1 có giữ kết nối mở sau mỗi response không?", "back": "Có, persistent connection là mặc định; muốn đóng thì gửi `Connection: close`." },
+    { "id": "tls-termination", "front": "TLS termination ở load balancer nghĩa là gì?", "back": "Load balancer giữ chứng chỉ và giải mã HTTPS, rồi chuyển tiếp request tới backend qua kết nối riêng (HTTP thường hoặc mã hoá lại)." },
+    { "id": "h2-multiplexing", "front": "HTTP/2 giải quyết giới hạn nào của HTTP/1.1?", "back": "HTTP/1.1 chỉ chạy một request mỗi lúc trên một kết nối; HTTP/2 multiplex nhiều stream song song trên cùng một kết nối TCP." },
+    { "id": "h3-quic", "front": "Vì sao HTTP/3 chạy trên QUIC thay vì TCP?", "back": "QUIC (trên UDP) đánh số thứ tự riêng từng stream nên mất gói chỉ chặn stream đó, tránh head-of-line blocking của TCP, và gộp handshake với TLS 1.3." },
+    { "id": "idle-timeout-order", "front": "Idle timeout giữa client, load balancer và backend nên sắp thế nào để tránh 502 lẻ tẻ?", "back": "Tăng dần theo chiều đi vào: client < load balancer < backend, để phía trong không đóng kết nối trước phía ngoài." }
+  ]
+}

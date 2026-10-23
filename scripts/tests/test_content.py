@@ -144,6 +144,17 @@ class RepoValidationTests(unittest.TestCase):
         self.assertIn("không có node 'b'", errors)
         self.assertIn("không có node/edge 'zzz'", errors)
 
+    def test_diagram_nodes_too_close_on_phone(self):
+        self.fx.topic["blocks"].append({"type": "diagram", "file": "d.json"})
+        self.fx.write_topic()
+        self.fx.write("content/core-java/demo/d.json", {"title": "D",
+            "nodes": [{"id": "a", "label": "A", "x": 0.1, "y": 0.5}, {"id": "b", "label": "B", "x": 0.25, "y": 0.6},
+                      {"id": "c", "label": "C", "x": 0.2, "y": 0.1}],
+            "edges": [], "steps": [{"caption": "c", "show": ["a", "b", "c"]}]})
+        errors = "\n".join(self.fx.errors())
+        self.assertIn("node 'a' và 'b' quá gần nhau", errors)
+        self.assertNotIn("'a' và 'c'", errors)
+
     def test_callout_rules(self):
         self.fx.topic["blocks"].append({"type": "callout", "file": "x.md"})
         self.fx.write_topic()

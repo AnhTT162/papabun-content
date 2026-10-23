@@ -49,7 +49,8 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
 - **lab.json (breakLab)**: code lỗi chạy được, triệu chứng có output thật, 4 lựa chọn chẩn đoán với 1 đáp án đúng và các lựa chọn sai hợp lý, cách sửa có code.
 - **scenario.json**: đề bài thực tế có ràng buộc (quy mô, SLA), 2–4 gợi ý từ rộng đến hẹp, lời giải, `tradeoffs` khi có nhiều phương án.
 - **troubleshoot.json**: bước đầu là triệu chứng; mỗi bước có 3–4 lựa chọn với `quality` good/ok/poor và feedback giải thích vì sao; evidence là dữ liệu như thật (thread dump, log, metric) dùng `evidenceFormat: monospace`; kết thúc bằng step không có choices nêu nguyên nhân gốc và cách phòng ngừa.
-- **diagram.json**: 3–7 node, toạ độ 0–1 không chồng nhau, mỗi step thêm 1–2 node/edge kèm caption một câu.
+- **diagram.json**: 3–7 node, mỗi step thêm 1–2 node/edge kèm caption một câu. Sơ đồ hiển thị trên khung ~340×300pt của điện thoại: tối đa 4 cột; hai node cùng hàng (chênh `y` < 0.25) phải chênh `x` ≥ 0.24 (`scripts/validate` kiểm tra); nhãn node ngắn, tối đa ~2 dòng × 12 ký tự; nhãn edge tối đa 20 ký tự và chỉ hiện ở bước edge đó được nhấn mạnh (`highlight`, hoặc bước edge xuất hiện).
+- **glossary.json**: `term` là tên ngắn (ví dụ `DNS`, `Keep-alive`); phần viết đầy đủ hoặc giải thích đưa vào `meaning`.
 - **callout** (inline trong topic.json): `interview` cho câu hỏi nối tiếp hay gặp, `warning` cho bẫy, `tip` cho mẹo.
 - **flashcards.json**: 5–10 thẻ, mặt trước là câu hỏi ngắn, mặt sau trả lời trong 1–2 câu. Mỗi thẻ chỉ một ý.
 - **quiz.json**: 3–5 câu; có ít nhất 1 câu `output` nếu topic có code. Đáp án sai phải là hiểu lầm phổ biến, không phải đáp án vô lý. Giải thích vì sao đúng.

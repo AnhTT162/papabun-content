@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "submit-order", "front": "Thứ tự `ThreadPoolExecutor` xử lý một task mới?", "back": "Thiếu core thì tạo thread → đủ core thì vào queue → queue đầy thì tạo thread tới max → hết chỗ thì reject." },
+    { "id": "extra-thread-when", "front": "Khi nào `ThreadPoolExecutor` tạo thread vượt `corePoolSize`?", "back": "Chỉ khi queue đã đầy (không nhận thêm task) và số thread còn dưới `maximumPoolSize`." },
+    { "id": "fixed-pool-risk", "front": "Vì sao `Executors.newFixedThreadPool(n)` nguy hiểm khi tải tăng?", "back": "Nó dùng `LinkedBlockingQueue` không giới hạn: task dồn lên mãi, latency tăng và có thể hết heap." },
+    { "id": "cached-pool-risk", "front": "Vì sao `Executors.newCachedThreadPool()` nguy hiểm khi tải tăng?", "back": "Max là `Integer.MAX_VALUE` với `SynchronousQueue`, nên mỗi task không có thread rảnh lại sinh thêm một thread mới." },
+    { "id": "caller-runs", "front": "`CallerRunsPolicy` làm gì khi pool đầy?", "back": "Thread gọi `execute` tự chạy task, làm chậm phía nộp task và tạo backpressure." },
+    { "id": "io-sizing", "front": "Công thức ước lượng kích thước pool cho việc IO-bound?", "back": "Số core × (1 + thời gian chờ / thời gian tính), rồi chặn trên bởi giới hạn của hệ thống phía sau." },
+    { "id": "shutdown-vs-now", "front": "`shutdown()` khác `shutdownNow()` thế nào?", "back": "`shutdown()` ngừng nhận task mới nhưng chạy hết task đã nhận; `shutdownNow()` interrupt thread đang chạy và trả về các task chưa bắt đầu." },
+    { "id": "submit-exception", "front": "Task nộp bằng `submit()` ném exception thì lỗi đi đâu?", "back": "Bị gói trong `Future`, chỉ lộ ra khi gọi `get()` (dưới dạng `ExecutionException`)." },
+    { "id": "virtual-thread-executor", "front": "Với virtual thread (Java 21), giới hạn số lời gọi đồng thời tới một API bằng gì?", "back": "Bằng `Semaphore`, vì `newVirtualThreadPerTaskExecutor()` không có giới hạn và không nên pool virtual thread." }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-high-cpu",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Ứng dụng Java CPU 100%",
+  "summary": "Quy trình tìm ra thread đang đốt CPU bằng top -H, thread dump, GC log và profiler, kèm một ca điều tra regex backtracking thực tế.",
+  "level": "senior",
+  "order": 1,
+  "minutes": 15,
+  "prerequisites": [],
+  "terms": ["thread-dump", "native-thread-id", "cpu-throttling", "full-gc", "stop-the-world", "sampling-profiler", "flame-graph", "jfr", "catastrophic-backtracking", "busy-spin"],
+  "references": [
+    { "title": "JDK 21 Tools: jcmd", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jcmd.html" },
+    { "title": "Java SE 21 Troubleshooting Guide: Troubleshoot Performance Issues Using JFR", "url": "https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshoot-performance-issues-using-jfr.html" },
+    { "title": "JDK-8268425: Show decimal nid of OSThread instead of hex format one (JDK 18)", "url": "https://bugs.openjdk.org/browse/JDK-8268425" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" }
+  ]
+}

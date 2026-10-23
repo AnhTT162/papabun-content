@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Executor cho API phí vận chuyển chậm",
+  "prompt": "Service `checkout` chạy **4 pod**, mỗi pod 2 vCPU, Java 17. Mỗi đơn hàng phải gọi API tính phí vận chuyển của một đối tác bên ngoài:\n\n- Peak: **200 request/giây** cho cả hệ thống, tức ~50 request/giây mỗi pod.\n- Latency của đối tác: p50 = 300ms, p99 = 2s, thỉnh thoảng treo tới 30s.\n- Đối tác cho phép tối đa **100 kết nối đồng thời** từ phía bạn, vượt quá sẽ trả 429.\n- SLA của checkout: trả lời trong 3s; không lấy được phí thì dùng bảng phí cố định và đánh dấu đơn để tính lại.\n\nCode hiện tại gọi API ngay trong Tomcat thread, và mỗi lần đối tác chậm thì toàn bộ checkout chậm theo. Hãy thiết kế executor cho lời gọi này: loại pool, kích thước, queue, rejection policy, timeout và cách shutdown.",
+  "hints": [
+    "Đây là việc IO-bound: thread gần như chỉ chờ mạng. Kích thước pool không phụ thuộc số core mà phụ thuộc số request cần chạy đồng thời. [[littles-law|Little's law]]: số đồng thời = throughput × latency.",
+    "Có hai giới hạn: nhu cầu (50 request/giây × 0,3s ≈ 15 đồng thời mỗi pod lúc bình thường, nhiều hơn khi latency tăng) và hạn mức của đối tác (100 kết nối chia cho 4 pod). Pool không được vượt giới hạn thứ hai.",
+    "Nghĩ xem điều gì xảy ra khi đối tác treo 30s: nếu không có timeout, thread nào cũng bị giữ 30s. Queue bao lâu thì task chờ trong queue đã vượt SLA 3s?",
+    "Khi pool đầy, `CallerRunsPolicy` sẽ bắt Tomcat thread tự gọi đối tác: có làm vỡ hạn mức 100 kết nối không?"
+  ],
+  "solution": "**1. Pool riêng cho đối tác ([[bulkhead]]), không dùng `Executors.newFixedThreadPool`.**\n\nHạn mức 100 kết nối chia cho 4 pod là **25 mỗi pod**. Lúc bình thường cần khoảng 50 × 0,3 = 15 thread, nên 25 thread đủ chịu khi latency tăng gấp rưỡi. Khi đối tác chậm hơn nữa, có thêm thread cũng chỉ nhận thêm 429.\n\n```java\nAtomicInteger threadSeq = new AtomicInteger();\nThreadFactory namedThreads = task -> new Thread(task, \"shipping-fee-\" + threadSeq.incrementAndGet());\n\nThreadPoolExecutor shippingPool = new ThreadPoolExecutor(\n        25, 25,                                  // core = max: không trông chờ thread thêm\n        60, TimeUnit.SECONDS,\n        new ArrayBlockingQueue<>(50),            // queue có giới hạn\n        namedThreads,                            // tên thread dễ đọc trong thread dump\n        new ThreadPoolExecutor.AbortPolicy());   // đầy thì báo lỗi ngay\nshippingPool.allowCoreThreadTimeOut(true);\n```\n\n**2. Queue tính theo thời gian chờ chấp nhận được.** 25 thread với 0,3s mỗi lời gọi xử lý được ~80 task/giây. Queue 50 task tương đương chờ ~0,6s, vẫn còn chỗ cho thời gian gọi trong SLA 3s. Queue 10.000 task thì task cuối chờ hàng phút: vô nghĩa vì người dùng đã bỏ đi.\n\n**3. Timeout ở mọi lớp.** HTTP client: connect timeout 500ms, request timeout 2s. Connection pool của HTTP client cũng giới hạn 25 kết nối. Phía gọi: `future.get(2500, MILLISECONDS)`, hết giờ thì `cancel(true)` và dùng phí cố định. Không có timeout thì một lần đối tác treo 30s sẽ giữ cả 25 thread.\n\n**4. Rejection = fallback, không phải `CallerRunsPolicy`.** `CallerRunsPolicy` bắt Tomcat thread tự gọi đối tác, vượt hạn mức 25 kết nối và kéo latency của cả service. Ở đây bắt `RejectedExecutionException`, trả phí cố định, đánh dấu đơn để tính lại sau, và tăng metric `shipping_fee_rejected`.\n\n**5. Quan sát và shutdown.** Xuất metric `getActiveCount()`, `getQueue().size()`, số reject. Khi tắt pod: `shutdown()`, `awaitTermination(10, SECONDS)`, quá hạn thì `shutdownNow()`, để task đang dở không bị cắt ngang khi còn thời gian.\n\n**Nếu đang ở Java 21**: có thể bỏ pool, dùng `Executors.newVirtualThreadPerTaskExecutor()` kèm `Semaphore(25)` giới hạn số lời gọi đồng thời, `tryAcquire(500, MILLISECONDS)` thất bại thì dùng fallback. Timeout vẫn bắt buộc.",
+  "tradeoffs": [
+    {
+      "option": "ThreadPoolExecutor 25 thread + ArrayBlockingQueue(50) + AbortPolicy",
+      "pros": [
+        "Giới hạn cứng số kết nối tới đối tác",
+        "Cô lập: đối tác chậm không chiếm Tomcat thread",
+        "Metric queue và reject cho thấy sớm khi đối tác xuống cấp"
+      ],
+      "cons": [
+        "Phải tự chọn và chỉnh kích thước pool, queue",
+        "Mỗi platform thread tốn bộ nhớ stack (thường ~1MB dự trữ)"
+      ]
+    },
+    {
+      "option": "Virtual thread per task + Semaphore (Java 21+)",
+      "pros": [
+        "Code blocking đơn giản, không cần chỉnh kích thước pool",
+        "Chờ IO gần như không tốn tài nguyên"
+      ],
+      "cons": [
+        "Bắt buộc có Semaphore, nếu không sẽ mở vô hạn kết nối",
+        "Java 21–23 cần tránh blocking trong `synchronized` (pinning)",
+        "Cần JDK 21, không áp dụng được cho service Java 17"
+      ]
+    },
+    {
+      "option": "HTTP client bất đồng bộ (`HttpClient.sendAsync`, WebClient) với giới hạn đồng thời",
+      "pros": [
+        "Ít thread nhất",
+        "Hợp với hệ thống đã reactive"
+      ],
+      "cons": [
+        "Code callback/reactive khó đọc và khó debug hơn",
+        "Vẫn phải tự giới hạn số request đang bay"
+      ]
+    },
+    {
+      "option": "Executors.newFixedThreadPool(25) mặc định",
+      "pros": [
+        "Một dòng code"
+      ],
+      "cons": [
+        "Queue không giới hạn: đối tác treo thì task dồn tới OOM",
+        "Không bao giờ reject, nên không có tín hiệu để fallback"
+      ]
+    }
+  ]
+}

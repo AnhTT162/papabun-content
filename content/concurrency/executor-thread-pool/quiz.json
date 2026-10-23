@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pool-trace",
+      "kind": "output",
+      "prompt": "Mỗi task ngủ 10 giây nên không task nào xong trong lúc vòng lặp chạy. Đoạn code in ra gì ở các dòng 5, 6 và 7?",
+      "code": "var pool = new ThreadPoolExecutor(2, 4, 60, TimeUnit.SECONDS,\n        new ArrayBlockingQueue<>(2));\nRunnable slowTask = () -> {\n    try { Thread.sleep(10_000); }\n    catch (InterruptedException e) { Thread.currentThread().interrupt(); }\n};\nfor (int i = 1; i <= 7; i++) {\n    try {\n        pool.execute(slowTask);\n        System.out.println(i + \": threads=\" + pool.getPoolSize()\n                + \", queue=\" + pool.getQueue().size());\n    } catch (RejectedExecutionException e) {\n        System.out.println(i + \": rejected\");\n    }\n}\npool.shutdownNow();",
+      "options": [
+        "5: threads=3, queue=2 / 6: threads=4, queue=2 / 7: rejected",
+        "5: threads=2, queue=3 / 6: threads=2, queue=4 / 7: threads=2, queue=5",
+        "5: rejected / 6: rejected / 7: rejected",
+        "5: threads=4, queue=1 / 6: threads=4, queue=2 / 7: rejected"
+      ],
+      "answer": 0,
+      "explanation": "Task 1, 2 tạo 2 core thread. Task 3, 4 vào queue (queue=2, đầy). Task 5, 6: queue đầy, số thread < 4 nên tạo thread thêm chạy ngay chính task đó (threads=3 rồi 4, queue vẫn 2). Task 7: queue đầy và đã đủ 4 thread nên `AbortPolicy` ném `RejectedExecutionException`. Đáp án thứ hai là hành vi khi queue không giới hạn; đáp án cuối là hiểu lầm rằng pool tăng lên max trước rồi mới dùng queue."
+    },
+    {
+      "id": "fixed-pool-max",
+      "kind": "single",
+      "prompt": "`new ThreadPoolExecutor(10, 50, 60, SECONDS, new LinkedBlockingQueue<>())`. Khi tải rất cao, pool có tối đa bao nhiêu thread?",
+      "options": ["10", "50", "60", "Không giới hạn"],
+      "answer": 0,
+      "explanation": "`LinkedBlockingQueue()` không giới hạn nên không bao giờ đầy, và thread vượt core chỉ được tạo khi queue đầy. Pool dừng ở 10 thread, `maximumPoolSize = 50` không có tác dụng, còn task thì dồn trong queue."
+    },
+    {
+      "id": "io-pool-size",
+      "kind": "single",
+      "prompt": "Máy 8 core. Mỗi task tính toán 10ms rồi chờ một API 90ms. Theo công thức `số core × (1 + chờ / tính)`, pool nên khoảng bao nhiêu thread để tận dụng CPU?",
+      "options": ["8", "9", "80", "720"],
+      "answer": 2,
+      "explanation": "8 × (1 + 90/10) = 8 × 10 = 80. Chọn 8 là coi task như CPU-bound, CPU sẽ rảnh 90% thời gian. Con số này còn phải chặn trên bởi giới hạn của API phía sau."
+    },
+    {
+      "id": "virtual-cpu",
+      "kind": "single",
+      "prompt": "Với Java 21, chuyển một pool 8 thread đang nén ảnh (CPU-bound) trên máy 8 core sang `newVirtualThreadPerTaskExecutor()` thì sao?",
+      "options": [
+        "Nhanh hơn nhiều vì có thể chạy hàng triệu virtual thread",
+        "Không nhanh hơn: virtual thread vẫn chạy trên khoảng 8 carrier thread, lợi ích chỉ có khi task chủ yếu chờ IO",
+        "Chậm hơn vì virtual thread luôn bị pin",
+        "Không chạy được vì virtual thread không dùng được với ExecutorService"
+      ],
+      "answer": 1,
+      "explanation": "Virtual thread giải phóng carrier khi chờ IO, nên giúp việc IO-bound. Việc CPU-bound vẫn bị giới hạn bởi số core; scheduler mặc định có parallelism bằng số core."
+    }
+  ]
+}

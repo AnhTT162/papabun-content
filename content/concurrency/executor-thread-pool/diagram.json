@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một task đi đâu khi gọi execute()",
+  "nodes": [
+    { "id": "caller", "label": "execute(task)", "kind": "client", "x": 0.12, "y": 0.4 },
+    { "id": "core", "label": "Core threads", "kind": "service", "x": 0.58, "y": 0.1 },
+    { "id": "queue", "label": "workQueue", "kind": "queue", "x": 0.58, "y": 0.4 },
+    { "id": "extra", "label": "Thread thêm (tới max)", "kind": "service", "x": 0.58, "y": 0.7 },
+    { "id": "reject", "label": "RejectedExecutionHandler", "kind": "generic", "x": 0.12, "y": 0.9 }
+  ],
+  "edges": [
+    { "id": "to-core", "from": "caller", "to": "core", "label": "1. poolSize < core" },
+    { "id": "to-queue", "from": "caller", "to": "queue", "label": "2. offer vào queue" },
+    { "id": "queue-to-core", "from": "queue", "to": "core", "label": "thread rảnh lấy task" },
+    { "id": "to-extra", "from": "caller", "to": "extra", "label": "3. đầy, chưa tới max" },
+    { "id": "to-reject", "from": "caller", "to": "reject", "label": "4. đầy, đã tới max" }
+  ],
+  "steps": [
+    { "caption": "Code gọi execute(task) trên ThreadPoolExecutor.", "show": ["caller"] },
+    { "caption": "Chưa đủ corePoolSize: tạo core thread mới chạy task, kể cả khi thread khác đang rảnh.", "show": ["core", "to-core"], "highlight": ["to-core"] },
+    { "caption": "Đã đủ core thread: task được đưa vào workQueue, không tạo thread mới.", "show": ["queue", "to-queue"], "highlight": ["to-queue"] },
+    { "caption": "Thread nào xong việc sẽ lấy task tiếp theo từ queue.", "show": ["queue-to-core"], "highlight": ["queue-to-core"] },
+    { "caption": "Queue đầy và chưa tới maximumPoolSize: tạo thread thêm chạy ngay task vừa nộp, task trong queue vẫn chờ.", "show": ["extra", "to-extra"], "highlight": ["to-extra"] },
+    { "caption": "Queue đầy và đã đủ maximumPoolSize (hoặc pool đã shutdown): gọi rejection handler, mặc định ném RejectedExecutionException.", "show": ["reject", "to-reject"], "highlight": ["to-reject"] },
+    { "caption": "Thread thêm rảnh quá keepAliveTime sẽ bị huỷ, pool co về corePoolSize.", "show": [], "highlight": ["extra"] }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "http-request-lifecycle",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "HTTP request đi qua những gì",
+  "summary": "Từ lúc gõ URL tới khi nhận response: DNS, TCP, TLS, load balancer, app server, database, keep-alive, và HTTP/2, HTTP/3 thay đổi gì.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 15,
+  "prerequisites": [],
+  "terms": ["dns", "rtt", "tcp-handshake", "tls-handshake", "keep-alive", "load-balancer", "reverse-proxy", "tls-termination", "connection-pool", "multiplexing", "quic", "head-of-line-blocking"],
+  "references": [
+    { "title": "MDN: An overview of HTTP", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview" },
+    { "title": "RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3", "url": "https://www.rfc-editor.org/rfc/rfc8446.html" },
+    { "title": "RFC 9114: HTTP/3", "url": "https://www.rfc-editor.org/rfc/rfc9114.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" }
+  ]
+}

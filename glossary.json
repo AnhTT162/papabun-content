@@ -32,6 +32,285 @@
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
       "topics": ["equals-hashcode"]
+    },
+    {
+      "id": "dns",
+      "term": "DNS (Domain Name System)",
+      "meaning": "Hệ thống phân giải tên miền thành địa chỉ IP. Kết quả được cache ở nhiều tầng theo TTL của bản ghi.",
+      "example": "Tra `shop.example.com` nhận về bản ghi A `203.0.113.10` với TTL 300 giây.",
+      "related": ["rtt", "load-balancer"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "rtt",
+      "term": "RTT (Round-Trip Time)",
+      "meaning": "Thời gian để một gói tin đi từ client tới server và nhận được phản hồi quay lại. Mỗi bước handshake tốn ít nhất một RTT.",
+      "example": "Từ Hà Nội tới server ở Singapore RTT khoảng 40ms, nên TCP + TLS 1.3 tốn khoảng 80ms trước khi gửi request.",
+      "related": ["tcp-handshake", "tls-handshake"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "tcp-handshake",
+      "term": "TCP three-way handshake",
+      "meaning": "Ba gói SYN, SYN-ACK, ACK để client và server thống nhất số thứ tự và mở kết nối TCP, tốn 1 RTT.",
+      "example": "`curl -w '%{time_connect}'` đo thời điểm handshake TCP hoàn tất.",
+      "related": ["rtt", "tls-handshake"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "tls-handshake",
+      "term": "TLS handshake",
+      "meaning": "Bước client và server thoả thuận thuật toán, trao đổi khoá và xác thực chứng chỉ trước khi truyền dữ liệu mã hoá. TLS 1.3 tốn 1 RTT, TLS 1.2 tốn 2 RTT.",
+      "example": "Trình duyệt gửi ClientHello kèm SNI `shop.example.com`, server trả chứng chỉ của domain đó.",
+      "related": ["tcp-handshake", "tls-termination", "rtt"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "keep-alive",
+      "term": "Keep-alive (persistent connection)",
+      "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
+      "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
+      "related": ["tcp-handshake", "connection-pool"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "load-balancer",
+      "term": "Load balancer",
+      "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
+      "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
+      "related": ["reverse-proxy", "tls-termination"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "reverse-proxy",
+      "term": "Reverse proxy",
+      "meaning": "Server đứng trước backend, nhận request thay cho backend rồi chuyển tiếp; client không biết backend thật là ai. Thường kiêm cache, nén, TLS termination.",
+      "example": "Nginx nhận `https://shop.example.com` và chuyển tới `http://10.0.1.5:8080`.",
+      "related": ["load-balancer", "tls-termination"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "tls-termination",
+      "term": "TLS termination",
+      "meaning": "Giải mã HTTPS tại load balancer hoặc reverse proxy; đoạn phía sau đi bằng HTTP thường hoặc được mã hoá lại.",
+      "example": "Chứng chỉ cài trên load balancer, các app server chỉ nghe HTTP trong mạng nội bộ.",
+      "related": ["tls-handshake", "load-balancer"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "connection-pool",
+      "term": "Connection pool",
+      "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
+      "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
+      "related": ["keep-alive", "thread-pool"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "multiplexing",
+      "term": "Multiplexing",
+      "meaning": "Chạy nhiều luồng dữ liệu độc lập đan xen trên cùng một kết nối. HTTP/2 chia mỗi request thành frame có stream id.",
+      "example": "Trình duyệt tải 50 ảnh song song qua một kết nối HTTP/2 thay vì 6 kết nối HTTP/1.1.",
+      "related": ["head-of-line-blocking", "quic"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "quic",
+      "term": "QUIC",
+      "meaning": "Giao thức transport chạy trên UDP, tích hợp TLS 1.3, có nhiều stream độc lập và connection ID cho phép giữ kết nối khi đổi mạng. HTTP/3 chạy trên QUIC.",
+      "example": "Điện thoại chuyển từ Wi-Fi sang 4G mà video đang tải qua HTTP/3 không phải kết nối lại.",
+      "related": ["multiplexing", "head-of-line-blocking"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "head-of-line-blocking",
+      "term": "Head-of-line blocking",
+      "meaning": "Phần tử đầu hàng bị chậm làm mọi phần tử phía sau phải chờ dù chúng không liên quan.",
+      "example": "Mất một gói TCP làm mọi stream HTTP/2 trên kết nối đó dừng cho tới khi gói được gửi lại.",
+      "related": ["multiplexing", "quic"],
+      "topics": ["http-request-lifecycle"]
+    },
+    {
+      "id": "thread-dump",
+      "term": "Thread dump",
+      "meaning": "Ảnh chụp tất cả thread của JVM tại một thời điểm: tên, trạng thái, stack trace, lock đang giữ hoặc đang chờ.",
+      "example": "`jcmd <pid> Thread.print > dump.txt` rồi tìm thread `RUNNABLE` có stack lặp lại qua nhiều lần chụp.",
+      "related": ["native-thread-id"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "native-thread-id",
+      "term": "Native thread ID (nid)",
+      "meaning": "ID của thread ở tầng hệ điều hành, in trong thread dump dưới dạng `nid`. Đến JDK 17 in dạng hex, từ JDK 18 in dạng thập phân.",
+      "example": "TID 4123 trong `top -H` tương ứng `nid=0x101b` (JDK 17) hoặc `nid=4123` (JDK 18+).",
+      "related": ["thread-dump"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "cpu-throttling",
+      "term": "CPU throttling",
+      "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
+      "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "full-gc",
+      "term": "Full GC",
+      "meaning": "Lần thu gom rác dọn toàn bộ heap (cả young và old), thường dừng mọi thread ứng dụng và tốn nhiều thời gian nhất.",
+      "example": "GC log `Pause Full (G1 Compaction Pause) 2980M->2950M(3072M) 2345.678ms` cho thấy Full GC gần như không thu hồi được gì.",
+      "related": ["stop-the-world"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "stop-the-world",
+      "term": "Stop-the-world",
+      "meaning": "Giai đoạn JVM dừng tất cả thread ứng dụng để làm việc nội bộ như GC, ứng dụng không xử lý được request nào.",
+      "example": "Young GC của G1 dừng ứng dụng khoảng 10ms mỗi lần.",
+      "related": ["full-gc"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "sampling-profiler",
+      "term": "Sampling profiler",
+      "meaning": "Profiler định kỳ chụp stack của các thread (ví dụ 100 lần/giây) rồi thống kê method nào xuất hiện nhiều nhất. Overhead thấp nên chạy được trên production.",
+      "example": "async-profiler, JFR.",
+      "related": ["flame-graph", "jfr"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "flame-graph",
+      "term": "Flame graph",
+      "meaning": "Biểu đồ gộp các stack mẫu: mỗi khối là một method, độ rộng tỉ lệ với thời gian CPU, method gọi nằm dưới method được gọi.",
+      "example": "Một khối `java.util.regex.Pattern$Loop.match` chiếm 90% chiều rộng chỉ ra ngay thủ phạm.",
+      "related": ["sampling-profiler"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "jfr",
+      "term": "JFR (JDK Flight Recorder)",
+      "meaning": "Công cụ ghi sự kiện tích hợp sẵn trong JDK (CPU sample, GC, lock, IO) với overhead thấp, xem bằng JDK Mission Control hoặc lệnh `jfr`.",
+      "example": "`jcmd <pid> JFR.start duration=60s settings=profile filename=cpu.jfr`.",
+      "related": ["sampling-profiler"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "catastrophic-backtracking",
+      "term": "Catastrophic backtracking",
+      "meaning": "Regex có nhiều cách khớp chồng lấn nên engine thử số khả năng tăng theo cấp số nhân với độ dài input khi input không khớp. Bị khai thác có chủ đích thì gọi là ReDoS.",
+      "example": "`^([a-z0-9]+\\s?){1,20}$` với 40 chữ liền kết thúc bằng `!` có thể chạy hàng giờ.",
+      "related": ["busy-spin"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "busy-spin",
+      "term": "Busy-spin",
+      "meaning": "Vòng lặp liên tục kiểm tra một điều kiện mà không ngủ hay block, đốt trọn một core trong lúc chờ.",
+      "example": "`while (!ready) { }` hoặc retry ngay lập tức không có backoff.",
+      "related": ["catastrophic-backtracking"],
+      "topics": ["java-high-cpu"]
+    },
+    {
+      "id": "thread-pool",
+      "term": "Thread pool",
+      "meaning": "Nhóm thread tạo sẵn và tái sử dụng để chạy nhiều task, thay vì tạo và huỷ thread cho mỗi task.",
+      "example": "`ThreadPoolExecutor` với 10 thread xử lý 10.000 task lần lượt.",
+      "related": ["core-pool-size", "work-queue", "connection-pool"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "core-pool-size",
+      "term": "Core pool size",
+      "meaning": "Số thread `ThreadPoolExecutor` giữ lại kể cả khi rảnh. Chưa đủ số này thì task mới luôn tạo thread mới.",
+      "example": "`corePoolSize = 8`: 8 task đầu tiên tạo 8 thread.",
+      "related": ["maximum-pool-size", "thread-pool"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "maximum-pool-size",
+      "term": "Maximum pool size",
+      "meaning": "Số thread tối đa của `ThreadPoolExecutor`. Thread vượt core chỉ được tạo khi queue đã đầy.",
+      "example": "Core 8, max 16, queue 100: thread thứ 9 chỉ xuất hiện khi đã có 100 task chờ.",
+      "related": ["core-pool-size", "work-queue"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "keep-alive-time",
+      "term": "Keep-alive time (thread pool)",
+      "meaning": "Thời gian thread vượt core được phép rảnh trước khi bị huỷ. Bật `allowCoreThreadTimeOut(true)` thì áp dụng cả cho core thread.",
+      "example": "`keepAliveTime = 60s`: sau đợt cao điểm, thread thêm tự biến mất sau 1 phút rảnh.",
+      "related": ["maximum-pool-size"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "work-queue",
+      "term": "Work queue",
+      "meaning": "Hàng đợi chứa task đang chờ thread rảnh trong `ThreadPoolExecutor`. Có giới hạn hay không quyết định pool có tạo thread thêm và có reject hay không.",
+      "example": "`new ArrayBlockingQueue<>(100)` chứa tối đa 100 task chờ.",
+      "related": ["core-pool-size", "rejection-policy"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "rejection-policy",
+      "term": "Rejection policy",
+      "meaning": "Cách `ThreadPoolExecutor` xử lý task khi queue đầy và đã đủ max thread, hoặc khi pool đã shutdown.",
+      "example": "`AbortPolicy` (ném exception, mặc định), `CallerRunsPolicy`, `DiscardPolicy`, `DiscardOldestPolicy`.",
+      "related": ["work-queue", "backpressure"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "backpressure",
+      "term": "Backpressure",
+      "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
+      "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
+      "related": ["rejection-policy"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "cpu-bound",
+      "term": "CPU-bound",
+      "meaning": "Công việc mà thời gian chủ yếu dành cho tính toán trên CPU; thêm thread vượt số core không làm nhanh hơn.",
+      "example": "Nén ảnh, mã hoá, parse JSON dung lượng lớn.",
+      "related": ["io-bound"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "io-bound",
+      "term": "IO-bound",
+      "meaning": "Công việc mà thời gian chủ yếu dành cho chờ IO (mạng, đĩa, database); nhiều thread hơn số core vẫn có lợi.",
+      "example": "Gọi REST API bên ngoài mất 300ms nhưng chỉ tốn 2ms CPU.",
+      "related": ["cpu-bound", "virtual-thread"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "littles-law",
+      "term": "Little's law",
+      "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
+      "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
+      "related": ["io-bound", "thread-pool"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "virtual-thread",
+      "term": "Virtual thread",
+      "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
+      "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
+      "related": ["pinning", "io-bound"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "pinning",
+      "term": "Pinning (virtual thread)",
+      "meaning": "Virtual thread bị dính chặt vào carrier thread khi block, nên carrier không phục vụ được virtual thread khác. Ở Java 21–23 xảy ra khi block trong `synchronized`; JEP 491 (Java 24) bỏ trường hợp này.",
+      "example": "Gọi JDBC chặn bên trong khối `synchronized` trên Java 21 sẽ giữ carrier suốt thời gian chờ.",
+      "related": ["virtual-thread"],
+      "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "bulkhead",
+      "term": "Bulkhead",
+      "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
+      "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
+      "related": ["thread-pool"],
+      "topics": ["executor-thread-pool"]
     }
   ]
 }

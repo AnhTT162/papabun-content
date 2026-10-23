@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hex-nid",
+      "kind": "output",
+      "prompt": "`top -H` cho thấy thread có TID 4131 đang 99% CPU trên JDK 17. Đoạn code sau in ra gì, và đó là giá trị cần tìm trong thread dump?",
+      "code": "System.out.println(\"nid=0x\" + Integer.toHexString(4131));",
+      "options": ["nid=0x1023", "nid=0x4131", "nid=0x1031", "nid=0x10230"],
+      "answer": 0,
+      "explanation": "4131 = 4096 + 35 = 0x1000 + 0x23 = 0x1023. Trên JDK 17 thread dump ghi `nid` dạng hex nên tìm `nid=0x1023`. Từ JDK 18 thì tìm thẳng `nid=4131`."
+    },
+    {
+      "id": "runnable-not-hot",
+      "kind": "single",
+      "prompt": "Thread dump có 40 thread `RUNNABLE`. Kết luận nào đúng?",
+      "options": [
+        "Cả 40 thread đang dùng CPU",
+        "Chưa kết luận được: thread đang chờ đọc socket trong native code cũng hiện `RUNNABLE`",
+        "Ứng dụng đang deadlock",
+        "GC đang chạy"
+      ],
+      "answer": 1,
+      "explanation": "`RUNNABLE` chỉ là trạng thái của JVM. Thread chặn ở socket read vẫn là `RUNNABLE`. Phải đối chiếu với `top -H` hoặc so trường `cpu=` giữa các lần dump."
+    },
+    {
+      "id": "gc-cause",
+      "kind": "single",
+      "prompt": "`top -H` cho thấy các thread nóng nhất là `GC Thread#0` tới `GC Thread#7`, `jstat` báo Old gen 99% và FGC tăng mỗi vài giây. Bước tiếp theo hợp lý nhất?",
+      "options": [
+        "Chụp thêm thread dump để tìm vòng lặp vô hạn",
+        "Phân tích heap (heap dump, histogram) để tìm cái gì đang giữ bộ nhớ",
+        "Tăng số GC thread",
+        "Tắt JIT"
+      ],
+      "answer": 1,
+      "explanation": "CPU đang đi vào GC vì heap gần đầy: GC chạy liên tục mà thu hồi được ít. CPU cao là triệu chứng, vấn đề gốc là bộ nhớ (leak hoặc heap quá nhỏ so với tải). `jcmd <pid> GC.class_histogram` hoặc heap dump sẽ chỉ ra object đang chiếm chỗ."
+    },
+    {
+      "id": "regex-fix",
+      "kind": "single",
+      "prompt": "Regex `^([a-z0-9]+\\s?){1,20}$` làm CPU 100% với input dài không có khoảng trắng. Cách sửa tốt nhất?",
+      "options": [
+        "Chạy regex trong thread riêng và gọi `interrupt()` sau 1 giây",
+        "Đổi thành `^[a-z0-9]+(\\s[a-z0-9]+){0,19}$` và giới hạn độ dài input trước khi match",
+        "Pre-compile `Pattern` thành hằng số `static final`",
+        "Tăng số Tomcat thread để request khác không bị ảnh hưởng"
+      ],
+      "answer": 1,
+      "explanation": "Pattern mới không mơ hồ: mỗi lần lặp phải bắt đầu bằng đúng một khoảng trắng, nên chỉ có một cách khớp. `interrupt()` không dừng được `Matcher`. Pre-compile chỉ tiết kiệm chi phí compile, không đổi số bước backtracking. Thêm thread chỉ để thêm request bị kẹt."
+    }
+  ]
+}

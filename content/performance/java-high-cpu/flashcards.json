@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "find-hot-thread", "front": "Lệnh nào cho biết thread nào trong tiến trình Java đang ăn CPU?", "back": "`top -H -p <pid>`: mỗi dòng là một thread, cột PID là TID của thread trên Linux." },
+    { "id": "tid-to-nid", "front": "Với JDK 17, làm sao khớp TID 4123 từ `top -H` với thread trong thread dump?", "back": "Đổi sang hex (`printf '%x' 4123` ra `101b`) rồi tìm `nid=0x101b`. Từ JDK 18, `nid` in thập phân nên khớp thẳng." },
+    { "id": "take-dump", "front": "Hai lệnh chụp thread dump phổ biến?", "back": "`jcmd <pid> Thread.print` và `jstack <pid>`." },
+    { "id": "multiple-dumps", "front": "Vì sao nên chụp thread dump 3 lần cách nhau vài giây?", "back": "Thread ở cùng một stack qua cả 3 lần mới là đang kẹt; một lần dump chỉ là ảnh chụp tình cờ." },
+    { "id": "gc-suspect", "front": "Dấu hiệu nào cho thấy CPU cao do GC chứ không phải code?", "back": "Thread nóng là `GC Thread#*`/`G1 Conc#*`, `jstat` cho Old gen gần 100% và FGC tăng liên tục, GC log có Full GC nối tiếp mà thu hồi ít." },
+    { "id": "deadlock-cpu", "front": "Deadlock có làm CPU lên 100% không?", "back": "Không. Thread deadlock ở trạng thái `BLOCKED` và không tốn CPU." },
+    { "id": "profiler-choice", "front": "Khi nào cần profiler thay vì thread dump?", "back": "Khi CPU dàn trải trên nhiều method và không có thread nào kẹt hẳn; dùng async-profiler (flame graph) hoặc JFR." },
+    { "id": "regex-no-timeout", "front": "Regex Java bị catastrophic backtracking có dừng được bằng `interrupt()` không?", "back": "Không. `Matcher` không kiểm tra interrupt và không có timeout, nên phải phòng từ đầu: pattern không mơ hồ và giới hạn độ dài input." },
+    { "id": "evidence-first", "front": "Vì sao không restart ngay khi CPU 100%?", "back": "Restart xoá thread dump, trạng thái GC và profile; nếu sự cố quay lại bạn vẫn không biết nguyên nhân. Chụp bằng chứng trước, rồi mới restart." }
+  ]
+}

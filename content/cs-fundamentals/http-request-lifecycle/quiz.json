@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "first-request-rtt",
+      "kind": "single",
+      "prompt": "Client mở kết nối HTTPS mới tới server (DNS đã cache, TCP + TLS 1.3, không có 0-RTT). Cần tối thiểu bao nhiêu RTT trước khi client nhận được byte đầu tiên của response?",
+      "options": ["1 RTT", "2 RTT", "3 RTT", "4 RTT"],
+      "answer": 2,
+      "explanation": "TCP handshake 1 RTT, TLS 1.3 handshake 1 RTT (client gửi request ngay sau Finished), rồi request/response thêm 1 RTT: tổng 3 RTT. Với TLS 1.2 (không bật False Start) là 4 RTT. Tái sử dụng kết nối keep-alive chỉ còn 1 RTT."
+    },
+    {
+      "id": "h2-hol",
+      "kind": "single",
+      "prompt": "Trên mạng di động hay mất gói, vì sao HTTP/2 vẫn có thể chậm dù đã multiplexing?",
+      "options": [
+        "HTTP/2 vẫn chỉ gửi một request mỗi lúc trên một kết nối",
+        "Mọi stream chung một kết nối TCP, mất một gói thì tất cả stream chờ TCP gửi lại",
+        "HTTP/2 không nén header",
+        "HTTP/2 bắt buộc mở kết nối mới cho mỗi request"
+      ],
+      "answer": 1,
+      "explanation": "Multiplexing loại bỏ head-of-line blocking ở tầng HTTP, nhưng TCP giao byte theo đúng thứ tự cho cả kết nối. Mất một gói chặn mọi stream phía sau. HTTP/3 trên QUIC xử lý thứ tự theo từng stream nên tránh được."
+    },
+    {
+      "id": "502-keepalive",
+      "kind": "single",
+      "prompt": "Sau load balancer, thỉnh thoảng có 502 rải rác dù backend khoẻ. Backend đặt keep-alive timeout 5 giây, load balancer có idle timeout 60 giây. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "DNS TTL quá ngắn",
+        "Backend đóng kết nối idle trước, load balancer gửi request vào kết nối vừa bị đóng",
+        "TLS handshake giữa trình duyệt và load balancer thất bại",
+        "Database hết connection"
+      ],
+      "answer": 1,
+      "explanation": "Load balancer nghĩ kết nối tới backend còn dùng được tới 60 giây, nhưng backend đã đóng sau 5 giây. Request rơi vào kết nối đang đóng sẽ lỗi và LB trả 502. Cách sửa: keep-alive timeout của backend lớn hơn idle timeout của LB."
+    },
+    {
+      "id": "curl-timing",
+      "kind": "output",
+      "prompt": "Lệnh `curl -w` in ra dòng dưới đây cho một request HTTPS mới. Thời gian riêng của TLS handshake là bao nhiêu?",
+      "code": "$ curl -s -o /dev/null -w \"dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer}\\n\" https://shop.example.com/orders\ndns=0.012 connect=0.045 tls=0.089 ttfb=0.240",
+      "options": ["0.089 giây", "0.044 giây", "0.033 giây", "0.151 giây"],
+      "answer": 1,
+      "explanation": "Các giá trị của curl là mốc cộng dồn tính từ lúc bắt đầu. TLS kết thúc ở 0.089, TCP connect kết thúc ở 0.045, nên TLS mất 0.089 - 0.045 = 0.044 giây. Tương tự TCP mất 0.033 giây, còn 0.151 giây từ lúc TLS xong tới byte đầu tiên gồm 1 RTT cộng thời gian server xử lý."
+    }
+  ]
+}
