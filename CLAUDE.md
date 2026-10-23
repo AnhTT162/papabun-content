@@ -19,3 +19,4 @@ Cài plugin một lần mỗi máy: `claude plugin marketplace add AnhTT162/papa
 - Không đổi `id` của topic, flashcard, câu quiz, thuật ngữ đã phát hành (tiến độ học trong app gắn với id).
 - Không tự tạo tag hay Release: tag `v*` là phát hành cho người dùng, chỉ chủ repo quyết định.
 - Thay đổi schema phải giữ tương thích với app đã phát hành; định dạng mới cần tăng `minAppVersion` của topic.
+- Sửa skill/agent trong `plugin/` thì tăng `version` trong `plugin/.claude-plugin/plugin.json`, nếu không máy khác sẽ không nhận bản mới khi `claude plugin update`.

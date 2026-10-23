@@ -33,6 +33,8 @@ claude plugin install papabun@papabun
 | agent `content-reviewer` | Review độc lập độ chính xác kỹ thuật và chất lượng bài |
 | `/papabun:project-profile` | Chạy trong repo dự án thật để tạo hồ sơ luyện phỏng vấn, lưu ở `~/PapaBun/projects/`, **không commit vào đây** |
 
+Làm trên máy công ty / tài khoản Claude khác: xem [docs/WORK_MACHINE_GUIDE.md](docs/WORK_MACHINE_GUIDE.md).
+
 Cập nhật plugin khi repo này đổi: `claude plugin marketplace update papabun`.
 
 ## Cấu trúc
