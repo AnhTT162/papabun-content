@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "manifest.schema.json",
+  "title": "manifest.json do scripts/build sinh ra, app đọc để biết cần tải file nào",
+  "type": "object",
+  "required": ["schemaVersion", "contentVersion", "generatedAt", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind", "sha256", "size"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "kind": { "enum": ["tracks", "glossary", "projectQuestions", "topic", "image"] },
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "minAppVersion": { "$ref": "common.schema.json#/$defs/version" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "size": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

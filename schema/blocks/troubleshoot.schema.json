@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blocks/troubleshoot.schema.json",
+  "title": "Block troubleshoot: điều tra sự cố. Bắt đầu ở steps[0]; step không có choices là kết luận.",
+  "type": "object",
+  "required": ["title", "symptom", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "title": { "$ref": "../common.schema.json#/$defs/text" },
+    "symptom": { "$ref": "../common.schema.json#/$defs/text" },
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "evidence": { "$ref": "../common.schema.json#/$defs/text", "description": "Dữ liệu hiện ra khi tới bước này (metric, log, dump)" },
+          "evidenceFormat": { "enum": ["markdown", "monospace"] },
+          "question": { "$ref": "../common.schema.json#/$defs/text" },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "quality", "feedback", "next"],
+              "additionalProperties": false,
+              "properties": {
+                "label": { "$ref": "../common.schema.json#/$defs/text" },
+                "quality": { "enum": ["good", "ok", "poor"] },
+                "feedback": { "$ref": "../common.schema.json#/$defs/text" },
+                "next": { "$ref": "../common.schema.json#/$defs/id", "description": "id của step tiếp theo" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

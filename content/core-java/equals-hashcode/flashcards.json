@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "contract", "front": "Contract bắt buộc giữa `equals` và `hashCode` là gì?", "back": "Hai object `equals` nhau thì phải có cùng `hashCode`. Chiều ngược lại không bắt buộc." },
+    { "id": "default-equals", "front": "`Object.equals` mặc định so sánh gì?", "back": "So sánh tham chiếu, giống `==`." },
+    { "id": "forget-hashcode", "front": "Override `equals` nhưng quên `hashCode` thì `HashMap.get` có thể bị gì?", "back": "Trả về `null` với key tương đương, vì key mới rơi vào [[bucket]] khác nên `equals` không được gọi." },
+    { "id": "mutable-key", "front": "Vì sao key của `HashMap` nên immutable?", "back": "Nếu field dùng trong `hashCode` đổi sau khi `put`, entry nằm ở bucket cũ và không tìm lại được." },
+    { "id": "record", "front": "Cách nhanh nhất để có `equals`/`hashCode` đúng cho class chỉ chứa dữ liệu (Java 16+)?", "back": "Khai báo `record`, compiler tự sinh cả hai dựa trên các component." }
+  ]
+}

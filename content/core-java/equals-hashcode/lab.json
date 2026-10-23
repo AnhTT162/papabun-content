@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "HashSet chứa hai user giống hệt nhau",
+  "context": "Class `User` được dùng làm phần tử trong `HashSet` để loại bỏ user trùng email.",
+  "buggyCode": "public class User {\n    private final String email;\n\n    public User(String email) { this.email = email; }\n\n    @Override\n    public boolean equals(Object o) {\n        if (this == o) return true;\n        if (!(o instanceof User other)) return false;\n        return email.equals(other.email);\n    }\n}\n\nSet<User> users = new HashSet<>();\nusers.add(new User(\"an@example.com\"));\nusers.add(new User(\"an@example.com\"));\nSystem.out.println(users.size());\nSystem.out.println(users.contains(new User(\"an@example.com\")));",
+  "symptom": {
+    "description": "Mong đợi set chỉ có 1 user và `contains` trả về `true`. Chạy thử gần như luôn ra kết quả khác.",
+    "output": "2\nfalse"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân chính là gì?",
+    "options": [
+      "`equals` so sánh sai field",
+      "Thiếu override `hashCode`, nên hai object bằng nhau rơi vào hai bucket khác nhau",
+      "`HashSet` không bao giờ gọi `equals`",
+      "`String.equals` so sánh tham chiếu"
+    ],
+    "answer": 1,
+    "explanation": "`HashSet` được xây trên `HashMap`: nó tính `hashCode` trước để chọn [[bucket]], và chỉ gọi `equals` với các phần tử trong cùng bucket. `Object.hashCode` mặc định gần như luôn khác nhau giữa hai object, nên `equals` hầu như không được gọi tới."
+  },
+  "fix": {
+    "code": "@Override\npublic int hashCode() {\n    return Objects.hash(email);\n}\n\n// Hoặc gọn hơn (Java 16+):\npublic record User(String email) {}",
+    "explanation": "Override `hashCode` dùng đúng các field đã dùng trong `equals`. Với class chỉ chứa dữ liệu, `record` tự sinh `equals`, `hashCode` và `toString` đúng contract."
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blocks/lab.schema.json",
+  "title": "Block breakLab: code lỗi → triệu chứng → đoán nguyên nhân → cách sửa",
+  "type": "object",
+  "required": ["title", "buggyCode", "symptom", "diagnosis", "fix"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "title": { "$ref": "../common.schema.json#/$defs/text" },
+    "context": { "$ref": "../common.schema.json#/$defs/text" },
+    "buggyCode": { "$ref": "../common.schema.json#/$defs/text" },
+    "symptom": {
+      "type": "object",
+      "required": ["description"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "$ref": "../common.schema.json#/$defs/text" },
+        "output": { "$ref": "../common.schema.json#/$defs/text", "description": "Log/output hiển thị dạng monospace" }
+      }
+    },
+    "diagnosis": {
+      "type": "object",
+      "required": ["question", "options", "answer", "explanation"],
+      "additionalProperties": false,
+      "properties": {
+        "question": { "$ref": "../common.schema.json#/$defs/text" },
+        "options": { "type": "array", "minItems": 2, "items": { "$ref": "../common.schema.json#/$defs/text" } },
+        "answer": { "type": "integer", "minimum": 0 },
+        "explanation": { "$ref": "../common.schema.json#/$defs/text" }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "required": ["code", "explanation"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "../common.schema.json#/$defs/text" },
+        "explanation": { "$ref": "../common.schema.json#/$defs/text" }
+      }
+    }
+  }
+}

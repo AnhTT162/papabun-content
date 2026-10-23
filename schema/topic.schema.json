@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topic.schema.json",
+  "title": "Metadata của một topic (content/<track>/<id>/topic.json)",
+  "type": "object",
+  "required": ["id", "schemaVersion", "minAppVersion", "track", "title", "level", "minutes", "blocks"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "$ref": "common.schema.json#/$defs/id", "description": "Phải trùng tên thư mục" },
+    "schemaVersion": { "const": 1 },
+    "minAppVersion": { "$ref": "common.schema.json#/$defs/version" },
+    "track": { "$ref": "common.schema.json#/$defs/id" },
+    "title": { "$ref": "common.schema.json#/$defs/text" },
+    "summary": { "$ref": "common.schema.json#/$defs/text" },
+    "level": { "$ref": "common.schema.json#/$defs/level" },
+    "order": { "type": "integer", "minimum": 1, "description": "Thứ tự trong track" },
+    "minutes": { "type": "integer", "minimum": 1, "maximum": 120 },
+    "prerequisites": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+    "terms": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+    "references": {
+      "type": "array",
+      "description": "Nguồn tham khảo để kiểm chứng nội dung",
+      "items": {
+        "type": "object",
+        "required": ["title", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "$ref": "common.schema.json#/$defs/text" },
+          "url": { "type": "string", "pattern": "^https://" }
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Block có file: analogy/layered (.md), breakLab/scenario/troubleshoot/diagram/simulation (.json), code (file mã nguồn). Block inline: callout.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "enum": ["analogy", "layered", "simulation", "breakLab", "scenario", "troubleshoot", "diagram", "code", "callout"] },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "caption": { "$ref": "common.schema.json#/$defs/text" },
+          "style": { "enum": ["tip", "warning", "interview"] },
+          "markdown": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    }
+  }
+}

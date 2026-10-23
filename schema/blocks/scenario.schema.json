@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blocks/scenario.schema.json",
+  "title": "Block scenario: đề bài → gợi ý từng bước → lời giải + trade-off",
+  "type": "object",
+  "required": ["title", "prompt", "hints", "solution"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "title": { "$ref": "../common.schema.json#/$defs/text" },
+    "prompt": { "$ref": "../common.schema.json#/$defs/text" },
+    "hints": { "type": "array", "items": { "$ref": "../common.schema.json#/$defs/text" } },
+    "solution": { "$ref": "../common.schema.json#/$defs/text" },
+    "tradeoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["option", "pros", "cons"],
+        "additionalProperties": false,
+        "properties": {
+          "option": { "$ref": "../common.schema.json#/$defs/text" },
+          "pros": { "type": "array", "items": { "$ref": "../common.schema.json#/$defs/text" } },
+          "cons": { "type": "array", "items": { "$ref": "../common.schema.json#/$defs/text" } }
+        }
+      }
+    }
+  }
+}

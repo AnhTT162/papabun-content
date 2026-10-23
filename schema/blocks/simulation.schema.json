@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blocks/simulation.schema.json",
+  "title": "Block simulation. Schema của config theo từng engine sẽ bổ sung ở Giai đoạn 3.",
+  "type": "object",
+  "required": ["engine", "title", "config"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "engine": { "type": "string", "pattern": "^(threadTimeline|stateMachine|flow|native:[a-z0-9-]+)$" },
+    "title": { "$ref": "../common.schema.json#/$defs/text" },
+    "instructions": { "$ref": "../common.schema.json#/$defs/text" },
+    "config": { "type": "object" }
+  }
+}

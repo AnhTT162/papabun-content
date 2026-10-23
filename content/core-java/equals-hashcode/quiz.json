@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "string-compare",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "String a = new String(\"hi\");\nString b = new String(\"hi\");\nSystem.out.println(a == b);\nSystem.out.println(a.equals(b));\nSystem.out.println(a.hashCode() == b.hashCode());",
+      "options": ["false / true / true", "true / true / true", "false / true / false", "false / false / true"],
+      "answer": 0,
+      "explanation": "`new String` tạo hai object khác nhau nên `==` là `false`. `String` override `equals` và `hashCode` theo nội dung nên hai lệnh sau đều `true`."
+    },
+    {
+      "id": "collision",
+      "kind": "single",
+      "prompt": "Hai object có cùng `hashCode`. Kết luận nào đúng?",
+      "options": ["Chắc chắn `equals` nhau", "Chắc chắn không `equals` nhau", "Chưa kết luận được, có thể chỉ là hash collision", "Vi phạm contract"],
+      "answer": 2,
+      "explanation": "Cùng `hashCode` không có nghĩa là bằng nhau. Contract chỉ yêu cầu chiều ngược lại."
+    },
+    {
+      "id": "lookup-order",
+      "kind": "single",
+      "prompt": "Khi gọi `map.get(key)` trên `HashMap`, method nào của key được gọi trước?",
+      "options": ["`equals`", "`hashCode`", "`compareTo`", "`toString`"],
+      "answer": 1,
+      "explanation": "`hashCode` dùng để chọn bucket trước, sau đó mới dùng `equals` để so với các entry trong bucket đó."
+    }
+  ]
+}

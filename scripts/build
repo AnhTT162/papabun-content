@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Kiểm tra rồi biên dịch nội dung sang thư mục phát hành.
+
+Dùng: scripts/build [--version v2026.10.24] [--out dist]
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from papabun.content import Repo  # noqa: E402
+
+root = Path(__file__).resolve().parent.parent
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--version", default="dev", help="contentVersion ghi vào manifest (thường là tag)")
+parser.add_argument("--out", default=str(root / "dist"), help="thư mục kết quả, mặc định dist/")
+args = parser.parse_args()
+
+repo = Repo(root)
+errors = repo.validate()
+if errors:
+    for error in errors:
+        print("✗ " + error)
+    print("\n%d lỗi, không build." % len(errors))
+    sys.exit(1)
+
+manifest = repo.build(args.out, args.version)
+print("✓ Đã build %s: %d file vào %s" % (manifest["contentVersion"], len(manifest["files"]) + 1, args.out))

@@ -10,8 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Giai đoạn 1 sẽ thay bước này bằng scripts/validate (JSON Schema, ảnh, thuật ngữ).
-      - name: Check every JSON file parses
-        run: |
-          find . -name '*.json' -not -path './.git/*' -print0 \
-            | xargs -0 -n1 python3 -m json.tool --no-ensure-ascii > /dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: Unit tests của scripts
+        run: python -m unittest discover -s scripts/tests
+      - name: Kiểm tra nội dung
+        run: scripts/validate

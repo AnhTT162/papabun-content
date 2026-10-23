@@ -1,0 +1,36 @@
+{
+  "$schema": "schema/project-questions.schema.json",
+  "schemaVersion": 1,
+  "technologies": [
+    {
+      "id": "kafka",
+      "name": "Apache Kafka",
+      "aliases": ["kafka"],
+      "questions": [
+        { "id": "why", "text": "Vì sao dự án chọn Kafka thay vì RabbitMQ hoặc gọi REST trực tiếp?" },
+        { "id": "ordering", "text": "Dự án đảm bảo thứ tự message thế nào? Key của partition là gì?", "hint": "Thứ tự chỉ đảm bảo trong một partition." },
+        { "id": "duplicate", "text": "Consumer xử lý message trùng lặp ra sao?", "hint": "At-least-once, idempotent consumer." }
+      ]
+    },
+    {
+      "id": "redis",
+      "name": "Redis",
+      "aliases": ["redis", "elasticache"],
+      "questions": [
+        { "id": "usage", "text": "Redis dùng vào việc gì trong dự án: cache, session, rate limit, lock?" },
+        { "id": "down", "text": "Nếu Redis chết thì hệ thống phản ứng thế nào?" },
+        { "id": "consistency", "text": "Làm sao giữ dữ liệu cache và database nhất quán?", "hint": "Cache-aside, TTL, xóa cache khi ghi." }
+      ]
+    },
+    {
+      "id": "spring-boot",
+      "name": "Spring Boot",
+      "aliases": ["spring", "spring boot"],
+      "questions": [
+        { "id": "transaction", "text": "Dự án dùng @Transactional ở tầng nào? Có gặp lỗi self-invocation không?" },
+        { "id": "config", "text": "Cấu hình theo môi trường (dev, staging, prod) được quản lý thế nào?" },
+        { "id": "observability", "text": "Dự án theo dõi health, metric, log của service bằng gì?" }
+      ]
+    }
+  ]
+}

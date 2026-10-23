@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "glossary.schema.json",
+  "title": "Thuật ngữ dùng chung, tham chiếu trong Markdown bằng [[id]] hoặc [[id|chữ hiển thị]]",
+  "type": "object",
+  "required": ["schemaVersion", "terms"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "term", "meaning"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "term": { "$ref": "common.schema.json#/$defs/text", "description": "Thuật ngữ tiếng Anh" },
+          "meaning": { "$ref": "common.schema.json#/$defs/text", "description": "Giải thích tiếng Việt, 1–2 câu" },
+          "example": { "$ref": "common.schema.json#/$defs/text" },
+          "related": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+          "topics": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } }
+        }
+      }
+    }
+  }
+}

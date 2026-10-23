@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quiz.schema.json",
+  "title": "Câu hỏi quiz của topic, dùng cho cả Quiz và Kiểm tra lỗ hổng",
+  "type": "object",
+  "required": ["questions"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "prompt", "options", "answer", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "kind": { "enum": ["single", "output"], "description": "output: đoán kết quả của đoạn code" },
+          "prompt": { "$ref": "common.schema.json#/$defs/text" },
+          "code": { "$ref": "common.schema.json#/$defs/text" },
+          "options": { "type": "array", "minItems": 2, "items": { "$ref": "common.schema.json#/$defs/text" } },
+          "answer": { "type": "integer", "minimum": 0, "description": "Chỉ số (từ 0) của đáp án đúng trong options" },
+          "explanation": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    }
+  }
+}

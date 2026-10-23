@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "equals-hashcode",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "equals & hashCode",
+  "summary": "Vì sao override equals thì bắt buộc override hashCode, và điều gì xảy ra với HashMap/HashSet nếu quên.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["hash-code", "bucket", "hash-collision", "immutable"],
+  "references": [
+    { "title": "Javadoc Object.equals / Object.hashCode (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" },
+    { "title": "Javadoc java.lang.Record (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Record.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai object khác nhau có thể cùng hashCode không?\" Có, đó là [[hash-collision]]. Contract chỉ bắt buộc chiều: equals nhau thì cùng hashCode." }
+  ]
+}

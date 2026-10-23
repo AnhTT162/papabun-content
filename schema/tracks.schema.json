@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tracks.schema.json",
+  "title": "Danh sách track",
+  "type": "object",
+  "required": ["schemaVersion", "tracks"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "order", "title", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "order": { "type": "integer", "minimum": 1 },
+          "title": { "$ref": "common.schema.json#/$defs/text" },
+          "summary": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    }
+  }
+}

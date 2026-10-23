@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flashcards.schema.json",
+  "title": "Flashcard của topic",
+  "type": "object",
+  "required": ["cards"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "front", "back"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "front": { "$ref": "common.schema.json#/$defs/text" },
+          "back": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    }
+  }
+}

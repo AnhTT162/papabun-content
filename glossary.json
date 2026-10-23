@@ -1,4 +1,37 @@
 {
+  "$schema": "schema/glossary.schema.json",
   "schemaVersion": 1,
-  "terms": []
+  "terms": [
+    {
+      "id": "hash-code",
+      "term": "Hash code",
+      "meaning": "Số nguyên đại diện cho một object, dùng để phân phối object vào các ô (bucket) của bảng băm.",
+      "example": "\"hi\".hashCode() luôn trả về cùng một số trong mọi lần chạy.",
+      "related": ["bucket", "hash-collision"],
+      "topics": ["equals-hashcode"]
+    },
+    {
+      "id": "bucket",
+      "term": "Bucket",
+      "meaning": "Một ô trong mảng nội bộ của bảng băm (HashMap, HashSet). Các phần tử có hash rơi vào cùng ô sẽ nằm chung bucket.",
+      "example": "HashMap mặc định có 16 bucket, tăng gấp đôi khi đầy quá 75%.",
+      "related": ["hash-code", "hash-collision"],
+      "topics": ["equals-hashcode"]
+    },
+    {
+      "id": "hash-collision",
+      "term": "Hash collision",
+      "meaning": "Va chạm băm: hai giá trị khác nhau nhưng cho ra cùng hash, hoặc cùng rơi vào một bucket.",
+      "example": "\"Aa\" và \"BB\" có cùng hashCode là 2112.",
+      "related": ["hash-code", "bucket"],
+      "topics": ["equals-hashcode"]
+    },
+    {
+      "id": "immutable",
+      "term": "Immutable",
+      "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
+      "example": "String, Integer, record với các field immutable.",
+      "topics": ["equals-hashcode"]
+    }
+  ]
 }

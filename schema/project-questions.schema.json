@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-questions.schema.json",
+  "title": "Câu hỏi mẫu theo công nghệ, dùng cho tính năng Dự án của tôi",
+  "type": "object",
+  "required": ["schemaVersion", "technologies"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "technologies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "questions"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "name": { "$ref": "common.schema.json#/$defs/text" },
+          "aliases": { "type": "array", "items": { "type": "string" }, "description": "Tên khác người dùng có thể gõ, so khớp không phân biệt hoa thường" },
+          "topics": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "text"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "$ref": "common.schema.json#/$defs/id" },
+                "text": { "$ref": "common.schema.json#/$defs/text" },
+                "hint": { "$ref": "common.schema.json#/$defs/text" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

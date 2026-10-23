@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Tạo khung một topic mới.
+
+Dùng: scripts/new-topic <track>/<topic-id> --title "Tiêu đề" [--level mid] [--blocks analogy,layered]
+Các loại block: analogy, layered, breakLab, scenario, troubleshoot, diagram, simulation, code, callout
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from papabun.content import FILE_BLOCKS, INLINE_BLOCKS  # noqa: E402
+
+root = Path(__file__).resolve().parent.parent
+parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+parser.add_argument("path", help="<track>/<topic-id>, ví dụ concurrency/deadlock")
+parser.add_argument("--title", required=True)
+parser.add_argument("--level", default="mid", choices=["foundation", "junior", "mid", "senior", "architect"])
+parser.add_argument("--minutes", type=int, default=15)
+parser.add_argument("--blocks", default="layered", help="danh sách block, cách nhau bằng dấu phẩy")
+args = parser.parse_args()
+
+track, _, topic_id = args.path.partition("/")
+tracks = {t["id"] for t in json.loads((root / "tracks.json").read_text(encoding="utf-8"))["tracks"]}
+if track not in tracks:
+    sys.exit("Không có track '%s'. Các track: %s" % (track, ", ".join(sorted(tracks))))
+folder = root / "content" / track / topic_id
+if folder.exists():
+    sys.exit("Đã tồn tại: %s" % folder.relative_to(root))
+
+kinds = [k.strip() for k in args.blocks.split(",") if k.strip()]
+unknown = [k for k in kinds if k not in FILE_BLOCKS and k not in INLINE_BLOCKS]
+if unknown:
+    sys.exit("Block không hợp lệ: %s" % ", ".join(unknown))
+
+SCHEMA = "../../../schema/"
+TEMPLATES = {
+    "analogy": ("analogy.md", "TODO: kể một ví dụ đời thường, câu cuối nối sang khái niệm kỹ thuật.\n"),
+    "layered": ("layered.md", "## Quick\n\nTODO: 1–2 câu.\n\n## Interview\n\nTODO: câu trả lời mẫu ~2 phút.\n\n## Deep\n\nTODO: bên trong, edge case.\n"),
+    "breakLab": ("lab.json", {"$schema": SCHEMA + "blocks/lab.schema.json", "title": "TODO", "buggyCode": "TODO",
+                              "symptom": {"description": "TODO", "output": "TODO"},
+                              "diagnosis": {"question": "TODO", "options": ["TODO", "TODO"], "answer": 0, "explanation": "TODO"},
+                              "fix": {"code": "TODO", "explanation": "TODO"}}),
+    "scenario": ("scenario.json", {"$schema": SCHEMA + "blocks/scenario.schema.json", "title": "TODO", "prompt": "TODO",
+                                   "hints": ["TODO"], "solution": "TODO"}),
+    "troubleshoot": ("troubleshoot.json", {"$schema": SCHEMA + "blocks/troubleshoot.schema.json", "title": "TODO", "symptom": "TODO",
+                                           "steps": [{"id": "start", "question": "TODO", "choices": [
+                                               {"label": "TODO", "quality": "good", "feedback": "TODO", "next": "root-cause"}]},
+                                               {"id": "root-cause", "evidence": "TODO"}]}),
+    "diagram": ("diagram.json", {"$schema": SCHEMA + "blocks/diagram.schema.json", "title": "TODO",
+                                 "nodes": [{"id": "client", "label": "TODO", "kind": "client", "x": 0.1, "y": 0.5}],
+                                 "edges": [], "steps": [{"caption": "TODO", "show": ["client"]}]}),
+    "simulation": ("simulation.json", {"$schema": SCHEMA + "blocks/simulation.schema.json", "engine": "threadTimeline",
+                                       "title": "TODO", "config": {}}),
+    "code": ("Example.java", "// TODO\n"),
+}
+
+folder.mkdir(parents=True)
+blocks = []
+for kind in kinds:
+    if kind == "callout":
+        blocks.append({"type": "callout", "style": "tip", "markdown": "TODO"})
+        continue
+    name, body = TEMPLATES[kind]
+    text = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False, indent=2) + "\n"
+    (folder / name).write_text(text, encoding="utf-8")
+    blocks.append({"type": kind, "file": name})
+
+topic = {
+    "$schema": SCHEMA + "topic.schema.json",
+    "id": topic_id,
+    "schemaVersion": 1,
+    "minAppVersion": "0.1",
+    "track": track,
+    "title": args.title,
+    "summary": "TODO",
+    "level": args.level,
+    "minutes": args.minutes,
+    "prerequisites": [],
+    "terms": [],
+    "references": [],
+    "blocks": blocks,
+}
+for name, data in [
+    ("topic.json", topic),
+    ("flashcards.json", {"$schema": SCHEMA + "flashcards.schema.json", "cards": [{"id": "card-1", "front": "TODO", "back": "TODO"}]}),
+    ("quiz.json", {"$schema": SCHEMA + "quiz.schema.json", "questions": [
+        {"id": "q-1", "kind": "single", "prompt": "TODO", "options": ["TODO", "TODO"], "answer": 0, "explanation": "TODO"}]}),
+]:
+    (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+print("✓ Đã tạo %s" % folder.relative_to(root))
+for item in sorted(folder.iterdir()):
+    print("  " + item.name)
+print("Thay hết các chữ TODO rồi chạy scripts/validate.")
