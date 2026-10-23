@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "state-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Thread worker = new Thread(() -> System.out.println(\"running\"));\nSystem.out.println(worker.getState());\nworker.start();\nworker.join();\nSystem.out.println(worker.getState());\ntry {\n    worker.start();\n} catch (IllegalThreadStateException e) {\n    System.out.println(\"IllegalThreadStateException\");\n}",
+      "options": [
+        "NEW / running / TERMINATED / IllegalThreadStateException",
+        "NEW / running / TERMINATED / running",
+        "RUNNABLE / running / TERMINATED / IllegalThreadStateException",
+        "NEW / running / RUNNABLE / running"
+      ],
+      "answer": 0,
+      "explanation": "Trước `start()` thread là NEW. `join()` chờ tới khi `run()` xong nên sau đó là TERMINATED. Thread đã kết thúc không `start()` lại được: lần gọi thứ hai ném `IllegalThreadStateException`."
+    },
+    {
+      "id": "sleep-in-sync",
+      "kind": "output",
+      "prompt": "Giả sử các lần `sleep(100)` đủ để thread kịp chạy tới chỗ chờ. Dòng cuối in ra gì?",
+      "code": "Object lock = new Object();\nThread sleeper = new Thread(() -> {\n    synchronized (lock) {\n        try { Thread.sleep(500); } catch (InterruptedException e) { }\n    }\n});\nThread latecomer = new Thread(() -> { synchronized (lock) { } });\nsleeper.start();\nThread.sleep(100);\nlatecomer.start();\nThread.sleep(100);\nSystem.out.println(sleeper.getState() + \" \" + latecomer.getState());",
+      "options": ["TIMED_WAITING BLOCKED", "TIMED_WAITING RUNNABLE", "WAITING BLOCKED", "BLOCKED WAITING"],
+      "answer": 0,
+      "explanation": "`sleeper` đang `sleep(500)` nên là TIMED_WAITING, và `sleep` không nhả monitor. `latecomer` muốn vào `synchronized (lock)` mà monitor còn bị giữ nên là BLOCKED."
+    },
+    {
+      "id": "reentrantlock-waiting",
+      "kind": "single",
+      "prompt": "Thread A giữ một `ReentrantLock`. Thread B gọi `lock.lock()` và đang chờ. `B.getState()` là gì?",
+      "options": ["BLOCKED", "WAITING", "TIMED_WAITING", "RUNNABLE"],
+      "answer": 1,
+      "explanation": "`ReentrantLock` chờ bằng `LockSupport.park()`, nên B ở WAITING. BLOCKED chỉ dành cho monitor của `synchronized`; đây là hiểu lầm hay gặp khi đọc thread dump."
+    },
+    {
+      "id": "wait-without-sync",
+      "kind": "single",
+      "prompt": "Gọi `queue.wait()` khi thread **không** ở trong `synchronized (queue)` thì sao?",
+      "options": [
+        "Thread chuyển sang WAITING bình thường",
+        "Ném `IllegalMonitorStateException`",
+        "Thread chuyển sang BLOCKED cho tới khi lấy được monitor",
+        "Lỗi biên dịch"
+      ],
+      "answer": 1,
+      "explanation": "`wait()`, `notify()`, `notifyAll()` yêu cầu thread đang giữ monitor của object đó, nếu không ném `IllegalMonitorStateException` lúc chạy. Compiler không kiểm tra được điều này."
+    }
+  ]
+}

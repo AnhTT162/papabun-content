@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "six-states", "front": "Sáu giá trị của `Thread.State`?", "back": "`NEW`, `RUNNABLE`, `BLOCKED`, `WAITING`, `TIMED_WAITING`, `TERMINATED`." },
+    { "id": "blocked-when", "front": "Khi nào thread ở trạng thái `BLOCKED`?", "back": "Khi chờ monitor để vào khối `synchronized`, hoặc để vào lại sau khi `wait()` được đánh thức." },
+    { "id": "after-notify", "front": "Ngay sau `notify()`, thread đang `wait()` chuyển sang trạng thái nào?", "back": "`BLOCKED`: thread gọi `notify()` vẫn giữ monitor, thread được đánh thức phải chờ lấy lại monitor." },
+    { "id": "sleep-monitor", "front": "`Thread.sleep()` có nhả monitor không?", "back": "Không. Chỉ `wait()` nhả monitor của object được gọi `wait`." },
+    { "id": "reentrantlock-state", "front": "Thread chờ `ReentrantLock.lock()` hiện trạng thái gì trong thread dump?", "back": "`WAITING` (hoặc `TIMED_WAITING` với `tryLock(timeout)`), vì nó bị `LockSupport.park`, không phải `BLOCKED`." },
+    { "id": "wait-loop", "front": "Vì sao `wait()` phải nằm trong vòng `while`?", "back": "Vì có spurious wakeup và vì điều kiện có thể đã đổi lại khi thread lấy được monitor." },
+    { "id": "start-twice", "front": "Gọi `start()` hai lần trên cùng một `Thread` thì sao?", "back": "Lần hai ném `IllegalThreadStateException`; thread đã TERMINATED không chạy lại được." },
+    { "id": "runnable-io", "front": "Thread đang đọc socket chặn thường hiện trạng thái gì?", "back": "`RUNNABLE`, vì nó đang ở native code; RUNNABLE không có nghĩa là đang tốn CPU." }
+  ]
+}

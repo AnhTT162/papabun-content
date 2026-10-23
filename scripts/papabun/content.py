@@ -17,9 +17,9 @@ TERM_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
 IMAGE_RE = re.compile(r"\]\((images/[^)\s]+)\)")
 IMAGE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.(png|jpg|jpeg|gif|svg|webp)$")
 LAYERED_SECTIONS = ["Quick", "Interview", "Deep"]
-# Khớp với DiagramLayout trong app (node cao 52pt, khung 300pt, node rộng tối thiểu 56pt).
+# Khớp với DiagramLayout trong app (node cao 52pt, khung 300pt, node rộng tối thiểu 56pt, khe 28pt cho mũi tên).
 DIAGRAM_ROW = 0.25
-DIAGRAM_MIN_DX = 0.24
+DIAGRAM_MIN_DX = 0.32
 DIAGRAM_MAX_LABEL = 20
 SIMULATION_SCHEMAS = {
     "threadTimeline": "simulations/threadTimeline.schema.json",

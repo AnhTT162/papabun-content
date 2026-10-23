@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "trylock-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "var lock = new ReentrantLock();\nlock.lock();\nSystem.out.println(lock.tryLock());\nThread other = new Thread(() -> {\n    try {\n        System.out.println(lock.tryLock(100, TimeUnit.MILLISECONDS));\n    } catch (InterruptedException e) {\n        Thread.currentThread().interrupt();\n    }\n});\nother.start();\nother.join();\nSystem.out.println(lock.getHoldCount());",
+      "options": ["true / false / 2", "false / false / 1", "true / true / 2", "Treo mãi ở dòng `tryLock()` đầu tiên"],
+      "answer": 0,
+      "explanation": "`ReentrantLock` là reentrant: thread `main` đang giữ lock nên `tryLock()` thành công ngay, hold count lên 2. Thread `other` chờ tối đa 100ms rồi bỏ cuộc, in `false` thay vì chờ mãi như `lock()`. `getHoldCount()` là số lần `main` đang giữ: 2."
+    },
+    {
+      "id": "ordering-breaks",
+      "kind": "single",
+      "prompt": "Quy định \"luôn khoá tài khoản có id nhỏ hơn trước\" phá điều kiện Coffman nào?",
+      "options": ["Mutual exclusion", "Hold and wait", "No preemption", "Circular wait"],
+      "answer": 3,
+      "explanation": "Thread vẫn giữ lock này trong khi chờ lock khác (hold and wait vẫn còn), nhưng mọi thread đi cùng một chiều theo id nên không thể tạo vòng chờ. Hold and wait là điều kiện mà `tryLock` có timeout phá."
+    },
+    {
+      "id": "mxbean-reentrantlock",
+      "kind": "single",
+      "prompt": "Hai thread deadlock trên hai `ReentrantLock`. Health check gọi `ThreadMXBean.findMonitorDeadlockedThreads()`. Kết quả?",
+      "options": [
+        "Trả về id hai thread",
+        "Trả về `null`, vì method này chỉ tìm deadlock trên monitor của `synchronized`",
+        "Ném `UnsupportedOperationException`",
+        "Tự interrupt hai thread để gỡ deadlock"
+      ],
+      "answer": 1,
+      "explanation": "`findMonitorDeadlockedThreads()` chỉ xét object monitor. Deadlock trên `ReentrantLock` (ownable synchronizer) phải dùng `findDeadlockedThreads()`. Không method nào tự gỡ deadlock."
+    },
+    {
+      "id": "livelock-scenario",
+      "kind": "single",
+      "prompt": "Hai thread cùng `tryLock` lock thứ hai thất bại, cùng nhả lock thứ nhất, cùng chờ đúng 10ms rồi thử lại, lặp mãi. CPU cao, không giao dịch nào xong. Đây là gì?",
+      "options": ["Deadlock", "Livelock", "Starvation", "Lost update"],
+      "answer": 1,
+      "explanation": "Các thread vẫn chạy và phản ứng với nhau nhưng không tiến lên: đó là livelock. Deadlock thì thread đứng yên chờ, CPU thấp. Sửa bằng backoff ngẫu nhiên hoặc lock ordering."
+    }
+  ]
+}

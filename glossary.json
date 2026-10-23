@@ -8,7 +8,7 @@
       "meaning": "Số nguyên đại diện cho một object, dùng để phân phối object vào các ô (bucket) của bảng băm.",
       "example": "\"hi\".hashCode() luôn trả về cùng một số trong mọi lần chạy.",
       "related": ["bucket", "hash-collision"],
-      "topics": ["equals-hashcode"]
+      "topics": ["equals-hashcode", "hashmap-internals"]
     },
     {
       "id": "bucket",
@@ -16,7 +16,7 @@
       "meaning": "Một ô trong mảng nội bộ của bảng băm (HashMap, HashSet). Các phần tử có hash rơi vào cùng ô sẽ nằm chung bucket.",
       "example": "HashMap mặc định có 16 bucket, tăng gấp đôi khi đầy quá 75%.",
       "related": ["hash-code", "hash-collision"],
-      "topics": ["equals-hashcode"]
+      "topics": ["equals-hashcode", "hashmap-internals"]
     },
     {
       "id": "hash-collision",
@@ -24,14 +24,14 @@
       "meaning": "Va chạm băm: hai giá trị khác nhau nhưng cho ra cùng hash, hoặc cùng rơi vào một bucket.",
       "example": "\"Aa\" và \"BB\" có cùng hashCode là 2112.",
       "related": ["hash-code", "bucket"],
-      "topics": ["equals-hashcode"]
+      "topics": ["equals-hashcode", "hashmap-internals"]
     },
     {
       "id": "immutable",
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile"]
     },
     {
       "id": "dns",
@@ -135,7 +135,7 @@
       "meaning": "Ảnh chụp tất cả thread của JVM tại một thời điểm: tên, trạng thái, stack trace, lock đang giữ hoặc đang chờ.",
       "example": "`jcmd <pid> Thread.print > dump.txt` rồi tìm thread `RUNNABLE` có stack lặp lại qua nhiều lần chụp.",
       "related": ["native-thread-id"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "thread-lifecycle", "deadlock"]
     },
     {
       "id": "native-thread-id",
@@ -206,7 +206,7 @@
       "meaning": "Vòng lặp liên tục kiểm tra một điều kiện mà không ngủ hay block, đốt trọn một core trong lúc chờ.",
       "example": "`while (!ready) { }` hoặc retry ngay lập tức không có backoff.",
       "related": ["catastrophic-backtracking"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "synchronized-volatile"]
     },
     {
       "id": "thread-pool",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "thread-lifecycle"]
     },
     {
       "id": "pinning",
@@ -311,6 +311,229 @@
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
       "topics": ["executor-thread-pool"]
+    },
+    {
+      "id": "hash-spreading",
+      "term": "Hash spreading",
+      "meaning": "Bước HashMap trộn 16 bit cao của hashCode xuống 16 bit thấp (`h ^ (h >>> 16)`) trước khi chọn bucket, vì index chỉ dùng vài bit thấp.",
+      "example": "Hai hashCode chỉ khác nhau ở bit cao như `0x10000` và `0x20000` vẫn rơi vào hai bucket khác nhau nhờ bước trộn.",
+      "related": ["hash-code", "bucket"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "separate-chaining",
+      "term": "Separate chaining",
+      "meaning": "Cách xử lý collision bằng cách nối các entry cùng bucket thành một danh sách liên kết; tìm key thì duyệt danh sách và so `equals`.",
+      "example": "`\"Aa\"`, `\"BB\"` và `\"banana\"` cùng nằm trong bucket 0 của `HashMap` capacity 8, nối đuôi nhau.",
+      "related": ["hash-collision", "bucket", "treeify"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "load-factor",
+      "term": "Load factor",
+      "meaning": "Tỉ lệ đầy tối đa của bảng băm trước khi resize. HashMap mặc định 0.75: resize khi `size > capacity × 0.75`.",
+      "example": "Capacity 16, load factor 0.75 thì resize khi thêm entry thứ 13.",
+      "related": ["rehash", "bucket"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "rehash",
+      "term": "Resize (rehash)",
+      "meaning": "Tạo mảng bucket mới lớn gấp đôi và chuyển mọi entry sang. Java 8 dùng `hash` đã lưu và một bit `hash & oldCap` để tách mỗi bucket thành hai danh sách lo/hi, không gọi lại `hashCode`.",
+      "example": "Capacity 8 → 16: node ở bucket 7 ở lại 7 hoặc sang 15.",
+      "related": ["load-factor", "bucket"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "treeify",
+      "term": "Treeify",
+      "meaning": "HashMap đổi một bucket từ danh sách liên kết sang cây đỏ-đen khi bucket có hơn 8 node và capacity ≥ 64, để lookup còn O(log n). Trở lại danh sách khi còn ít node (ví dụ ≤ 6 lúc resize).",
+      "example": "Nhiều key cùng hashCode như `AaAaAaAa`, `AaAaAaBB`... trong map capacity 64 làm bucket thành `TreeNode`.",
+      "related": ["red-black-tree", "separate-chaining"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "red-black-tree",
+      "term": "Red-black tree",
+      "meaning": "Cây nhị phân tìm kiếm tự cân bằng: mỗi node tô đỏ hoặc đen theo quy tắc giữ chiều cao cỡ O(log n), nên tìm, thêm, xoá đều O(log n).",
+      "example": "`TreeMap` và các bucket đã treeify của `HashMap` dùng cây đỏ-đen.",
+      "related": ["treeify"],
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "fail-fast",
+      "term": "Fail-fast iterator",
+      "meaning": "Iterator phát hiện collection bị sửa cấu trúc trong lúc duyệt (qua bộ đếm `modCount`) và ném `ConcurrentModificationException` ngay, thay vì chạy tiếp với dữ liệu sai. Chỉ là cố gắng phát hiện, không đảm bảo.",
+      "example": "Gọi `map.remove(key)` bên trong vòng `for (var e : map.entrySet())` làm lần lặp sau ném `ConcurrentModificationException`.",
+      "topics": ["hashmap-internals"]
+    },
+    {
+      "id": "monitor",
+      "term": "Monitor (intrinsic lock)",
+      "meaning": "Lock gắn sẵn với mọi object Java, được lấy khi vào khối `synchronized` và nhả khi ra. Mỗi lúc chỉ một thread giữ, và nó có wait set cho `wait`/`notify`.",
+      "example": "`synchronized (order) { ... }` lấy monitor của object `order`; thread khác muốn vào phải BLOCKED.",
+      "related": ["reentrancy", "happens-before"],
+      "topics": ["thread-lifecycle", "synchronized-volatile", "deadlock"]
+    },
+    {
+      "id": "spurious-wakeup",
+      "term": "Spurious wakeup",
+      "meaning": "Thread đang `wait()` thức dậy mà không có ai `notify`, `interrupt` hay hết giờ. Spec cho phép điều này, nên điều kiện chờ phải được kiểm tra lại trong vòng `while`.",
+      "example": "`while (queue.isEmpty()) { queue.wait(); }` thay vì `if (queue.isEmpty()) queue.wait();`.",
+      "related": ["monitor"],
+      "topics": ["thread-lifecycle"]
+    },
+    {
+      "id": "thread-interrupt",
+      "term": "Interrupt",
+      "meaning": "Cơ chế yêu cầu một thread dừng việc đang chờ: `thread.interrupt()` đặt cờ ngắt, các method chặn như `sleep`, `wait`, `join` ném `InterruptedException` và xoá cờ.",
+      "example": "Bắt `InterruptedException` thì gọi lại `Thread.currentThread().interrupt()` để không làm mất tín hiệu.",
+      "related": ["monitor"],
+      "topics": ["thread-lifecycle"]
+    },
+    {
+      "id": "jmm",
+      "term": "JMM (Java Memory Model)",
+      "meaning": "Phần của JLS (chương 17) quy định khi nào một lần ghi của thread này chắc chắn được thread khác nhìn thấy, dựa trên quan hệ happens-before.",
+      "example": "Không có `volatile` hay khoá, JMM cho phép thread đọc mãi giá trị cũ của một biến.",
+      "related": ["happens-before", "visibility", "data-race"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "happens-before",
+      "term": "Happens-before",
+      "meaning": "Quan hệ thứ tự của JMM: nếu A happens-before B thì mọi thứ A ghi đều hiện ra với B. Tạo bởi program order, unlock→lock cùng monitor, ghi→đọc cùng biến volatile, `start()`, `join()`, và có tính bắc cầu.",
+      "example": "Ghi `ready = true` (volatile) sau `data = 42`; thread đọc thấy `ready` là `true` thì chắc chắn thấy `data = 42`.",
+      "related": ["jmm", "visibility"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "visibility",
+      "term": "Visibility",
+      "meaning": "Một thread có thấy giá trị mà thread khác vừa ghi hay không. Thiếu happens-before thì không có gì đảm bảo thấy.",
+      "example": "Cờ `running` không volatile: main ghi `false` nhưng worker vẫn đọc `true`.",
+      "related": ["happens-before", "jmm"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "atomicity",
+      "term": "Atomicity",
+      "meaning": "Một thao tác diễn ra trọn vẹn như một bước, thread khác không thể chen vào giữa hay nhìn thấy trạng thái dở dang.",
+      "example": "`count++` không atomic (đọc, cộng, ghi); `AtomicInteger.incrementAndGet()` thì atomic.",
+      "related": ["cas", "lost-update"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "instruction-reordering",
+      "term": "Instruction reordering",
+      "meaning": "Compiler, JIT và CPU được đổi thứ tự lệnh miễn là kết quả trong một thread không đổi; thread khác có thể thấy thứ tự khác nếu không có happens-before.",
+      "example": "`data = 42; ready = true;` có thể hiện ra với thread khác như thể `ready` được ghi trước.",
+      "related": ["happens-before", "jmm"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "data-race",
+      "term": "Data race",
+      "meaning": "Hai thread truy cập cùng một biến, ít nhất một bên ghi, mà không có happens-before giữa hai lần truy cập. Kết quả khi đó không được JMM đảm bảo.",
+      "example": "Hai thread cùng `count++` trên một `int` thường không khoá.",
+      "related": ["race-condition", "happens-before"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "lost-update",
+      "term": "Lost update",
+      "meaning": "Hai thread cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
+      "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
+      "related": ["atomicity", "race-condition"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "race-condition",
+      "term": "Race condition",
+      "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
+      "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
+      "related": ["data-race", "lost-update"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "cas",
+      "term": "CAS (Compare-and-swap)",
+      "meaning": "Lệnh CPU atomic: chỉ ghi giá trị mới nếu giá trị hiện tại vẫn bằng giá trị mong đợi, nếu không thì báo thất bại để thử lại. Là nền của `AtomicInteger` và các cấu trúc lock-free.",
+      "example": "`counter.compareAndSet(5, 6)` chỉ thành công nếu `counter` đang là 5.",
+      "related": ["atomicity"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "reentrancy",
+      "term": "Reentrancy",
+      "meaning": "Thread đang giữ một lock có thể lấy lại chính lock đó mà không tự chặn mình; lock đếm số lần lấy và chỉ nhả khi đã nhả đủ. `synchronized` và `ReentrantLock` đều reentrant.",
+      "example": "Method `synchronized` `deposit()` gọi method `synchronized` `log()` trên cùng object mà không deadlock.",
+      "related": ["monitor"],
+      "topics": ["synchronized-volatile", "deadlock"]
+    },
+    {
+      "id": "double-checked-locking",
+      "term": "Double-checked locking",
+      "meaning": "Kiểu khởi tạo lười: kiểm tra `instance == null` ngoài khoá, rồi kiểm tra lại trong `synchronized` mới tạo object. Chỉ đúng khi field là `volatile` (Java 5+).",
+      "example": "`private static volatile Config instance;` cùng hai lần kiểm tra `if (instance == null)`.",
+      "related": ["happens-before", "instruction-reordering"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "deadlock",
+      "term": "Deadlock",
+      "meaning": "Nhóm thread chờ nhau theo vòng tròn, mỗi thread giữ một tài nguyên mà thread kế tiếp cần, nên không thread nào chạy tiếp được.",
+      "example": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`.",
+      "related": ["coffman-conditions", "lock-ordering", "livelock"],
+      "topics": ["deadlock"]
+    },
+    {
+      "id": "coffman-conditions",
+      "term": "Coffman conditions",
+      "meaning": "Bốn điều kiện cần cùng có để xảy ra deadlock: mutual exclusion, hold and wait, no preemption, circular wait. Phá một điều kiện là tránh được deadlock.",
+      "example": "Lock ordering phá circular wait; `tryLock` có timeout phá hold and wait.",
+      "related": ["deadlock", "lock-ordering"],
+      "topics": ["deadlock"]
+    },
+    {
+      "id": "lock-ordering",
+      "term": "Lock ordering",
+      "meaning": "Quy ước mọi thread lấy nhiều lock theo cùng một thứ tự toàn cục (ví dụ theo id), để không thể có vòng chờ.",
+      "example": "Chuyển tiền luôn khoá tài khoản có id nhỏ hơn trước, bất kể chiều chuyển.",
+      "related": ["deadlock", "coffman-conditions"],
+      "topics": ["deadlock"]
+    },
+    {
+      "id": "livelock",
+      "term": "Livelock",
+      "meaning": "Các thread vẫn chạy và liên tục phản ứng với nhau (nhường, nhả, thử lại) nhưng không thread nào làm xong việc.",
+      "example": "Hai thread cùng `tryLock` thất bại, cùng nhả lock, cùng chờ 10ms rồi thử lại, lặp mãi.",
+      "related": ["deadlock", "starvation"],
+      "topics": ["deadlock"]
+    },
+    {
+      "id": "starvation",
+      "term": "Starvation",
+      "meaning": "Một thread mãi không được dùng tài nguyên vì các thread khác luôn giành trước, dù hệ thống vẫn chạy.",
+      "example": "Một thread nhả lock rồi lấy lại ngay trong vòng lặp dài; với lock không công bằng, thread khác đang chờ có thể hiếm khi tới lượt.",
+      "related": ["livelock", "deadlock"],
+      "topics": ["deadlock"]
+    },
+    {
+      "id": "jit",
+      "term": "JIT (Just-In-Time compiler)",
+      "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
+      "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
+      "related": ["jmm", "instruction-reordering"],
+      "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "memory-barrier",
+      "term": "Memory barrier (fence)",
+      "meaning": "Lệnh ngăn CPU và compiler đổi thứ tự các thao tác bộ nhớ qua một điểm, và buộc các lần ghi trước đó hiện ra với core khác. JVM chèn barrier quanh truy cập volatile và khi lấy/nhả khoá.",
+      "example": "Trên x86, ghi một biến volatile thường sinh thêm một lệnh có tiền tố `lock`, còn đọc volatile gần như không tốn thêm.",
+      "related": ["happens-before", "instruction-reordering"],
+      "topics": ["synchronized-volatile"]
     }
   ]
 }

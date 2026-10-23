@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Hai lệnh chuyển tiền ngược chiều",
+  "instructions": "Thread 1 chuyển A → B, Thread 2 chuyển B → A, mỗi thread khoá tài khoản nguồn trước. Chạy lịch \"Xen kẽ\" để thấy deadlock, rồi lịch \"Lần lượt\" để thấy cùng đoạn code đó vẫn chạy xong nếu may mắn.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "account-a", "kind": "lock", "label": "accountA (id 1)" },
+      { "id": "account-b", "kind": "lock", "label": "accountB (id 2)" }
+    ],
+    "threads": [
+      { "id": "t1", "name": "Thread 1: A → B", "steps": [
+        { "op": "lock", "target": "account-a", "code": "synchronized (from) {      // accountA" },
+        { "op": "lock", "target": "account-b", "code": "  synchronized (to) {      // accountB" },
+        { "op": "work", "code": "    from.balance -= amount; to.balance += amount;" },
+        { "op": "unlock", "target": "account-b", "code": "  }" },
+        { "op": "unlock", "target": "account-a", "code": "}" }
+      ] },
+      { "id": "t2", "name": "Thread 2: B → A", "steps": [
+        { "op": "lock", "target": "account-b", "code": "synchronized (from) {      // accountB" },
+        { "op": "lock", "target": "account-a", "code": "  synchronized (to) {      // accountA" },
+        { "op": "work", "code": "    from.balance -= amount; to.balance += amount;" },
+        { "op": "unlock", "target": "account-a", "code": "  }" },
+        { "op": "unlock", "target": "account-b", "code": "}" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2"] },
+      { "id": "sequential", "title": "Lần lượt", "order": ["t1", "t1", "t1", "t1", "t1", "t2", "t2", "t2", "t2", "t2"] }
+    ],
+    "outcomes": {
+      "deadlock": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`: vòng chờ khép kín, không ai nhả lock. Sửa bằng [[lock-ordering|lock ordering]]: luôn khoá tài khoản có `id` nhỏ hơn trước, bất kể chiều chuyển.",
+      "success": "Thread 1 lấy và nhả cả hai lock trước khi Thread 2 bắt đầu nên không có vòng chờ. Code vẫn có lỗi: chỉ cần scheduler xen kẽ như lịch \"Xen kẽ\" là deadlock."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "coffman", "front": "Bốn điều kiện Coffman của deadlock?", "back": "Mutual exclusion, hold and wait, no preemption, circular wait. Thiếu một điều kiện thì không deadlock." },
+    { "id": "lock-ordering", "front": "Lock ordering phá điều kiện Coffman nào?", "back": "Circular wait: mọi thread lấy lock theo cùng thứ tự nên không thể chờ nhau thành vòng." },
+    { "id": "trylock", "front": "`tryLock(timeout)` giúp tránh deadlock thế nào?", "back": "Không lấy được lock thứ hai trong thời hạn thì nhả lock đang giữ và thử lại sau, phá điều kiện hold and wait." },
+    { "id": "dump-message", "front": "Thread dump báo deadlock bằng dòng nào?", "back": "`Found one Java-level deadlock:`, kèm thread nào đang chờ lock nào và lock đó do thread nào giữ." },
+    { "id": "mxbean", "front": "Phát hiện deadlock trong code bằng API nào?", "back": "`ManagementFactory.getThreadMXBean().findDeadlockedThreads()`, tìm cả `synchronized` lẫn `ReentrantLock`; trả về `null` nếu không có." },
+    { "id": "no-recovery", "front": "JVM có tự gỡ deadlock không?", "back": "Không. Thread kẹt mãi, `interrupt()` cũng không giải được `synchronized` hay `lock()`; thường phải restart." },
+    { "id": "livelock", "front": "Livelock khác deadlock thế nào?", "back": "Thread trong livelock vẫn chạy và đổi trạng thái liên tục (thường tốn CPU) nhưng không tiến lên được; thread deadlock thì đứng yên chờ." },
+    { "id": "starvation", "front": "Starvation là gì, giảm bằng cách nào?", "back": "Một thread mãi không tới lượt dùng tài nguyên. Giảm bằng lock công bằng `new ReentrantLock(true)` hoặc giữ lock ngắn hơn." }
+  ]
+}

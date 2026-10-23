@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Cờ dừng không volatile",
+  "instructions": "Chạy một lịch có sẵn rồi xem cache của từng thread: Main ghi `false` vào cache riêng, còn Worker cứ đọc `true` trong cache của mình nên quay mãi, dù Main ghi trước hay sau. Phần Interview giải thích vì sao khai báo `volatile boolean running` sửa được lỗi này.",
+  "config": {
+    "memoryModel": "jmm",
+    "resources": [
+      { "id": "running", "kind": "variable", "label": "running", "valueType": "boolean", "initial": 1, "volatile": false }
+    ],
+    "threads": [
+      { "id": "worker", "name": "Worker", "steps": [
+        { "op": "spinUntil", "target": "running", "value": 0, "code": "while (running) { }" },
+        { "op": "work", "code": "System.out.println(\"Worker dừng\");" }
+      ] },
+      { "id": "main", "name": "Main", "steps": [
+        { "op": "work", "code": "Thread.sleep(1000);" },
+        { "op": "write", "target": "running", "value": 0, "code": "running = false;" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "worker-first", "title": "Worker chạy trước", "order": ["worker", "main", "main", "worker", "worker", "worker"] },
+      { "id": "main-first", "title": "Main ghi trước", "order": ["main", "main", "worker", "worker", "worker"] }
+    ]
+  }
+}

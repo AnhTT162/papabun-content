@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "null-key-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Map<String, String> map = new HashMap<>();\nmap.put(null, \"x\");\nmap.put(null, \"y\");\nmap.put(\"a\", null);\nSystem.out.println(map.size());\nSystem.out.println(map.get(null));\nSystem.out.println(map.get(\"a\") + \" \" + map.containsKey(\"a\"));",
+      "options": ["2 / y / null true", "3 / x / null false", "2 / x / null true", "NullPointerException ở dòng put đầu tiên"],
+      "answer": 0,
+      "explanation": "`HashMap` cho phép một key `null` (hash 0, bucket 0); `put` lần hai thay value thành `\"y\"`, nên chỉ có 2 key. Value `null` cũng hợp lệ: `get(\"a\")` trả về `null` nhưng `containsKey` là `true`. `NullPointerException` là hành vi của `ConcurrentHashMap`, không phải `HashMap`."
+    },
+    {
+      "id": "first-resize",
+      "kind": "single",
+      "prompt": "`new HashMap<>(10)` với load factor mặc định. Bảng resize lần đầu khi put entry thứ mấy?",
+      "options": ["Thứ 8", "Thứ 11", "Thứ 13", "Thứ 17"],
+      "answer": 2,
+      "explanation": "Capacity được làm tròn lên lũy thừa của 2 là 16, threshold = 16 × 0.75 = 12. Resize xảy ra khi `++size > 12`, tức entry thứ 13. \"Thứ 8\" là nhầm capacity bằng đúng 10 (threshold 7,5); \"thứ 11\" là nhầm resize khi vượt số truyền vào."
+    },
+    {
+      "id": "treeify-small",
+      "kind": "single",
+      "prompt": "Một `HashMap` capacity 16 có một bucket đang chứa 8 node. Put thêm key thứ 9 cùng bucket đó thì sao?",
+      "options": [
+        "Bucket thành cây đỏ-đen",
+        "Bảng resize lên 32, bucket vẫn là danh sách",
+        "Ném `IllegalStateException`",
+        "Key mới bị từ chối vì bucket đầy"
+      ],
+      "answer": 1,
+      "explanation": "Chuỗi vượt `TREEIFY_THRESHOLD = 8` nên gọi `treeifyBin`, nhưng capacity 16 < `MIN_TREEIFY_CAPACITY = 64` nên nó resize thay vì treeify. Resize thường tách được chuỗi dài; với key trùng hashCode hoàn toàn thì chuỗi vẫn dài cho tới khi capacity đạt 64."
+    },
+    {
+      "id": "resize-move",
+      "kind": "single",
+      "prompt": "Capacity 8 → 16. Một node đang ở bucket 5. Sau resize nó có thể ở đâu?",
+      "options": ["Chỉ bucket 5", "Bucket 5 hoặc 13", "Bất kỳ bucket nào, vì key được băm lại", "Bucket 10 hoặc 11"],
+      "answer": 1,
+      "explanation": "Index mới dùng thêm đúng một bit: `hash & 8`. Bằng 0 thì ở lại 5 (danh sách lo), khác 0 thì sang 5 + 8 = 13 (danh sách hi). `hashCode` không được gọi lại vì node đã lưu sẵn `hash`."
+    }
+  ]
+}

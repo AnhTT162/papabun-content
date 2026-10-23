@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-problems", "front": "Ba vấn đề tách biệt của dữ liệu dùng chung giữa các thread?", "back": "Atomicity (không bị chen giữa), visibility (thấy giá trị mới), ordering (không bị sắp xếp lại lệnh)." },
+    { "id": "volatile-gives", "front": "`volatile` đảm bảo gì và không đảm bảo gì?", "back": "Đảm bảo visibility và ordering quanh biến đó; không làm thao tác ghép như `count++` thành atomic." },
+    { "id": "hb-monitor", "front": "Quy tắc happens-before của monitor?", "back": "Unlock một monitor happens-before mọi lần lock sau đó trên cùng monitor." },
+    { "id": "hb-volatile", "front": "Quy tắc happens-before của `volatile`?", "back": "Ghi một biến volatile happens-before mọi lần đọc sau đó của chính biến đó, kéo theo mọi thứ đã ghi trước lần ghi đó." },
+    { "id": "stop-flag", "front": "Vì sao `while (running) { }` có thể không bao giờ dừng khi `running` không volatile?", "back": "Không có happens-before nên JIT được phép đọc `running` một lần rồi quay mãi." },
+    { "id": "atomic-vs-adder", "front": "Khi nào dùng `LongAdder` thay vì `AtomicLong`?", "back": "Khi nhiều thread cùng cộng và chỉ cần tổng (counter, metric); không dùng khi cần giá trị chính xác từng lúc như cấp số thứ tự." },
+    { "id": "dcl", "front": "Double-checked locking cần gì để đúng?", "back": "Field instance phải `volatile`, nếu không thread khác có thể thấy object chưa chạy xong constructor." },
+    { "id": "reentrant", "front": "Method `synchronized` gọi method `synchronized` khác trên cùng object có tự deadlock không?", "back": "Không, monitor là reentrant: JVM đếm số lần vào và chỉ nhả khi thoát hết." },
+    { "id": "static-sync", "front": "`static synchronized` khoá trên object nào?", "back": "Object `Class` của class đó, không phải `this`, nên không loại trừ với method `synchronized` instance." }
+  ]
+}

@@ -54,7 +54,7 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
   - `stateMachine`: vòng đời, trạng thái (Thread lifecycle, Circuit Breaker, Saga). Toạ độ trạng thái theo cùng quy tắc với diagram; nhãn transition ≤ 20 ký tự; mỗi state có `note`.
   - `native:hashmap`: chỉ cho topic HashMap; `keys` nên có nhóm trùng hashCode (Aa/BB) để thấy collision và đủ key để vượt ngưỡng resize.
   - `instructions`: 1–2 câu nói người học cần thử gì.
-- **diagram.json**: 3–7 node, mỗi step thêm 1–2 node/edge kèm caption một câu. Sơ đồ hiển thị trên khung ~340×300pt của điện thoại: tối đa 4 cột; hai node cùng hàng (chênh `y` < 0.25) phải chênh `x` ≥ 0.24 (`scripts/validate` kiểm tra); nhãn node ngắn, tối đa ~2 dòng × 12 ký tự; nhãn edge tối đa 20 ký tự và chỉ hiện ở bước edge đó được nhấn mạnh (`highlight`, hoặc bước edge xuất hiện).
+- **diagram.json**: 3–7 node, mỗi step thêm 1–2 node/edge kèm caption một câu. Sơ đồ hiển thị trên khung ~340×300pt của điện thoại: tối đa 4 cột; hai node cùng hàng (chênh `y` < 0.25) phải chênh `x` ≥ 0.32 (`scripts/validate` kiểm tra); nhãn node ngắn, tối đa ~2 dòng × 12 ký tự; nhãn edge tối đa 20 ký tự và chỉ hiện ở bước edge đó được nhấn mạnh (`highlight`, hoặc bước edge xuất hiện).
 - **glossary.json**: `term` là tên ngắn (ví dụ `DNS`, `Keep-alive`); phần viết đầy đủ hoặc giải thích đưa vào `meaning`.
 - **callout** (inline trong topic.json): `interview` cho câu hỏi nối tiếp hay gặp, `warning` cho bẫy, `tip` cho mẹo.
 - **flashcards.json**: 5–10 thẻ, mặt trước là câu hỏi ngắn, mặt sau trả lời trong 1–2 câu. Mỗi thẻ chỉ một ý.

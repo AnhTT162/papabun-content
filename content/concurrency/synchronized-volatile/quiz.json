@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "reentrant-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau chạy trên một thread. Nó in ra gì?",
+      "code": "Object lock = new Object();\nsynchronized (lock) {\n    synchronized (lock) {\n        System.out.println(\"inside\");\n    }\n}\nSystem.out.println(\"done\");",
+      "options": ["inside / done", "Treo mãi vì thread chờ chính nó", "Ném `IllegalMonitorStateException`", "Chỉ in done"],
+      "answer": 0,
+      "explanation": "Monitor của `synchronized` là reentrant: thread đang giữ `lock` vào lại được, JVM tăng bộ đếm và chỉ nhả khi thoát cả hai khối. Không có deadlock với chính mình."
+    },
+    {
+      "id": "volatile-publish",
+      "kind": "single",
+      "prompt": "`int data` thường, `volatile boolean ready`. Thread A: `data = 42; ready = true;`. Thread B: `if (ready) System.out.println(data);`. Nếu B in ra, giá trị là gì?",
+      "options": [
+        "Chắc chắn 42",
+        "0 hoặc 42, vì `data` không volatile",
+        "Không xác định được gì nếu `data` không volatile",
+        "Chắc chắn 0"
+      ],
+      "answer": 0,
+      "explanation": "Ghi `data` happens-before ghi `ready` (program order), ghi `ready` happens-before lần đọc thấy `true` (quy tắc volatile), bắc cầu nên B thấy `data = 42`. Đây là cách công bố dữ liệu an toàn bằng một biến volatile."
+    },
+    {
+      "id": "volatile-counter",
+      "kind": "single",
+      "prompt": "`volatile int count = 0`. Hai thread, mỗi thread chạy `count++` 1000 lần, rồi `join` cả hai. Kết luận nào đúng?",
+      "options": [
+        "Luôn là 2000 vì `volatile` đảm bảo thấy giá trị mới nhất",
+        "Có thể nhỏ hơn 2000",
+        "Có thể lớn hơn 2000",
+        "Luôn là 1000"
+      ],
+      "answer": 1,
+      "explanation": "`count++` là đọc, cộng, ghi. Hai thread có thể cùng đọc một giá trị rồi cùng ghi giá trị +1, mất một lần cộng. Không bao giờ vượt 2000 vì mỗi lần ghi chỉ cộng 1 vào một giá trị đã từng tồn tại."
+    },
+    {
+      "id": "dcl-why",
+      "kind": "single",
+      "prompt": "Trong double-checked locking, vì sao field `instance` phải là `volatile`?",
+      "options": [
+        "Để hai thread không cùng vào khối `synchronized`",
+        "Để thread đọc `instance != null` ở lần kiểm tra đầu (ngoài khoá) không thấy object chưa khởi tạo xong",
+        "Để `instance` được lưu trong heap thay vì stack",
+        "Không cần, `synchronized` bên trong đã đủ"
+      ],
+      "answer": 1,
+      "explanation": "Lần kiểm tra đầu đọc `instance` không qua khoá nên không có happens-before với thread đã tạo object. Thiếu `volatile`, tham chiếu có thể hiện ra trước các field mà constructor ghi. Ghi volatile sau khi constructor xong đảm bảo ai thấy tham chiếu cũng thấy object đầy đủ."
+    }
+  ]
+}

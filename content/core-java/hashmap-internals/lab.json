@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Giá giỏ hàng biến mất khỏi cache",
+  "context": "Một service cache giá theo giỏ hàng: key là danh sách sản phẩm. Sau khi khách thêm sản phẩm vào giỏ, code tra lại giá trong cache.",
+  "buggyCode": "List<String> cart = new ArrayList<>(List.of(\"milk\"));\nMap<List<String>, Integer> prices = new HashMap<>();\nprices.put(cart, 25_000);\n\ncart.add(\"bread\");                 // khách thêm sản phẩm\n\nSystem.out.println(prices.get(cart));\nSystem.out.println(prices.get(List.of(\"milk\")));\nSystem.out.println(prices.size());\nSystem.out.println(prices);",
+  "symptom": {
+    "description": "Cả hai lần `get` đều trả về `null`, kể cả khi tra bằng đúng nội dung lúc `put`. Nhưng map vẫn có 1 entry, in ra thì thấy rõ entry đó.",
+    "output": "null\nnull\n1\n{[milk, bread]=25000}"
+  },
+  "diagnosis": {
+    "question": "Vì sao entry vẫn nằm trong map mà không `get` được?",
+    "options": [
+      "`ArrayList` không override `equals` và `hashCode`, nên map so theo tham chiếu",
+      "Key bị sửa sau khi `put`: entry nằm ở bucket và có `hash` tính từ `[milk]`, còn key giờ là `[milk, bread]`",
+      "`HashMap` copy key khi `put`, nên sửa `cart` không ảnh hưởng tới map",
+      "Map đã resize và làm mất entry"
+    ],
+    "answer": 1,
+    "explanation": "`ArrayList.hashCode` tính theo nội dung. Lúc `put`, node lưu `hash` của `[milk]` và nằm ở bucket tương ứng. `get(cart)` tính hash của `[milk, bread]`: khác hash đã lưu (thường khác cả bucket) nên không khớp. `get(List.of(\"milk\"))` tới đúng bucket và đúng hash, nhưng `equals` so với key hiện tại `[milk, bread]` nên trả về `false`. Entry vẫn chiếm chỗ mà không ai tra được: một kiểu rò rỉ bộ nhớ. Lựa chọn 1 sai vì `ArrayList` có override cả hai; lựa chọn 3 sai vì `HashMap` giữ tham chiếu tới chính object key; resize không làm mất entry, `size()` vẫn là 1."
+  },
+  "fix": {
+    "code": "// Key phải immutable: chụp bản sao bất biến lúc put\nprices.put(List.copyOf(cart), 25_000);\n\n// Hoặc dùng record với component immutable\nrecord CartKey(List<String> items) {\n    CartKey { items = List.copyOf(items); }\n}\nprices.put(new CartKey(cart), 25_000);",
+    "explanation": "Dùng key [[immutable]] (`List.copyOf`, `String`, `record` có component bất biến). Nếu bắt buộc phải đổi key thì `remove` bằng key cũ trước khi sửa, rồi `put` lại."
+  }
+}

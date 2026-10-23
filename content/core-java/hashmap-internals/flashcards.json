@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "spread", "front": "`HashMap.hash(key)` tính gì từ `hashCode()`?", "back": "`h ^ (h >>> 16)`: trộn 16 bit cao vào 16 bit thấp, vì index chỉ dùng các bit thấp." },
+    { "id": "index", "front": "Công thức chọn bucket trong `HashMap`?", "back": "`(n - 1) & hash`, với `n` là capacity (luôn là lũy thừa của 2)." },
+    { "id": "power-of-two", "front": "Vì sao capacity của `HashMap` luôn là lũy thừa của 2?", "back": "Để `(n - 1) & hash` thay được phép chia lấy dư, và khi resize chỉ cần xem một bit `hash & oldCap` để biết node ở lại hay chuyển đi." },
+    { "id": "resize-when", "front": "Khi nào `HashMap` resize?", "back": "Khi sau một lần thêm, `size > capacity × loadFactor` (mặc định 0.75), ví dụ entry thứ 13 với capacity 16. Hoặc khi một bucket cần treeify mà capacity < 64." },
+    { "id": "lo-hi", "front": "Java 8 chia lại một bucket thế nào khi resize?", "back": "Thành hai danh sách giữ nguyên thứ tự: lo ở lại index `j`, hi sang `j + oldCap`, dựa vào bit `hash & oldCap`." },
+    { "id": "treeify", "front": "Ba hằng số treeify của `HashMap`?", "back": "`TREEIFY_THRESHOLD = 8`, `UNTREEIFY_THRESHOLD = 6`, `MIN_TREEIFY_CAPACITY = 64`: bucket quá 8 node chỉ thành cây khi capacity ≥ 64." },
+    { "id": "null-key", "front": "Key `null` nằm ở đâu trong `HashMap`?", "back": "Bucket 0, vì `hash(null)` được định nghĩa là 0. Chỉ có một key `null`." },
+    { "id": "not-thread-safe", "front": "Dùng chung `HashMap` giữa nhiều thread thì có thể bị gì, và dùng gì thay?", "back": "Mất entry khi hai `put` ghi đè nhau, `size` sai, hỏng cấu trúc khi resize song song. Dùng `ConcurrentHashMap`." },
+    { "id": "presize", "front": "Cần map chứa 1000 phần tử mà không resize, tạo thế nào (Java 19+)?", "back": "`HashMap.newHashMap(1000)`, nó tính capacity theo load factor 0.75. `new HashMap<>(1000)` vẫn resize khi vượt 768." }
+  ]
+}

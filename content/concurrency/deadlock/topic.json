@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "deadlock",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Deadlock",
+  "summary": "Bốn điều kiện Coffman, phòng deadlock bằng lock ordering và tryLock có timeout, phát hiện bằng thread dump và ThreadMXBean, cùng livelock và starvation.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": ["synchronized-volatile"],
+  "terms": ["deadlock", "coffman-conditions", "lock-ordering", "livelock", "starvation", "thread-dump", "monitor", "reentrancy"],
+  "references": [
+    { "title": "Javadoc ThreadMXBean (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.management/java/lang/management/ThreadMXBean.html" },
+    { "title": "Javadoc ReentrantLock (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantLock.html" },
+    { "title": "The Java Tutorials: Liveness (Deadlock, Starvation and Livelock)", "url": "https://docs.oracle.com/javase/tutorial/essential/concurrency/liveness.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "warning", "markdown": "JVM không tự gỡ [[deadlock]]: thread kẹt tới khi process tắt, `interrupt()` không giải được thread chờ `synchronized` hay `lock()`. Đừng trông vào phát hiện rồi xử lý; hãy thiết kế để không thể xảy ra (lock ordering, `tryLock` có timeout, không gọi code lạ khi đang giữ lock), và thêm `findDeadlockedThreads()` vào health check để biết sớm." }
+  ]
+}

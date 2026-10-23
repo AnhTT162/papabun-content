@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Sáu trạng thái của Thread.State",
+  "instructions": "Bấm sự kiện để đưa một thread đi qua vòng đời. Thử `wait()` rồi `notify()` để thấy thread không quay thẳng về RUNNABLE, và so `sleep(1000)` với `wait(1000)` khi hết thời gian.",
+  "config": {
+    "states": [
+      { "id": "new", "label": "NEW", "x": 0.12, "y": 0.15, "note": "Đã tạo object `Thread` nhưng chưa gọi `start()`. Chưa có thread hệ điều hành nào chạy code của nó." },
+      { "id": "runnable", "label": "RUNNABLE", "x": 0.5, "y": 0.15, "note": "Đang chạy trong JVM **hoặc** sẵn sàng chạy và chờ CPU: Java không tách hai trạng thái này. Thread đang đọc socket chặn cũng thường hiện RUNNABLE trong thread dump." },
+      { "id": "terminated", "label": "TERMINATED", "x": 0.88, "y": 0.15, "note": "`run()` đã trả về hoặc ném exception ra ngoài. Thread không chạy lại được: gọi `start()` lần nữa ném `IllegalThreadStateException`." },
+      { "id": "waiting", "label": "WAITING", "x": 0.12, "y": 0.8, "note": "Chờ vô thời hạn tới khi thread khác ra tay: `Object.wait()`, `Thread.join()`, `LockSupport.park()`. Không tốn CPU. Thread chờ `ReentrantLock.lock()` cũng ở đây vì nó bị `park`." },
+      { "id": "blocked", "label": "BLOCKED", "x": 0.5, "y": 0.8, "note": "Chờ lấy **monitor** để vào khối `synchronized`, hoặc để vào lại khối đó sau khi `wait()` được đánh thức. Chỉ monitor của `synchronized` mới tạo ra BLOCKED." },
+      { "id": "timed-waiting", "label": "TIMED_WAITING", "x": 0.88, "y": 0.8, "note": "Chờ có thời hạn: `Thread.sleep(ms)`, `wait(ms)`, `join(ms)`, `LockSupport.parkNanos`. `sleep` vẫn giữ mọi monitor đang có, còn `wait(ms)` đã nhả monitor." }
+    ],
+    "initial": "new",
+    "events": [
+      { "id": "start", "label": "start()" },
+      { "id": "contend", "label": "Vào synchronized bận" },
+      { "id": "acquire", "label": "Lock được nhả" },
+      { "id": "wait", "label": "wait()" },
+      { "id": "wait-timed", "label": "wait(1000)" },
+      { "id": "sleep", "label": "sleep(1000)" },
+      { "id": "notify", "label": "Thread khác notify()" },
+      { "id": "timeout", "label": "Hết thời gian" },
+      { "id": "finish", "label": "run() kết thúc" }
+    ],
+    "counters": [
+      { "id": "in-wait", "label": "Đang trong wait (1 = có)", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "t-start", "from": "new", "event": "start", "to": "runnable", "label": "start()", "note": "`start()` tạo thread mới và thread đó gọi `run()`. Gọi thẳng `run()` thì code chạy trên thread hiện tại, thread này vẫn là NEW." },
+      { "id": "t-contend", "from": "runnable", "event": "contend", "to": "blocked", "label": "monitor bị giữ", "note": "Thread khác đang giữ monitor của object này. Nếu monitor rảnh, thread vào luôn và vẫn RUNNABLE." },
+      { "id": "t-acquire", "from": "blocked", "event": "acquire", "to": "runnable", "label": "lấy được monitor", "effects": [ { "counter": "in-wait", "set": 0 } ], "note": "Thread giành được monitor và chạy tiếp. Nếu nó tới đây từ `wait()`, lúc này `wait()` mới thực sự trả về, vẫn ở bên trong khối `synchronized`." },
+      { "id": "t-wait", "from": "runnable", "event": "wait", "to": "waiting", "label": "wait()", "effects": [ { "counter": "in-wait", "set": 1 } ], "note": "`wait()` phải gọi khi đang giữ monitor của chính object đó (trong `synchronized`), nếu không ném `IllegalMonitorStateException`. Nó **nhả monitor** rồi mới chờ." },
+      { "id": "t-wait-timed", "from": "runnable", "event": "wait-timed", "to": "timed-waiting", "label": "wait(ms)", "effects": [ { "counter": "in-wait", "set": 1 } ], "note": "Giống `wait()` (nhả monitor) nhưng tự thức dậy sau tối đa 1000ms." },
+      { "id": "t-sleep", "from": "runnable", "event": "sleep", "to": "timed-waiting", "label": "sleep(ms)", "effects": [ { "counter": "in-wait", "set": 0 } ], "note": "`sleep` **không nhả** monitor nào. Ngủ bên trong `synchronized` làm mọi thread khác muốn vào phải BLOCKED suốt thời gian đó." },
+      { "id": "t-notify", "from": "waiting", "event": "notify", "to": "blocked", "label": "notify()", "note": "Thread gọi `notify()` vẫn đang giữ monitor (nó phải ở trong `synchronized`), nên thread vừa được đánh thức chưa chạy được: nó sang BLOCKED để chờ lấy lại monitor." },
+      { "id": "t-notify-timed", "from": "timed-waiting", "event": "notify", "to": "blocked", "label": "notify()", "guard": { "counter": "in-wait", "eq": 1 }, "note": "`wait(ms)` cũng bị `notify()` đánh thức sớm, và cũng phải lấy lại monitor trước khi chạy tiếp." },
+      { "id": "t-timeout-wait", "from": "timed-waiting", "event": "timeout", "to": "blocked", "label": "hết giờ (wait)", "guard": { "counter": "in-wait", "eq": 1 }, "note": "Hết thời gian chờ nhưng thread vẫn phải lấy lại monitor. Ở đây giả sử thread khác đang giữ nó; nếu monitor rảnh, thread lấy ngay và về RUNNABLE." },
+      { "id": "t-timeout-sleep", "from": "timed-waiting", "event": "timeout", "to": "runnable", "label": "hết giờ ngủ", "note": "`sleep` không nhả monitor nên không phải lấy lại gì: thread chạy tiếp ngay." },
+      { "id": "t-finish", "from": "runnable", "event": "finish", "to": "terminated", "label": "run() xong", "note": "`run()` trả về hoặc ném exception chưa bắt. Các thread đang `join()` thread này được đánh thức." }
+    ],
+    "invalidNote": "Sự kiện này không xảy ra ở trạng thái hiện tại. Ví dụ: `notify()` không đánh thức thread đang `sleep`; thread chỉ gọi được `wait()`/`sleep()` khi đang chạy (RUNNABLE); gọi `start()` lần hai ném `IllegalThreadStateException`."
+  }
+}

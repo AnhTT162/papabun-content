@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Service chuyển tiền treo cứng",
+  "context": "Hai luồng xử lý liên tục các lệnh chuyển tiền giữa hai tài khoản theo hai chiều ngược nhau. Sau vài giây, service ngừng xử lý, CPU về 0%.",
+  "buggyCode": "final class Account {\n    final long id;\n    long balance;\n    Account(long id, long balance) { this.id = id; this.balance = balance; }\n}\n\nstatic void transfer(Account from, Account to, long amount) {\n    synchronized (from) {\n        synchronized (to) {\n            from.balance -= amount;\n            to.balance += amount;\n        }\n    }\n}\n\nAccount alice = new Account(1, 1_000_000);\nAccount bob = new Account(2, 1_000_000);\nnew Thread(() -> { for (int i = 0; i < 1_000_000; i++) transfer(alice, bob, 1); }, \"transfer-1\").start();\nnew Thread(() -> { for (int i = 0; i < 1_000_000; i++) transfer(bob, alice, 1); }, \"transfer-2\").start();",
+  "symptom": {
+    "description": "Chương trình không bao giờ kết thúc. `jstack <pid>` in ra đoạn sau ở cuối thread dump.",
+    "output": "Found one Java-level deadlock:\n=============================\n\"transfer-1\":\n  waiting to lock monitor 0x000000781cf10b60 (object 0x00000070028166e8, a Bank$Account),\n  which is held by \"transfer-2\"\n\n\"transfer-2\":\n  waiting to lock monitor 0x000000781cf10c40 (object 0x00000070028166d0, a Bank$Account),\n  which is held by \"transfer-1\"\n\nJava stack information for the threads listed above:\n===================================================\n\"transfer-1\":\n\tat Bank.transfer(Bank.java:11)\n\t- waiting to lock <0x00000070028166e8> (a Bank$Account)\n\t- locked <0x00000070028166d0> (a Bank$Account)\n\"transfer-2\":\n\tat Bank.transfer(Bank.java:11)\n\t- waiting to lock <0x00000070028166d0> (a Bank$Account)\n\t- locked <0x00000070028166e8> (a Bank$Account)\n\nFound 1 deadlock."
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân gốc là gì?",
+    "options": [
+      "`balance` không `volatile` nên mỗi thread không thấy số dư thread kia vừa ghi và chờ mãi",
+      "Hai chiều chuyển khoá hai tài khoản theo thứ tự ngược nhau: mỗi thread giữ tài khoản nguồn và chờ tài khoản đích mà thread kia đang giữ",
+      "Không được lồng hai khối `synchronized` vào nhau",
+      "Hai thread tranh CPU quá nhiều nên scheduler không cho thread nào chạy"
+    ],
+    "answer": 1,
+    "explanation": "`transfer(alice, bob)` khoá `alice` rồi `bob`, còn `transfer(bob, alice)` khoá `bob` rồi `alice`. Khi mỗi thread vừa lấy xong lock đầu, cả bốn [[coffman-conditions|điều kiện Coffman]] đều thoả và vòng chờ khép lại; thread dump chỉ ra đúng vòng đó. Lựa chọn 1 nhầm visibility với deadlock: thread ở BLOCKED, không phải đang quay đọc biến. Lồng `synchronized` hoàn toàn hợp lệ, chỉ nguy hiểm khi thứ tự không thống nhất. CPU 0% loại trừ lựa chọn cuối."
+  },
+  "fix": {
+    "code": "static void transfer(Account from, Account to, long amount) {\n    // Luôn khoá tài khoản id nhỏ hơn trước, bất kể chiều chuyển\n    Account first = from.id < to.id ? from : to;\n    Account second = from.id < to.id ? to : from;\n    synchronized (first) {\n        synchronized (second) {\n            from.balance -= amount;\n            to.balance += amount;\n        }\n    }\n}",
+    "explanation": "[[lock-ordering|Lock ordering]] theo `id` phá điều kiện circular wait: thread nào đang chờ tài khoản 2 thì chắc chắn đã giữ tài khoản 1, nên không thể có vòng. Chạy lại, cả hai thread xong và số dư cuối là `1000000 1000000`. Chuyển cho chính mình (`from == to`) vẫn an toàn vì `synchronized` là [[reentrancy|reentrant]]."
+  }
+}

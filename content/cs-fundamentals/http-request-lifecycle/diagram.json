@@ -2,29 +2,159 @@
   "$schema": "../../../schema/blocks/diagram.schema.json",
   "title": "Hành trình của GET /orders",
   "nodes": [
-    { "id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.08, "y": 0.55 },
-    { "id": "dns", "label": "DNS resolver", "kind": "external", "x": 0.3, "y": 0.12 },
-    { "id": "lb", "label": "Load balancer", "kind": "service", "x": 0.4, "y": 0.55 },
-    { "id": "app-a", "label": "App server A", "kind": "service", "x": 0.68, "y": 0.3 },
-    { "id": "app-b", "label": "App server B", "kind": "service", "x": 0.68, "y": 0.8 },
-    { "id": "db", "label": "Database", "kind": "database", "x": 0.92, "y": 0.3 }
+    {
+      "id": "browser",
+      "label": "Trình duyệt",
+      "kind": "client",
+      "x": 0.0,
+      "y": 0.55
+    },
+    {
+      "id": "dns",
+      "label": "DNS resolver",
+      "kind": "external",
+      "x": 0.3,
+      "y": 0.12
+    },
+    {
+      "id": "lb",
+      "label": "Load balancer",
+      "kind": "service",
+      "x": 0.33,
+      "y": 0.55
+    },
+    {
+      "id": "app-a",
+      "label": "App server A",
+      "kind": "service",
+      "x": 0.66,
+      "y": 0.3
+    },
+    {
+      "id": "app-b",
+      "label": "App server B",
+      "kind": "service",
+      "x": 0.66,
+      "y": 0.8
+    },
+    {
+      "id": "db",
+      "label": "Database",
+      "kind": "database",
+      "x": 1.0,
+      "y": 0.3
+    }
   ],
   "edges": [
-    { "id": "dns-lookup", "from": "browser", "to": "dns", "label": "shop.example.com?" },
-    { "id": "client-conn", "from": "browser", "to": "lb", "label": "TCP + TLS, rồi HTTP" },
-    { "id": "lb-to-a", "from": "lb", "to": "app-a", "label": "forward" },
-    { "id": "lb-to-b", "from": "lb", "to": "app-b", "label": "health check" },
-    { "id": "app-to-db", "from": "app-a", "to": "db", "label": "SQL qua pool" },
-    { "id": "response", "from": "lb", "to": "browser", "label": "200 OK" }
+    {
+      "id": "dns-lookup",
+      "from": "browser",
+      "to": "dns",
+      "label": "shop.example.com?"
+    },
+    {
+      "id": "client-conn",
+      "from": "browser",
+      "to": "lb",
+      "label": "TCP + TLS, rồi HTTP"
+    },
+    {
+      "id": "lb-to-a",
+      "from": "lb",
+      "to": "app-a",
+      "label": "forward"
+    },
+    {
+      "id": "lb-to-b",
+      "from": "lb",
+      "to": "app-b",
+      "label": "health check"
+    },
+    {
+      "id": "app-to-db",
+      "from": "app-a",
+      "to": "db",
+      "label": "SQL qua pool"
+    },
+    {
+      "id": "response",
+      "from": "lb",
+      "to": "browser",
+      "label": "200 OK"
+    }
   ],
   "steps": [
-    { "caption": "Người dùng mở https://shop.example.com/orders, trình duyệt chưa biết server nằm ở IP nào.", "show": ["browser"] },
-    { "caption": "DNS: hỏi cache rồi tới resolver, nhận về IP của load balancer kèm TTL để cache.", "show": ["dns", "dns-lookup"], "highlight": ["dns-lookup"] },
-    { "caption": "TCP handshake (1 RTT) rồi TLS 1.3 handshake (1 RTT) với load balancer, nơi giữ chứng chỉ.", "show": ["lb", "client-conn"], "highlight": ["client-conn"] },
-    { "caption": "Request GET /orders đi trên kết nối đã mã hoá; load balancer giải mã và chọn instance còn khoẻ.", "show": ["app-a", "app-b", "lb-to-b"], "highlight": ["lb"] },
-    { "caption": "Load balancer chuyển tiếp request tới App server A qua kết nối riêng của nó, thêm X-Forwarded-For.", "show": ["lb-to-a"], "highlight": ["lb-to-a"] },
-    { "caption": "App server giao request cho một worker thread, mượn kết nối từ connection pool để query database.", "show": ["db", "app-to-db"], "highlight": ["app-to-db"] },
-    { "caption": "Response đi ngược lại qua load balancer về trình duyệt.", "show": ["response"], "highlight": ["response"] },
-    { "caption": "Request tiếp theo dùng lại kết nối keep-alive: bỏ qua DNS, TCP và TLS, gửi thẳng HTTP.", "show": [], "highlight": ["client-conn"] }
+    {
+      "caption": "Người dùng mở https://shop.example.com/orders, trình duyệt chưa biết server nằm ở IP nào.",
+      "show": [
+        "browser"
+      ]
+    },
+    {
+      "caption": "DNS: hỏi cache rồi tới resolver, nhận về IP của load balancer kèm TTL để cache.",
+      "show": [
+        "dns",
+        "dns-lookup"
+      ],
+      "highlight": [
+        "dns-lookup"
+      ]
+    },
+    {
+      "caption": "TCP handshake (1 RTT) rồi TLS 1.3 handshake (1 RTT) với load balancer, nơi giữ chứng chỉ.",
+      "show": [
+        "lb",
+        "client-conn"
+      ],
+      "highlight": [
+        "client-conn"
+      ]
+    },
+    {
+      "caption": "Request GET /orders đi trên kết nối đã mã hoá; load balancer giải mã và chọn instance còn khoẻ.",
+      "show": [
+        "app-a",
+        "app-b",
+        "lb-to-b"
+      ],
+      "highlight": [
+        "lb"
+      ]
+    },
+    {
+      "caption": "Load balancer chuyển tiếp request tới App server A qua kết nối riêng của nó, thêm X-Forwarded-For.",
+      "show": [
+        "lb-to-a"
+      ],
+      "highlight": [
+        "lb-to-a"
+      ]
+    },
+    {
+      "caption": "App server giao request cho một worker thread, mượn kết nối từ connection pool để query database.",
+      "show": [
+        "db",
+        "app-to-db"
+      ],
+      "highlight": [
+        "app-to-db"
+      ]
+    },
+    {
+      "caption": "Response đi ngược lại qua load balancer về trình duyệt.",
+      "show": [
+        "response"
+      ],
+      "highlight": [
+        "response"
+      ]
+    },
+    {
+      "caption": "Request tiếp theo dùng lại kết nối keep-alive: bỏ qua DNS, TCP và TLS, gửi thẳng HTTP.",
+      "show": [],
+      "highlight": [
+        "client-conn"
+      ]
+    }
   ]
 }

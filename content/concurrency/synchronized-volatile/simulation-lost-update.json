@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "count++ trên biến volatile vẫn mất lần cộng",
+  "instructions": "Mọi lần đọc/ghi ở đây đi thẳng vào bộ nhớ chung, giống `volatile`. Chạy lịch \"Xen kẽ\" để thấy `count++` là hai bước đọc và ghi, và thread kia chen vào giữa được.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "count", "kind": "variable", "label": "count (volatile)", "valueType": "int", "initial": 0, "volatile": true }
+    ],
+    "threads": [
+      { "id": "t1", "name": "Thread A", "steps": [
+        { "op": "read", "target": "count", "into": "tmp", "code": "int tmp = count;     // count++: đọc" },
+        { "op": "write", "target": "count", "from": "tmp", "add": 1, "code": "count = tmp + 1;     // count++: ghi" }
+      ] },
+      { "id": "t2", "name": "Thread B", "steps": [
+        { "op": "read", "target": "count", "into": "tmp", "code": "int tmp = count;     // count++: đọc" },
+        { "op": "write", "target": "count", "from": "tmp", "add": 1, "code": "count = tmp + 1;     // count++: ghi" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "sequential", "title": "Lần lượt", "order": ["t1", "t1", "t2", "t2"] },
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2"] }
+    ],
+    "expect": [ { "target": "count", "value": 2 } ],
+    "outcomes": {
+      "mismatch": "`count = 1`: cả hai thread đọc cùng giá trị 0 rồi cùng ghi 1, một lần cộng bị ghi đè ([[lost-update|lost update]]). `volatile` chỉ đảm bảo mỗi lần đọc thấy giá trị mới nhất, không ngăn thread khác chen vào giữa đọc và ghi. Sửa bằng `AtomicInteger.incrementAndGet()` hoặc `synchronized`.",
+      "success": "`count = 2` với thứ tự này, nhưng scheduler không hứa chạy lần lượt. Thử lịch \"Xen kẽ\"."
+    }
+  }
+}

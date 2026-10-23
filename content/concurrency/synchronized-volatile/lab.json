@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã thêm volatile mà counter vẫn sai",
+  "context": "Một đồng nghiệp sửa lỗi đếm sai bằng cách khai báo `count` là `volatile`. Hai thread, mỗi thread cộng 100.000 lần.",
+  "buggyCode": "public class Counter {\n    private static volatile int count = 0;\n\n    public static void main(String[] args) throws InterruptedException {\n        Runnable increment = () -> {\n            for (int i = 0; i < 100_000; i++) {\n                count++;\n            }\n        };\n        Thread first = new Thread(increment);\n        Thread second = new Thread(increment);\n        first.start();\n        second.start();\n        first.join();\n        second.join();\n        System.out.println(\"count = \" + count);\n    }\n}",
+  "symptom": {
+    "description": "Mong đợi `count = 200000`. Mỗi lần chạy ra một số khác, luôn nhỏ hơn.",
+    "output": "count = 131729"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "`main` in kết quả trước khi hai thread chạy xong",
+      "Giá trị cuối cùng còn nằm trong cache CPU, chưa được ghi ra RAM",
+      "`count++` là đọc, cộng, ghi; `volatile` không ngăn hai thread cùng đọc một giá trị rồi ghi đè nhau",
+      "`int` bị tràn số"
+    ],
+    "answer": 2,
+    "explanation": "`volatile` đảm bảo [[visibility]]: mỗi lần đọc thấy lần ghi mới nhất. Nhưng `count++` gồm ba bước, và giữa bước đọc với bước ghi, thread kia có thể đọc cùng giá trị cũ; một trong hai lần cộng bị mất ([[lost-update|lost update]]). Lựa chọn 1 sai vì `join()` chờ cả hai thread xong. Lựa chọn 2 sai vì `join()` tạo happens-before nên `main` thấy mọi lần ghi của hai thread. 200.000 còn rất xa giới hạn của `int`."
+  },
+  "fix": {
+    "code": "private static final AtomicInteger count = new AtomicInteger();\n// trong vòng lặp:\ncount.incrementAndGet();\n\n// Counter rất nóng, chỉ cần tổng ở cuối (Java 8+):\nprivate static final LongAdder hits = new LongAdder();\nhits.increment();\nlong total = hits.sum();\n\n// Hoặc khi cần cập nhật nhiều biến cùng lúc:\nprivate static final Object lock = new Object();\nsynchronized (lock) { count++; }",
+    "explanation": "`AtomicInteger.incrementAndGet()` làm cả ba bước thành một thao tác [[atomicity|atomic]] bằng [[cas|CAS]]. `LongAdder` giảm tranh chấp khi nhiều thread cùng cộng. `synchronized` cần khi phải giữ bất biến giữa nhiều biến. Kết quả luôn là `count = 200000`."
+  }
+}

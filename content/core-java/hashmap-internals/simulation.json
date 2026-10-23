@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "native:hashmap",
+  "title": "Put từng key vào HashMap(8)",
+  "instructions": "Put các key theo thứ tự có sẵn: `Aa`, `BB`, `banana` cùng rơi vào bucket 0, key thứ 7 (`kiwi`) làm bảng resize lên 16, key thứ 13 (`grape`) làm resize lên 32. Muốn xem treeify, gõ thêm các key 8 ký tự ghép từ Aa/BB (`AaAaAaAa`, `AaAaAaBB`...): chúng cùng hashCode, và chuỗi quá 8 node chỉ thành cây khi capacity đã tới 64.",
+  "config": {
+    "initialCapacity": 8,
+    "keys": ["Aa", "BB", "apple", "banana", "cherry", "mango", "kiwi", "lemon", "AaAa", "AaBB", "BBAa", "BBBB", "grape"],
+    "allowCustomKeys": true
+  }
+}

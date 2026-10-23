@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "synchronized-volatile",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "synchronized & volatile",
+  "summary": "Atomicity, visibility và ordering; quy tắc happens-before của Java Memory Model; vì sao volatile không làm count++ atomic; AtomicInteger, LongAdder, double-checked locking và reentrancy.",
+  "level": "mid",
+  "order": 2,
+  "minutes": 15,
+  "prerequisites": ["thread-lifecycle"],
+  "terms": ["jmm", "happens-before", "visibility", "atomicity", "instruction-reordering", "data-race", "lost-update", "cas", "reentrancy", "double-checked-locking", "monitor", "busy-spin", "immutable", "jit", "memory-barrier"],
+  "references": [
+    { "title": "JLS chương 17: Threads and Locks (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html" },
+    { "title": "java.util.concurrent: Memory Consistency Properties (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/package-summary.html" },
+    { "title": "Javadoc LongAdder (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/atomic/LongAdder.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "simulation", "file": "simulation-lost-update.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}

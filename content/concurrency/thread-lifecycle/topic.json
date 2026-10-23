@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "thread-lifecycle",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Thread Lifecycle",
+  "summary": "Sáu trạng thái của Thread.State, cách wait/notify, sleep, join và synchronized đưa thread qua lại giữa chúng, và cách đọc đúng trạng thái trong thread dump.",
+  "level": "junior",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["monitor", "spurious-wakeup", "thread-interrupt", "thread-dump", "virtual-thread"],
+  "references": [
+    { "title": "Javadoc Thread.State (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.State.html" },
+    { "title": "Javadoc Object.wait / notify (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" },
+    { "title": "JLS 17.2 Wait Sets and Notification (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html#jls-17.2" }
+  ],
+  "blocks": [
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"BLOCKED khác WAITING thế nào?\" BLOCKED là chờ lấy [[monitor]] của `synchronized`, thread không tự thoát được và không phản hồi interrupt. WAITING là tự nguyện chờ một thread khác ra tay (`notify`, kết thúc thread được `join`, `unpark`) và phản hồi interrupt. Thread chờ `ReentrantLock` là WAITING, không phải BLOCKED." }
+  ]
+}

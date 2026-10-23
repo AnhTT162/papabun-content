@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "hashmap-internals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "HashMap Internals",
+  "summary": "Bên trong HashMap của Java 8+: hash spreading, chọn bucket bằng (n - 1) & hash, chuỗi collision, load factor và resize tách lo/hi, treeify, key null, và vì sao HashMap không thread-safe.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": ["equals-hashcode"],
+  "terms": ["bucket", "hash-code", "hash-collision", "hash-spreading", "separate-chaining", "load-factor", "rehash", "treeify", "red-black-tree", "fail-fast", "immutable"],
+  "references": [
+    { "title": "Javadoc HashMap (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html" },
+    { "title": "Mã nguồn HashMap.java (OpenJDK)", "url": "https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/util/HashMap.java" },
+    { "title": "JEP 180: Handle Frequent HashMap Collisions with Balanced Trees", "url": "https://openjdk.org/jeps/180" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}
