@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "simulations/stateMachine.schema.json",
+  "title": "config của engine stateMachine: người học bấm sự kiện, máy trạng thái chuyển theo transition đầu tiên khớp (from + event + guard).",
+  "type": "object",
+  "required": ["states", "initial", "events", "transitions"],
+  "additionalProperties": false,
+  "properties": {
+    "states": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "x", "y"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "label": { "$ref": "../common.schema.json#/$defs/text" },
+          "x": { "type": "number", "minimum": 0, "maximum": 1 },
+          "y": { "type": "number", "minimum": 0, "maximum": 1 },
+          "note": { "$ref": "../common.schema.json#/$defs/text", "description": "Markdown hiện khi đang ở trạng thái này" }
+        }
+      }
+    },
+    "initial": { "$ref": "../common.schema.json#/$defs/id" },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "label": { "$ref": "../common.schema.json#/$defs/text", "description": "Chữ trên nút, ví dụ start(), Gọi lỗi" }
+        }
+      }
+    },
+    "counters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "label": { "$ref": "../common.schema.json#/$defs/text" },
+          "initial": { "type": "integer" }
+        }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "event", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "from": { "$ref": "../common.schema.json#/$defs/id" },
+          "event": { "$ref": "../common.schema.json#/$defs/id" },
+          "to": { "$ref": "../common.schema.json#/$defs/id" },
+          "label": { "type": "string", "maxLength": 20, "description": "Nhãn mũi tên, mặc định là nhãn sự kiện" },
+          "guard": {
+            "type": "object",
+            "required": ["counter"],
+            "additionalProperties": false,
+            "properties": {
+              "counter": { "$ref": "../common.schema.json#/$defs/id" },
+              "lt": { "type": "integer" },
+              "gte": { "type": "integer" },
+              "eq": { "type": "integer" }
+            }
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["counter"],
+              "additionalProperties": false,
+              "properties": {
+                "counter": { "$ref": "../common.schema.json#/$defs/id" },
+                "add": { "type": "integer" },
+                "set": { "type": "integer" }
+              }
+            }
+          },
+          "note": { "$ref": "../common.schema.json#/$defs/text", "description": "Markdown giải thích khi transition này xảy ra" }
+        }
+      }
+    },
+    "invalidNote": { "$ref": "../common.schema.json#/$defs/text", "description": "Markdown khi bấm sự kiện không hợp lệ ở trạng thái hiện tại" }
+  }
+}

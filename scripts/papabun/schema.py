@@ -1,7 +1,7 @@
 """Bộ kiểm tra JSON Schema rút gọn.
 
 Hỗ trợ đúng các từ khóa mà thư mục schema/ đang dùng: type, required, properties,
-additionalProperties (false), items, minItems, minLength, pattern, enum, const,
+additionalProperties (false), items, minItems, minLength, maxLength, pattern, enum, const,
 minimum, maximum và $ref tới file khác (kèm #/$defs/...). Gặp từ khóa lạ sẽ báo lỗi
 để không âm thầm bỏ qua ràng buộc.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 _IGNORED = {"$schema", "$id", "$defs", "title", "description"}
 _SUPPORTED = {
     "type", "required", "properties", "additionalProperties", "items", "minItems",
-    "minLength", "pattern", "enum", "const", "minimum", "maximum", "$ref",
+    "minLength", "maxLength", "pattern", "enum", "const", "minimum", "maximum", "$ref",
 }
 
 _TYPES = {
@@ -73,6 +73,8 @@ class SchemaValidator:
         if isinstance(value, str):
             if len(value.strip()) < schema.get("minLength", 0):
                 errors.append("%s: không được để trống" % where)
+            if len(value) > schema.get("maxLength", len(value)):
+                errors.append("%s: dài quá %d ký tự" % (where, schema["maxLength"]))
             if "pattern" in schema and not re.search(schema["pattern"], value):
                 errors.append("%s: %r không khớp mẫu %s" % (where, value, schema["pattern"]))
 

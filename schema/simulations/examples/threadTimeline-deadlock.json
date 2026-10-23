@@ -1,0 +1,31 @@
+{
+  "engine": "threadTimeline",
+  "title": "Hai thread lấy lock ngược thứ tự",
+  "config": {
+    "resources": [
+      { "id": "lock-a", "kind": "lock", "label": "lockA" },
+      { "id": "lock-b", "kind": "lock", "label": "lockB" }
+    ],
+    "threads": [
+      { "id": "t1", "name": "Thread A", "steps": [
+        { "op": "lock", "target": "lock-a", "code": "synchronized (lockA) {" },
+        { "op": "lock", "target": "lock-b", "code": "  synchronized (lockB) {" },
+        { "op": "work", "code": "    transfer();" },
+        { "op": "unlock", "target": "lock-b", "code": "  }" },
+        { "op": "unlock", "target": "lock-a", "code": "}" }
+      ] },
+      { "id": "t2", "name": "Thread B", "steps": [
+        { "op": "lock", "target": "lock-b", "code": "synchronized (lockB) {" },
+        { "op": "lock", "target": "lock-a", "code": "  synchronized (lockA) {" },
+        { "op": "work", "code": "    transfer();" },
+        { "op": "unlock", "target": "lock-a", "code": "  }" },
+        { "op": "unlock", "target": "lock-b", "code": "}" }
+      ] }
+    ],
+    "schedules": [ { "id": "bad", "title": "A rồi B, xen kẽ", "order": ["t1", "t2", "t1", "t2"] } ],
+    "outcomes": {
+      "deadlock": "A giữ lockA chờ lockB, B giữ lockB chờ lockA: không ai nhả lock. Sửa bằng cách mọi thread lấy lock **cùng một thứ tự**.",
+      "success": "Không deadlock với thứ tự chạy này."
+    }
+  }
+}

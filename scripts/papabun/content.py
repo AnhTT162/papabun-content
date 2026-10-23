@@ -21,6 +21,11 @@ LAYERED_SECTIONS = ["Quick", "Interview", "Deep"]
 DIAGRAM_ROW = 0.25
 DIAGRAM_MIN_DX = 0.24
 DIAGRAM_MAX_LABEL = 20
+SIMULATION_SCHEMAS = {
+    "threadTimeline": "simulations/threadTimeline.schema.json",
+    "stateMachine": "simulations/stateMachine.schema.json",
+    "native:hashmap": "simulations/native-hashmap.schema.json",
+}
 
 # type -> (đuôi file yêu cầu, schema của file). None: block inline.
 FILE_BLOCKS = {
@@ -270,6 +275,87 @@ class Repo:
             if step_id not in reachable:
                 self.error(path, "step '%s' không thể đi tới từ bước đầu" % step_id)
 
+    def _check_simulation(self, path, data):
+        engine = data["engine"]
+        schema_name = SIMULATION_SCHEMAS[engine]
+        problems = self.validator.validate(data["config"], schema_name)
+        for problem in problems:
+            self.error(path, "config: " + problem.replace("$", "config", 1))
+        if problems:
+            return
+        getattr(self, "_check_" + engine.replace("native:", "native_"))(path, data["config"])
+
+    def _check_threadTimeline(self, path, config):
+        kinds = {r["id"]: r["kind"] for r in config["resources"]}
+        self._unique([r["id"] for r in config["resources"]], path, "resource")
+        thread_ids = self._unique([t["id"] for t in config["threads"]], path, "thread")
+        for resource in config["resources"]:
+            if resource["kind"] == "lock" and set(resource) & {"valueType", "initial", "volatile"}:
+                self.error(path, "resource '%s': lock không dùng valueType/initial/volatile" % resource["id"])
+        needs = {"lock": "lock", "unlock": "lock", "read": "variable", "write": "variable", "spinUntil": "variable"}
+        for thread in config["threads"]:
+            locals_ = set()
+            for i, step in enumerate(thread["steps"]):
+                where = "thread '%s' steps[%d] (%s)" % (thread["id"], i, step["op"])
+                op = step["op"]
+                if op in needs:
+                    target = step.get("target")
+                    if kinds.get(target) != needs[op]:
+                        self.error(path, "%s: target phải là %s có trong resources" % (where, needs[op]))
+                elif "target" in step:
+                    self.error(path, "%s: work không dùng target" % where)
+                if op == "read":
+                    if "into" not in step:
+                        self.error(path, "%s: thiếu into" % where)
+                    locals_.add(step.get("into"))
+                if op == "write" and ("value" in step) == ("from" in step):
+                    self.error(path, "%s: cần đúng một trong value hoặc from" % where)
+                if op == "write" and "from" in step and step["from"] not in locals_:
+                    self.error(path, "%s: from '%s' chưa được read trước đó trong thread" % (where, step["from"]))
+                if op == "spinUntil" and "value" not in step:
+                    self.error(path, "%s: thiếu value" % where)
+        for schedule in config.get("schedules", []):
+            for ref in schedule["order"]:
+                if ref not in thread_ids:
+                    self.error(path, "schedule '%s': không có thread '%s'" % (schedule["id"], ref))
+        for item in config.get("expect", []):
+            if kinds.get(item["target"]) != "variable":
+                self.error(path, "expect: '%s' không phải variable" % item["target"])
+
+    def _check_stateMachine(self, path, config):
+        state_ids = self._unique([s["id"] for s in config["states"]], path, "state")
+        event_ids = self._unique([e["id"] for e in config["events"]], path, "event")
+        counter_ids = self._unique([c["id"] for c in config.get("counters", [])], path, "counter")
+        self._unique([t["id"] for t in config["transitions"]], path, "transition")
+        if config["initial"] not in state_ids:
+            self.error(path, "initial '%s' không có trong states" % config["initial"])
+        used_events = set()
+        for t in config["transitions"]:
+            for end in ("from", "to"):
+                if t[end] not in state_ids:
+                    self.error(path, "transition '%s'.%s: không có state '%s'" % (t["id"], end, t[end]))
+            if t["event"] not in event_ids:
+                self.error(path, "transition '%s': không có event '%s'" % (t["id"], t["event"]))
+            used_events.add(t["event"])
+            refs = ([t["guard"]] if "guard" in t else []) + t.get("effects", [])
+            for ref in refs:
+                if ref["counter"] not in counter_ids:
+                    self.error(path, "transition '%s': không có counter '%s'" % (t["id"], ref["counter"]))
+        for event in event_ids - used_events:
+            self.error(path, "event '%s' không được transition nào dùng" % event)
+        self._check_spacing(path, config["states"])
+
+    def _check_native_hashmap(self, path, config):
+        self._unique(config["keys"], path, "key")
+
+    def _check_spacing(self, path, nodes):
+        # Trên điện thoại khung sơ đồ chỉ rộng ~340pt: hai node cùng hàng cần cách nhau đủ xa.
+        for i, a in enumerate(nodes):
+            for b in nodes[i + 1:]:
+                if abs(a["y"] - b["y"]) < DIAGRAM_ROW and abs(a["x"] - b["x"]) < DIAGRAM_MIN_DX:
+                    self.error(path, "node '%s' và '%s' quá gần nhau: cùng hàng (|y| chênh < %.2f) thì x phải chênh >= %.2f"
+                               % (a["id"], b["id"], DIAGRAM_ROW, DIAGRAM_MIN_DX))
+
     def _check_diagram(self, path, data):
         node_ids = self._unique([n["id"] for n in data["nodes"]], path, "node")
         edge_ids = self._unique([e["id"] for e in data["edges"]], path, "edge")
@@ -277,13 +363,7 @@ class Repo:
             for end in ("from", "to"):
                 if edge[end] not in node_ids:
                     self.error(path, "edge '%s'.%s: không có node '%s'" % (edge["id"], end, edge[end]))
-        # Trên điện thoại khung sơ đồ chỉ rộng ~340pt: hai node cùng hàng cần cách nhau đủ xa.
-        nodes = data["nodes"]
-        for i, a in enumerate(nodes):
-            for b in nodes[i + 1:]:
-                if abs(a["y"] - b["y"]) < DIAGRAM_ROW and abs(a["x"] - b["x"]) < DIAGRAM_MIN_DX:
-                    self.error(path, "node '%s' và '%s' quá gần nhau: cùng hàng (|y| chênh < %.2f) thì x phải chênh >= %.2f"
-                               % (a["id"], b["id"], DIAGRAM_ROW, DIAGRAM_MIN_DX))
+        self._check_spacing(path, data["nodes"])
         for edge in data["edges"]:
             if len(edge.get("label", "")) > DIAGRAM_MAX_LABEL:
                 self.error(path, "edge '%s': nhãn dài quá %d ký tự, sẽ che node trên điện thoại" % (edge["id"], DIAGRAM_MAX_LABEL))

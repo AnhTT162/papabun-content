@@ -1,0 +1,20 @@
+{
+  "engine": "threadTimeline",
+  "title": "Cờ dừng không volatile",
+  "config": {
+    "memoryModel": "jmm",
+    "resources": [
+      { "id": "running", "kind": "variable", "label": "running", "valueType": "boolean", "initial": 1, "volatile": false }
+    ],
+    "threads": [
+      { "id": "worker", "name": "Worker", "steps": [
+        { "op": "spinUntil", "target": "running", "value": 0, "code": "while (running) { }" },
+        { "op": "work", "code": "System.out.println(\"Dừng\");" }
+      ] },
+      { "id": "main", "name": "Main", "steps": [
+        { "op": "write", "target": "running", "value": 0, "code": "running = false;" }
+      ] }
+    ],
+    "schedules": [ { "id": "stop", "title": "Worker chạy trước", "order": ["worker", "main", "worker", "worker"] } ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "engine": "stateMachine",
+  "title": "Circuit breaker",
+  "config": {
+    "states": [
+      { "id": "closed", "label": "CLOSED", "x": 0.1, "y": 0.5, "note": "Request đi qua bình thường, đếm lỗi liên tiếp." },
+      { "id": "open", "label": "OPEN", "x": 0.9, "y": 0.5, "note": "Chặn mọi request, trả lỗi ngay (fail fast)." },
+      { "id": "half-open", "label": "HALF_OPEN", "x": 0.5, "y": 0.1, "note": "Cho một request thử đi qua." }
+    ],
+    "initial": "closed",
+    "events": [
+      { "id": "fail", "label": "Gọi lỗi" },
+      { "id": "success", "label": "Gọi thành công" },
+      { "id": "timeout", "label": "Hết thời gian chờ" }
+    ],
+    "counters": [ { "id": "failures", "label": "Lỗi liên tiếp", "initial": 0 } ],
+    "transitions": [
+      { "id": "count-fail", "from": "closed", "event": "fail", "to": "closed", "guard": { "counter": "failures", "lt": 2 }, "effects": [ { "counter": "failures", "add": 1 } ] },
+      { "id": "trip", "from": "closed", "event": "fail", "to": "open", "label": "lỗi thứ 3", "effects": [ { "counter": "failures", "set": 0 } ], "note": "Đủ 3 lỗi liên tiếp: breaker mở." },
+      { "id": "reset-count", "from": "closed", "event": "success", "to": "closed", "effects": [ { "counter": "failures", "set": 0 } ] },
+      { "id": "probe", "from": "open", "event": "timeout", "to": "half-open", "label": "hết chờ" },
+      { "id": "recover", "from": "half-open", "event": "success", "to": "closed", "label": "thử OK" },
+      { "id": "retrip", "from": "half-open", "event": "fail", "to": "open", "label": "thử lỗi" }
+    ],
+    "invalidNote": "Sự kiện này không đổi trạng thái ở đây."
+  }
+}

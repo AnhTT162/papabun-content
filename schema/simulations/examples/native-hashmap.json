@@ -1,0 +1,9 @@
+{
+  "engine": "native:hashmap",
+  "title": "Bên trong HashMap",
+  "config": {
+    "initialCapacity": 8,
+    "keys": ["apple", "banana", "cherry", "Aa", "BB", "AaAa", "AaBB", "BBAa", "BBBB"],
+    "allowCustomKeys": true
+  }
+}

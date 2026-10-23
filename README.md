@@ -57,6 +57,7 @@ scripts/                   # new-topic, validate, build (chỉ cần Python 3.9+
 - **Thuật ngữ**: `[[bucket]]` hoặc `[[hash-code|hashCode]]` để đổi chữ hiển thị. Thuật ngữ phải có trong `glossary.json`.
 - **layered.md** cần đúng 3 heading theo thứ tự: `## Quick`, `## Interview`, `## Deep`.
 - **callout** viết thẳng trong `topic.json`: `{ "type": "callout", "style": "tip|warning|interview", "markdown": "..." }`.
+- **simulation**: `{ "type": "simulation", "file": "simulation.json" }`, engine `threadTimeline`, `stateMachine` hoặc `native:hashmap`. Schema config ở `schema/simulations/`, ví dụ ở `schema/simulations/examples/`.
 - **code**: `{ "type": "code", "file": "Example.java", "caption": "..." }`, ngôn ngữ lấy từ đuôi file.
 - Mỗi topic nên có `references` trỏ tới nguồn chính thức để kiểm chứng.
 

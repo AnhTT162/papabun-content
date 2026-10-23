@@ -28,7 +28,7 @@ Viết cho người đã đi làm: không giải thích vòng vo, nhưng **khôn
 | Kiến trúc / SA | scenario + diagram |
 | Kiến thức ngắn | layered |
 
-`layered` gần như luôn có. `simulation` chưa có engine hoàn chỉnh (Giai đoạn 3): chỉ thêm khi người dùng yêu cầu.
+`layered` gần như luôn có.
 
 ## 2. Nghiên cứu từ nguồn chính thức
 Ưu tiên: Javadoc/JLS/JEP (docs.oracle.com, openjdk.org), Spring docs, tài liệu chính thức của PostgreSQL/MySQL/Redis/Kafka, OWASP, AWS docs, RFC.
@@ -49,6 +49,11 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
 - **lab.json (breakLab)**: code lỗi chạy được, triệu chứng có output thật, 4 lựa chọn chẩn đoán với 1 đáp án đúng và các lựa chọn sai hợp lý, cách sửa có code.
 - **scenario.json**: đề bài thực tế có ràng buộc (quy mô, SLA), 2–4 gợi ý từ rộng đến hẹp, lời giải, `tradeoffs` khi có nhiều phương án.
 - **troubleshoot.json**: bước đầu là triệu chứng; mỗi bước có 3–4 lựa chọn với `quality` good/ok/poor và feedback giải thích vì sao; evidence là dữ liệu như thật (thread dump, log, metric) dùng `evidenceFormat: monospace`; kết thúc bằng step không có choices nêu nguyên nhân gốc và cách phòng ngừa.
+- **simulation.json**: chọn engine theo nội dung, xem schema trong `schema/simulations/` và ví dụ chạy được trong `schema/simulations/examples/`.
+  - `threadTimeline`: race condition, deadlock, `synchronized`, `volatile`/visibility (đặt `memoryModel: jmm`). Mỗi bước có dòng `code` Java ngắn. Có ít nhất một `schedules` dẫn tới kết cục đáng học (deadlock, sai giá trị) và `outcomes` giải thích; khai báo `expect` khi có giá trị đúng.
+  - `stateMachine`: vòng đời, trạng thái (Thread lifecycle, Circuit Breaker, Saga). Toạ độ trạng thái theo cùng quy tắc với diagram; nhãn transition ≤ 20 ký tự; mỗi state có `note`.
+  - `native:hashmap`: chỉ cho topic HashMap; `keys` nên có nhóm trùng hashCode (Aa/BB) để thấy collision và đủ key để vượt ngưỡng resize.
+  - `instructions`: 1–2 câu nói người học cần thử gì.
 - **diagram.json**: 3–7 node, mỗi step thêm 1–2 node/edge kèm caption một câu. Sơ đồ hiển thị trên khung ~340×300pt của điện thoại: tối đa 4 cột; hai node cùng hàng (chênh `y` < 0.25) phải chênh `x` ≥ 0.24 (`scripts/validate` kiểm tra); nhãn node ngắn, tối đa ~2 dòng × 12 ký tự; nhãn edge tối đa 20 ký tự và chỉ hiện ở bước edge đó được nhấn mạnh (`highlight`, hoặc bước edge xuất hiện).
 - **glossary.json**: `term` là tên ngắn (ví dụ `DNS`, `Keep-alive`); phần viết đầy đủ hoặc giải thích đưa vào `meaning`.
 - **callout** (inline trong topic.json): `interview` cho câu hỏi nối tiếp hay gặp, `warning` cho bẫy, `tip` cho mẹo.

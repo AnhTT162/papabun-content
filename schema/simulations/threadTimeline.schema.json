@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "simulations/threadTimeline.schema.json",
+  "title": "config của engine threadTimeline: các thread chạy từng bước trên lock và biến dùng chung. Người học chọn thread nào chạy tiếp, hoặc chạy theo lịch có sẵn.",
+  "type": "object",
+  "required": ["resources", "threads"],
+  "additionalProperties": false,
+  "properties": {
+    "memoryModel": {
+      "enum": ["simple", "jmm"],
+      "description": "simple (mặc định): mọi đọc/ghi đi thẳng vào bộ nhớ chung. jmm: mỗi thread có cache riêng; biến không volatile chỉ được đẩy ra bộ nhớ chung khi unlock, chỉ đọc lại từ bộ nhớ chung sau lock; biến volatile luôn đọc/ghi bộ nhớ chung."
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "kind": { "enum": ["lock", "variable"] },
+          "label": { "$ref": "../common.schema.json#/$defs/text" },
+          "valueType": { "enum": ["int", "boolean"], "description": "Chỉ cho variable. boolean lưu 0/1, hiển thị false/true." },
+          "initial": { "type": "integer", "description": "Chỉ cho variable, mặc định 0" },
+          "volatile": { "type": "boolean", "description": "Chỉ cho variable, có ý nghĩa khi memoryModel = jmm" }
+        }
+      }
+    },
+    "threads": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "steps"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "name": { "$ref": "../common.schema.json#/$defs/text" },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["op", "code"],
+              "additionalProperties": false,
+              "properties": {
+                "op": { "enum": ["lock", "unlock", "read", "write", "spinUntil", "work"] },
+                "code": { "$ref": "../common.schema.json#/$defs/text", "description": "Dòng Java hiển thị cho bước này" },
+                "target": { "$ref": "../common.schema.json#/$defs/id", "description": "lock/unlock: id lock; read/write/spinUntil: id variable" },
+                "into": { "$ref": "../common.schema.json#/$defs/id", "description": "read: tên biến cục bộ nhận giá trị" },
+                "from": { "$ref": "../common.schema.json#/$defs/id", "description": "write: lấy giá trị từ biến cục bộ (đã read trước đó)" },
+                "add": { "type": "integer", "description": "write với from: cộng thêm" },
+                "value": { "type": "integer", "description": "write: giá trị cố định; spinUntil: lặp cho tới khi biến bằng giá trị này" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schedules": {
+      "type": "array",
+      "description": "Lịch chạy có sẵn: danh sách id thread theo thứ tự, mỗi phần tử chạy một bước",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "order"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/$defs/id" },
+          "title": { "$ref": "../common.schema.json#/$defs/text" },
+          "order": { "type": "array", "minItems": 1, "items": { "$ref": "../common.schema.json#/$defs/id" } }
+        }
+      }
+    },
+    "expect": {
+      "type": "array",
+      "description": "Giá trị mong đợi trong bộ nhớ chung khi mọi thread kết thúc",
+      "items": {
+        "type": "object",
+        "required": ["target", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "target": { "$ref": "../common.schema.json#/$defs/id" },
+          "value": { "type": "integer" }
+        }
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "description": "Giải thích (Markdown) hiện khi mô phỏng kết thúc",
+      "additionalProperties": false,
+      "properties": {
+        "deadlock": { "$ref": "../common.schema.json#/$defs/text" },
+        "mismatch": { "$ref": "../common.schema.json#/$defs/text", "description": "Mọi thread xong nhưng sai giá trị expect" },
+        "success": { "$ref": "../common.schema.json#/$defs/text" }
+      }
+    }
+  }
+}

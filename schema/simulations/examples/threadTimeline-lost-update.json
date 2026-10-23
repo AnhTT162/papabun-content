@@ -1,0 +1,30 @@
+{
+  "engine": "threadTimeline",
+  "title": "Hai thread cùng tăng count",
+  "instructions": "Chọn thread chạy từng bước, hoặc chạy theo lịch có sẵn. Thử tìm thứ tự làm mất một lần cộng.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "count", "kind": "variable", "label": "count", "initial": 0 }
+    ],
+    "threads": [
+      { "id": "t1", "name": "Thread A", "steps": [
+        { "op": "read", "target": "count", "into": "tmp", "code": "int tmp = count;" },
+        { "op": "write", "target": "count", "from": "tmp", "add": 1, "code": "count = tmp + 1;" }
+      ] },
+      { "id": "t2", "name": "Thread B", "steps": [
+        { "op": "read", "target": "count", "into": "tmp", "code": "int tmp = count;" },
+        { "op": "write", "target": "count", "from": "tmp", "add": 1, "code": "count = tmp + 1;" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "sequential", "title": "Lần lượt", "order": ["t1", "t1", "t2", "t2"] },
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2"] }
+    ],
+    "expect": [ { "target": "count", "value": 2 } ],
+    "outcomes": {
+      "mismatch": "Mất một lần cộng: cả hai thread đọc cùng giá trị cũ rồi ghi đè lên nhau (**lost update**).",
+      "success": "Kết quả đúng với thứ tự này, nhưng không có gì đảm bảo thứ tự đó."
+    }
+  }
+}

@@ -155,6 +155,43 @@ class RepoValidationTests(unittest.TestCase):
         self.assertIn("node 'a' và 'b' quá gần nhau", errors)
         self.assertNotIn("'a' và 'c'", errors)
 
+    def _simulation(self, data):
+        self.fx.topic["blocks"].append({"type": "simulation", "file": "sim.json"})
+        self.fx.write_topic()
+        self.fx.write("content/core-java/demo/sim.json", data)
+        return "\n".join(self.fx.errors())
+
+    def test_simulation_examples_are_valid(self):
+        for example in sorted((ROOT / "schema" / "simulations" / "examples").glob("*.json")):
+            data = json.loads(example.read_text(encoding="utf-8"))
+            self.assertEqual(self._simulation(data), "", example.name)
+
+    def test_thread_timeline_semantic_errors(self):
+        data = json.loads((ROOT / "schema/simulations/examples/threadTimeline-lost-update.json").read_text(encoding="utf-8"))
+        steps = data["config"]["threads"][0]["steps"]
+        steps[0]["target"] = "missing"
+        steps[1]["from"] = "nope"
+        data["config"]["schedules"][0]["order"].append("t9")
+        errors = self._simulation(data)
+        self.assertIn("target phải là variable", errors)
+        self.assertIn("from 'nope' chưa được read", errors)
+        self.assertIn("không có thread 't9'", errors)
+
+    def test_state_machine_semantic_errors(self):
+        data = json.loads((ROOT / "schema/simulations/examples/stateMachine-circuit-breaker.json").read_text(encoding="utf-8"))
+        data["config"]["initial"] = "ghost"
+        data["config"]["transitions"][0]["to"] = "nowhere"
+        data["config"]["events"].append({"id": "unused", "label": "X"})
+        errors = self._simulation(data)
+        self.assertIn("initial 'ghost'", errors)
+        self.assertIn("không có state 'nowhere'", errors)
+        self.assertIn("event 'unused' không được transition nào dùng", errors)
+
+    def test_simulation_config_schema_errors(self):
+        errors = self._simulation({"engine": "native:hashmap", "title": "H", "config": {"initialCapacity": 7, "keys": []}})
+        self.assertIn("config.initialCapacity", errors)
+        self.assertIn("config.keys: cần ít nhất 1", errors)
+
     def test_callout_rules(self):
         self.fx.topic["blocks"].append({"type": "callout", "file": "x.md"})
         self.fx.write_topic()
