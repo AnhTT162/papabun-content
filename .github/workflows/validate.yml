@@ -1,0 +1,17 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Giai đoạn 1 sẽ thay bước này bằng scripts/validate (JSON Schema, ảnh, thuật ngữ).
+      - name: Check every JSON file parses
+        run: |
+          find . -name '*.json' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 python3 -m json.tool --no-ensure-ascii > /dev/null

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "tracks": [
+    { "id": "cs-fundamentals", "order": 1,  "title": "Nền tảng CS",                  "summary": "Network, HTTP, OS, cấu trúc dữ liệu, Git" },
+    { "id": "core-java",       "order": 2,  "title": "Core Java",                    "summary": "OOP, String, Collections, HashMap, Generics, Exceptions, Java 8–21" },
+    { "id": "concurrency",     "order": 3,  "title": "Concurrency",                  "summary": "Thread, synchronized/volatile, Lock, Executor, CompletableFuture, Virtual Threads" },
+    { "id": "jvm",             "order": 4,  "title": "JVM",                          "summary": "Memory model, GC, ClassLoader, JIT, JVM flags" },
+    { "id": "spring",          "order": 5,  "title": "Spring",                       "summary": "IoC/DI, Bean lifecycle, AOP, @Transactional, Boot, Security, Data JPA" },
+    { "id": "testing",         "order": 6,  "title": "Testing",                      "summary": "Test pyramid, JUnit 5, Mockito, Testcontainers, Spring Boot Test" },
+    { "id": "database",        "order": 7,  "title": "Database",                     "summary": "SQL, Index, Execution plan, Transaction, Isolation, Locking, Replication, Sharding" },
+    { "id": "caching-messaging","order": 8, "title": "Caching & Messaging",          "summary": "Cache patterns, Redis, Kafka, RabbitMQ" },
+    { "id": "security",        "order": 9,  "title": "Security",                     "summary": "AuthN/AuthZ, JWT, OAuth2/OIDC, OWASP Top 10, mã hóa, secret" },
+    { "id": "performance",     "order": 10, "title": "Performance & Troubleshooting","summary": "Điều tra sự cố, thread/heap dump, slow query, profiling, observability" },
+    { "id": "design",          "order": 11, "title": "Design",                       "summary": "SOLID, Design Patterns, Clean/Hexagonal, DDD" },
+    { "id": "distributed",     "order": 12, "title": "Distributed Systems",          "summary": "CAP, Microservices, Saga, Outbox, CQRS, Circuit Breaker, Idempotency" },
+    { "id": "cloud-devops",    "order": 13, "title": "Cloud & DevOps",               "summary": "Docker, Kubernetes, AWS, CI/CD, Blue-green/Canary, IaC" },
+    { "id": "system-design",   "order": 14, "title": "System Design",                "summary": "Khung trả lời, ước lượng, các bài thiết kế kinh điển" },
+    { "id": "solution-architect","order": 15,"title": "Solution Architect",          "summary": "NFR, Trade-off, ADR, Cost, Migration, Stakeholder" }
+  ]
+}
