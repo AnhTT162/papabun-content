@@ -1,0 +1,12 @@
+{
+  "name": "papabun",
+  "description": "Skill và agent để soạn nội dung cho app PapaBun",
+  "owner": { "name": "AnhTT162" },
+  "plugins": [
+    {
+      "name": "papabun",
+      "source": "./plugin",
+      "description": "Soạn và review bài học PapaBun, tạo hồ sơ dự án để luyện phỏng vấn"
+    }
+  ]
+}

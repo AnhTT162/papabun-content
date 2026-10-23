@@ -21,6 +21,20 @@ Khi có tag `v*`, GitHub Actions build và tạo Release. App kiểm tra
 2. Chạy app bản Debug từ Xcode. Scheme đã trỏ biến môi trường `PAPABUN_LOCAL_CONTENT` tới `../papabun-content/dist`.
 3. Trong app: tab Học → biểu tượng ⚙︎ → Nguồn nội dung → **Thư mục local**.
 
+## Soạn nội dung với Claude Code
+Repo này cũng là một plugin marketplace. Cài một lần trên mỗi máy (máy cá nhân, máy công ty, tài khoản Claude nào cũng được):
+```bash
+claude plugin marketplace add AnhTT162/papabun-content
+claude plugin install papabun@papabun
+```
+| Thành phần | Dùng để |
+|---|---|
+| `/papabun:write-topic` | Soạn bài mới đúng định dạng, có nguồn, validate rồi gọi reviewer |
+| agent `content-reviewer` | Review độc lập độ chính xác kỹ thuật và chất lượng bài |
+| `/papabun:project-profile` | Chạy trong repo dự án thật để tạo hồ sơ luyện phỏng vấn, lưu ở `~/PapaBun/projects/`, **không commit vào đây** |
+
+Cập nhật plugin khi repo này đổi: `claude plugin marketplace update papabun`.
+
 ## Cấu trúc
 
 ```

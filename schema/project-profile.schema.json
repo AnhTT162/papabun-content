@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-profile.schema.json",
+  "title": "Hồ sơ một dự án thật để luyện phỏng vấn. File này KHÔNG commit vào repo nội dung: chỉ nhập vào app (Dự án của tôi).",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "context", "role", "techStack"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "name": { "$ref": "common.schema.json#/$defs/text", "description": "Tên mô tả chung, ví dụ 'Hệ thống thanh toán cho sàn TMĐT', không dùng tên nội bộ" },
+    "period": { "type": "string", "description": "Ví dụ 2022–2024" },
+    "context": {
+      "type": "object",
+      "required": ["product"],
+      "additionalProperties": false,
+      "properties": {
+        "product": { "$ref": "common.schema.json#/$defs/text", "description": "Sản phẩm gì, giải quyết vấn đề gì, cho ai" },
+        "scale": { "$ref": "common.schema.json#/$defs/text", "description": "Quy mô ước lượng: user, request/giây, dữ liệu" }
+      }
+    },
+    "role": { "$ref": "common.schema.json#/$defs/text", "description": "Vai trò và phạm vi trách nhiệm của bạn" },
+    "teamSize": { "type": "string" },
+    "architecture": { "$ref": "common.schema.json#/$defs/text", "description": "Markdown: thành phần chính và luồng dữ liệu" },
+    "techStack": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "common.schema.json#/$defs/text" },
+          "technologyId": { "$ref": "common.schema.json#/$defs/id", "description": "id trong project-questions.json nếu có" },
+          "usage": { "$ref": "common.schema.json#/$defs/text", "description": "Dùng vào việc gì trong dự án" }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "choice", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "$ref": "common.schema.json#/$defs/text" },
+          "choice": { "$ref": "common.schema.json#/$defs/text" },
+          "alternatives": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/text" } },
+          "reason": { "$ref": "common.schema.json#/$defs/text" },
+          "tradeoffs": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    },
+    "challenges": {
+      "type": "array",
+      "description": "Vấn đề khó, kể theo STAR",
+      "items": {
+        "type": "object",
+        "required": ["title", "situation", "task", "action", "result"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "$ref": "common.schema.json#/$defs/text" },
+          "situation": { "$ref": "common.schema.json#/$defs/text" },
+          "task": { "$ref": "common.schema.json#/$defs/text" },
+          "action": { "$ref": "common.schema.json#/$defs/text" },
+          "result": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "$ref": "common.schema.json#/$defs/text" },
+          "value": { "$ref": "common.schema.json#/$defs/text" }
+        }
+      }
+    },
+    "retrospective": { "$ref": "common.schema.json#/$defs/text", "description": "Nếu làm lại sẽ thiết kế khác thế nào" },
+    "practiceQuestions": {
+      "type": "array",
+      "description": "Câu hỏi luyện tập riêng cho dự án này, ngoài câu hỏi sinh từ techStack",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "text": { "$ref": "common.schema.json#/$defs/text" },
+          "answerNotes": { "$ref": "common.schema.json#/$defs/text", "description": "Ý chính để tự chấm" }
+        }
+      }
+    }
+  }
+}

@@ -69,6 +69,19 @@ class SchemaValidatorTests(unittest.TestCase):
             "quiz.schema.json")
         self.assertTrue(any("cần kiểu integer" in e for e in errors))
 
+    def test_project_profile_schema(self):
+        validator = SchemaValidator(ROOT / "schema")
+        profile = {
+            "schemaVersion": 1, "id": "payment-platform", "name": "Hệ thống thanh toán",
+            "context": {"product": "Thanh toán cho sàn TMĐT", "scale": "~2.000 request/giây"},
+            "role": "Backend lead", "techStack": [{"name": "Kafka", "technologyId": "kafka", "usage": "Event"}],
+            "challenges": [{"title": "Trùng giao dịch", "situation": "S", "task": "T", "action": "A", "result": "R"}],
+            "practiceQuestions": [{"id": "scale-10x", "text": "Traffic tăng 10 lần?"}],
+        }
+        self.assertEqual(validator.validate(profile, "project-profile.schema.json"), [])
+        del profile["role"]
+        self.assertTrue(validator.validate(profile, "project-profile.schema.json"))
+
 
 class RepoValidationTests(unittest.TestCase):
     def setUp(self):
