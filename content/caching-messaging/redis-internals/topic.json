@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "redis-internals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Redis bên trong",
+  "summary": "Các kiểu dữ liệu và cách chúng được mã hoá trong bộ nhớ, một luồng chính thực thi lệnh và I/O thread, vì sao một lệnh O(N) làm chậm mọi client, hết hạn key, eviction, RDB với fork và copy-on-write, AOF và fsync, bộ nhớ và phân mảnh, pipelining, transaction và Lua, cấu hình client Java, và giấy phép Redis/Valkey.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 18,
+  "prerequisites": ["caching-basics"],
+  "terms": ["redis-single-thread", "redis-big-key", "rdb-snapshot", "aof", "copy-on-write", "redis-pipelining", "cache-eviction", "ttl", "lru", "lfu", "hot-key", "fsync"],
+  "references": [
+    { "title": "Redis Documentation: Persistence", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/" },
+    { "title": "Redis Documentation: Diagnosing latency issues", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/" },
+    { "title": "Redis Documentation: Key eviction", "url": "https://redis.io/docs/latest/develop/reference/eviction/" },
+    { "title": "Redis Documentation: Latency monitoring", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency-monitor/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Redis đơn luồng sao lại nhanh, và sao không dùng nhiều luồng cho lệnh?\" Nhanh vì dữ liệu nằm trong RAM, cấu trúc dữ liệu được tối ưu, và không tốn chi phí khoá hay chuyển ngữ cảnh: mỗi lệnh chỉ mất cỡ micro giây, nên một luồng xử lý được hàng trăm nghìn lệnh mỗi giây. Phần đắt nhất thường là đọc ghi mạng, và từ bản 6 có thể chuyển phần đó sang I/O thread nếu bật. Đơn luồng còn cho một đảm bảo rất quý: mỗi lệnh, mỗi `MULTI/EXEC` và mỗi Lua script là nguyên tử mà không cần khoá. Cái giá: một lệnh chậm chặn mọi client, và muốn dùng nhiều core thì phải chạy nhiều shard (Redis Cluster)." }
+  ]
+}

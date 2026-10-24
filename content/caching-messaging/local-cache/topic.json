@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "local-cache",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Local & multi-level cache",
+  "summary": "Cache trong JVM bằng Caffeine và khi nào nó đáng hơn Redis, cache hai tầng (L1 trong JVM, L2 Redis), đồng bộ invalidation giữa hàng chục pod bằng pub/sub, Kafka hay client-side caching của Redis, giới hạn độ cũ, cache object có thể sửa, và các bẫy của Caffeine (compute đệ quy, soft reference, kích thước theo heap).",
+  "level": "mid",
+  "order": 4,
+  "minutes": 16,
+  "prerequisites": ["cache-patterns"],
+  "terms": ["local-cache", "distributed-cache", "multi-level-cache", "near-cache", "client-side-caching", "hot-key", "cache-invalidation", "ttl", "cache-eviction", "pub-sub", "immutable"],
+  "references": [
+    { "title": "Caffeine Wiki: Population, Eviction, Refresh", "url": "https://github.com/ben-manes/caffeine/wiki" },
+    { "title": "Redis Documentation: Client-side caching", "url": "https://redis.io/docs/latest/develop/reference/client-side-caching/" },
+    { "title": "Spring Boot Reference: Caching (Caffeine)", "url": "https://docs.spring.io/spring-boot/reference/io/caching.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Có 50 pod, mỗi pod một local cache, làm sao giữ chúng nhất quán?\" Câu trả lời thẳng: không giữ được nhất quán tuyệt đối, chỉ **giới hạn được độ lệch**. Mỗi pod nhận tin invalidation (Redis pub/sub, Kafka) và xoá key của mình, nhưng tin có thể đến muộn hoặc bị mất khi pod mất kết nối; vì vậy vẫn phải có TTL ngắn làm lưới an toàn. Độ cũ tệ nhất xấp xỉ TTL của tầng L1 cộng độ cũ của tầng L2. Từ đó chọn theo từng loại dữ liệu: cấu hình, danh mục, mô tả sản phẩm chịu được vài giây; giá lúc thanh toán và tồn kho lúc chốt đơn thì đọc từ nguồn." },
+    { "type": "callout", "style": "warning", "markdown": "Local cache trả về **chính object** đang nằm trong cache, không phải bản sao. Một request gọi `product.setPrice(...)` hay `list.add(...)` trên object lấy từ cache là đã sửa dữ liệu cho mọi request sau trên pod đó, và chỉ pod đó: lỗi không tái hiện được trên máy khác. Chỉ cache object bất biến (record, `List.copyOf`), hoặc copy khi lấy ra. Redis không có lỗi này vì mỗi lần đọc là một lần deserialize ra object mới." }
+  ]
+}

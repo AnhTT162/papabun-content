@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "evict-inside-tx",
+      "kind": "output",
+      "prompt": "PostgreSQL hoặc MySQL InnoDB, isolation mặc định. Request A gọi `updatePrice` (giá cũ 100, mới 120). Đúng lúc giữa dòng xoá cache và lúc commit, request B gọi `getPrice` với cache-aside. Sau khi A commit, cache chứa gì?",
+      "code": "@Transactional\npublic void updatePrice(long id, BigDecimal price) {\n    productRepository.updatePrice(id, price);\n    redis.delete(\"price:\" + id);        // xoá cache\n    auditService.record(id, price);     // mất 300ms\n}                                       // commit ở đây",
+      "options": [
+        "Không có gì, vì A đã xoá key và B không thấy key nên không ghi",
+        "Giá 120, vì B đọc database và thấy thay đổi chưa commit của A",
+        "Giá 100, vì B đọc database trước khi A commit rồi ghi lại vào cache",
+        "Giá 120, vì Redis chờ transaction của A commit rồi mới cho B ghi"
+      ],
+      "answer": 2,
+      "explanation": "B miss vì A vừa xoá, nên đọc database. Ở mức mặc định của PostgreSQL và MySQL, MVCC cho B đọc bản đã commit mà không phải chờ lock của A, nên đọc 100 rồi ghi vào cache. A commit sau đó, nhưng không ai xoá cache nữa: giá 100 nằm lại tới hết TTL. Redis không biết gì về transaction của database. Sửa: xoá sau commit (`TransactionAwareCacheDecorator`, `@TransactionalEventListener(AFTER_COMMIT)`)."
+    },
+    {
+      "id": "update-vs-delete",
+      "kind": "single",
+      "prompt": "Hai request đổi tồn kho của cùng sản phẩm gần như cùng lúc. Mỗi request làm: cập nhật database rồi `SET stock:42 <giá trị mới>` vào Redis. Rủi ro là gì?",
+      "options": [
+        "Không có rủi ro, vì Redis xử lý lệnh tuần tự nên luôn giữ giá trị cuối",
+        "Database và Redis có thể nhận hai lần ghi theo thứ tự khác nhau",
+        "Redis báo lỗi khi hai lệnh `SET` cùng key đến gần nhau",
+        "Database sẽ deadlock vì hai transaction cùng sửa một dòng"
+      ],
+      "answer": 1,
+      "explanation": "Redis tuần tự theo thứ tự lệnh **đến Redis**, không theo thứ tự commit ở database. Request ghi sau ở database có thể `SET` trước, rồi bị request kia đè, và cache giữ giá trị sai cho tới khi TTL hết. Hai `UPDATE` cùng dòng chỉ làm request sau chờ lock, không deadlock. Xoá key thay vì `SET` để lần đọc sau lấy giá trị đúng từ database."
+    },
+    {
+      "id": "write-behind-fit",
+      "kind": "single",
+      "prompt": "Dữ liệu nào hợp nhất với write-behind (ghi cache trước, xả xuống database theo lô mỗi vài giây)?",
+      "options": [
+        "Số dư ví sau mỗi lần thanh toán",
+        "Giỏ hàng của khách trước khi đặt",
+        "Số lượt xem của mỗi bài viết",
+        "Trạng thái đơn hàng khi khách đặt mua"
+      ],
+      "answer": 2,
+      "explanation": "Write-behind đổi độ bền lấy tốc độ: cache chết trước khi xả thì mất phần chưa ghi. Lượt xem đổi liên tục, gộp nhiều lần tăng thành một lần ghi rất có lợi, và mất vài giây số liệu là chấp nhận được. Giỏ hàng nghe có vẻ hợp, nhưng mất giỏ là khách mất hàng đã chọn và có thể bỏ đơn; số dư và đơn hàng cần bền ngay khi trả lời người dùng."
+    },
+    {
+      "id": "list-invalidation",
+      "kind": "single",
+      "prompt": "Trang danh mục được cache theo key `catalog:{categoryId}:page:{n}:sort:{s}`, có hàng nghìn tổ hợp. Đổi giá một sản phẩm thì invalidate thế nào cho thực tế?",
+      "options": [
+        "`KEYS catalog:*` rồi xoá từng key tìm được",
+        "Đặt phiên bản namespace trong key và tăng nó khi dữ liệu đổi",
+        "Tắt cache cho trang danh mục, chỉ cache trang chi tiết",
+        "Ghi lại toàn bộ các trang ngay khi một giá thay đổi"
+      ],
+      "answer": 1,
+      "explanation": "Key thành `catalog:v{n}:...` với `n` đọc từ một key riêng; đổi dữ liệu thì `INCR` nó, mọi request sau dùng key mới và key cũ tự hết hạn theo TTL. `KEYS` quét toàn bộ keyspace và chặn Redis (dùng `SCAN` thì đỡ chặn nhưng vẫn chậm và có thể sót). Tắt cache bỏ mất lợi ích ở trang được đọc nhiều; ghi lại mọi trang là tốn công cho những trang có thể không ai xem."
+    }
+  ]
+}

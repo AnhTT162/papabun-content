@@ -1,0 +1,63 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Một key Redis làm nghẽn cả shard trong đợt flash sale",
+  "prompt": "Trang chủ thương mại điện tử chạy **60 pod** Spring Boot, mỗi lần tải trang đọc key `home:flash-sale` từ Redis Cluster (giá trị JSON khoảng **50KB**: danh sách 40 sản phẩm, ảnh, giá khuyến mãi, thời gian kết thúc). Đợt flash sale lúc 12:00 có **25.000 lượt tải trang mỗi giây**.\n\n- 12:00:20 shard giữ key đó báo CPU 100%, latency p99 của Redis từ 1ms lên 900ms, timeout lan sang mọi key khác trên shard.\n- Card mạng của node Redis đó chạm giới hạn 10 Gbit/s.\n- Đội marketing sửa danh sách khuyến mãi vài lần mỗi giờ; giá khuyến mãi phải đúng khi khách bấm thanh toán.\n\nThiết kế lại để đợt sau không lặp lại, và nói rõ dữ liệu có thể cũ tối đa bao lâu.",
+  "hints": [
+    "25.000 lần đọc mỗi giây × 50KB là bao nhiêu byte mỗi giây? Thêm node Redis có giúp key này không?",
+    "Mỗi pod có cần hỏi Redis cho mỗi request không, nếu dữ liệu chỉ đổi vài lần mỗi giờ?",
+    "Khi marketing sửa danh sách, các pod biết bằng cách nào? Nếu một pod lỡ tin đó thì sao?",
+    "Phần nào của trang chịu được cũ vài giây, phần nào không?"
+  ],
+  "solution": "**1. Chẩn đoán**: 25.000 × 50KB ≈ 1,25GB/s ≈ 10 Gbit/s, đúng bằng giới hạn card mạng của node. Một key chỉ nằm trên một shard, nên thêm node vào cluster không chia được tải của key này: đây là hot key. Redis xử lý lệnh trên một luồng chính, nên chép 50KB vào output buffer và ghi socket cho mỗi lần đọc cũng làm CPU của shard bão hoà và mọi key khác trên shard chậm theo.\n\n**2. L1 trong JVM cho key này**\n\n- Caffeine `LoadingCache` riêng cho dữ liệu trang chủ: `maximumSize(100)`, `refreshAfterWrite(2s)`, `expireAfterWrite(30s)`. Giá trị lưu là object bất biến (record, `List.copyOf`) đã parse sẵn, nên mỗi request không phải parse lại 50KB JSON.\n- Mỗi pod chỉ tải lại khoảng một lần mỗi 2 giây: 60 pod × 0,5 = khoảng 30 lần đọc Redis mỗi giây thay vì 25.000, tức khoảng 1,5MB/s.\n- `refreshAfterWrite` trả bản cũ trong lúc tải lại, nên request không bao giờ phải chờ Redis; `expireAfterWrite(30s)` là trần cho trường hợp Redis lỗi lâu.\n- Làm nóng L1 trước khi pod báo ready, để rolling deploy không dội 60 lần miss vào Redis cùng lúc.\n\n**3. Invalidation khi marketing sửa**\n\n- Service quản trị lưu thay đổi, commit, ghi giá trị mới vào Redis, rồi `PUBLISH cache-invalidation home:flash-sale`.\n- Mỗi pod subscribe kênh đó và gọi `cache.refresh(key)`; thay đổi thường hiện ra trên mọi pod trong vài trăm mili giây. Caffeine gộp các lần refresh cùng key đang chạy, nên nếu một lần refresh tự động vừa bắt đầu (và có thể đọc bản cũ), lệnh refresh từ tin invalidation chỉ nhận lại kết quả đó và thay đổi phải chờ thêm một chu kỳ. Muốn chắc chắn thì đưa số phiên bản vào tin và bỏ giá trị tải về nếu cũ hơn, hoặc `invalidate` rồi tải lại.\n- Pod lỡ tin (mất kết nối pub/sub) vẫn tự làm mới sau tối đa 2 giây nhờ `refreshAfterWrite`, và sau khi kết nối lại thì làm mới toàn bộ L1.\n- **Độ cũ tệ nhất** cho danh sách khuyến mãi: khoảng 2 giây cộng thời gian tải lại, khi tin invalidation bị lỡ; bình thường dưới một giây.\n\n**4. Tách phần phải chính xác**\n\n- Danh sách, ảnh, mô tả: lấy từ L1, chịu được cũ vài giây.\n- Thời điểm kết thúc: client tự đếm ngược theo thời gian tuyệt đối trong dữ liệu, không cần hỏi lại.\n- **Giá khi thanh toán** luôn tính lại từ nguồn (service giá hoặc database) trong lúc tạo đơn; nếu khác giá hiển thị thì báo cho khách. Hiển thị cũ vài giây chấp nhận được, chốt đơn với giá cũ thì không.\n\n**5. Giảm kích thước**: 50KB cho 40 sản phẩm là thừa. Trả về id, tên, giá, URL ảnh thu nhỏ (không nhúng dữ liệu ảnh), nén nếu cần: giảm kích thước còn khoảng 8–10KB làm mọi tầng (L1, Redis, mạng tới trình duyệt) nhẹ đi. Phần không cá nhân hoá của trang có thể cache ở CDN với `s-maxage` vài giây, chặn tải ngay từ trước khi tới pod.\n\n**6. Phòng ngừa**\n\n- Cảnh báo theo băng thông mạng và CPU **từng shard** Redis, không chỉ trung bình cụm.\n- `redis-cli --hotkeys` (cần policy LFU) hoặc thống kê phía client để tìm key nóng trước sự kiện.\n- Kiểm thử tải trước mỗi đợt khuyến mãi với đúng kịch bản trang chủ.",
+  "tradeoffs": [
+    {
+      "option": "Chỉ thêm node hoặc replica cho Redis",
+      "pros": [
+        "Không đổi code"
+      ],
+      "cons": [
+        "Một key vẫn nằm trên một shard; đọc từ replica chỉ chia tải theo số replica và có độ trễ replication"
+      ]
+    },
+    {
+      "option": "L1 Caffeine với refresh ngắn, không invalidation",
+      "pros": [
+        "Đơn giản, giảm tải Redis hàng trăm lần"
+      ],
+      "cons": [
+        "Mọi thay đổi chậm tới bằng chu kỳ refresh"
+      ]
+    },
+    {
+      "option": "L1 Caffeine + Redis pub/sub để invalidation",
+      "pros": [
+        "Thay đổi hiện ra gần như ngay",
+        "Refresh định kỳ làm lưới an toàn khi lỡ tin"
+      ],
+      "cons": [
+        "Thêm kênh pub/sub phải vận hành",
+        "Mỗi tin gửi tới mọi pod"
+      ]
+    },
+    {
+      "option": "Client-side caching của Redis",
+      "pros": [
+        "Server tự gửi invalidation, không cần tự publish"
+      ],
+      "cons": [
+        "Phụ thuộc mức hỗ trợ của client Java",
+        "Server tốn bộ nhớ theo dõi key, phải xử lý khi mất kết nối"
+      ]
+    },
+    {
+      "option": "Nhân key thành N bản (`home:flash-sale:{0..N-1}`)",
+      "pros": [
+        "Chia tải đọc sang nhiều shard mà không cần L1"
+      ],
+      "cons": [
+        "Mỗi lần sửa phải ghi N bản",
+        "Vẫn tốn băng thông Redis cho mỗi lượt đọc"
+      ]
+    }
+  ]
+}

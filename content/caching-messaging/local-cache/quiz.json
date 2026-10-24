@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "mutable-cache-object",
+      "kind": "output",
+      "prompt": "Một request áp mã giảm giá như dưới đây. Request sau, trên cùng pod, gọi `findProduct(42)` thấy giá bao nhiêu? Giá gốc 200.000.",
+      "code": "private final Cache<Long, Product> cache = Caffeine.newBuilder().maximumSize(10_000).build();\n\nProduct findProduct(long id) {\n    return cache.get(id, repo::load);         // Product là class có setter\n}\n\nBigDecimal priceWithCoupon(long id) {\n    Product p = findProduct(id);\n    p.setPrice(p.getPrice().multiply(new BigDecimal(\"0.9\")));\n    return p.getPrice();\n}",
+      "options": [
+        "200.000, vì Caffeine trả về một bản sao của object",
+        "180.000, vì request trước đã sửa chính object nằm trong cache",
+        "200.000, vì mỗi thread có bản cache riêng của nó",
+        "Lỗi, vì Caffeine không cho sửa object đang nằm trong cache"
+      ],
+      "answer": 1,
+      "explanation": "Local cache lưu tham chiếu tới object, `get` trả về đúng object đó. `setPrice` sửa luôn bản trong cache, nên mọi request sau trên pod này thấy giá đã giảm, và mỗi lần áp mã giá lại giảm tiếp. Các pod khác không bị, nên lỗi rất khó tái hiện. Cache object bất biến (record) và tính giá giảm thành giá trị mới."
+    },
+    {
+      "id": "pods-loading",
+      "kind": "single",
+      "prompt": "40 pod, mỗi pod có Caffeine `LoadingCache`. Key `config:pricing` vừa hết hạn đồng thời trên mọi pod, và mỗi pod đang có 200 request cần nó. Có bao nhiêu lần tải xuống Redis?",
+      "options": [
+        "1 lần",
+        "40 lần",
+        "200 lần",
+        "8.000 lần"
+      ],
+      "answer": 1,
+      "explanation": "Trong mỗi JVM, Caffeine chỉ cho một thread tải mỗi key, các thread còn lại chờ kết quả đó, nên mỗi pod một lần: 40 lần tổng. Không có gì phối hợp giữa các JVM. Với một key đắt hơn (tải từ database), 40 lần đồng thời có thể đã là stampede; `refreshAfterWrite` chỉ tránh cho request phải chờ, vẫn là 40 lần tải; muốn các pod không cùng tải một lúc thì thêm jitter cho thời hạn (`expireAfter(Expiry)` với thời hạn ngẫu nhiên), hoặc khoá phân tán ở tầng dưới."
+    },
+    {
+      "id": "pubsub-reconnect",
+      "kind": "single",
+      "prompt": "Pod dùng Redis pub/sub để nhận tin invalidation cho L1. Pod mất kết nối Redis 20 giây rồi kết nối lại. Nên làm gì ngay khi kết nối lại?",
+      "options": [
+        "Không cần làm gì, Redis gửi lại các tin pub/sub đã lỡ",
+        "Xoá toàn bộ L1 (hoặc làm mới), vì không biết đã lỡ tin nào",
+        "Đọc lại các tin đã lỡ bằng `XRANGE` trên kênh pub/sub",
+        "Khởi động lại pod để chắc chắn cache sạch"
+      ],
+      "answer": 1,
+      "explanation": "Pub/sub của Redis không lưu tin: subscriber không kết nối lúc tin được gửi thì lỡ vĩnh viễn, và không có cách đọc lại (`XRANGE` là của Redis Streams, không phải pub/sub). Xoá hoặc làm mới toàn bộ L1 khi kết nối lại là cách an toàn, rẻ hơn nhiều so với khởi động lại pod. Muốn không lỡ tin thì dùng Streams hoặc Kafka, đổi lại phức tạp hơn."
+    },
+    {
+      "id": "staleness-math",
+      "kind": "single",
+      "prompt": "L1 Caffeine `expireAfterWrite(10s)`, L2 Redis TTL 120 giây, không có invalidation nào. Sau khi database đổi, một pod có thể trả dữ liệu cũ lâu nhất khoảng bao lâu?",
+      "options": [
+        "10 giây",
+        "120 giây",
+        "130 giây",
+        "1.200 giây"
+      ],
+      "answer": 2,
+      "explanation": "Redis có thể vừa nhận bản cũ ngay trước khi database đổi và giữ nó 120 giây. Một pod tải bản cũ đó vào L1 ở giây cuối và giữ thêm 10 giây: khoảng 130 giây. Có invalidation cho L2 (xoá Redis sau commit) thì độ cũ chỉ còn khoảng 10 giây của L1, và thêm pub/sub cho L1 thì còn cỡ độ trễ của tin."
+    }
+  ]
+}

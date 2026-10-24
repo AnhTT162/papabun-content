@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "local-tradeoff", "front": "Local cache nhanh hơn Redis nhưng đổi lại gì?", "back": "Mỗi pod một bản, các bản lệch nhau, tốn heap nhân theo số pod, và rỗng lại sau mỗi lần deploy." },
+    { "id": "when-local", "front": "Khi nào nên thêm local cache trước Redis?", "back": "Dữ liệu nhỏ, đọc rất nhiều, đổi ít; hoặc một hot key làm nghẽn một shard Redis." },
+    { "id": "hot-key-shard", "front": "Vì sao thêm node vào Redis Cluster không cứu được một hot key?", "back": "Một key chỉ nằm trên một shard, nên toàn bộ lượt đọc key đó vẫn dồn vào một node." },
+    { "id": "pubsub-lost", "front": "Rủi ro của invalidation bằng Redis pub/sub?", "back": "Pub/sub là bắn rồi quên: pod mất kết nối thì lỡ tin vĩnh viễn. Luôn kèm TTL và xoá toàn bộ L1 khi kết nối lại." },
+    { "id": "staleness-bound", "front": "L1 TTL 5 giây, L2 TTL 60 giây, không invalidation: dữ liệu cũ tối đa bao lâu?", "back": "Khoảng 65 giây: L2 giữ bản cũ 60 giây, L1 lấy bản cũ đó ở giây cuối và giữ thêm 5 giây." },
+    { "id": "caffeine-single-load", "front": "`cache.get(key, loader)` của Caffeine chống stampede tới đâu?", "back": "Chỉ trong một JVM: một thread tải mỗi key. 50 pod cùng miss vẫn là 50 lần tải." },
+    { "id": "mutable-cached", "front": "Vì sao chỉ nên cache object bất biến trong local cache?", "back": "Cache trả chính object đó; ai sửa nó là sửa cho mọi request sau trên pod, và lỗi chỉ xuất hiện ở pod đó." },
+    { "id": "soft-values", "front": "Vì sao không nên dùng `softValues()` thay cho giới hạn kích thước?", "back": "GC chỉ dọn soft reference khi heap đã căng, gây GC dài và hành vi khó đoán." },
+    { "id": "client-side-caching", "front": "Client-side caching của Redis hoạt động thế nào?", "back": "`CLIENT TRACKING ON`: server nhớ key client đã đọc (hoặc theo tiền tố với BCAST) và gửi tin invalidation khi key đổi." },
+    { "id": "kafka-invalidation", "front": "Dùng Kafka để invalidate local cache thì đọc topic thế nào?", "back": "Mỗi pod phải nhận mọi tin: `assign()` mọi partition không qua group, không commit, `seekToEnd` lúc khởi động vì L1 lúc đó đã rỗng." }
+  ]
+}

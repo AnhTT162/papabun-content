@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache"]
     },
     {
       "id": "dns",
@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "cache-patterns"]
     },
     {
       "id": "cas",
@@ -618,10 +618,10 @@
     {
       "id": "copy-on-write",
       "term": "Copy-on-write",
-      "meaning": "Kỹ thuật mỗi lần ghi thì tạo bản sao mới rồi thay tham chiếu, nên người đọc không cần lock và không bao giờ thấy dữ liệu dở dang.",
-      "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn.",
+      "meaning": "Kỹ thuật cho hai bên dùng chung dữ liệu tới khi một bên ghi, lúc đó mới sao chép phần bị ghi. Áp dụng cho collection trong Java, và cho bộ nhớ của process sau `fork`, như khi Redis tạo snapshot.",
+      "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn. Với Redis: snapshot trong lúc ghi nhiều làm các page bị ghi được sao chép, RAM có thể tăng gần gấp đôi.",
       "related": ["immutable", "fail-fast"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "redis-internals"]
     },
     {
       "id": "sequenced-collection",
@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns"]
     },
     {
       "id": "savepoint",
@@ -1349,7 +1349,7 @@
       "meaning": "Một method gọi method khác trong cùng class bằng `this`, nên không đi qua proxy của Spring; các annotation như `@Transactional`, `@Async`, `@Cacheable` trên method được gọi không có tác dụng.",
       "example": "`this.transferInTx()` trong cùng bean: `@Transactional` của `transferInTx` bị bỏ qua.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "caching-basics"]
+      "topics": ["acid-transactions-basics", "caching-basics", "cache-patterns"]
     },
     {
       "id": "dirty-checking",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns"]
     },
     {
       "id": "datasource",
@@ -1581,7 +1581,7 @@
       "meaning": "Lời gọi hệ thống buộc dữ liệu đã ghi thật sự xuống thiết bị lưu trữ, không chỉ nằm trong cache của OS. Database fsync WAL trước khi báo commit thành công. Trên Linux, PostgreSQL mặc định dùng biến thể `fdatasync` (`wal_sync_method`).",
       "example": "Trên ổ mạng cloud, mỗi lần fsync thường mất 1–3ms, nên giới hạn số commit tuần tự mỗi giây.",
       "related": ["wal", "group-commit"],
-      "topics": ["storage-engine"]
+      "topics": ["storage-engine", "redis-internals"]
     },
     {
       "id": "checkpoint",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns"]
     },
     {
       "id": "security-definer",
@@ -1877,7 +1877,7 @@
       "meaning": "Binary log của MySQL: ghi lại mọi thay đổi dữ liệu theo thứ tự commit, dùng cho replication và PITR.",
       "example": "`mysqlbinlog --stop-datetime='2026-10-24 14:05:11' binlog.000042 | mysql` (thời gian hiểu theo múi giờ của máy chạy `mysqlbinlog`).",
       "related": ["pitr", "cdc"],
-      "topics": ["backup-restore", "replication-ha", "postgres-vs-mysql"]
+      "topics": ["backup-restore", "replication-ha", "postgres-vs-mysql", "cache-patterns"]
     },
     {
       "id": "wal-archiving",
@@ -2357,7 +2357,7 @@
       "meaning": "Bản sao dữ liệu đặt ở chỗ đọc nhanh hơn nguồn gốc (RAM, cùng process, gần người dùng), đánh đổi độ mới lấy tốc độ và giảm tải cho nguồn.",
       "example": "Thông tin sản phẩm đọc từ Redis trong 1ms thay vì query database 40ms.",
       "related": ["cache-hit-ratio", "ttl"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "cache-patterns"]
     },
     {
       "id": "cache-hit-ratio",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals"]
     },
     {
       "id": "cache-eviction",
@@ -2381,7 +2381,7 @@
       "meaning": "Việc cache tự bỏ bớt mục khi đầy, theo một chính sách như LRU hay LFU. Khác với hết hạn theo TTL.",
       "example": "Caffeine `maximumSize(10_000)`: thêm mục thứ 10.001 thì một mục cũ bị bỏ.",
       "related": ["lru", "lfu", "ttl"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "local-cache", "redis-internals"]
     },
     {
       "id": "lru",
@@ -2389,7 +2389,7 @@
       "meaning": "Least Recently Used: chính sách eviction bỏ mục lâu nhất chưa được dùng.",
       "example": "Đọc lần lượt 2 triệu sản phẩm một lần đẩy hết các mục nóng ra khỏi cache LRU.",
       "related": ["lfu", "cache-eviction"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "redis-internals"]
     },
     {
       "id": "lfu",
@@ -2397,7 +2397,7 @@
       "meaning": "Least Frequently Used: chính sách eviction bỏ mục ít được dùng nhất, nên mục nóng không bị một đợt quét đẩy ra.",
       "example": "Redis `maxmemory-policy allkeys-lfu`.",
       "related": ["lru", "cache-eviction"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "redis-internals"]
     },
     {
       "id": "cache-key",
@@ -2405,7 +2405,7 @@
       "meaning": "Khoá dùng để tìm một mục trong cache. Phải chứa mọi thứ làm kết quả khác đi (tenant, ngôn ngữ, người dùng nếu cá nhân hoá), nếu không sẽ trả nhầm dữ liệu.",
       "example": "`v3:product:{tenant}:{id}:{locale}`",
       "related": ["cache", "http-caching"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "cache-patterns"]
     },
     {
       "id": "http-caching",
@@ -2429,7 +2429,7 @@
       "meaning": "Cache nằm ngay trong bộ nhớ của process ứng dụng (ví dụ Caffeine trong JVM): nhanh nhất, nhưng mỗi instance một bản riêng và có thể lệch nhau.",
       "example": "`Caffeine.newBuilder().maximumSize(10_000).expireAfterWrite(Duration.ofMinutes(5)).build()`",
       "related": ["distributed-cache", "cache"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "local-cache"]
     },
     {
       "id": "distributed-cache",
@@ -2437,7 +2437,7 @@
       "meaning": "Cache chạy thành dịch vụ riêng (Redis, Memcached) mà mọi instance ứng dụng dùng chung; tốn một vòng mạng nhưng chỉ có một bản dữ liệu.",
       "example": "20 pod cùng đọc `product:42` từ một cụm Redis.",
       "related": ["local-cache", "cache"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "local-cache"]
     },
     {
       "id": "negative-caching",
@@ -2461,7 +2461,7 @@
       "meaning": "Publish/subscribe: bên gửi publish lên một topic, mỗi subscriber nhận một bản riêng của message.",
       "example": "SNS topic `order-placed` đẩy cùng một sự kiện sang queue của email, kho và phân tích.",
       "related": ["message-queue", "fan-out"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "local-cache", "kafka-architecture"]
     },
     {
       "id": "competing-consumers",
@@ -2469,7 +2469,7 @@
       "meaning": "Nhiều consumer cùng đọc một queue, mỗi message chỉ tới một trong số đó; thêm consumer để tăng tốc độ xử lý.",
       "example": "3 pod worker cùng đọc `SQS kho`, mỗi pod xử lý khoảng một phần ba số message.",
       "related": ["message-queue"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "kafka-architecture"]
     },
     {
       "id": "message-ack",
@@ -2493,7 +2493,7 @@
       "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
       "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
       "related": ["message-ack", "idempotent-consumer"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "kafka-architecture"]
     },
     {
       "id": "idempotent-consumer",
@@ -2526,6 +2526,214 @@
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
       "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "cache-aside",
+      "term": "Cache-aside",
+      "meaning": "Pattern cache phổ biến nhất (còn gọi lazy loading): ứng dụng tự hỏi cache, miss thì đọc database rồi ghi vào cache; khi ghi thì cập nhật database rồi xoá key.",
+      "example": "`get(\"product:42\")` miss → `SELECT` → `SET product:42 ... EX 300`.",
+      "related": ["read-through", "cache-invalidation"],
+      "topics": ["cache-patterns"]
+    },
+    {
+      "id": "read-through",
+      "term": "Read-through",
+      "meaning": "Cache tự gọi hàm tải dữ liệu từ nguồn khi miss, ứng dụng chỉ nói chuyện với cache.",
+      "example": "Caffeine `LoadingCache` với `CacheLoader` đọc database.",
+      "related": ["cache-aside", "write-through"],
+      "topics": ["cache-patterns"]
+    },
+    {
+      "id": "write-through",
+      "term": "Write-through",
+      "meaning": "Mọi lần ghi đi qua cache, cache ghi đồng bộ xuống database rồi mới trả về; cache luôn mới nhưng mỗi lần ghi chậm hơn.",
+      "example": "Data grid với `MapStore` ghi xuống database trong mỗi `put`.",
+      "related": ["write-behind", "read-through"],
+      "topics": ["cache-patterns"]
+    },
+    {
+      "id": "write-behind",
+      "term": "Write-behind",
+      "meaning": "Ghi vào cache rồi trả về ngay, cache xả xuống database theo lô sau đó (còn gọi write-back). Nhanh, giảm tải ghi, nhưng có thể mất dữ liệu chưa xả.",
+      "example": "Lượt xem bài viết được cộng trong Redis và ghi xuống database mỗi 10 giây.",
+      "related": ["write-through"],
+      "topics": ["cache-patterns"]
+    },
+    {
+      "id": "refresh-ahead",
+      "term": "Refresh-ahead",
+      "meaning": "Làm mới một mục cache trước khi nó hết hạn, để người đọc không phải chờ lúc miss.",
+      "example": "Caffeine `refreshAfterWrite(1, MINUTES)` tải lại ngầm và vẫn trả bản cũ trong lúc chờ.",
+      "related": ["ttl", "read-through"],
+      "topics": ["cache-patterns"]
+    },
+    {
+      "id": "cache-invalidation",
+      "term": "Cache invalidation",
+      "meaning": "Làm cho mục cache cũ không còn được dùng khi dữ liệu gốc đổi: xoá key, tăng phiên bản namespace, hoặc chờ TTL.",
+      "example": "Sau khi đổi giá và commit, `DEL price:42`.",
+      "related": ["cache-aside", "ttl"],
+      "topics": ["cache-patterns", "local-cache"]
+    },
+    {
+      "id": "multi-level-cache",
+      "term": "Multi-level cache",
+      "meaning": "Nhiều tầng cache xếp chồng: L1 trong JVM (nhanh nhất, TTL ngắn), L2 dùng chung như Redis, rồi mới tới database. Mỗi tầng chặn bớt tải cho tầng dưới.",
+      "example": "Đọc Caffeine, miss thì Redis, miss nữa thì database; L1 TTL 5 giây, L2 TTL 5 phút.",
+      "related": ["local-cache", "distributed-cache"],
+      "topics": ["local-cache"]
+    },
+    {
+      "id": "near-cache",
+      "term": "Near cache",
+      "meaning": "Bản sao cục bộ trong ứng dụng của dữ liệu thuộc một cache phân tán, được cluster tự gửi invalidation khi dữ liệu đổi.",
+      "example": "Near cache của Hazelcast giữ bản cục bộ cho map `products`.",
+      "related": ["local-cache", "client-side-caching"],
+      "topics": ["local-cache"]
+    },
+    {
+      "id": "client-side-caching",
+      "term": "Client-side caching (Redis)",
+      "meaning": "Tính năng của Redis 6+: client giữ bản cục bộ của key đã đọc, server theo dõi và gửi tin invalidation khi key đó đổi.",
+      "example": "`CLIENT TRACKING ON` trên connection RESP3, hoặc `BCAST PREFIX product:`.",
+      "related": ["near-cache", "local-cache"],
+      "topics": ["local-cache"]
+    },
+    {
+      "id": "hot-key",
+      "term": "Hot key",
+      "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
+      "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
+      "related": ["hot-partition", "local-cache"],
+      "topics": ["local-cache", "redis-internals"]
+    },
+    {
+      "id": "redis-single-thread",
+      "term": "Luồng chính của Redis",
+      "meaning": "Redis thực thi mọi lệnh trên một luồng chính, tuần tự: mỗi lệnh nguyên tử mà không cần khoá, nhưng một lệnh chậm làm mọi client khác phải chờ. I/O thread (từ bản 6) chỉ lo đọc ghi mạng.",
+      "example": "`SMEMBERS` một set 5 triệu phần tử chặn mọi lệnh khác trong vài giây.",
+      "related": ["redis-big-key", "redis-pipelining"],
+      "topics": ["redis-internals"]
+    },
+    {
+      "id": "redis-big-key",
+      "term": "Big key",
+      "meaning": "Key Redis có giá trị rất lớn (chuỗi vài MB, collection hàng triệu phần tử): lệnh đọc, xoá hay di chuyển nó chặn luồng chính và làm mất cân bằng bộ nhớ giữa các shard.",
+      "example": "`redis-cli --bigkeys` tìm key lớn; xoá bằng `UNLINK` thay vì `DEL`.",
+      "related": ["redis-single-thread", "hot-key"],
+      "topics": ["redis-internals"]
+    },
+    {
+      "id": "rdb-snapshot",
+      "term": "RDB",
+      "meaning": "Snapshot toàn bộ dữ liệu Redis ra một file tại một thời điểm, do process con tạo ra sau khi `fork`. Khởi động nhanh, nhưng mất các thay đổi sau snapshot gần nhất.",
+      "example": "`save 300 100`: snapshot nếu trong 300 giây có ít nhất 100 lần ghi.",
+      "related": ["aof", "copy-on-write"],
+      "topics": ["redis-internals"]
+    },
+    {
+      "id": "aof",
+      "term": "AOF",
+      "meaning": "Append-only file: Redis nối mọi lệnh ghi vào file log và fsync theo chính sách (`always`, `everysec`, `no`); khởi động lại thì chạy lại log.",
+      "example": "`appendfsync everysec` có thể mất khoảng 1–2 giây dữ liệu khi sập.",
+      "related": ["rdb-snapshot", "fsync"],
+      "topics": ["redis-internals"]
+    },
+    {
+      "id": "redis-pipelining",
+      "term": "Pipelining",
+      "meaning": "Gửi nhiều lệnh Redis liên tiếp không chờ từng phản hồi, rồi đọc tất cả phản hồi sau, để giảm số vòng mạng. Không nguyên tử: lệnh của client khác có thể chen vào giữa.",
+      "example": "500 lệnh `GET` gửi một lượt mất vài mili giây thay vì 250ms.",
+      "related": ["redis-single-thread"],
+      "topics": ["redis-internals"]
+    },
+    {
+      "id": "kafka-partition",
+      "term": "Partition (Kafka)",
+      "meaning": "Một phần của topic Kafka: log chỉ ghi nối có thứ tự, nằm trên một broker leader và được sao chép sang các follower. Đơn vị song song và đơn vị giữ thứ tự.",
+      "example": "Topic `orders` có 12 partition; message key `order-42` luôn vào cùng một partition.",
+      "related": ["kafka-offset", "consumer-group"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "kafka-offset",
+      "term": "Offset",
+      "meaning": "Số thứ tự tăng dần của message trong một partition. Consumer lưu offset đã xử lý để biết đọc tiếp từ đâu.",
+      "example": "Group `billing` đã commit offset 18.204 cho partition 3.",
+      "related": ["kafka-partition", "consumer-group"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "consumer-group",
+      "term": "Consumer group",
+      "meaning": "Nhóm consumer cùng `group.id`: mỗi partition của topic được giao cho đúng một consumer trong nhóm, và nhóm lưu offset chung. Nhiều nhóm cùng đọc một topic độc lập với nhau.",
+      "example": "10 pod cùng group đọc topic 6 partition: 6 pod có việc, 4 pod chờ.",
+      "related": ["kafka-partition", "competing-consumers"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "isr",
+      "term": "ISR",
+      "meaning": "In-sync replicas: tập replica của một partition đang theo kịp leader. Chỉ replica trong ISR mới được bầu làm leader khi tắt unclean election.",
+      "example": "Follower tụt quá 30 giây (`replica.lag.time.max.ms`) bị loại khỏi ISR.",
+      "related": ["kafka-acks", "min-insync-replicas"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "kafka-acks",
+      "term": "acks",
+      "meaning": "Cấu hình producer Kafka quyết định chờ xác nhận tới đâu: `0` không chờ, `1` chờ leader, `all` chờ mọi replica trong ISR (mặc định từ 3.0).",
+      "example": "`acks=all` cộng `min.insync.replicas=2`: message được xác nhận khi đã nằm ở ít nhất hai broker.",
+      "related": ["isr", "min-insync-replicas"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "min-insync-replicas",
+      "term": "min.insync.replicas",
+      "meaning": "Số replica tối thiểu trong ISR để broker chấp nhận ghi với `acks=all`; thiếu thì từ chối bằng `NotEnoughReplicasException`.",
+      "example": "RF 3 với `min.insync.replicas=2` chịu được mất một broker mà vẫn ghi được.",
+      "related": ["kafka-acks", "isr"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "high-watermark",
+      "term": "High watermark",
+      "meaning": "Bằng log end offset nhỏ nhất trong ISR, tức offset của message kế tiếp mà mọi replica ISR đều sẽ có. Consumer chỉ đọc được các offset nhỏ hơn nó, nên (khi tắt unclean election) không thấy message có thể bị mất khi đổi leader.",
+      "example": "Leader có log end offset 1.050 nhưng follower chậm nhất mới tới 1.040: high watermark là 1.040, consumer đọc được tới offset 1.039.",
+      "related": ["isr", "kafka-offset"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "log-compaction",
+      "term": "Log compaction",
+      "meaning": "Chính sách giữ dữ liệu của Kafka theo key: giữ ít nhất bản mới nhất cho mỗi key thay vì xoá theo thời gian; giá trị `null` (tombstone) đánh dấu xoá key.",
+      "example": "Topic `product-prices` compact theo `product_id` để consumer mới dựng được bảng giá hiện tại.",
+      "related": ["kafka-offset"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "kraft",
+      "term": "KRaft",
+      "meaning": "Chế độ Kafka tự quản lý metadata bằng các controller chạy giao thức đồng thuận kiểu Raft, thay cho ZooKeeper. Kafka 4.0 chỉ còn KRaft.",
+      "example": "3 controller KRaft lưu danh sách topic, partition và leader.",
+      "related": ["unclean-leader-election"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "unclean-leader-election",
+      "term": "Unclean leader election",
+      "meaning": "Cho phép replica ngoài ISR làm leader khi không còn replica ISR nào, để partition chạy tiếp; đổi lại mất các message replica đó chưa có. Mặc định tắt.",
+      "example": "`unclean.leader.election.enable=true` chỉ nên dùng cho dữ liệu như log hay metric.",
+      "related": ["isr", "kraft"],
+      "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "zero-copy",
+      "term": "Zero-copy",
+      "meaning": "Chuyển dữ liệu từ file (page cache) ra socket ngay trong kernel, không chép qua bộ nhớ của ứng dụng, bằng lời gọi như `sendfile`.",
+      "example": "Broker Kafka gửi dữ liệu cho consumer qua `sendfile`; bật TLS thì mất tối ưu này.",
+      "related": ["kafka-partition"],
+      "topics": ["kafka-architecture"]
     }
   ]
 }

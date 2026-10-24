@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "ordering", "front": "Kafka đảm bảo thứ tự ở phạm vi nào?", "back": "Trong một partition. Message cùng key đi cùng partition nên giữ thứ tự theo key." },
+    { "id": "isr", "front": "ISR là gì?", "back": "Tập replica theo kịp leader; follower tụt quá `replica.lag.time.max.ms` bị loại khỏi ISR." },
+    { "id": "acks-all", "front": "`acks=all` chờ cái gì?", "back": "Chờ mọi replica trong ISR có message; đi cùng `min.insync.replicas=2` thì message nằm ở ít nhất hai broker." },
+    { "id": "two-down", "front": "RF 3, `min.insync.replicas=2`, mất 2 broker thì sao?", "back": "Ghi với `acks=all` bị từ chối (`NotEnoughReplicasException`); đọc dữ liệu đã commit vẫn được." },
+    { "id": "high-watermark", "front": "High watermark dùng để làm gì?", "back": "Là offset mọi replica trong ISR đã có; consumer chỉ đọc tới đó nên không thấy message có thể bị mất khi đổi leader (khi unclean election tắt)." },
+    { "id": "unclean", "front": "Unclean leader election đánh đổi gì?", "back": "Cho replica ngoài ISR làm leader để partition chạy tiếp, đổi lại mất các message nó chưa có. Mặc định tắt." },
+    { "id": "kraft", "front": "KRaft thay thế cái gì?", "back": "ZooKeeper: metadata do các controller tự quản lý bằng đồng thuận kiểu Raft. Kafka 4.0 bỏ hẳn ZooKeeper." },
+    { "id": "consumers-vs-partitions", "front": "Group có 8 consumer đọc topic 6 partition thì sao?", "back": "6 consumer có việc, 2 consumer ngồi không; số partition là giới hạn song song của một group." },
+    { "id": "add-partitions", "front": "Vì sao tăng số partition có thể phá thứ tự theo key?", "back": "Partition chọn bằng `hash(key) % số partition`; đổi số partition thì cùng key có thể sang partition khác." },
+    { "id": "compaction", "front": "Log compaction giữ lại gì?", "back": "Ít nhất bản mới nhất của mỗi key; giá trị `null` (tombstone) đánh dấu xoá key." }
+  ]
+}

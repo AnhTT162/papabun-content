@@ -1,0 +1,5 @@
+Quầy lễ tân khách sạn có tấm bảng ghi giá phòng hôm nay, để khỏi phải gọi lên phòng kinh doanh mỗi lần khách hỏi. Lần đầu có khách hỏi mà bảng còn trống, lễ tân gọi lên hỏi rồi **viết vào bảng**. Những người hỏi sau chỉ cần nhìn bảng.
+
+Khi phòng kinh doanh đổi giá, có hai cách báo cho quầy. Cách thứ nhất: họ đọc giá mới để lễ tân **sửa trên bảng**. Nếu hai lần đổi giá liên tiếp được báo lệch thứ tự, bảng sẽ ghi giá cũ hơn. Cách thứ hai an toàn hơn: họ chỉ dặn **"xoá dòng đó đi"**, và lần sau có khách hỏi thì lễ tân tự gọi lên lấy giá đúng. Dù vậy, nếu một lễ tân đang nghe điện thoại giá cũ đúng lúc dòng bị xoá, rồi viết lại giá cũ, bảng vẫn sai. Vì thế mỗi dòng còn ghi thêm "chỉ dùng tới 12 giờ".
+
+Lễ tân tự gọi lên khi bảng trống là [[cache-aside|cache-aside]], dặn "xoá dòng đó" là [[cache-invalidation|invalidation]] bằng cách xoá thay vì cập nhật, lễ tân viết lại giá cũ là một [[race-condition|race condition]], còn "chỉ dùng tới 12 giờ" là [[ttl|TTL]] làm giới hạn cuối cùng cho độ cũ.

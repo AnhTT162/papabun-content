@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Cache-aside: đọc, ghi và race để lại dữ liệu cũ",
+  "nodes": [
+    {"id": "reader", "label": "Request đọc", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "redis", "label": "Redis", "kind": "cache", "x": 0.85, "y": 0.05},
+    {"id": "db", "label": "Database", "kind": "database", "x": 0.1, "y": 0.5},
+    {"id": "writer", "label": "Request ghi", "kind": "client", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "reader-redis", "from": "reader", "to": "redis", "label": "GET, miss thì SET"},
+    {"id": "reader-db", "from": "reader", "to": "db", "label": "SELECT khi miss"},
+    {"id": "writer-db", "from": "writer", "to": "db", "label": "UPDATE, COMMIT"},
+    {"id": "writer-redis", "from": "writer", "to": "redis", "label": "DEL sau commit"}
+  ],
+  "steps": [
+    {"caption": "Đọc: hỏi Redis trước. Hit thì trả luôn.", "show": ["reader", "redis", "reader-redis"], "highlight": ["reader-redis"]},
+    {"caption": "Miss thì đọc database, rồi SET vào Redis kèm TTL để lần sau hit.", "show": ["db", "reader-db"], "highlight": ["reader-db"]},
+    {"caption": "Ghi: cập nhật database và commit trước.", "show": ["writer", "writer-db"], "highlight": ["writer-db"]},
+    {"caption": "Rồi mới xoá key trong Redis (không cập nhật). Lần đọc sau miss và lấy bản mới nhất từ database.", "show": ["writer-redis"], "highlight": ["writer-redis"]},
+    {"caption": "Race: request đọc lấy bản cũ từ database, bị chậm; request ghi cập nhật và xoá key; request đọc ghi bản cũ vào Redis sau đó. Bản cũ nằm lại tới hết TTL.", "show": [], "highlight": ["reader-db", "writer-redis", "reader-redis"]},
+    {"caption": "TTL là giới hạn trên cho độ cũ. Muốn chặn hẳn thì ghi kèm phiên bản và chỉ cho bản mới hơn đè bản cũ, hoặc dùng lease.", "show": [], "highlight": ["redis"]}
+  ]
+}

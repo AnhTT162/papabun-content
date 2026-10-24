@@ -1,0 +1,106 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Cứ 5 phút Redis lại đứng gần một giây",
+  "symptom": "Redis 7.2 tự quản lý trên một máy ảo thế hệ cũ (Xen) 32GB RAM, một instance duy nhất làm cache và giữ session, dữ liệu khoảng 22GB, bật RDB với `save 300 100`. Từ khi dữ liệu tăng qua 20GB, cứ khoảng 5 phút API lại có một đợt lỗi `RedisCommandTimeoutException` (timeout của Lettuce đặt 500ms) kéo dài khoảng 1 giây. CPU trung bình của Redis chỉ 30%.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Xem `SLOWLOG` và `LATENCY LATEST` để biết có lệnh chậm hay sự kiện nào khác chặn Redis",
+          "quality": "good",
+          "feedback": "Lỗi theo chu kỳ đều đặn gợi ý một việc định kỳ của chính Redis hoặc một job. Slowlog cho lệnh chậm, latency monitor cho các sự kiện không phải lệnh.",
+          "next": "slowlog"
+        },
+        {
+          "label": "Tăng timeout của Lettuce lên 5 giây",
+          "quality": "poor",
+          "feedback": "Lỗi sẽ biến thành request chậm thêm 1 giây và thread của ứng dụng bị giữ lâu hơn. Chưa biết vì sao Redis đứng.",
+          "next": "slowlog"
+        },
+        {
+          "label": "Thêm một replica và chuyển lệnh đọc sang đó",
+          "quality": "ok",
+          "feedback": "Chia tải đọc chỉ có ích nếu Redis quá tải, mà CPU đang thấp. Lệnh ghi và session vẫn đi vào primary. Tìm nguyên nhân trước.",
+          "next": "slowlog"
+        }
+      ]
+    },
+    {
+      "id": "slowlog",
+      "evidence": "127.0.0.1:6379> SLOWLOG GET 5\n1) 1) (integer) 8812\n   2) (integer) 1729755913\n   3) (integer) 14210        <- micro giây\n   4) 1) \"HGETALL\"\n      2) \"session:9f3a...\"\n(các mục khác 10–15ms, rải rác, không theo chu kỳ)\n\n127.0.0.1:6379> LATENCY LATEST\n1) 1) \"fork\"\n   2) (integer) 1729756200\n   3) (integer) 1180          <- mili giây, lần gần nhất\n   4) (integer) 1240          <- mili giây, cao nhất",
+      "evidenceFormat": "monospace",
+      "question": "Slowlog không có gì tới 1 giây, nhưng latency monitor ghi sự kiện `fork` 1.180ms. Nghĩa là gì?",
+      "choices": [
+        {
+          "label": "Mỗi lần snapshot RDB, lời gọi `fork` dừng luồng chính khoảng 1,2 giây",
+          "quality": "good",
+          "feedback": "Đúng. Slowlog chỉ đo thời gian thực thi lệnh, nên không thấy được thời gian Redis bị dừng vì fork. `save 300 100` kích hoạt snapshot khoảng mỗi 5 phút, khớp với chu kỳ lỗi.",
+          "next": "info"
+        },
+        {
+          "label": "Process con ghi RDB làm đĩa quá tải nên lệnh chậm",
+          "quality": "ok",
+          "feedback": "Ghi RDB do process con làm, song song với luồng chính. Đĩa bận có thể ảnh hưởng AOF, nhưng sự kiện ghi nhận ở đây là chính lời gọi `fork`.",
+          "next": "info"
+        },
+        {
+          "label": "`HGETALL` trên session là nguyên nhân, cần đổi sang `HGET`",
+          "quality": "poor",
+          "feedback": "14ms là chậm và đáng tối ưu, nhưng nó rải rác và quá ngắn để giải thích đợt đứng 1 giây đều đặn mỗi 5 phút.",
+          "next": "info"
+        }
+      ]
+    },
+    {
+      "id": "info",
+      "evidence": "127.0.0.1:6379> INFO stats\nlatest_fork_usec:1183442\n\n127.0.0.1:6379> INFO persistence\nrdb_bgsave_in_progress:0\nrdb_last_bgsave_status:ok\nrdb_last_cow_size:9126805504\naof_enabled:0\n\n127.0.0.1:6379> INFO memory\nused_memory_human:21.97G\nmaxmemory_human:0B\nmaxmemory_policy:noeviction\n\n$ cat /sys/kernel/mm/transparent_hugepage/enabled\n[always] madvise never\n$ sysctl vm.overcommit_memory\nvm.overcommit_memory = 0",
+      "evidenceFormat": "monospace",
+      "question": "Những dấu hiệu nào đáng lo, ngoài thời gian fork?",
+      "choices": [
+        {
+          "label": "Fork trên 22GB chậm; THP làm copy-on-write tốn 9GB; không có `maxmemory`; `overcommit_memory = 0`",
+          "quality": "good",
+          "feedback": "Đúng. Thời gian fork tỉ lệ với lượng bộ nhớ (phải sao chép bảng trang của 22GB) và rất chậm trên loại máy ảo này. THP thì làm phần **sau** fork nặng lên: mỗi page bị ghi được sao chép theo khối 2MB, nên copy-on-write lần trước tốn 9GB; 22GB cộng 9GB là sát 32GB RAM, một ngày ghi nhiều hơn là OOM killer giết Redis. Không có `maxmemory` thì Redis dùng tới khi hết RAM. `overcommit_memory = 0` có thể làm fork thất bại khi RAM còn ít.",
+          "next": "fix"
+        },
+        {
+          "label": "`rdb_last_bgsave_status:ok` nên phần persistence không có vấn đề",
+          "quality": "poor",
+          "feedback": "Snapshot vẫn thành công, nhưng cái giá của nó (fork 1,2 giây, 9GB copy-on-write) mới là vấn đề.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Tách session ra instance riêng; primary không snapshot (để replica làm); tắt THP, overcommit = 1, `maxmemory` cho cache",
+          "quality": "good",
+          "feedback": "Thời gian fork chỉ giảm khi primary không còn fork (`save \"\"`, replica lo snapshot) hoặc mỗi instance nhỏ đi; tắt THP giảm mạnh copy-on-write và độ trễ ngay sau fork. Phải tách session trước: instance đang `noeviction` với 22GB dữ liệu mà đặt `maxmemory` 20GB thì lệnh ghi lỗi OOM ngay, còn đổi sang `allkeys-lru` thì session bị bỏ. Sau khi tách, instance cache mới đặt `maxmemory` kèm `allkeys-lru`/`allkeys-lfu`.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tắt hẳn RDB và AOF cho cả instance",
+          "quality": "ok",
+          "feedback": "Hết fork, nhưng instance đang giữ session: restart là mọi người dùng bị đăng xuất. Chỉ hợp lý nếu instance chỉ làm cache.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Chuyển sang AOF `appendfsync always` thay cho RDB",
+          "quality": "poor",
+          "feedback": "Mỗi lệnh ghi phải chờ fsync, chậm hẳn. Và AOF vẫn phải rewrite định kỳ bằng fork.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: snapshot RDB trên primary 22GB chạy trên máy ảo có fork chậm.** Mỗi lần `save 300 100` kích hoạt, `fork` phải sao chép bảng trang của 22GB; trên loại máy ảo này mất khoảng 1,2 giây (máy ảo hiện đại thường khoảng 10–20ms mỗi GB), và luồng chính dừng suốt lúc đó. Mọi lệnh vượt timeout 500ms của Lettuce. Slowlog không thấy vì đó không phải thời gian thực thi lệnh.\n\n**Rủi ro lớn hơn đang chờ**: Transparent Huge Pages làm copy-on-write sao chép theo khối 2MB, lần trước tốn 9GB; cộng 22GB dữ liệu là 31GB trên máy 32GB, không có `maxmemory`. Một đợt ghi nhiều trong lúc snapshot là OOM killer giết Redis, mất cả cache lẫn session.\n\n**Sửa**:\n- Tách hai vai trò: instance session nhỏ, có replica, snapshot hoặc AOF trên replica; instance cache với `maxmemory` và `allkeys-lru`, không snapshot.\n- Primary không fork định kỳ (`save \"\"`), để replica làm snapshot.\n- Tắt THP (`echo never > /sys/kernel/mm/transparent_hugepage/enabled`, và giữ cấu hình khi khởi động lại máy), đặt `vm.overcommit_memory = 1`.\n- Về lâu dài: chuyển sang loại máy ảo có fork nhanh, và nhiều instance nhỏ (Redis Cluster) thay vì một instance lớn.\n\n**Phòng ngừa**:\n- Bật `latency-monitor-threshold` (ví dụ 100ms) và cảnh báo theo `latest_fork_usec`, `rdb_last_cow_size`, `used_memory` so với RAM.\n- Checklist cài đặt Redis theo khuyến nghị chính thức: THP, overcommit, `maxmemory`.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

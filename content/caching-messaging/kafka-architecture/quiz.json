@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "acks-one-loss",
+      "kind": "single",
+      "prompt": "Topic `replication.factor=3`. Producer gửi `acks=1` và nhận xác nhận cho message M. Ngay sau đó broker leader mất điện trước khi follower nào kịp kéo M. Kết quả?",
+      "options": [
+        "M an toàn vì leader đã ghi xuống đĩa trước khi xác nhận",
+        "M bị mất: leader mới được chọn từ follower chưa có M",
+        "M được producer tự gửi lại vì đã cấu hình retries",
+        "Partition dừng nhận ghi cho tới khi leader cũ quay lại"
+      ],
+      "answer": 1,
+      "explanation": "`acks=1` chỉ chờ leader nhận (vào page cache, không chờ fsync). Leader chết trước khi replicate thì controller chọn một follower trong ISR làm leader, và follower đó không có M. Producer đã nhận xác nhận nên không gửi lại. Khi broker cũ quay lại, nó cắt bỏ phần log không có ở leader mới. `acks=all` cộng `min.insync.replicas=2` chặn trường hợp này."
+    },
+    {
+      "id": "min-isr-two-down",
+      "kind": "single",
+      "prompt": "`replication.factor=3`, `min.insync.replicas=2`, producer `acks=all`. Hai trong ba broker giữ partition bị sập. Điều gì xảy ra?",
+      "options": [
+        "Ghi vẫn thành công vì còn leader",
+        "Ghi bị từ chối với `NotEnoughReplicasException`, đọc vẫn được",
+        "Cả đọc lẫn ghi đều dừng cho tới khi đủ 3 broker",
+        "Kafka tự hạ `min.insync.replicas` xuống 1 để chạy tiếp"
+      ],
+      "answer": 1,
+      "explanation": "ISR chỉ còn 1, nhỏ hơn `min.insync.replicas`, nên leader từ chối ghi với `acks=all` thay vì nhận message chỉ nằm trên một máy. Consumer vẫn đọc được dữ liệu đã commit. Kafka không tự nới cấu hình. Producer dùng `acks=1` thì vẫn ghi được, nhưng với rủi ro mất dữ liệu."
+    },
+    {
+      "id": "idle-consumers",
+      "kind": "single",
+      "prompt": "Topic `orders` có 6 partition. Một service chạy 10 pod, cùng `group.id=billing`. Có bao nhiêu pod nhận được message?",
+      "options": [
+        "10 pod, mỗi pod nhận một phần message",
+        "6 pod; 4 pod còn lại không được giao partition nào",
+        "1 pod, vì một group chỉ có một consumer hoạt động",
+        "10 pod, mỗi pod nhận một bản đầy đủ của mọi message"
+      ],
+      "answer": 1,
+      "explanation": "Trong một consumer group, mỗi partition chỉ giao cho một consumer, nên tối đa 6 consumer có việc; 4 pod còn lại ngồi không, chỉ để thay thế khi pod khác chết. Muốn 10 pod cùng xử lý thì cần ít nhất 10 partition. Mỗi pod nhận bản đầy đủ là hành vi của 10 group khác nhau."
+    },
+    {
+      "id": "compaction-use",
+      "kind": "single",
+      "prompt": "Topic nào hợp nhất với `cleanup.policy=compact`?",
+      "options": [
+        "Log truy cập HTTP cần giữ 7 ngày để điều tra",
+        "Giá hiện tại của từng sản phẩm, key là `product_id`",
+        "Sự kiện thanh toán cần đối soát đủ từng lần",
+        "Click của người dùng để tính số liệu theo giờ"
+      ],
+      "answer": 1,
+      "explanation": "Compaction giữ bản mới nhất của mỗi key, hợp với dữ liệu dạng trạng thái: consumer mới đọc từ đầu vẫn dựng được bảng giá hiện tại mà không phải đọc mọi lần đổi giá. Log truy cập, sự kiện thanh toán và click cần giữ **mọi** bản ghi, nên dùng retention theo thời gian; compaction theo key sẽ làm mất các bản ghi cũ hơn của cùng key."
+    }
+  ]
+}

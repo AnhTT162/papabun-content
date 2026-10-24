@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "single-thread", "front": "Redis thực thi lệnh trên bao nhiêu luồng, hệ quả là gì?", "back": "Một luồng chính: mỗi lệnh nguyên tử không cần khoá, nhưng một lệnh chậm chặn mọi client. I/O thread chỉ lo đọc ghi mạng." },
+    { "id": "keys-vs-scan", "front": "Vì sao không dùng `KEYS *` trên production?", "back": "Nó duyệt mọi key trong một lệnh và chặn Redis; dùng `SCAN` để duyệt dần theo con trỏ." },
+    { "id": "unlink", "front": "Xoá một set triệu phần tử mà không chặn Redis thế nào?", "back": "`UNLINK` (hoặc bật lazyfree): gỡ key ngay, giải phóng bộ nhớ ở luồng nền." },
+    { "id": "expiry", "front": "Key hết hạn bị xoá khi nào?", "back": "Khi được truy cập, hoặc khi chu kỳ nền lấy mẫu trúng nó; nên key hết hạn có thể còn chiếm RAM một lúc." },
+    { "id": "rdb-fork", "front": "Cái giá của snapshot RDB là gì?", "back": "`fork` dừng luồng chính một lúc (lâu hơn khi dữ liệu lớn), và copy-on-write có thể làm RAM tăng gần gấp đôi khi ghi nhiều." },
+    { "id": "aof-everysec", "front": "`appendfsync everysec` có thể mất bao nhiêu dữ liệu khi sập?", "back": "Thường khoảng 1–2 giây lệnh ghi gần nhất." },
+    { "id": "slowlog-limit", "front": "Vì sao slowlog không thấy được đợt Redis đứng do fork?", "back": "Slowlog chỉ đo thời gian thực thi lệnh; fork, fsync, eviction được ghi ở latency monitor (`LATENCY LATEST`)." },
+    { "id": "multi-exec", "front": "`MULTI/EXEC` có rollback không?", "back": "Không. Các lệnh chạy liền không bị chen, nhưng lệnh lỗi khi chạy thì các lệnh khác vẫn được áp." },
+    { "id": "thp", "front": "Hai cấu hình hệ điều hành tài liệu Redis khuyên đặt là gì?", "back": "Tắt Transparent Huge Pages và đặt `vm.overcommit_memory = 1`." },
+    { "id": "lettuce-timeout", "front": "Vì sao phải đặt timeout cho Lettuce?", "back": "Mặc định 60 giây: Redis chậm sẽ giữ thread của ứng dụng rất lâu. Đặt vài trăm mili giây tới 1 giây." }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "multi-exec-no-rollback",
+      "kind": "output",
+      "prompt": "Key `profile:7` đang là một hash. Sau khi chạy đoạn dưới đây, `GET counter` trả về gì? (Trước đó `counter` là 10.)",
+      "code": "MULTI\nINCR counter\nINCR profile:7        -- profile:7 là hash, không phải số\nINCR counter\nEXEC",
+      "options": [
+        "\"10\", vì một lệnh lỗi làm cả transaction bị huỷ",
+        "\"12\", vì lệnh lỗi không làm các lệnh khác bị huỷ",
+        "\"11\", vì Redis dừng transaction ở lệnh lỗi",
+        "Lỗi, vì `EXEC` từ chối chạy khi có lệnh sai kiểu"
+      ],
+      "answer": 1,
+      "explanation": "Lỗi sai kiểu chỉ phát hiện khi lệnh **chạy**, lúc đó Redis trả lỗi cho riêng lệnh đó và vẫn chạy các lệnh còn lại: `counter` tăng hai lần thành 12. Redis không rollback. Chỉ lỗi phát hiện được lúc xếp hàng (sai cú pháp, sai số tham số) mới làm `EXEC` huỷ cả transaction. Cần nguyên tử kèm kiểm tra điều kiện thì dùng Lua script."
+    },
+    {
+      "id": "big-key-latency",
+      "kind": "single",
+      "prompt": "Một job dọn dẹp chạy `DEL leaderboard:2025` (sorted set 15 triệu phần tử). Trong lúc đó mọi API dùng Redis báo timeout gần 2 giây. Vì sao, và lệnh nào nên dùng thay?",
+      "options": [
+        "`DEL` khoá riêng key đó; dùng `EXPIRE` để Redis tự xoá dần",
+        "`DEL` giải phóng mọi phần tử trên luồng chính; dùng `UNLINK`",
+        "`DEL` ghi vào AOF đồng bộ; tắt AOF trong lúc chạy job xoá",
+        "Sorted set lớn bị khoá khi xoá; chia key ra nhiều database số"
+      ],
+      "answer": 1,
+      "explanation": "`DEL` giải phóng bộ nhớ của từng phần tử ngay trên luồng chính, và mọi lệnh khác của mọi client phải chờ. `UNLINK` gỡ key khỏi keyspace ngay (O(1)) rồi giải phóng ở luồng nền. `EXPIRE` cuối cùng vẫn xoá trên luồng chính trừ khi bật `lazyfree-lazy-expire`. Redis không có khoá theo key, và nhiều database số trong một instance vẫn dùng chung một luồng. Không sửa được code thì bật `lazyfree-lazy-user-del yes` để `DEL` chạy như `UNLINK`."
+    },
+    {
+      "id": "volatile-no-ttl",
+      "kind": "single",
+      "prompt": "Redis đặt `maxmemory 8gb` và `maxmemory-policy volatile-lru`. Ứng dụng ghi mọi key mà không đặt TTL. Khi chạm 8GB thì sao?",
+      "options": [
+        "Redis bỏ các key lâu nhất chưa dùng như `allkeys-lru`",
+        "Lệnh ghi báo lỗi OOM, vì không có key nào đủ điều kiện để bỏ",
+        "Redis tự đặt TTL mặc định cho các key rồi bỏ dần",
+        "Redis vượt `maxmemory` cho tới khi hết RAM của máy"
+      ],
+      "answer": 1,
+      "explanation": "Các chính sách `volatile-*` chỉ chọn trong những key có TTL. Không key nào có TTL thì không có gì để bỏ, và Redis hành xử như `noeviction`: lệnh ghi nhận lỗi `OOM command not allowed when used memory > 'maxmemory'`. Dùng Redis thuần làm cache thì chọn `allkeys-lru` hoặc `allkeys-lfu`."
+    },
+    {
+      "id": "pipelining-vs-atomic",
+      "kind": "single",
+      "prompt": "Ứng dụng cần đọc 500 key, mỗi lần gọi Redis mất 0,5ms đi về. Gọi tuần tự từng `GET` mất khoảng 250ms. Cách nào đơn giản và phù hợp nhất để giảm thời gian?",
+      "options": [
+        "Bọc 500 lệnh `GET` trong `MULTI/EXEC` để chạy nguyên tử",
+        "Dùng `MGET` hoặc pipelining để gửi cả lô trong vài vòng mạng",
+        "Mở 500 connection và gọi song song, mỗi connection một key",
+        "Bật I/O threads để Redis xử lý 500 `GET` song song"
+      ],
+      "answer": 1,
+      "explanation": "Thời gian chủ yếu là 500 vòng mạng. `MGET` hoặc pipelining gửi cả lô trong một vài vòng, còn khoảng vài mili giây. `MULTI/EXEC` vẫn tốn vòng mạng cho từng lệnh nếu không pipeline, và thêm nguyên tử không cần thiết. 500 connection tốn tài nguyên cả hai bên. I/O threads chỉ chia việc đọc ghi mạng, lệnh vẫn thực thi trên một luồng, và không làm giảm số vòng mạng của client. Trong Redis Cluster, `MGET` chỉ dùng cho các key cùng slot; client sẽ tách theo slot."
+    }
+  ]
+}

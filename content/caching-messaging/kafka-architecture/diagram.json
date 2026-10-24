@@ -1,0 +1,134 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một message đi qua partition có 3 replica",
+  "nodes": [
+    {
+      "id": "producer",
+      "label": "Producer",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "leader",
+      "label": "Broker 1 (leader)",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "f2",
+      "label": "Broker 3 (follower)",
+      "kind": "queue",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "f1",
+      "label": "Broker 2 (follower)",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "consumer",
+      "label": "Consumer group",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "controller",
+      "label": "Controller (KRaft)",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "producer-leader",
+      "from": "producer",
+      "to": "leader",
+      "label": "gửi, acks=all"
+    },
+    {
+      "id": "f1-leader",
+      "from": "f1",
+      "to": "leader",
+      "label": "kéo dữ liệu"
+    },
+    {
+      "id": "f2-leader",
+      "from": "f2",
+      "to": "leader",
+      "label": "kéo dữ liệu"
+    },
+    {
+      "id": "consumer-leader",
+      "from": "consumer",
+      "to": "leader",
+      "label": "đọc tới HW"
+    },
+    {
+      "id": "controller-f1",
+      "from": "controller",
+      "to": "f1",
+      "label": "bầu leader mới"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Producer băm key để chọn partition, rồi gửi lô message tới broker đang là leader của partition đó.",
+      "show": [
+        "producer",
+        "leader",
+        "producer-leader"
+      ],
+      "highlight": [
+        "producer-leader"
+      ]
+    },
+    {
+      "caption": "Các follower liên tục kéo dữ liệu mới từ leader. Follower theo kịp nằm trong ISR; tụt quá replica.lag.time.max.ms thì bị loại.",
+      "show": [
+        "f1",
+        "f2",
+        "f1-leader",
+        "f2-leader"
+      ],
+      "highlight": [
+        "f1-leader",
+        "f2-leader"
+      ]
+    },
+    {
+      "caption": "Khi mọi replica trong ISR đã có message, high watermark tiến lên và leader xác nhận với producer (acks=all). Với min.insync.replicas=2, ISR còn dưới 2 thì ghi bị từ chối.",
+      "show": [],
+      "highlight": [
+        "leader",
+        "producer-leader"
+      ]
+    },
+    {
+      "caption": "Consumer đọc từ leader nhưng chỉ tới high watermark, nên không thấy message có thể bị mất khi đổi leader (khi unclean election tắt).",
+      "show": [
+        "consumer",
+        "consumer-leader"
+      ],
+      "highlight": [
+        "consumer-leader"
+      ]
+    },
+    {
+      "caption": "Broker 1 chết: controller chọn một replica trong ISR làm leader mới. Producer và consumer cập nhật metadata rồi nói chuyện với Broker 2.",
+      "show": [
+        "controller",
+        "controller-f1"
+      ],
+      "highlight": [
+        "controller-f1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cache-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Cache patterns",
+  "summary": "Cache-aside, read-through, write-through, write-behind và refresh-ahead; vì sao khi ghi nên xoá cache thay vì cập nhật; các race condition làm cache giữ dữ liệu cũ tới hết TTL và cách chặn (xoá sau commit, phiên bản, xoá hai lần, invalidation qua CDC); invalidation cho danh sách và trang tổng hợp; và Spring Cache trong transaction.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 16,
+  "prerequisites": ["caching-basics"],
+  "terms": ["cache-aside", "read-through", "write-through", "write-behind", "refresh-ahead", "cache-invalidation", "cache", "ttl", "cache-key", "race-condition", "cdc", "dual-write", "self-invocation", "wal", "binlog"],
+  "references": [
+    { "title": "AWS Whitepaper: Database Caching Strategies Using Redis", "url": "https://docs.aws.amazon.com/whitepapers/latest/database-caching-strategies-using-redis/caching-patterns.html" },
+    { "title": "Spring Framework: Cache Abstraction", "url": "https://docs.spring.io/spring-framework/reference/integration/cache.html" },
+    { "title": "Caffeine Wiki: Refresh", "url": "https://github.com/ben-manes/caffeine/wiki/Refresh" },
+    { "title": "Spring Data Redis: Redis Cache", "url": "https://docs.spring.io/spring-data/redis/reference/redis/redis-cache.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Xoá cache rồi mà người dùng vẫn thấy giá cũ suốt 10 phút, sao vậy?\" Hai thủ phạm hay gặp. Một: xoá cache **trước khi transaction commit**, nên một request khác đọc database (vẫn là giá cũ) và ghi lại vào cache ngay sau lúc xoá. Hai: race của cache-aside, một request đọc giá cũ từ database trước khi bạn cập nhật, nhưng ghi vào cache **sau** khi bạn xoá. Thủ phạm thứ ba: lần đọc khi miss đi vào **read replica** còn trễ, nên bản cũ lại vào cache. Cả ba để lại giá cũ tới khi TTL hết; local cache trên từng pod chưa được invalidate cũng cho kết quả tương tự (bài Local & multi-level cache). Cách chặn: xoá sau commit, luôn đặt TTL làm giới hạn trên cho độ cũ, và với dữ liệu quan trọng thì ghi kèm phiên bản và chỉ cho bản mới hơn đè bản cũ." }
+  ]
+}

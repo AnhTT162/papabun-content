@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cache-aside-flow", "front": "Cache-aside đọc và ghi thế nào?", "back": "Đọc: hỏi cache, miss thì đọc database rồi ghi vào cache kèm TTL. Ghi: cập nhật database, commit, rồi xoá key." },
+    { "id": "delete-not-update", "front": "Vì sao khi ghi nên xoá cache thay vì cập nhật cache?", "back": "Hai lần ghi đồng thời có thể cập nhật cache lệch thứ tự với database; xoá thì lần đọc sau luôn lấy bản mới nhất." },
+    { "id": "delete-after-commit", "front": "Vì sao phải xoá cache sau commit, không phải trong transaction?", "back": "Xoá trước commit thì request khác đọc database (vẫn bản cũ) và ghi lại vào cache ngay sau đó." },
+    { "id": "aside-race", "front": "Race nào của cache-aside vẫn để lại dữ liệu cũ dù xoá đúng lúc?", "back": "Request đọc lấy bản cũ, bị chậm, rồi ghi vào cache sau khi request ghi đã xoá key." },
+    { "id": "ttl-bound", "front": "Vì sao luôn đặt TTL dù đã có invalidation?", "back": "Mọi cách xoá đều có thể sót hoặc lỗi; TTL là giới hạn trên cho thời gian dữ liệu cũ tồn tại." },
+    { "id": "write-behind-risk", "front": "Rủi ro của write-behind là gì, hợp với dữ liệu nào?", "back": "Cache chết trước khi xả xuống database là mất dữ liệu; hợp với bộ đếm hay vị trí, không hợp với đơn hàng hay tiền." },
+    { "id": "spring-tx-aware", "front": "Làm `@CacheEvict` chạy sau commit trong Spring thế nào?", "back": "Dùng `TransactionAwareCacheDecorator` (hoặc `transactionAware()` của `RedisCacheManager`), hoặc xoá trong `@TransactionalEventListener(AFTER_COMMIT)`." },
+    { "id": "namespace-version", "front": "Invalidate hàng nghìn key trang danh mục cùng lúc thế nào?", "back": "Đặt phiên bản namespace trong key (`catalog:v{n}:...`), đổi dữ liệu thì tăng `n`; key cũ tự hết hạn theo TTL." },
+    { "id": "cdc-invalidation", "front": "Ưu điểm của invalidation qua CDC?", "back": "Không bỏ sót đường ghi nào và luôn xảy ra sau commit; đổi lại trễ thêm và phải ánh xạ dòng sang key." },
+    { "id": "versioned-set", "front": "Chặn request đọc chậm ghi đè bản mới trong cache bằng cách nào?", "back": "Ghi kèm phiên bản và chỉ `SET` khi phiên bản mới lớn hơn (Lua script), hoặc dùng lease." }
+  ]
+}
