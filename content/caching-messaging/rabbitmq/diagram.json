@@ -19,7 +19,7 @@
   "steps": [
     { "caption": "Order service gửi message với routing key order.vn.paid tới topic exchange, kèm publisher confirm và cờ mandatory.", "show": ["producer", "exchange", "producer-exchange"], "highlight": ["producer-exchange"] },
     { "caption": "Exchange so routing key với từng binding: order.*.paid và order.# đều khớp, nên message được chép vào cả hai queue. Không khớp binding nào thì message bị bỏ, trừ khi có mandatory hoặc alternate exchange.", "show": ["billing-q", "email-q", "exchange-billing", "exchange-email"], "highlight": ["exchange-billing", "exchange-email"] },
-    { "caption": "Quorum queue ghi message lên đa số node rồi broker mới gửi confirm về producer. Lúc này producer mới được coi là gửi xong.", "show": [], "highlight": ["billing-q", "producer-exchange"] },
+    { "caption": "Quorum queue ghi message lên đa số replica rồi broker mới gửi confirm về producer. Lúc này producer mới được coi là gửi xong.", "show": [], "highlight": ["billing-q", "producer-exchange"] },
     { "caption": "Broker đẩy message tới worker, tối đa 10 message chưa ack mỗi consumer. Worker xử lý xong mới ack, và broker xoá message khỏi queue.", "show": ["consumer", "billing-consumer"], "highlight": ["billing-consumer"] },
     { "caption": "Lỗi vĩnh viễn (dữ liệu sai): worker nack không requeue, message sang dead-letter exchange rồi vào billing.dlq, kèm header x-death ghi lý do.", "show": ["dlq", "billing-dlq"], "highlight": ["billing-dlq"] }
   ]
