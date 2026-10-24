@@ -1,15 +1,80 @@
 {
   "$schema": "../../../schema/flashcards.schema.json",
   "cards": [
-    { "id": "index-tradeoff", "front": "Index đánh đổi điều gì?", "back": "Đọc nhanh hơn (O(log n) thay vì quét cả bảng) nhưng mỗi lần ghi chậm hơn và tốn thêm dung lượng." },
-    { "id": "leftmost-prefix", "front": "Index `(a, b, c)` tìm thẳng được với điều kiện nào?", "back": "Điều kiện bắt đầu từ cột trái nhất: `a`, `a + b`, `a + b + c`; không dùng để tìm thẳng với riêng `b` hoặc `c`." },
-    { "id": "column-order", "front": "Trong index nhiều cột, nên xếp cột nào trước?", "back": "Cột so sánh bằng trước, cột so sánh khoảng hoặc `ORDER BY` sau." },
-    { "id": "covering-index", "front": "Covering index là gì?", "back": "Index chứa đủ mọi cột query cần, nên database trả kết quả từ index (Index Only Scan); PostgreSQL vẫn đọc bảng với page chưa all-visible, xem `Heap Fetches`." },
-    { "id": "seq-scan-chosen", "front": "Vì sao có index mà planner vẫn chọn Seq Scan?", "back": "Điều kiện khớp quá nhiều dòng (độ chọn lọc thấp) nên đọc tuần tự rẻ hơn, hoặc điều kiện không sargable, hoặc thống kê sai." },
-    { "id": "explain-analyze", "front": "`EXPLAIN` khác `EXPLAIN ANALYZE` thế nào?", "back": "`EXPLAIN` chỉ in plan với số ước lượng; `EXPLAIN ANALYZE` chạy thật câu lệnh và in thời gian, số dòng thật." },
-    { "id": "estimate-vs-actual", "front": "Plan có `rows=50` nhưng `actual rows=2000000`. Nghĩa là gì?", "back": "Ước lượng sai nên planner có thể chọn sai cách chạy; thường do thống kê cũ (`ANALYZE`), cột tương quan (`CREATE STATISTICS`) hoặc điều kiện bọc hàm." },
-    { "id": "sargable", "front": "Ba kiểu điều kiện làm index không dùng được?", "back": "Bọc cột trong hàm (`date(col)`), `LIKE '%abc'`, và so sánh khác kiểu buộc ép kiểu từng dòng." },
-    { "id": "innodb-secondary", "front": "Trong InnoDB, index phụ trỏ tới dòng bằng gì?", "back": "Bằng giá trị primary key; sau đó tra tiếp clustered index để lấy dòng, nên primary key dài làm mọi index phụ to ra." },
-    { "id": "fk-index", "front": "PostgreSQL có tự tạo index cho cột foreign key không?", "back": "Không (InnoDB thì có). Phải tự tạo, nếu không mỗi lần xoá hoặc đổi key dòng cha phải quét cả bảng con." }
+    {
+      "id": "index-tradeoff",
+      "front": "Index đánh đổi điều gì?",
+      "back": "Đọc nhanh hơn (O(log n) thay vì quét cả bảng) nhưng mỗi lần ghi chậm hơn và tốn thêm dung lượng."
+    },
+    {
+      "id": "leftmost-prefix",
+      "front": "Index `(a, b, c)` tìm thẳng được với điều kiện nào?",
+      "back": "Điều kiện bắt đầu từ cột trái nhất: `a`, `a + b`, `a + b + c`; không dùng để tìm thẳng với riêng `b` hoặc `c`."
+    },
+    {
+      "id": "column-order",
+      "front": "Trong index nhiều cột, nên xếp cột nào trước?",
+      "back": "Cột so sánh bằng trước, cột so sánh khoảng hoặc `ORDER BY` sau."
+    },
+    {
+      "id": "covering-index",
+      "front": "Covering index là gì?",
+      "back": "Index chứa đủ mọi cột query cần, nên database trả kết quả từ index (Index Only Scan); PostgreSQL vẫn đọc bảng với page chưa all-visible, xem `Heap Fetches`."
+    },
+    {
+      "id": "seq-scan-chosen",
+      "front": "Vì sao có index mà planner vẫn chọn Seq Scan?",
+      "back": "Điều kiện khớp quá nhiều dòng (độ chọn lọc thấp) nên đọc tuần tự rẻ hơn, hoặc điều kiện không sargable, hoặc thống kê sai."
+    },
+    {
+      "id": "explain-analyze",
+      "front": "`EXPLAIN` khác `EXPLAIN ANALYZE` thế nào?",
+      "back": "`EXPLAIN` chỉ in plan với số ước lượng; `EXPLAIN ANALYZE` chạy thật câu lệnh và in thời gian, số dòng thật."
+    },
+    {
+      "id": "estimate-vs-actual",
+      "front": "Plan có `rows=50` nhưng `actual rows=2000000`. Nghĩa là gì?",
+      "back": "Ước lượng sai nên planner có thể chọn sai cách chạy; thường do thống kê cũ (`ANALYZE`), cột tương quan (`CREATE STATISTICS`) hoặc điều kiện bọc hàm."
+    },
+    {
+      "id": "sargable",
+      "front": "Ba kiểu điều kiện làm index không dùng được?",
+      "back": "Bọc cột trong hàm (`date(col)`), `LIKE '%abc'`, và so sánh khác kiểu buộc ép kiểu từng dòng."
+    },
+    {
+      "id": "innodb-secondary",
+      "front": "Trong InnoDB, index phụ trỏ tới dòng bằng gì?",
+      "back": "Bằng giá trị primary key; sau đó tra tiếp clustered index để lấy dòng, nên primary key dài làm mọi index phụ to ra."
+    },
+    {
+      "id": "fk-index",
+      "front": "PostgreSQL có tự tạo index cho cột foreign key không?",
+      "back": "Không (InnoDB thì có). Phải tự tạo, nếu không mỗi lần xoá hoặc đổi key dòng cha phải quét cả bảng con."
+    },
+    {
+      "id": "brin-when",
+      "front": "Khi nào dùng BRIN index thay vì B-tree?",
+      "back": "Bảng rất lớn mà giá trị cột tăng theo thứ tự ghi (log, sự kiện theo thời gian): BRIN chỉ lưu min/max mỗi dải page nên rất nhỏ."
+    },
+    {
+      "id": "gin-when",
+      "front": "GIN index dùng cho loại dữ liệu nào?",
+      "back": "Giá trị chứa nhiều phần tử: `jsonb`, mảng, full-text search, và `LIKE '%abc%'` qua `pg_trgm`."
+    },
+    {
+      "id": "bitmap-scan",
+      "front": "Bitmap Heap Scan xuất hiện khi nào?",
+      "back": "Khi điều kiện khớp vài phần trăm bảng, hoặc cần kết hợp nhiều index (`BitmapAnd`/`BitmapOr`): gom vị trí dòng thành bitmap rồi đọc bảng theo thứ tự page."
+    },
+    {
+      "id": "index-bloat",
+      "front": "Vì sao index PostgreSQL có thể to gấp nhiều lần dữ liệu thật, và xử lý thế nào?",
+      "back": "UPDATE/DELETE để lại entry chết và page đã tách không tự gộp; dọn bằng `REINDEX INDEX CONCURRENTLY`."
+    },
+    {
+      "id": "mixed-order",
+      "front": "`ORDER BY created_at DESC, id ASC` cần index nào để khỏi sort?",
+      "back": "`(created_at DESC, id ASC)` hoặc `(created_at ASC, id DESC)`; index `(created_at, id)` không dùng được vì hai cột ngược chiều."
+    }
   ]
 }

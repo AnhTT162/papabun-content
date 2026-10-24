@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-partition", "front": "Partitioning giúp được gì, và không giúp được gì?", "back": "Giúp query theo partition key chỉ đọc phần liên quan, và xoá dữ liệu cũ bằng drop partition; không làm query đơn lẻ đã có index tốt nhanh hơn đáng kể." },
+    { "id": "three-kinds", "front": "Ba kiểu partition phổ biến?", "back": "Range (theo khoảng, thường là thời gian), list (theo danh sách giá trị), hash (chia đều theo hàm băm)." },
+    { "id": "local-vs-global", "front": "Local index khác global index thế nào?", "back": "Local: mỗi partition một index, dễ drop partition nhưng không unique toàn bảng và phải dò mọi partition khi thiếu key. Global: một index cho cả bảng, tra nhanh và unique được nhưng tốn công bảo trì khi drop partition." },
+    { "id": "unique-rule", "front": "Vì sao PostgreSQL/MySQL bắt unique key chứa partition key?", "back": "Chúng chỉ có local index, mỗi index chỉ kiểm tra unique trong partition của nó; chứa partition key thì hai dòng trùng chắc chắn nằm cùng partition." },
+    { "id": "pruning-sargable", "front": "Điều kiện nào làm mất partition pruning?", "back": "Bọc partition key trong hàm, ví dụ `date_trunc('month', created_at) = ...`; phải viết dạng khoảng trên chính cột." },
+    { "id": "drop-vs-delete", "front": "Vì sao xoá dữ liệu cũ bằng drop partition tốt hơn `DELETE`?", "back": "Drop gần như tức thì, không sinh dòng chết, không cần VACUUM và không làm replication trễ." },
+    { "id": "oracle-global-unusable", "front": "Oracle: drop partition mà không có `UPDATE GLOBAL INDEXES` thì sao?", "back": "Global index thành `UNUSABLE`, query dùng nó lỗi hoặc đổi plan cho tới khi rebuild." },
+    { "id": "dynamodb-gsi-lsi", "front": "DynamoDB LSI khác GSI thế nào?", "back": "LSI cùng partition key, tạo cùng lúc với bảng, đọc strongly consistent được; GSI chọn partition key tuỳ ý (thường khác bảng), thêm lúc nào cũng được nhưng chỉ eventually consistent." },
+    { "id": "shard-by-time", "front": "Vì sao không nên shard theo thời gian?", "back": "Mọi lượt ghi dồn vào shard mới nhất (hot partition); shard key thường là hash của `customer_id` hoặc `tenant_id`." }
+  ]
+}

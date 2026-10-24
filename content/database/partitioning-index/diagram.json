@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Bảng orders chia theo năm: local và global index",
+  "nodes": [
+    { "id": "query", "label": "WHERE order_no = ?", "kind": "client", "x": 0.1, "y": 0.5 },
+    { "id": "p2024", "label": "orders_2024 + index", "kind": "database", "x": 0.85, "y": 0.05 },
+    { "id": "pruned", "label": "WHERE năm 2026", "kind": "client", "x": 0.1, "y": 0.95 },
+    { "id": "p2025", "label": "orders_2025 + index", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "global", "label": "Global index order_no", "kind": "cache", "x": 0.1, "y": 0.05 },
+    { "id": "p2026", "label": "orders_2026 + index", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    {"id": "q-2024", "from": "query", "to": "p2024", "label": "dò index"},
+    {"id": "q-2025", "from": "query", "to": "p2025", "label": "dò index"},
+    {"id": "q-2026", "from": "query", "to": "p2026", "label": "dò index"},
+    {"id": "pruned-2026", "from": "pruned", "to": "p2026", "label": "chỉ 1 partition"},
+    {"id": "global-2024", "from": "global", "to": "p2024", "label": "trỏ thẳng tới dòng"}
+  ],
+  "steps": [
+    {"caption": "Bảng orders chia theo năm của created_at. Mỗi partition có local index riêng trên order_no.", "show": ["p2024", "p2025", "p2026"]},
+    {"caption": "Query theo order_no không có created_at: planner không biết dòng nằm ở partition nào, phải dò index của từng partition.", "show": ["query", "q-2024", "q-2025", "q-2026"], "highlight": ["q-2024", "q-2025", "q-2026"]},
+    {"caption": "Query có điều kiện trên created_at: partition pruning loại các partition không liên quan, chỉ dò một index.", "show": ["pruned", "pruned-2026"], "highlight": ["pruned-2026"]},
+    {"caption": "Global index (Oracle): một index cho cả bảng, tra một lần là ra dòng ở đúng partition (ở đây là 2024), và đảm bảo được order_no unique toàn bảng.", "show": ["global", "global-2024"], "highlight": ["global-2024"]},
+    {"caption": "Cái giá của global index: drop partition 2024 phải dọn mọi entry của nó trong global index. Local index của 2024 thì đi theo partition, không tốn gì.", "show": [], "highlight": ["global", "p2024"]}
+  ]
+}

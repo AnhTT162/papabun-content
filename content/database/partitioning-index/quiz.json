@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pk-without-partition-key",
+      "kind": "output",
+      "prompt": "PostgreSQL 16. Lệnh cuối cùng cho kết quả gì?",
+      "code": "CREATE TABLE orders (\n    id         bigint      NOT NULL,\n    created_at timestamptz NOT NULL\n) PARTITION BY RANGE (created_at);\n\nALTER TABLE orders ADD PRIMARY KEY (id);",
+      "options": [
+        "Thành công, PostgreSQL tạo global index cho id",
+        "ERROR: unique constraint on partitioned table must include all partitioning columns",
+        "Thành công, nhưng id chỉ unique trong từng partition",
+        "Thành công, PostgreSQL tự thêm created_at vào primary key"
+      ],
+      "answer": 1,
+      "explanation": "PostgreSQL không có global index. Mỗi partition chỉ kiểm tra unique trong chính nó, nên primary key phải chứa partition key để hai dòng trùng chắc chắn nằm cùng partition. Phải viết `PRIMARY KEY (id, created_at)`. PostgreSQL không tự sửa định nghĩa của bạn."
+    },
+    {
+      "id": "which-prunes",
+      "kind": "single",
+      "prompt": "Bảng `orders` chia range theo tháng của `created_at`. Query nào được partition pruning chỉ còn partition tháng 10/2026?",
+      "options": [
+        "`WHERE date_trunc('month', created_at) = '2026-10-01'`",
+        "`WHERE created_at >= '2026-10-01' AND created_at < '2026-11-01'`",
+        "`WHERE to_char(created_at, 'YYYY-MM') = '2026-10'`",
+        "`WHERE extract(month FROM created_at) = 10`"
+      ],
+      "answer": 1,
+      "explanation": "Pruning cần so sánh trực tiếp trên partition key, giống điều kiện sargable cho index. Bọc cột trong hàm thì planner không suy ra được khoảng giá trị, nên phải quét mọi partition. Lựa chọn cuối còn sai về nghĩa: nó lấy tháng 10 của mọi năm."
+    },
+    {
+      "id": "local-index-lookup-cost",
+      "kind": "single",
+      "prompt": "Bảng chia 36 partition theo tháng, mỗi partition có local index trên `order_no`. Query `WHERE order_no = 'A123'` không có điều kiện thời gian. Điều gì xảy ra?",
+      "options": [
+        "Seq Scan toàn bộ 36 partition",
+        "Dò index của cả 36 partition, mỗi lần một phép tra B-tree",
+        "Chỉ dò partition mới nhất",
+        "Báo lỗi vì thiếu partition key"
+      ],
+      "answer": 1,
+      "explanation": "Không có partition key nên không pruning được, nhưng mỗi partition vẫn có index, nên planner dùng index trên từng partition (`Append` gồm 36 nhánh `Index Scan`). Mỗi lần tra rất nhanh, nhưng chi phí tăng theo số partition. Đó là cái giá của local index với query thiếu partition key."
+    },
+    {
+      "id": "oracle-drop-partition",
+      "kind": "single",
+      "prompt": "Oracle, bảng `orders` có một global index unique trên `order_no`. DBA chạy `ALTER TABLE orders DROP PARTITION p2023_01;` (không có `UPDATE GLOBAL INDEXES`). Sau đó?",
+      "options": [
+        "Global index tự loại các entry của partition đã drop, không ảnh hưởng gì",
+        "Global index chuyển sang `UNUSABLE`; query và `INSERT` cần index đó lỗi hoặc đổi plan cho tới khi rebuild",
+        "Lệnh drop bị từ chối vì có global index",
+        "Chỉ local index bị ảnh hưởng"
+      ],
+      "answer": 1,
+      "explanation": "Không kèm `UPDATE GLOBAL INDEXES` (hoặc `UPDATE INDEXES`), Oracle không dọn entry trong global index mà đánh dấu cả index là `UNUSABLE`. Index unique ở trạng thái đó còn làm `INSERT` lỗi. Từ 12c, kèm `UPDATE INDEXES` thì việc dọn được làm bất đồng bộ nên lệnh drop vẫn nhanh. Local index đi theo partition nên không bị ảnh hưởng."
+    },
+    {
+      "id": "dynamodb-gsi-consistency",
+      "kind": "single",
+      "prompt": "Bảng DynamoDB `Orders` có partition key `customerId`. Cần tra đơn theo `orderNo` và đọc được ngay giá trị vừa ghi. Nhận định nào đúng?",
+      "options": [
+        "Tạo GSI trên `orderNo`, đọc với `ConsistentRead = true`",
+        "GSI trên `orderNo` chỉ đọc eventually consistent; cần đọc ngay thì đọc lại từ bảng chính bằng key, hoặc thiết kế key khác",
+        "Tạo LSI trên `orderNo` sau khi bảng đã có dữ liệu",
+        "DynamoDB không tra được theo thuộc tính khác partition key"
+      ],
+      "answer": 1,
+      "explanation": "GSI được cập nhật bất đồng bộ và không hỗ trợ strongly consistent read. LSI thì đọc consistent được nhưng phải cùng partition key với bảng (ở đây là `customerId`, không phải `orderNo`) và chỉ tạo được lúc tạo bảng. Tra GSI để lấy key rồi đọc bảng chính với `ConsistentRead` chỉ cho bản mới nhất của những item **đã** lan sang GSI; đơn vừa ghi có thể chưa có trong GSI. Muốn đọc ngay sau khi tạo: trả key cho client lúc ghi, hoặc ghi thêm một item có key là `orderNo` trong cùng `TransactWriteItems` rồi đọc nó với `ConsistentRead`."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "partitioning-index",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Partitioning & Global/Local Index",
+  "summary": "Chia bảng lớn theo range/list/hash, partition pruning, local index và global index khác nhau thế nào trong PostgreSQL, MySQL, Oracle; vì sao unique key phải chứa partition key; xoá dữ liệu bằng drop partition; mở rộng sang sharding và DynamoDB GSI/LSI.",
+  "level": "senior",
+  "order": 4,
+  "minutes": 20,
+  "prerequisites": ["index-execution-plan"],
+  "terms": ["partitioning", "partition-key", "partition-pruning", "local-index", "global-index", "sharding", "hot-partition", "gsi", "lsi", "brin-index", "sargable"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Table Partitioning", "url": "https://www.postgresql.org/docs/current/ddl-partitioning.html" },
+    { "title": "MySQL 8.0: Partitioning Keys, Primary Keys, and Unique Keys", "url": "https://dev.mysql.com/doc/refman/8.0/en/partitioning-limitations-partitioning-keys-unique-keys.html" },
+    { "title": "Amazon DynamoDB: Secondary Indexes", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SecondaryIndexes.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Partitioning và sharding khác nhau thế nào?\" Partitioning chia bảng **trong một database**: transaction, join và ràng buộc vẫn hoạt động bình thường. Sharding chia dữ liệu **qua nhiều server**: mỗi shard là một database riêng, nên query thiếu shard key phải hỏi mọi shard, transaction qua nhiều shard cần cơ chế phân tán, và global index phải tự xây (bảng tra cứu, hoặc dùng database phân tán có sẵn). Nên partition trước, chỉ shard khi một máy thật sự không chịu nổi." },
+    { "type": "callout", "style": "warning", "markdown": "Partitioning không phải cách chữa query chậm mặc định. Bảng 50 triệu dòng với index đúng thường chưa cần partition. Partition sai key (query chính không lọc theo key) còn làm mọi query chậm hơn, vì phải dò nhiều index nhỏ thay vì một index lớn." }
+  ]
+}

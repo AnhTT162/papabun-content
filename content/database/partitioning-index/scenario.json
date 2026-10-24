@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Partition bảng orders 3 tỷ dòng trên PostgreSQL",
+  "prompt": "Bảng `orders` trên PostgreSQL 16 đã có **3 tỷ dòng** (khoảng 2TB), ghi thêm **5.000 đơn/giây** lúc cao điểm. Quy định chỉ giữ dữ liệu **3 năm**. Job xoá dữ liệu cũ bằng `DELETE` chạy cả đêm, làm bảng phình và replication trễ. Các truy cập chính:\n\n1. App khách hàng: xem đơn của mình trong 3 tháng gần nhất (rất nhiều request).\n2. Tổng đài: tra một đơn theo `order_no` (mã in trên hoá đơn, unique toàn hệ thống) khi khách gọi tới. Khách thường không nhớ ngày đặt. Khoảng 20 lượt/giây.\n3. Báo cáo doanh thu theo tháng.\n4. Xoá dữ liệu quá 3 năm.\n\nHãy chọn cách chia partition, partition key, primary key và các index. Giải thích cách bạn giữ `order_no` unique và tra nhanh theo `order_no`.",
+  "hints": [
+    "Ba trên bốn truy cập gắn với thời gian (3 tháng gần nhất, báo cáo theo tháng, xoá quá 3 năm). Chia theo khoảng của `created_at` thì mỗi truy cập đó chạm bao nhiêu partition?",
+    "PostgreSQL chỉ có local index: primary key và unique phải chứa partition key. Vậy `UNIQUE (order_no)` có tạo được không? Nếu không, ai đảm bảo `order_no` unique?",
+    "Tra theo `order_no` không có ngày: với 36 partition theo tháng, dò 36 index B-tree mất bao lâu, và 20 lượt/giây có đáng lo không? Có cách nào biết được partition ngay từ `order_no` không?",
+    "Xoá dữ liệu quá 3 năm: so sánh `DELETE` 80 triệu dòng mỗi tháng với detach rồi drop một partition."
+  ],
+  "solution": "**1. Range partition theo tháng của `created_at`.** Khoảng 36 partition cho 3 năm, mỗi partition chừng 80 triệu dòng. Tạo trước partition cho vài tháng tới bằng job (hoặc extension `pg_partman`) và cảnh báo khi số partition tạo sẵn còn ít. Không dùng partition `DEFAULT`: nó chặn `DETACH ... CONCURRENTLY` ở bước 5, và bị khoá, bị quét mỗi lần tạo partition mới.\n\n```sql\nCREATE TABLE orders (\n    id          bigint      NOT NULL,\n    order_no    text        NOT NULL,\n    customer_id bigint      NOT NULL,\n    created_at  timestamptz NOT NULL,\n    total       numeric(14,2) NOT NULL,\n    PRIMARY KEY (id, created_at)          -- bắt buộc chứa partition key\n) PARTITION BY RANGE (created_at);\n\nCREATE TABLE orders_2026_10 PARTITION OF orders\n    FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');\n\nCREATE INDEX ON orders (customer_id, created_at DESC);   -- local, tự tạo trên mọi partition\n```\n\n**2. App khách hàng**: query luôn kèm `created_at >= now() - interval '3 months'`, nên pruning chỉ còn 3–4 partition, mỗi partition dùng index `(customer_id, created_at DESC)`. Vì `now()` chỉ biết lúc chạy, pruning xảy ra khi bắt đầu thực thi; plan có dòng `Subplans Removed: 32`.\n\n**3. `order_no` unique và tra nhanh.** Không tạo được `UNIQUE (order_no)` trên bảng partition. Có ba cách:\n- **Mã hoá tháng vào `order_no`** (ví dụ `2610-8F3K2Q`: 4 ký tự đầu là năm và tháng). Tổng đài tách tháng từ mã rồi thêm điều kiện `created_at` vào query, pruning còn một partition. Unique do bộ sinh mã đảm bảo (sequence, hoặc snowflake: id 64 bit ghép thời gian, mã máy và số đếm), cộng thêm local index `(order_no)` để tra. `order_no` và `created_at` phải lấy từ **cùng một thời điểm theo UTC**; nếu không, đơn tạo lúc nửa đêm cuối tháng có thể nằm ở partition khác với tháng trong mã. An toàn hơn thì tra trong khoảng tháng đó ± 1 tháng.\n- **Bảng tra cứu không chia partition** `order_lookup(order_no PRIMARY KEY, id, created_at)`, ghi trong cùng transaction với `orders`. Nó là \"global index tự làm\": unique thật và tra một lần, đổi lại mỗi lần ghi thêm một `INSERT`, và phải tự dọn khi drop partition.\n- **Chỉ dùng local index `(order_no)`** và chấp nhận dò cả 36 partition: khi index nằm trong cache, mỗi lần dò B-tree khoảng 0,1ms nên một lượt tra mất vài mili giây, đủ cho 20 lượt/giây. Nhưng unique chỉ còn do bộ sinh mã đảm bảo.\n\nVới hệ thống này, chọn cách 1 nếu được đổi định dạng mã, nếu không thì cách 2.\n\n**4. Báo cáo theo tháng** chạm đúng một partition, và Seq Scan cả partition đó là cách đọc đúng. [[brin-index|BRIN]] trên `created_at` chỉ có ích khi báo cáo lọc khoảng nhỏ hơn một partition (theo ngày, theo giờ).\n\n**5. Xoá dữ liệu cũ** mỗi tháng:\n\n```sql\nALTER TABLE orders DETACH PARTITION orders_2023_09 CONCURRENTLY;\nDROP TABLE orders_2023_09;   -- hoặc lưu sang kho rẻ trước khi drop\n```\n\nGần như tức thì, không sinh dòng chết, không làm replication trễ. Với bảng tra cứu ở cách 2, xoá các dòng tương ứng theo lô nhỏ.\n\n**Chuyển đổi từ bảng cũ**: không đổi được bảng 3 tỷ dòng sang partition tại chỗ. Tạo bảng partition mới, ghi song song vào cả hai bảng (dual write, hoặc trigger), copy dữ liệu cũ theo lô, đối soát, rồi đổi tên trong một transaction ngắn. Một cách khác là gắn cả bảng cũ làm một partition lịch sử: thêm `CHECK` khớp khoảng của partition (`NOT VALID` rồi `VALIDATE`) để `ATTACH` không phải quét lại, nhưng primary key của bảng cũ vẫn phải đổi sang chứa `created_at`.",
+  "tradeoffs": [
+    {
+      "option": "Mã hoá tháng vào order_no + local index",
+      "pros": [
+        "Tra theo mã chỉ chạm một partition",
+        "Không thêm bảng hay lượt ghi nào"
+      ],
+      "cons": [
+        "Phải đổi định dạng mã, ảnh hưởng hệ thống khác đang dùng mã cũ",
+        "Unique do bộ sinh mã đảm bảo, database không kiểm tra"
+      ]
+    },
+    {
+      "option": "Bảng tra cứu order_no không chia partition",
+      "pros": [
+        "Unique thật do database đảm bảo",
+        "Tra một lần, không phụ thuộc định dạng mã"
+      ],
+      "cons": [
+        "Mỗi đơn ghi hai bảng",
+        "Bảng tra cứu tự nó lớn dần, phải tự dọn khi drop partition"
+      ]
+    },
+    {
+      "option": "Chỉ local index, dò mọi partition",
+      "pros": [
+        "Đơn giản nhất, không đổi gì ở ứng dụng"
+      ],
+      "cons": [
+        "Mỗi lượt tra chạm 36 index, tệ dần khi số partition tăng",
+        "Không có ràng buộc unique ở database"
+      ]
+    },
+    {
+      "option": "Chuyển sang Oracle hoặc distributed SQL để có global index",
+      "pros": [
+        "Unique toàn bảng và tra một lần có sẵn"
+      ],
+      "cons": [
+        "Chi phí chuyển đổi rất lớn cho một vấn đề có cách giải trong PostgreSQL",
+        "Drop partition phải bảo trì global index"
+      ]
+    }
+  ]
+}

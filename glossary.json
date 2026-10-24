@@ -781,7 +781,7 @@
       "meaning": "Điều kiện viết sao cho database dùng được index để tìm (Search ARGument ABLE): so sánh trực tiếp trên cột, không bọc cột trong hàm.",
       "example": "`created_at >= '2026-10-01'` là sargable; `date(created_at) = '2026-10-01'` thì không.",
       "related": ["expression-index", "b-tree"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "partitioning-index"]
     },
     {
       "id": "expression-index",
@@ -1070,6 +1070,110 @@
       "example": "Trace của một request cho thấy 253 span `SELECT` tới database.",
       "related": ["n-plus-one"],
       "topics": ["n-plus-one"]
+    },
+    {
+      "id": "partitioning",
+      "term": "Partitioning",
+      "meaning": "Chia một bảng logic thành nhiều bảng vật lý (partition) theo giá trị của một cột, trong cùng một database. Query và ứng dụng vẫn thấy một bảng.",
+      "example": "Bảng `orders` chia theo tháng: `orders_2026_10`, `orders_2026_11`...",
+      "related": ["partition-key", "partition-pruning", "sharding"],
+      "topics": ["partitioning-index", "index-execution-plan"]
+    },
+    {
+      "id": "partition-key",
+      "term": "Partition key",
+      "meaning": "Cột (hoặc các cột) quyết định một dòng nằm ở partition nào. Nên là cột mà hầu hết query và việc xoá dữ liệu đều lọc theo.",
+      "example": "`PARTITION BY RANGE (created_at)`: `created_at` là partition key.",
+      "related": ["partitioning", "partition-pruning"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "partition-pruning",
+      "term": "Partition pruning",
+      "meaning": "Planner loại bỏ các partition chắc chắn không chứa dòng cần tìm, dựa trên điều kiện trên partition key.",
+      "example": "`WHERE created_at >= '2026-10-01' AND created_at < '2026-11-01'` chỉ đọc partition tháng 10.",
+      "related": ["partitioning", "sargable"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "local-index",
+      "term": "Local index",
+      "meaning": "Index được chia theo cùng cách với bảng: mỗi partition có index riêng. Dễ bảo trì khi drop partition, nhưng chỉ kiểm tra unique trong từng partition.",
+      "example": "Index `(customer_id)` trên bảng partition của PostgreSQL tạo một index con trên mỗi partition.",
+      "related": ["global-index", "partitioning"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "global-index",
+      "term": "Global index",
+      "meaning": "Một index cho cả bảng partition, trỏ tới dòng ở bất kỳ partition nào. Tra nhanh và unique được trên cột không phải partition key, nhưng phải bảo trì khi drop hoặc truncate partition.",
+      "example": "Oracle: `CREATE UNIQUE INDEX ux_order_no ON orders (order_no);` trên bảng partition, index không chia partition thì mặc định là global.",
+      "related": ["local-index", "partitioning"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "sharding",
+      "term": "Sharding",
+      "meaning": "Chia dữ liệu qua nhiều database server (shard), mỗi shard giữ một phần dòng theo shard key. Mở rộng được ghi vượt một máy, nhưng query, transaction và index qua nhiều shard phức tạp hơn nhiều.",
+      "example": "Khách có `hash(customer_id) % 8 = 3` nằm ở shard số 3.",
+      "related": ["partitioning", "hot-partition"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "hot-partition",
+      "term": "Hot partition",
+      "meaning": "Một partition hoặc shard nhận phần lớn lượt đọc/ghi trong khi phần còn lại rảnh, thường do chọn key theo thời gian hoặc theo một khách hàng quá lớn.",
+      "example": "Shard theo ngày: mọi đơn mới đều ghi vào shard của hôm nay.",
+      "related": ["sharding", "partition-key"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "gsi",
+      "term": "GSI",
+      "meaning": "Global Secondary Index của DynamoDB: partition key và sort key tuỳ chọn (thường khác bảng chính), thêm được bất cứ lúc nào, cập nhật bất đồng bộ nên chỉ đọc eventually consistent.",
+      "example": "Bảng `Orders` key theo `customerId`, thêm GSI theo `orderNo` để tra theo mã đơn.",
+      "related": ["lsi", "global-index"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "lsi",
+      "term": "LSI",
+      "meaning": "Local Secondary Index của DynamoDB: cùng partition key với bảng nhưng sort key khác; phải tạo lúc tạo bảng, đọc strongly consistent được.",
+      "example": "Bảng `Orders` (`customerId`, `createdAt`) thêm LSI sắp theo `total` của cùng khách.",
+      "related": ["gsi", "local-index"],
+      "topics": ["partitioning-index"]
+    },
+    {
+      "id": "gin-index",
+      "term": "GIN index",
+      "meaning": "Generalized Inverted Index của PostgreSQL: index đảo ngược, ánh xạ từng phần tử (key JSON, phần tử mảng, từ, trigram) tới các dòng chứa nó.",
+      "example": "`CREATE INDEX ON products USING gin (attributes jsonb_path_ops)` cho `WHERE attributes @> '{\"color\":\"red\"}'`.",
+      "related": ["b-tree", "brin-index"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "brin-index",
+      "term": "BRIN index",
+      "meaning": "Block Range Index của PostgreSQL: chỉ lưu min/max của mỗi dải page, rất nhỏ; hiệu quả khi giá trị cột tăng theo thứ tự dữ liệu được ghi.",
+      "example": "`CREATE INDEX ON events USING brin (created_at)` trên bảng log 2 tỷ dòng chỉ tốn vài MB.",
+      "related": ["b-tree", "gin-index"],
+      "topics": ["index-execution-plan", "partitioning-index"]
+    },
+    {
+      "id": "bitmap-scan",
+      "term": "Bitmap Index Scan",
+      "meaning": "Cách đọc của PostgreSQL: gom vị trí dòng từ một hoặc nhiều index thành bitmap theo page, rồi đọc bảng theo thứ tự vật lý (Bitmap Heap Scan). Hợp với độ chọn lọc trung bình.",
+      "example": "Plan có `BitmapOr` kết hợp index trên `status` và index trên `customer_id`.",
+      "related": ["seq-scan", "index-only-scan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "index-bloat",
+      "term": "Index bloat",
+      "meaning": "Index chiếm nhiều dung lượng hơn mức cần vì chứa entry chết và page gần rỗng sau nhiều lần UPDATE/DELETE; làm index chậm và tốn cache.",
+      "example": "Index 30GB cho bảng chỉ 8GB dữ liệu; `REINDEX INDEX CONCURRENTLY` thu về 3GB.",
+      "related": ["b-tree", "hot-update"],
+      "topics": ["index-execution-plan"]
     }
   ]
 }

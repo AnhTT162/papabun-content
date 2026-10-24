@@ -10,10 +10,11 @@
   "order": 1,
   "minutes": 18,
   "prerequisites": [],
-  "terms": ["b-tree", "clustered-index", "composite-index", "covering-index", "execution-plan", "planner-statistics", "selectivity", "seq-scan", "sargable", "expression-index", "index-only-scan", "tid", "partial-index", "hot-update", "skip-scan"],
+  "terms": ["b-tree", "clustered-index", "composite-index", "covering-index", "execution-plan", "planner-statistics", "selectivity", "seq-scan", "sargable", "expression-index", "index-only-scan", "tid", "partial-index", "hot-update", "skip-scan", "gin-index", "brin-index", "bitmap-scan", "index-bloat", "partitioning"],
   "references": [
     { "title": "PostgreSQL Documentation: Indexes", "url": "https://www.postgresql.org/docs/current/indexes.html" },
     { "title": "PostgreSQL Documentation: Using EXPLAIN", "url": "https://www.postgresql.org/docs/current/using-explain.html" },
+    { "title": "PostgreSQL Documentation: Index Types", "url": "https://www.postgresql.org/docs/current/indexes-types.html" },
     { "title": "MySQL 8.0: Clustered and Secondary Indexes", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html" }
   ],
   "blocks": [
