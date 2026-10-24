@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "locking-deadlock-db",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Lock & deadlock trong database",
+  "summary": "Lock cấp bảng và hàng đợi lock (vì sao một ALTER TABLE làm treo cả bảng), metadata lock của MySQL, record/gap/next-key/insert intention lock của InnoDB, các nguyên nhân deadlock hay gặp, đọc deadlock log của PostgreSQL và InnoDB, công cụ tìm ai đang chặn ai, advisory lock.",
+  "level": "senior",
+  "order": 17,
+  "minutes": 20,
+  "prerequisites": ["optimistic-pessimistic-locking", "transaction-isolation"],
+  "terms": ["table-lock", "lock-queue", "metadata-lock", "next-key-lock", "gap-lock", "insert-intention-lock", "deadlock", "lock-timeout", "advisory-lock", "lock-ordering", "connection-pool", "retry-backoff", "foreign-key"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Explicit Locking", "url": "https://www.postgresql.org/docs/current/explicit-locking.html" },
+    { "title": "MySQL 8.0: InnoDB Locking", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html" },
+    { "title": "MySQL 8.0: Metadata Locking", "url": "https://dev.mysql.com/doc/refman/8.0/en/metadata-locking.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống thỉnh thoảng có vài deadlock mỗi ngày, có phải lỗi nghiêm trọng không?\" Không nhất thiết. Với nhiều transaction đồng thời, deadlock thỉnh thoảng xảy ra là bình thường; database tự phát hiện và huỷ một bên, và ứng dụng phải retry cả transaction. Điều cần làm là: đảm bảo có retry, theo dõi số deadlock theo thời gian, và khi nó tăng thì đọc deadlock log để tìm cặp câu lệnh lặp lại, rồi sửa gốc (thống nhất thứ tự khoá, thêm index để khoá ít dòng hơn, rút ngắn transaction)." }
+  ]
+}

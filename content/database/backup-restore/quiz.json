@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "replica-after-drop",
+      "kind": "single",
+      "prompt": "PostgreSQL có primary và một streaming replica. Ai đó chạy `DROP TABLE invoices;` trên primary. Ngay sau đó, bảng `invoices` trên replica thế nào?",
+      "options": [
+        "Vẫn còn, vì replica chỉ chép dữ liệu, không chép DDL",
+        "Vẫn còn nếu replica là async",
+        "Cũng mất sau vài mili giây tới vài giây",
+        "Replica dừng đồng bộ và báo lỗi"
+      ],
+      "answer": 2,
+      "explanation": "Streaming replication phát lại mọi thay đổi trong WAL, gồm cả DDL, dù là sync hay async; async chỉ làm chậm hơn một chút. Đó là lý do replica không phải backup. Chỉ PITR từ backup, hoặc một delayed replica có độ trễ lớn hơn thời gian phát hiện lỗi, mới lấy lại được bảng."
+    },
+    {
+      "id": "archive-timeout-rpo",
+      "kind": "single",
+      "prompt": "PostgreSQL bật WAL archiving, `archive_timeout = 0` (mặc định, tắt). Ban đêm hệ thống chỉ ghi khoảng 1MB WAL mỗi giờ. Máy primary hỏng hoàn toàn lúc 3 giờ sáng. Có thể mất bao nhiêu dữ liệu?",
+      "options": [
+        "Không mất gì, vì WAL được archive liên tục",
+        "Tối đa `checkpoint_timeout`, tức 5 phút",
+        "Tối đa vài giây",
+        "Có thể tới nhiều giờ"
+      ],
+      "answer": 3,
+      "explanation": "`archive_command` chỉ chạy cho file WAL đã hoàn tất, và checkpoint không buộc chuyển sang file mới. File 16MB với 1MB mỗi giờ phải khoảng 16 giờ mới đầy, nên phần dữ liệu từ lần chuyển file gần nhất chỉ nằm trên đĩa primary. Đặt `archive_timeout` (ví dụ 60 giây) để PostgreSQL chuyển file sau tối đa 60 giây, đổi lại tốn dung lượng vì file đóng sớm vẫn dài đủ 16MB. Muốn RPO gần 0 cho riêng backup thì stream WAL liên tục bằng `pg_receivewal` hoặc Barman. Có replica thì dữ liệu vẫn còn trên replica; câu hỏi này nói về RPO của riêng backup."
+    },
+    {
+      "id": "restore-one-table",
+      "kind": "single",
+      "prompt": "Lúc 10:00 một bảng bị xoá nhầm, phát hiện lúc 10:30, trong 30 phút đó hệ thống vẫn nhận đơn hàng. Có pgBackRest với WAL archive đầy đủ. Cách nào đúng?",
+      "options": [
+        "Restore đè production về 09:59",
+        "Restore ra một máy riêng tới 09:59, lấy bảng đó ra rồi chép lại vào production",
+        "Chép bảng từ replica",
+        "Restore `pg_dump` mới nhất đè lên production"
+      ],
+      "answer": 1,
+      "explanation": "Đưa cả production về 09:59 là mất 30 phút đơn hàng. PITR ra một máy riêng giữ nguyên production, chỉ lấy đúng bảng bị xoá rồi chép lại. Replica đã áp lệnh xoá nên không còn bảng. Restore `pg_dump` đè lên còn mất nhiều hơn: mọi thay đổi từ lúc dump."
+    },
+    {
+      "id": "mysqldump-single-transaction",
+      "kind": "single",
+      "prompt": "`mysqldump --single-transaction` trên database có cả bảng InnoDB và MyISAM, trong lúc ứng dụng vẫn ghi. Điều gì đúng?",
+      "options": [
+        "Mọi bảng đều có snapshot nhất quán",
+        "Bảng InnoDB nhất quán, còn MyISAM bị khoá suốt lúc dump nên cũng nhất quán",
+        "Dump bị chặn tới khi ứng dụng ngừng ghi",
+        "Bảng InnoDB nhất quán, MyISAM thì có thể không khớp với phần còn lại"
+      ],
+      "answer": 3,
+      "explanation": "`--single-transaction` mở một transaction REPEATABLE READ và dựa vào MVCC của InnoDB, không khoá bảng. MyISAM không có MVCC và cũng không bị khoá trong chế độ này, nên dữ liệu của nó được đọc ở thời điểm khác. DDL chạy trong lúc dump cũng có thể làm hỏng tính nhất quán. Database lớn nên dùng physical backup (XtraBackup)."
+    },
+    {
+      "id": "pg-restore-single-table",
+      "kind": "single",
+      "prompt": "Cần lấy riêng bảng `invoices` từ bản dump đêm qua và restore song song cho nhanh. Bản dump được tạo bằng lệnh nào thì làm được cả hai việc?",
+      "options": [
+        "`pg_dump shop > shop.sql`",
+        "`pg_dumpall > all.sql`",
+        "`pg_dump -Fc shop > shop.dump`",
+        "Chỉ `pg_basebackup`"
+      ],
+      "answer": 2,
+      "explanation": "Định dạng custom (`-Fc`) và directory (`-Fd`) cho phép `pg_restore -t invoices` lấy riêng một bảng và `pg_restore -j 8` restore song song. Dump SQL thuần chỉ chạy lại được bằng `psql` từ đầu tới cuối; muốn lấy một bảng phải tự lọc file. `pg_basebackup` là physical backup của cả cluster, không lấy riêng một bảng được."
+    }
+  ]
+}

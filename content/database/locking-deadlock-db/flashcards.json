@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "access-exclusive", "front": "Lock `ACCESS EXCLUSIVE` của PostgreSQL xung đột với gì, ai lấy nó?", "back": "Xung đột với mọi mức lock, kể cả `SELECT`. Phần lớn `ALTER TABLE`, `DROP`, `TRUNCATE`, `VACUUM FULL` lấy nó." },
+    { "id": "lock-queue-trap", "front": "Vì sao một `ALTER TABLE` đang chờ lock lại làm treo cả các `SELECT`?", "back": "Lock được cấp theo hàng đợi: `SELECT` mới xung đột với yêu cầu `ACCESS EXCLUSIVE` đang chờ phía trước nên phải xếp sau nó." },
+    { "id": "ddl-lock-timeout", "front": "Chạy DDL trên production thế nào cho an toàn với lock?", "back": "`SET lock_timeout = '3s'` (MySQL: `lock_wait_timeout`) rồi retry, và không để transaction dài trên bảng đó." },
+    { "id": "mysql-mdl", "front": "Trạng thái `Waiting for table metadata lock` trong MySQL nghĩa là gì?", "back": "DDL đang chờ metadata lock độc quyền vì một transaction đang mở (kể cả chỉ `SELECT`) đã chạm vào bảng." },
+    { "id": "gap-vs-insert-intention", "front": "Gap lock chặn gì và không chặn gì?", "back": "Gap lock của các transaction không chặn nhau, nhưng chặn insert intention lock, tức chặn insert vào khoảng đó." },
+    { "id": "deadlock-detection", "front": "PostgreSQL và InnoDB phát hiện deadlock khác nhau thế nào?", "back": "PostgreSQL kiểm tra sau `deadlock_timeout` (1 giây) và báo `40P01`; InnoDB phát hiện ngay và rollback transaction nhỏ hơn, lỗi `1213`." },
+    { "id": "innodb-all-deadlocks", "front": "Vì sao `SHOW ENGINE INNODB STATUS` không đủ để điều tra deadlock?", "back": "Nó chỉ giữ deadlock gần nhất. Bật `innodb_print_all_deadlocks` để ghi mọi deadlock vào error log." },
+    { "id": "who-blocks", "front": "Tìm session đang chặn session khác trong PostgreSQL thế nào?", "back": "`pg_blocking_pids(pid)` trong `pg_stat_activity`, và `pg_locks` để xem chi tiết lock." },
+    { "id": "rc-fewer-deadlocks", "front": "Vì sao chuyển InnoDB sang READ COMMITTED thường giảm deadlock?", "back": "Nó tắt gap lock cho tìm kiếm và nhả lock trên dòng không khớp `WHERE`; đổi lại chấp nhận phantom." },
+    { "id": "idle-in-transaction", "front": "Session `idle in transaction` nguy hiểm thế nào?", "back": "Nó vẫn giữ mọi lock đã lấy, và (ở REPEATABLE READ, hoặc khi đã ghi) chặn VACUUM dọn dòng chết; dùng `idle_in_transaction_session_timeout` để tự đóng." }
+  ]
+}

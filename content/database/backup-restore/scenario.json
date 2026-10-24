@@ -1,0 +1,61 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Có người chạy DELETE thiếu WHERE lúc 14:05",
+  "prompt": "Hệ thống đặt hàng chạy PostgreSQL 16 tự quản lý trên máy ảo: primary và một replica đồng bộ gần như tức thì, database **2TB**, ghi khoảng 30GB WAL mỗi ngày. Cam kết: **RPO 5 phút**, **RTO 1 giờ** khi mất database.\n\nHiện tại chỉ có một job `pg_dump -Fc` chạy lúc 2 giờ sáng, lưu file vào chính ổ đĩa của máy primary, và chưa ai từng thử restore. Mạng giữa các máy là 1Gbit/s.\n\nHôm nay lúc **14:05:12**, một kỹ sư chạy nhầm `DELETE FROM customer_address;` trên production (quên `WHERE`). Phát hiện lúc 14:20. Trong 15 phút đó hệ thống vẫn nhận đơn mới và khách vẫn thêm địa chỉ mới.\n\n1. Cứu dữ liệu bị xoá thế nào mà không mất đơn hàng của 15 phút sau đó?\n2. Thiết kế lại chiến lược backup để đáp ứng RPO và RTO.",
+  "hints": [
+    "Replica có giúp được không, khi nó đã áp câu `DELETE` gần như ngay lập tức?",
+    "Restore `pg_dump` lúc 2 giờ sáng đè lên production thì mất những gì? Có cần đưa **cả database** về 14:05 không?",
+    "Với 2TB, chép dữ liệu thôi qua mạng 1Gbit/s đã mất bao lâu? `pg_dump` restore còn phải tạo lại mọi index.",
+    "RPO 5 phút nghĩa là WAL phải rời khỏi máy primary ít nhất mỗi 5 phút. Nếu ít ghi thì một file WAL 16MB đầy sau bao lâu?"
+  ],
+  "solution": "**1. Cứu dữ liệu: khôi phục ra một máy riêng, rồi chỉ chép lại bảng bị xoá.**\n\nReplica vô dụng ở đây: nó đã áp câu `DELETE`. Restore đè cả database về 14:05 thì mất mọi đơn hàng trong 15 phút sau đó.\n\nVới hiện trạng chỉ có `pg_dump` lúc 2 giờ sáng: restore riêng bảng `customer_address` từ dump vào một database tạm (`pg_restore -t customer_address`), rồi chép các dòng đó trở lại. Địa chỉ được thêm hoặc sửa từ 2 giờ sáng tới 14:05 thì mất, trừ khi tìm lại được từ nguồn khác (log ứng dụng, audit). Đây là lý do cần PITR.\n\nNếu đã có PITR (sau khi làm bước 2):\n1. Restore base backup gần nhất vào một máy **riêng**, phát lại WAL tới ngay trước câu lệnh: `pgbackrest restore --type=time --target='2026-10-24 14:05:11+07' --target-action=pause --archive-mode=off`. pgBackRest tự sinh `restore_command` và `recovery.signal`; làm tay thì phải tự cấu hình cả hai. `--archive-mode=off` để máy tạm không đẩy WAL và timeline mới của nó vào cùng kho archive của production, làm rối các lần PITR sau.\n2. Trên máy đó, `pg_dump -t customer_address` hoặc dùng `postgres_fdw` để đọc bảng.\n3. Trước khi chèn lại, liệt kê các foreign key trỏ vào bảng (`SELECT conrelid::regclass, confdeltype FROM pg_constraint WHERE confrelid = 'customer_address'::regclass`): nếu có `ON DELETE CASCADE` hoặc `SET NULL`, câu `DELETE` đã xoá dây chuyền hoặc xoá tham chiếu ở bảng khác (ví dụ địa chỉ giao hàng của đơn), và những bảng đó cũng phải được khôi phục. Kiểm tra trigger trên bảng: chèn lại có thể kích hoạt audit, outbox và gửi thông báo cho khách.\n4. Chèn lại trong một transaction bằng `INSERT ... ON CONFLICT (id) DO NOTHING` (hoặc `NOT EXISTS`; tránh `NOT IN`, vốn trả rỗng khi gặp `NULL`), đối soát số dòng. `DELETE` không làm lùi sequence nên id cũ không đụng id mới.\n5. Địa chỉ mới thêm sau 14:05 vẫn nằm trên production nên không mất gì, nhưng khách có thể đã thêm lại chính địa chỉ cũ: cần đối soát trùng ở mức nghiệp vụ.\n\nThời điểm theo giây có thể lệch. Chính xác hơn: tìm transaction id của bản ghi xoá bằng `pg_waldump`, rồi dùng `recovery_target_xid` với `recovery_target_inclusive = false`. Muốn có sẵn dấu vết lần sau thì bật `log_statement = 'mod'` (ghi mọi `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE`) hoặc dùng `pgaudit`; mức `ddl` không ghi `DELETE`.\n\n**2. Chiến lược backup mới**\n\n- **pgBackRest với hai repo**: full backup mỗi tuần, differential mỗi ngày. `repo1` là object storage **cùng vùng** để restore nhanh; `repo2` ở **vùng và tài khoản khác**, bật Object Lock 14 ngày, cho thảm hoạ và ransomware. Cả hai đều mã hoá. Không bao giờ lưu backup trên chính máy database.\n- **WAL archive liên tục** lên cùng kho đó, `archive_timeout = 60s` để kể cả lúc ít ghi, WAL cũng rời máy trong vòng 1 phút: RPO thực tế khoảng 1 phút, dưới cam kết 5 phút. Cảnh báo khi `pg_stat_archiver.failed_count` tăng hoặc WAL tồn trên đĩa tăng.\n- **RTO 1 giờ với 2TB**: chép 2TB qua 1Gbit/s đã mất hơn 4 giờ. Muốn dưới 1 giờ thì restore từ `repo1` cùng vùng với băng thông 10Gbit/s trở lên và restore nhiều luồng song song (khoảng 30 phút cho phần chép, đó là cận dưới theo tốc độ đường truyền), giữ backup thường xuyên để ít WAL phải phát lại, hoặc chấp nhận rằng khi mất primary thì **failover sang replica** mới là cách đạt RTO (vài phút), còn restore là cho lỗi logic.\n- **Delayed replica** với `recovery_min_apply_delay = '1h'`: lần sau có `DELETE` nhầm và phát hiện trong vòng 1 giờ, dừng áp WAL trên máy này và lấy bảng ra trong vài phút, không cần restore 2TB.\n- **Diễn tập restore mỗi tháng** vào máy riêng, đo thời gian thật, chạy `pg_amcheck` và kiểm tra số dòng các bảng chính. Ghi lại runbook từng bước.\n- **Phòng ngừa**: tài khoản của người không được ghi trực tiếp vào production; thao tác sửa dữ liệu đi qua script được review, chạy trong transaction có kiểm tra số dòng bị ảnh hưởng trước khi commit.",
+  "tradeoffs": [
+    {
+      "option": "Chỉ pg_dump hằng đêm",
+      "pros": [
+        "Đơn giản, lấy được riêng một bảng",
+        "Chuyển được giữa các phiên bản"
+      ],
+      "cons": [
+        "RPO tới 24 giờ",
+        "Restore 2TB mất nhiều giờ vì phải tạo lại index",
+        "Giữ snapshot cũ suốt lúc dump"
+      ]
+    },
+    {
+      "option": "Physical backup + WAL archive (pgBackRest)",
+      "pros": [
+        "PITR tới từng giây",
+        "RPO khoảng 1 phút với archive_timeout",
+        "Backup và restore song song, nén, mã hoá"
+      ],
+      "cons": [
+        "Phải vận hành và giám sát archive",
+        "Restore cả cluster, muốn lấy một bảng phải restore ra máy riêng"
+      ]
+    },
+    {
+      "option": "Delayed replica",
+      "pros": [
+        "Cứu lỗi logic vừa xảy ra trong vài phút",
+        "Không cần restore toàn bộ"
+      ],
+      "cons": [
+        "Chỉ cứu được nếu phát hiện trong khoảng trễ",
+        "Tốn thêm một máy",
+        "Không thay được backup"
+      ]
+    },
+    {
+      "option": "Dịch vụ managed (RDS, Cloud SQL)",
+      "pros": [
+        "Backup và PITR có sẵn, giữ tới 35 ngày",
+        "Không phải vận hành công cụ"
+      ],
+      "cons": [
+        "PITR tạo instance mới, vẫn phải tự chép bảng về",
+        "Muốn giữ lâu hơn hoặc sang tài khoản khác phải cấu hình thêm"
+      ]
+    }
+  ]
+}

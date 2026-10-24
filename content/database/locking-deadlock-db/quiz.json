@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "select-blocked-by-alter",
+      "kind": "output",
+      "prompt": "PostgreSQL 16, mặc định `lock_timeout = 0`. Ba session chạy theo thứ tự dưới đây. Session C thế nào?",
+      "code": "-- Session A\nBEGIN;\nSELECT count(*) FROM orders;      -- giữ ACCESS SHARE, chưa commit\n\n-- Session B\nALTER TABLE orders ADD COLUMN note text;\n\n-- Session C\nSELECT * FROM orders WHERE id = 1;",
+      "options": [
+        "Chạy ngay, vì `SELECT` không xung đột với `SELECT` của A",
+        "Báo lỗi `could not obtain lock`",
+        "Chờ: nó xếp hàng sau `ALTER` của B, mà B đang chờ A commit",
+        "Đọc được nhưng không thấy cột `note`"
+      ],
+      "answer": 2,
+      "explanation": "`ACCESS SHARE` của C không xung đột với A, nhưng xung đột với yêu cầu `ACCESS EXCLUSIVE` của B đang chờ phía trước trong hàng đợi, nên C phải chờ. Chỉ khi A kết thúc, B mới chạy rồi tới C. Không có lỗi vì `lock_timeout = 0` nghĩa là chờ vô hạn. Đây là cơ chế khiến một migration nhỏ làm treo cả bảng."
+    },
+    {
+      "id": "innodb-gap-lock-insert-deadlock",
+      "kind": "single",
+      "prompt": "InnoDB, REPEATABLE READ, bảng `users` có unique index trên `email` và chưa có `x@y.z`. Hai transaction cùng chạy `SELECT ... WHERE email = 'x@y.z' FOR UPDATE`, thấy rỗng, rồi cùng `INSERT` email đó. Kết quả hay gặp nhất?",
+      "options": [
+        "Deadlock: hai gap lock cùng tồn tại, rồi insert của mỗi bên bị gap lock bên kia chặn",
+        "Bên thứ hai chờ ở `SELECT ... FOR UPDATE` vì bên đầu đã khoá khoảng đó, rồi insert thành công sau khi bên đầu commit",
+        "Cả hai insert thành công, tạo hai dòng trùng",
+        "Transaction thứ hai nhận lỗi trùng khoá ngay ở `SELECT`"
+      ],
+      "answer": 0,
+      "explanation": "`FOR UPDATE` trên giá trị chưa tồn tại không có bản ghi để khoá nên khoá khoảng trống. Gap lock của nhiều transaction cùng tồn tại được, nên cả hai đều qua bước kiểm tra. Khi insert, mỗi bên xin insert intention lock vào khoảng đó và bị gap lock của bên kia chặn: vòng chờ. Unique index vẫn chặn trùng dữ liệu. Cách đúng: insert thẳng rồi bắt lỗi trùng khoá, hoặc dùng `INSERT ... ON DUPLICATE KEY UPDATE`."
+    },
+    {
+      "id": "read-pg-deadlock-log",
+      "kind": "single",
+      "prompt": "Log PostgreSQL: `Process 5120 waits for ShareLock on transaction 9012; blocked by process 5133. Process 5133 waits for ShareLock on transaction 9008; blocked by process 5120. Process 5120: UPDATE account SET ... WHERE id = 2. Process 5133: UPDATE account SET ... WHERE id = 1.` Giả thuyết nào hợp lý nhất?",
+      "options": [
+        "Hai transaction cùng giữ `ShareLock` trên dòng rồi cùng xin nâng lên exclusive (mẫu `FOR SHARE` rồi `UPDATE`)",
+        "Hai luồng cập nhật cùng các dòng theo thứ tự ngược nhau",
+        "Thiếu index trên `account.id`",
+        "`deadlock_timeout` quá ngắn"
+      ],
+      "answer": 1,
+      "explanation": "\"Waits for ShareLock on transaction X\" không nói về lock của dòng: nó nghĩa là chờ transaction X kết thúc, vì X giữ lock trên dòng cần sửa. Mỗi process đang sửa dòng mà process kia đã sửa trước đó, tức thứ tự khoá ngược nhau, như hai lệnh chuyển tiền ngược chiều. Log chỉ in câu lệnh hiện tại (`WHERE id = 2`, `WHERE id = 1`), còn câu đã khoá dòng kia phải tìm trong code. Sửa bằng cách luôn cập nhật theo thứ tự `id` tăng dần. `id` là khoá chính nên không thiếu index; `deadlock_timeout` chỉ quyết định khi nào kiểm tra, không gây ra deadlock."
+    },
+    {
+      "id": "mysql-mdl-timeout",
+      "kind": "single",
+      "prompt": "MySQL 8.0. Một DBA mở công cụ SQL, chạy `SELECT * FROM orders LIMIT 10` trong một transaction rồi đi ăn trưa, không commit. Sau đó migration chạy `ALTER TABLE orders ADD COLUMN note TEXT, ALGORITHM=INSTANT`. Với cấu hình mặc định, chuyện gì xảy ra?",
+      "options": [
+        "`ALTER` chạy ngay vì `INSTANT` không cần lock",
+        "`ALTER` thất bại sau 50 giây vì hết `innodb_lock_wait_timeout`",
+        "`ALTER` chạy và transaction của DBA bị rollback",
+        "`ALTER` chờ metadata lock, và mọi truy vấn mới vào `orders` xếp hàng sau nó"
+      ],
+      "answer": 3,
+      "explanation": "Transaction đang mở đã chạm vào `orders` giữ metadata lock dùng chung tới khi commit. `ALTER`, kể cả `INSTANT`, cần metadata lock độc quyền trong chốc lát nên phải chờ, và các truy vấn sau xếp hàng sau nó. `innodb_lock_wait_timeout` chỉ áp cho row lock, còn metadata lock dùng `lock_wait_timeout` (mặc định 31.536.000 giây). Đặt `SET SESSION lock_wait_timeout = 5` trước migration."
+    }
+  ]
+}

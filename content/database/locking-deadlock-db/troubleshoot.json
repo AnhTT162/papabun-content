@@ -1,0 +1,102 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Deploy migration nhỏ, cả trang đơn hàng sập",
+  "symptom": "10:00 deploy bản mới, kèm migration Flyway `ALTER TABLE orders ADD COLUMN note text;` (cột mới không có default, đã chạy trên staging trong 20ms). Từ 10:00 mọi API liên quan đơn hàng timeout, log ứng dụng toàn `HikariPool-1 - Connection is not available, request timed out after 30000ms`. CPU của PostgreSQL chỉ 6%.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn làm gì đầu tiên?",
+      "choices": [
+        {
+          "label": "Xem `pg_stat_activity`: các session đang chờ gì và transaction nào đang mở lâu",
+          "quality": "good",
+          "feedback": "CPU thấp mà mọi thứ đứng thì rất có thể là đang chờ lock. `pg_stat_activity` cho biết ai đang chờ, chờ loại gì.",
+          "next": "activity"
+        },
+        {
+          "label": "Tăng `maximumPoolSize` của Hikari từ 20 lên 60 và restart pod",
+          "quality": "poor",
+          "feedback": "Pool cạn là triệu chứng, không phải nguyên nhân. Thêm connection chỉ thêm session xếp hàng chờ cùng một thứ.",
+          "next": "restart"
+        },
+        {
+          "label": "Rollback bản deploy về phiên bản trước",
+          "quality": "ok",
+          "feedback": "Code cũ vẫn cần bảng orders, và câu `ALTER TABLE` đang chạy trong database không dừng chỉ vì rollback ứng dụng. Cần xem trong database trước.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "evidence": "10:06 restart 8 pod với maximumPoolSize=60\n10:07 HikariPool-1 - Connection is not available, request timed out after 30000ms\npg_stat_activity: 486 session, phần lớn wait_event_type = Lock",
+      "evidenceFormat": "monospace",
+      "question": "Số session chờ tăng lên, lỗi vẫn vậy. Giờ làm gì?",
+      "choices": [
+        {
+          "label": "Trả pool về 20 và xem các session đang chờ gì",
+          "quality": "good",
+          "feedback": "Đúng, phải tìm thứ mà mọi session đang chờ.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "evidence": "SELECT pid, state, wait_event_type AS wtype, wait_event, now() - xact_start AS xact_age, left(query, 50) AS query\nFROM pg_stat_activity WHERE datname = 'shop' AND state <> 'idle' ORDER BY xact_start;\n\n pid  | state  | wtype | wait_event | xact_age | query\n------+--------+-------+------------+----------+---------------------------------------------\n 4410 | active |       |            | 00:47:12 | SELECT c.region, sum(o.total) FROM orders o JO\n 5120 | active | Lock  | relation   | 00:06:05 | ALTER TABLE orders ADD COLUMN note text\n 5133 | active | Lock  | relation   | 00:06:01 | SELECT * FROM orders WHERE id = $1\n 5134 | active | Lock  | relation   | 00:06:01 | INSERT INTO orders (customer_id, total, ...) V\n ... 156 dòng tương tự (Lock / relation) ...",
+      "evidenceFormat": "monospace",
+      "question": "Chuyện gì đang xảy ra?",
+      "choices": [
+        {
+          "label": "`ALTER TABLE` chờ `ACCESS EXCLUSIVE` sau báo cáo pid 4410; mọi câu lệnh mới xếp hàng sau `ALTER`",
+          "quality": "good",
+          "feedback": "Đúng. `ADD COLUMN` không có default chỉ sửa metadata, nhưng vẫn cần `ACCESS EXCLUSIVE`. Trong lúc nó chờ, hàng đợi lock chặn cả `SELECT` lẫn `INSERT` đến sau.",
+          "next": "blocking"
+        },
+        {
+          "label": "`ALTER TABLE` đang ghi lại cả bảng orders nên chậm",
+          "quality": "poor",
+          "feedback": "Thêm cột không có default chưa bao giờ ghi lại bảng; từ PostgreSQL 11, default không volatile (hằng số, `now()`) cũng không ghi lại. Và session 5120 đang ở trạng thái chờ lock, không phải đang làm việc.",
+          "next": "blocking"
+        },
+        {
+          "label": "Deadlock giữa `ALTER TABLE` và các câu `SELECT`",
+          "quality": "poor",
+          "feedback": "Không phải deadlock: không có vòng chờ, chỉ là một hàng đợi. PostgreSQL đã kiểm tra sau `deadlock_timeout` và không huỷ ai. Hàng đợi này có thể kéo dài vô hạn vì `lock_timeout` mặc định là 0.",
+          "next": "blocking"
+        }
+      ]
+    },
+    {
+      "id": "blocking",
+      "evidence": "SELECT pid, pg_blocking_pids(pid) AS blocked_by, left(query, 40) AS query\nFROM pg_stat_activity WHERE cardinality(pg_blocking_pids(pid)) > 0 LIMIT 4;\n\n pid  | blocked_by | query\n------+------------+-----------------------------------------\n 5120 | {4410}     | ALTER TABLE orders ADD COLUMN note text\n 5133 | {5120}     | SELECT * FROM orders WHERE id = $1\n 5134 | {5120}     | INSERT INTO orders (customer_id, total,\n 5135 | {5120}     | SELECT * FROM orders WHERE customer_id =\n\npid 4410: user = analyst, application_name = DBeaver, xact_start 09:18, query_start 09:20",
+      "evidenceFormat": "monospace",
+      "question": "Cần khôi phục dịch vụ ngay. Làm gì?",
+      "choices": [
+        {
+          "label": "Huỷ câu `ALTER TABLE`: `SELECT pg_cancel_backend(5120);`",
+          "quality": "good",
+          "feedback": "Hàng đợi tan ngay: các `SELECT`/`INSERT` không xung đột với báo cáo nên chạy tiếp, và không ai mất việc đang làm. Nhưng Flyway chạy lúc pod khởi động: migration lỗi làm pod mới crash, Kubernetes khởi động lại và `ALTER` lại xếp hàng sau báo cáo. Tạm dừng hoặc huỷ rollout (`kubectl rollout pause` / `undo`) cùng lúc với lệnh cancel, rồi chạy lại migration với `lock_timeout`.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Kết thúc session báo cáo: `SELECT pg_terminate_backend(4410);`",
+          "quality": "ok",
+          "feedback": "Cũng gỡ được tắc: `ALTER` lấy được lock, xong trong vài mili giây, rồi hàng đợi chạy tiếp. Nhưng nó huỷ việc của người khác mà chưa hỏi, và nếu migration còn câu DDL khác thì vòng tắc có thể lặp lại.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Restart PostgreSQL",
+          "quality": "poor",
+          "feedback": "Gỡ được tắc nhưng ngắt mọi kết nối, rollback mọi transaction đang chạy, và mất vài phút khởi động. Một lệnh huỷ đúng session là đủ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: DDL chạy không có `lock_timeout`, đúng lúc có một transaction dài trên cùng bảng.** `ALTER TABLE ... ADD COLUMN` rất nhanh khi lấy được lock, nhưng phải chờ một báo cáo đã chạy 47 phút và chưa biết khi nào xong; trong lúc chờ, hàng đợi lock chặn mọi truy cập mới vào `orders`, và connection pool của ứng dụng cạn trong vài giây. Trên staging không có báo cáo dài nên không thấy.\n\n**Sửa ngay**: tạm dừng rollout để pod mới không chạy lại migration, `pg_cancel_backend` session `ALTER`, rồi chạy lại migration khi đã đặt `lock_timeout`.\n\n**Sửa đúng**:\n- Mọi migration DDL bắt đầu bằng `SET lock_timeout = '3s';`, và quy trình deploy retry vài lần có nghỉ. Hết thời gian chờ thì `ALTER` tự bỏ cuộc, chỉ làm chậm các truy vấn khác tối đa 3 giây.\n- Báo cáo chạy trên read replica, không trên primary. Role `analyst` có `statement_timeout` (ví dụ 5 phút) và `idle_in_transaction_session_timeout`.\n- Trước khi chạy migration, kiểm tra transaction đang mở lâu: `SELECT pid, now() - xact_start FROM pg_stat_activity WHERE xact_start < now() - interval '1 minute';`.\n\n**Phòng ngừa**:\n- Cảnh báo khi có transaction mở quá 5 phút, và khi số session có `wait_event_type = 'Lock'` tăng đột biến.\n- Bật `log_lock_waits = on` để log mọi lần chờ lock quá `deadlock_timeout`.\n- MySQL có cùng bẫy với metadata lock: đặt `SET SESSION lock_wait_timeout = 5` trong session migration, vì mặc định là một năm.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

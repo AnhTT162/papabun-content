@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "logical-vs-physical", "front": "Logical backup và physical backup khác nhau thế nào?", "back": "Logical xuất dữ liệu qua query (`pg_dump`), chuyển được giữa phiên bản, lấy riêng một bảng, nhưng chậm. Physical chép nguyên file dữ liệu, nhanh, hỗ trợ PITR, nhưng cùng phiên bản và cả cluster." },
+    { "id": "pitr-parts", "front": "PITR cần những gì?", "back": "Một backup làm điểm xuất phát (PostgreSQL: base backup physical; MySQL: physical hoặc dump có ghi toạ độ binlog) cộng toàn bộ log thay đổi liên tục tới thời điểm muốn quay về; thiếu một đoạn log là chuỗi đứt." },
+    { "id": "replica-not-backup", "front": "Vì sao replica không phải backup?", "back": "Nó chép mọi thay đổi, kể cả `DROP TABLE` hay `DELETE` sai, gần như ngay lập tức; chỉ bảo vệ khi máy hỏng." },
+    { "id": "archive-timeout", "front": "`archive_timeout` dùng để làm gì?", "back": "Buộc PostgreSQL đẩy file WAL lên kho sau tối đa N giây kể cả khi file chưa đầy 16MB, nhờ đó giới hạn RPO lúc ít ghi." },
+    { "id": "pitr-new-instance", "front": "PITR trên RDS hoạt động thế nào?", "back": "Luôn tạo một instance mới tại thời điểm chọn, không ghi đè instance đang chạy; muốn cứu một bảng phải tự chép về." },
+    { "id": "delayed-replica-use", "front": "Delayed replica cứu được gì?", "back": "Lỗi logic (xoá nhầm) được phát hiện trong khoảng trễ: dừng áp log trước thời điểm lỗi rồi lấy dữ liệu ra, không cần restore toàn bộ." },
+    { "id": "pg-dump-globals", "front": "`pg_dump` thiếu gì khi dựng lại một server?", "back": "Role và tablespace; cần thêm `pg_dumpall --globals-only`." },
+    { "id": "xtrabackup-prepare", "front": "Vì sao backup của Percona XtraBackup phải `--prepare` trước khi restore?", "back": "File được chép khi database đang chạy nên chưa nhất quán; bước prepare áp redo log để dữ liệu nhất quán." },
+    { "id": "restore-drill", "front": "Cách duy nhất để biết RTO thật là gì?", "back": "Diễn tập restore định kỳ vào máy riêng, đo thời gian từ đầu tới lúc ứng dụng chạy được, và kiểm tra dữ liệu." }
+  ]
+}

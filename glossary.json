@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db"]
     },
     {
       "id": "multiplexing",
@@ -485,7 +485,7 @@
       "meaning": "Nhóm thread chờ nhau theo vòng tròn, mỗi thread giữ một tài nguyên mà thread kế tiếp cần, nên không thread nào chạy tiếp được.",
       "example": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`.",
       "related": ["coffman-conditions", "lock-ordering", "livelock"],
-      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics", "optimistic-pessimistic-locking"]
+      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics", "optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "coffman-conditions",
@@ -501,7 +501,7 @@
       "meaning": "Quy ước mọi thread lấy nhiều lock theo cùng một thứ tự toàn cục (ví dụ theo id), để không thể có vòng chờ.",
       "example": "Chuyển tiền luôn khoá tài khoản có id nhỏ hơn trước, bất kể chiều chuyển.",
       "related": ["deadlock", "coffman-conditions"],
-      "topics": ["deadlock", "transaction-isolation", "optimistic-pessimistic-locking"]
+      "topics": ["deadlock", "transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "livelock",
@@ -941,7 +941,7 @@
       "meaning": "Khoá của InnoDB trên một bản ghi index cộng với khoảng trống ngay trước nó (gap lock), chặn transaction khác chèn dòng vào khoảng đó; dùng để chống phantom khi quét theo khoảng.",
       "example": "`SELECT ... WHERE amount BETWEEN 100 AND 200 FOR UPDATE` chặn `INSERT` một đơn có amount = 150.",
       "related": ["phantom-read", "consistent-read"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "consistent-read",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "idempotency-key",
@@ -1229,7 +1229,7 @@
       "meaning": "Cột tham chiếu tới primary/unique key của bảng khác; database chặn giá trị không tồn tại và quy định hành vi khi dòng cha bị xoá.",
       "example": "`orders.customer_id REFERENCES customers(id) ON DELETE RESTRICT`.",
       "related": ["primary-key", "constraint"],
-      "topics": ["relational-keys-normalization", "optimistic-pessimistic-locking"]
+      "topics": ["relational-keys-normalization", "optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "constraint",
@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore"]
     },
     {
       "id": "savepoint",
@@ -1397,7 +1397,7 @@
       "meaning": "Thời gian tối đa một câu lệnh chờ lấy khoá trước khi báo lỗi. `NOWAIT` báo lỗi ngay thay vì chờ.",
       "example": "PostgreSQL `SET LOCAL lock_timeout = '2s'` (giá trị `0` nghĩa là chờ vô hạn); MySQL `innodb_lock_wait_timeout` mặc định 50 giây.",
       "related": ["pessimistic-locking", "skip-locked", "deadlock"],
-      "topics": ["optimistic-pessimistic-locking"]
+      "topics": ["optimistic-pessimistic-locking", "locking-deadlock-db"]
     },
     {
       "id": "aggregate-root",
@@ -1413,7 +1413,7 @@
       "meaning": "Khoá do ứng dụng đặt tên (một số hoặc chuỗi) và database quản lý, không gắn với dòng hay bảng nào. Database không tự dùng nó; ứng dụng tự quy ước.",
       "example": "PostgreSQL `SELECT pg_advisory_xact_lock(42)`: chỉ một transaction giữ được khoá 42, tự nhả khi commit.",
       "related": ["pessimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking", "connection-pool"]
+      "topics": ["optimistic-pessimistic-locking", "connection-pool", "locking-deadlock-db"]
     },
     {
       "id": "max-connections",
@@ -1709,7 +1709,7 @@
       "meaning": "Cơ chế PostgreSQL ghi nhớ một bên nhận (replica, Debezium) đã đọc WAL tới đâu và giữ lại WAL chưa được đọc. Bên nhận dừng lâu thì WAL tích tụ, có thể làm đầy đĩa.",
       "example": "`SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) FROM pg_replication_slots;`",
       "related": ["cdc", "wal"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "backup-restore"]
     },
     {
       "id": "hot-row",
@@ -1846,6 +1846,102 @@
       "example": "PostgreSQL cho đơn hàng, Redis cho cache và session, Elasticsearch cho tìm kiếm.",
       "related": ["cdc"],
       "topics": ["nosql-overview"]
+    },
+    {
+      "id": "logical-backup",
+      "term": "Logical backup",
+      "meaning": "Backup bằng cách đọc dữ liệu qua query và xuất ra lệnh SQL hoặc file dữ liệu. Chuyển được giữa phiên bản, lấy riêng từng bảng, nhưng chậm với database lớn.",
+      "example": "`pg_dump -Fc shop > shop.dump`; `mysqldump --single-transaction shop`.",
+      "related": ["physical-backup"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "physical-backup",
+      "term": "Physical backup",
+      "meaning": "Backup bằng cách chép nguyên file dữ liệu của database (kèm log để sửa phần chép dở). Nhanh, là nền của PITR, nhưng cần cùng phiên bản chính và thường là cả cluster.",
+      "example": "`pg_basebackup`, pgBackRest, Percona XtraBackup.",
+      "related": ["logical-backup", "pitr"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "pitr",
+      "term": "PITR",
+      "meaning": "Point-In-Time Recovery: khôi phục database về một thời điểm bất kỳ bằng cách restore base backup rồi phát lại log thay đổi (WAL, binlog) tới thời điểm đó.",
+      "example": "Khôi phục về 14:05:11, ngay trước câu `DELETE` sai lúc 14:05:12.",
+      "related": ["wal", "binlog", "physical-backup", "logical-backup"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "binlog",
+      "term": "Binlog",
+      "meaning": "Binary log của MySQL: ghi lại mọi thay đổi dữ liệu theo thứ tự commit, dùng cho replication và PITR.",
+      "example": "`mysqlbinlog --stop-datetime='2026-10-24 14:05:11' binlog.000042 | mysql` (thời gian hiểu theo múi giờ của máy chạy `mysqlbinlog`).",
+      "related": ["pitr", "cdc"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "wal-archiving",
+      "term": "WAL archiving",
+      "meaning": "Cơ chế PostgreSQL đẩy từng file WAL đã hoàn tất sang kho lưu trữ bên ngoài, tạo chuỗi log liên tục cho PITR.",
+      "example": "`archive_mode = on`, `archive_command` hoặc pgBackRest `archive-push`.",
+      "related": ["wal", "pitr"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "delayed-replica",
+      "term": "Delayed replica",
+      "meaning": "Replica cố ý áp thay đổi trễ một khoảng thời gian, để còn kịp dừng lại trước khi một lỗi logic (xoá nhầm) được áp vào nó.",
+      "example": "PostgreSQL `recovery_min_apply_delay = '1h'`; MySQL 8.0.23+ `SOURCE_DELAY = 3600` (bản cũ `MASTER_DELAY`).",
+      "related": ["pitr"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "rpo-rto",
+      "term": "RPO / RTO",
+      "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
+      "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
+      "related": ["pitr"],
+      "topics": ["backup-restore"]
+    },
+    {
+      "id": "table-lock",
+      "term": "Table lock",
+      "meaning": "Lock trên cả bảng. PostgreSQL có 8 mức, từ `ACCESS SHARE` (do `SELECT` lấy) tới `ACCESS EXCLUSIVE` (do phần lớn `ALTER TABLE` lấy, chặn cả đọc).",
+      "example": "`LOCK TABLE orders IN SHARE ROW EXCLUSIVE MODE;` chặn ghi đồng thời nhưng vẫn cho đọc.",
+      "related": ["lock-queue", "metadata-lock"],
+      "topics": ["locking-deadlock-db"]
+    },
+    {
+      "id": "lock-queue",
+      "term": "Lock queue",
+      "meaning": "Hàng đợi các yêu cầu lock trên cùng một đối tượng. Yêu cầu mới xung đột với một yêu cầu đang chờ phía trước cũng phải chờ, dù không xung đột với lock đang được giữ. MySQL có hành vi tương tự với metadata lock: yêu cầu độc quyền đang chờ được ưu tiên hơn các yêu cầu đọc mới.",
+      "example": "`ALTER TABLE` chờ sau một báo cáo dài khiến mọi `SELECT` mới cũng phải chờ.",
+      "related": ["table-lock", "lock-timeout"],
+      "topics": ["locking-deadlock-db"]
+    },
+    {
+      "id": "metadata-lock",
+      "term": "Metadata lock",
+      "meaning": "Lock của MySQL bảo vệ cấu trúc bảng: transaction đang mở giữ lock dùng chung trên mọi bảng nó đã chạm, còn DDL cần lock độc quyền.",
+      "example": "`SHOW PROCESSLIST` hiện `Waiting for table metadata lock` khi `ALTER TABLE` chờ một transaction chưa commit.",
+      "related": ["table-lock", "lock-queue"],
+      "topics": ["locking-deadlock-db"]
+    },
+    {
+      "id": "gap-lock",
+      "term": "Gap lock",
+      "meaning": "Lock của InnoDB trên khoảng trống giữa hai bản ghi index, chặn insert vào khoảng đó. Gap lock của các transaction khác nhau không chặn nhau.",
+      "example": "`SELECT ... WHERE email = 'x@y.z' FOR UPDATE` khi chưa có email đó sẽ khoá khoảng trống nơi nó sẽ được chèn.",
+      "related": ["next-key-lock", "insert-intention-lock"],
+      "topics": ["locking-deadlock-db"]
+    },
+    {
+      "id": "insert-intention-lock",
+      "term": "Insert intention lock",
+      "meaning": "Loại gap lock đặc biệt mà `INSERT` xin trước khi chèn vào một khoảng. Nhiều insert vào các vị trí khác nhau trong cùng khoảng không chặn nhau, nhưng bị gap lock thường chặn.",
+      "example": "Hai transaction cùng giữ gap lock trên cùng một khoảng rồi cùng insert vào khoảng đó thì deadlock.",
+      "related": ["gap-lock", "next-key-lock"],
+      "topics": ["locking-deadlock-db"]
     }
   ]
 }

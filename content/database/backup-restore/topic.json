@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "backup-restore",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Backup, restore & PITR",
+  "summary": "Logical và physical backup, khôi phục về một thời điểm (PITR) bằng WAL/binlog, vì sao replica không phải backup, delayed replica, backup trên cloud, kiểm tra backup bằng diễn tập restore, và cứu một bảng bị xoá nhầm mà không quay lui cả database.",
+  "level": "mid",
+  "order": 16,
+  "minutes": 16,
+  "prerequisites": ["storage-engine"],
+  "terms": ["logical-backup", "physical-backup", "pitr", "wal", "binlog", "wal-archiving", "delayed-replica", "rpo-rto", "replication-slot"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Continuous Archiving and Point-in-Time Recovery", "url": "https://www.postgresql.org/docs/current/continuous-archiving.html" },
+    { "title": "MySQL 8.0: Point-in-Time (Incremental) Recovery", "url": "https://dev.mysql.com/doc/refman/8.0/en/point-in-time-recovery.html" },
+    { "title": "pgBackRest User Guide", "url": "https://pgbackrest.org/user-guide.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Một backup chưa từng được restore thử thì chưa phải là backup. Lỗi chỉ lộ ra lúc restore: file WAL bị thiếu giữa chừng, khoá giải mã nằm cùng chỗ với máy vừa hỏng, dump thiếu role và quyền, hoặc restore mất 14 giờ trong khi cam kết là 1 giờ. Lên lịch diễn tập restore định kỳ vào một máy riêng, đo thời gian, và kiểm tra dữ liệu sau khi restore." },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đã có replica rồi, cần gì backup nữa?\" Replica chép **mọi** thay đổi, kể cả `DROP TABLE` hay `DELETE` thiếu `WHERE`, gần như ngay lập tức. Nó bảo vệ khi máy hỏng, không bảo vệ khi người hoặc phần mềm làm sai. Chỉ backup cộng log thay đổi (WAL/binlog) mới quay lại được thời điểm trước lỗi. Delayed replica (áp thay đổi trễ, ví dụ 1 giờ) là lớp ở giữa: cứu nhanh lỗi vừa xảy ra, nhưng không thay được backup." }
+  ]
+}

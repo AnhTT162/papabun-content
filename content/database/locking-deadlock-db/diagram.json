@@ -1,0 +1,140 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một ALTER TABLE chờ lock làm treo cả bảng",
+  "nodes": [
+    {
+      "id": "report",
+      "label": "Báo cáo 40 phút",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "table",
+      "label": "Bảng orders",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "select",
+      "label": "SELECT mới",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "alter",
+      "label": "ALTER TABLE",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "pool",
+      "label": "Pool cạn, API lỗi",
+      "kind": "external",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "insert",
+      "label": "INSERT mới",
+      "kind": "client",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "report-table",
+      "from": "report",
+      "to": "table",
+      "label": "giữ ACCESS SHARE"
+    },
+    {
+      "id": "alter-table",
+      "from": "alter",
+      "to": "table",
+      "label": "chờ ACCESS EXCLUSIVE"
+    },
+    {
+      "id": "select-alter",
+      "from": "select",
+      "to": "alter",
+      "label": "xếp sau ALTER"
+    },
+    {
+      "id": "insert-alter",
+      "from": "insert",
+      "to": "alter",
+      "label": "xếp sau ALTER"
+    },
+    {
+      "id": "select-pool",
+      "from": "select",
+      "to": "pool",
+      "label": "giữ connection"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Một báo cáo chạy 40 phút đang đọc bảng orders, giữ ACCESS SHARE tới khi transaction kết thúc.",
+      "show": [
+        "report",
+        "table",
+        "report-table"
+      ],
+      "highlight": [
+        "report-table"
+      ]
+    },
+    {
+      "caption": "Migration chạy ALTER TABLE, xin ACCESS EXCLUSIVE. Lock này xung đột với ACCESS SHARE nên phải chờ báo cáo xong.",
+      "show": [
+        "alter",
+        "alter-table"
+      ],
+      "highlight": [
+        "alter-table"
+      ]
+    },
+    {
+      "caption": "Một SELECT mới tới. ACCESS SHARE không xung đột với báo cáo, nhưng xung đột với ALTER đang chờ phía trước, nên phải xếp hàng sau ALTER.",
+      "show": [
+        "select",
+        "select-alter"
+      ],
+      "highlight": [
+        "select-alter"
+      ]
+    },
+    {
+      "caption": "INSERT cũng vậy. Mọi truy cập vào orders giờ đều chờ, dù ALTER chưa làm gì.",
+      "show": [
+        "insert",
+        "insert-alter"
+      ],
+      "highlight": [
+        "insert-alter"
+      ]
+    },
+    {
+      "caption": "Mỗi SELECT và INSERT đang chờ đều giữ một connection. Vài giây sau pool cạn và mọi API dùng database đều lỗi.",
+      "show": [
+        "pool",
+        "select-pool"
+      ],
+      "highlight": [
+        "select-pool"
+      ]
+    },
+    {
+      "caption": "Phòng ngừa: chạy DDL với lock_timeout vài giây và retry, để ALTER tự bỏ cuộc thay vì làm tắc hàng đợi.",
+      "show": [],
+      "highlight": [
+        "alter"
+      ]
+    }
+  ]
+}
