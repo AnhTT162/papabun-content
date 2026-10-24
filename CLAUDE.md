@@ -11,6 +11,7 @@ Nội dung bài học cho app iOS PapaBun (repo app: `AnhTT162/papabun-app`, pri
 
 ## Soạn nội dung
 Dùng skill `/papabun:write-topic` để viết bài mới và agent `content-reviewer` để kiểm tra trước khi commit.
+Danh sách bài, thứ tự viết và tiêu chuẩn chuyên sâu: `docs/CURRICULUM.md` (đổi ⬜ thành ✅ khi viết xong một bài).
 Cài plugin một lần mỗi máy: `claude plugin marketplace add AnhTT162/papabun-content` rồi `claude plugin install papabun@papabun`.
 
 ## Quy tắc bắt buộc

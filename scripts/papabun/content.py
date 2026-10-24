@@ -23,6 +23,9 @@ DIAGRAM_MIN_DX = 0.32
 # Hai node lệch dọc ít hơn mức này thì chồng lên nhau dù khác cột (node cao 52pt trong khung ~230pt).
 DIAGRAM_MIN_DY = 0.26
 DIAGRAM_MAX_LABEL = 20
+CURRICULUM = "docs/CURRICULUM.md"
+CURRICULUM_TRACK_RE = re.compile(r"^### \d+\. .*\(`([a-z0-9-]+)`\)\s*$")
+CURRICULUM_ROW_RE = re.compile(r"^\| \d+ \| `([a-z0-9-]+)` \|.*\| (✅|⬜) \|\s*$")
 SIMULATION_SCHEMAS = {
     "threadTimeline": "simulations/threadTimeline.schema.json",
     "stateMachine": "simulations/stateMachine.schema.json",
@@ -106,6 +109,32 @@ class Repo:
 
     # ---------- kiểm tra ----------
 
+    def _check_curriculum(self):
+        """Mỗi topic đã viết phải có trong docs/CURRICULUM.md, đúng track và đánh dấu ✅."""
+        path = self.root / CURRICULUM
+        if not path.exists():
+            return
+        entries, track = {}, None
+        for line in path.read_text(encoding="utf-8").splitlines():
+            heading = CURRICULUM_TRACK_RE.match(line)
+            if heading:
+                track = heading.group(1)
+                continue
+            row = CURRICULUM_ROW_RE.match(line)
+            if row:
+                if row.group(1) in entries:
+                    self.error(path, "id '%s' xuất hiện hai lần" % row.group(1))
+                entries[row.group(1)] = (track, row.group(2))
+        for topic in self.topics:
+            if topic.id not in entries:
+                self.error(topic.folder / "topic.json", "chưa có trong %s: thêm một dòng cho topic này" % CURRICULUM)
+                continue
+            track, status = entries[topic.id]
+            if track != topic.meta.get("track"):
+                self.error(topic.folder / "topic.json", "%s xếp topic vào track '%s', topic.json ghi '%s'" % (CURRICULUM, track, topic.meta.get("track")))
+            if status != "✅":
+                self.error(topic.folder / "topic.json", "đã viết nhưng %s còn đánh dấu ⬜: đổi thành ✅" % CURRICULUM)
+
     def validate(self):
         """Kiểm tra toàn bộ repo. Trả về danh sách lỗi (rỗng nghĩa là hợp lệ)."""
         track_ids = self._unique([t["id"] for t in self.tracks["tracks"]], self.root / "tracks.json", "track")
@@ -132,6 +161,7 @@ class Repo:
 
         for topic in self.topics:
             self._validate_topic(topic, track_ids, topic_ids, term_ids)
+        self._check_curriculum()
         self.errors = list(dict.fromkeys(self.errors))
         return self.errors
 

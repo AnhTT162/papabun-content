@@ -10,11 +10,13 @@ Viết cho người đã đi làm: không giải thích vòng vo, nhưng **khôn
 
 ## 0. Chuẩn bị
 1. Làm việc trong bản clone của `AnhTT162/papabun-content`. Nếu chưa ở đó, hỏi người dùng đường dẫn hoặc clone về.
-2. Đọc `README.md`, `tracks.json`, `glossary.json` và liệt kê `content/` để biết topic và thuật ngữ đã có. Không viết trùng topic.
+2. Đọc `docs/CURRICULUM.md` (danh sách bài, thứ tự viết, **tiêu chuẩn chuyên sâu**), `README.md`, `tracks.json`, `glossary.json` và liệt kê `content/` để biết topic và thuật ngữ đã có. Không viết trùng topic.
+   Người dùng không nêu bài cụ thể thì đề xuất bài ⬜ tiếp theo theo thứ tự trong curriculum.
 3. Tạo nhánh `topic/<id>` nếu đang ở máy khác máy chính hoặc người dùng muốn PR.
 
 ## 1. Chốt phạm vi với người dùng (một câu hỏi, có đề xuất sẵn)
-- Track, `id` (kebab-case, tiếng Anh), tiêu đề, level, thời lượng (10–20 phút).
+- Track, `id` (kebab-case, tiếng Anh), tiêu đề, level, thời lượng (10–20 phút). Bài có trong curriculum thì dùng `id` và trọng tâm ghi ở đó; bài chưa có thì thêm dòng mới vào curriculum.
+- Phạm vi phải đạt **tiêu chuẩn chuyên sâu** (mục 1 của curriculum): cơ chế bên trong, khác biệt giữa các hệ/phiên bản, bẫy production, trade-off, câu hỏi nối tiếp. Chủ đề quá rộng thì tách bài.
 - Chọn block theo loại topic:
 
 | Loại topic | Block |
@@ -70,7 +72,7 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
 ```bash
 scripts/validate
 ```
-Sửa đến khi sạch lỗi. Sau đó gọi agent **content-reviewer** với đường dẫn topic để review độc lập về độ chính xác kỹ thuật và chất lượng sư phạm. Sửa theo các phát hiện có căn cứ; với điểm không đồng ý thì nói lý do cho người dùng.
+Sửa đến khi sạch lỗi. Validator báo lỗi nếu bài chưa có trong `docs/CURRICULUM.md` hoặc chưa đổi ⬜ thành ✅. Sau đó gọi agent **content-reviewer** với đường dẫn topic để review độc lập về độ chính xác kỹ thuật và chất lượng sư phạm. Sửa theo các phát hiện có căn cứ; với điểm không đồng ý thì nói lý do cho người dùng.
 
 Nếu có repo app cạnh repo này, có thể xem trước: `scripts/build`, rồi chạy app trên Simulator với nguồn "Thư mục local".
 

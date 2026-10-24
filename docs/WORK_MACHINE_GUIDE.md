@@ -79,14 +79,17 @@ git switch -c topic/<id-bai-hoc>        # ví dụ topic/transaction-isolation
 claude
 ```
 
+Chọn bài trong `docs/CURRICULUM.md`: lấy bài ⬜ tiếp theo theo thứ tự ở mục 2, và tránh bài đang có người viết (xem các PR đang mở bằng `gh pr list --repo AnhTT162/papabun-content`).
+
 Trong Claude, gõ ví dụ:
 ```
-/papabun:write-topic Viết bài "Transaction Isolation Level" cho track database, level mid
+/papabun:write-topic Viết bài connection-pool trong curriculum
 ```
+hoặc chỉ `/papabun:write-topic` để Claude đề xuất bài tiếp theo.
 
 Claude sẽ:
 1. Hỏi chốt phạm vi (id, level, các block). Trả lời hoặc đồng ý đề xuất.
-2. Tra nguồn chính thức, viết các file, thêm thuật ngữ vào `glossary.json`.
+2. Tra nguồn chính thức, viết các file theo tiêu chuẩn chuyên sâu, thêm thuật ngữ vào `glossary.json`, đổi dòng của bài trong `docs/CURRICULUM.md` thành ✅.
 3. Chạy `scripts/validate` cho đến khi sạch lỗi.
 4. Gọi `content-reviewer` để review, sửa theo các điểm có căn cứ.
 5. Tóm tắt và hỏi bạn trước khi commit.

@@ -133,6 +133,20 @@ class RepoValidationTests(unittest.TestCase):
         self.assertIn("next 'missing' không tồn tại", errors)
         self.assertIn("step 'orphan' không thể đi tới", errors)
 
+    def _curriculum(self, body):
+        path = self.fx.root / "docs" / "CURRICULUM.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        return "\n".join(self.fx.errors())
+
+    def test_curriculum_must_list_written_topics_as_done(self):
+        header = "### 2. Core Java (`core-java`)\n\n| # | id | Bài | Level | Trọng tâm | Block | |\n|---|---|---|---|---|---|---|\n"
+        self.assertEqual(self._curriculum(header + "| 1 | `demo` | Demo | mid | x | L | ✅ |\n"), "")
+        self.assertIn("còn đánh dấu ⬜", self._curriculum(header + "| 1 | `demo` | Demo | mid | x | L | ⬜ |\n"))
+        self.assertIn("chưa có trong docs/CURRICULUM.md", self._curriculum(header + "| 1 | `other` | Khác | mid | x | L | ⬜ |\n"))
+        wrong_track = header.replace("core-java", "jvm") + "| 1 | `demo` | Demo | mid | x | L | ✅ |\n"
+        self.assertIn("track 'jvm'", self._curriculum(wrong_track))
+
     def test_diagram_references(self):
         self.fx.topic["blocks"].append({"type": "diagram", "file": "d.json"})
         self.fx.write_topic()
