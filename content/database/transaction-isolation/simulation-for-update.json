@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Khoá trước khi đọc với SELECT ... FOR UPDATE",
+  "instructions": "Cùng hai lần rút tiền, nhưng mỗi transaction khoá dòng ngay khi đọc. Chạy lịch \"Xen kẽ\" và để ý T2 bị chặn ở bước đầu tiên tới khi T1 commit.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "balance", "kind": "variable", "label": "balance (account id = 1)", "valueType": "int", "initial": 100 },
+      { "id": "row", "kind": "lock", "label": "Row lock của account 1" }
+    ],
+    "threads": [
+      { "id": "t1", "name": "T1: rút 30", "steps": [
+        { "op": "lock", "target": "row", "code": "SELECT balance FROM account WHERE id = 1 FOR UPDATE;" },
+        { "op": "read", "target": "balance", "into": "bal", "code": "-- đọc bản mới nhất khi đã giữ lock" },
+        { "op": "write", "target": "balance", "from": "bal", "add": -30, "code": "UPDATE account SET balance = :bal - 30 WHERE id = 1; COMMIT;" },
+        { "op": "unlock", "target": "row", "code": "-- row lock nhả cùng lúc COMMIT" }
+      ] },
+      { "id": "t2", "name": "T2: rút 20", "steps": [
+        { "op": "lock", "target": "row", "code": "SELECT balance FROM account WHERE id = 1 FOR UPDATE;" },
+        { "op": "read", "target": "balance", "into": "bal", "code": "-- đọc bản mới nhất khi đã giữ lock" },
+        { "op": "write", "target": "balance", "from": "bal", "add": -20, "code": "UPDATE account SET balance = :bal - 20 WHERE id = 1; COMMIT;" },
+        { "op": "unlock", "target": "row", "code": "-- row lock nhả cùng lúc COMMIT" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2", "t1", "t1", "t2", "t2", "t2", "t2"] }
+    ],
+    "expect": [ { "target": "balance", "value": 50 } ],
+    "outcomes": {
+      "mismatch": "Số dư sai: kiểm tra lại xem cả hai transaction có khoá dòng trước khi đọc không.",
+      "success": "`balance = 50`. T2 không đọc được cho tới khi T1 commit, nên nó đọc 70 chứ không phải 100. Kết quả này đúng ở READ COMMITTED (PostgreSQL) và ở MySQL; ở REPEATABLE READ của PostgreSQL, T2 sẽ nhận lỗi serialization thay vì đọc 70. Đổi lại, T2 phải chờ suốt thời gian T1 giữ lock: giữ transaction thật ngắn, và khoá các dòng theo cùng một thứ tự ([[lock-ordering|lock ordering]]) để tránh [[deadlock]]."
+    }
+  }
+}

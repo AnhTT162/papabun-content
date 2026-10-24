@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "transaction-isolation"]
     },
     {
       "id": "multiplexing",
@@ -442,10 +442,10 @@
     {
       "id": "lost-update",
       "term": "Lost update",
-      "meaning": "Hai thread cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
+      "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "transaction-isolation"]
     },
     {
       "id": "race-condition",
@@ -485,7 +485,7 @@
       "meaning": "Nhóm thread chờ nhau theo vòng tròn, mỗi thread giữ một tài nguyên mà thread kế tiếp cần, nên không thread nào chạy tiếp được.",
       "example": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`.",
       "related": ["coffman-conditions", "lock-ordering", "livelock"],
-      "topics": ["deadlock"]
+      "topics": ["deadlock", "transaction-isolation"]
     },
     {
       "id": "coffman-conditions",
@@ -501,7 +501,7 @@
       "meaning": "Quy ước mọi thread lấy nhiều lock theo cùng một thứ tự toàn cục (ví dụ theo id), để không thể có vòng chờ.",
       "example": "Chuyển tiền luôn khoá tài khoản có id nhỏ hơn trước, bất kể chiều chuyển.",
       "related": ["deadlock", "coffman-conditions"],
-      "topics": ["deadlock"]
+      "topics": ["deadlock", "transaction-isolation"]
     },
     {
       "id": "livelock",
@@ -830,6 +830,142 @@
       "example": "Index `(gender, birth_date)` vẫn giúp `WHERE birth_date = ...` vì `gender` chỉ có vài giá trị.",
       "related": ["composite-index"],
       "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "transaction",
+      "term": "Transaction",
+      "meaning": "Nhóm câu lệnh database được xử lý như một đơn vị: hoặc tất cả được commit, hoặc tất cả bị rollback.",
+      "example": "`BEGIN; UPDATE` trừ tiền ví A; `UPDATE` cộng tiền ví B; `COMMIT;`",
+      "related": ["acid", "isolation-level"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "acid",
+      "term": "ACID",
+      "meaning": "Bốn đảm bảo của transaction: Atomicity (tất cả hoặc không), Consistency (giữ ràng buộc dữ liệu), Isolation (chạy đồng thời như lần lượt), Durability (đã commit thì không mất khi sập máy).",
+      "example": "Chuyển tiền giữa hai ví: không bao giờ chỉ trừ mà không cộng.",
+      "related": ["transaction", "isolation-level"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "isolation-level",
+      "term": "Isolation level",
+      "meaning": "Mức độ một transaction được thấy thay đổi của các transaction chạy đồng thời. Chuẩn SQL có 4 mức: READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE.",
+      "example": "`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;` hoặc `@Transactional(isolation = Isolation.REPEATABLE_READ)`.",
+      "related": ["dirty-read", "non-repeatable-read", "phantom-read"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "dirty-read",
+      "term": "Dirty read",
+      "meaning": "Đọc dữ liệu mà transaction khác đã sửa nhưng chưa commit; nếu transaction đó rollback thì bạn đã dùng dữ liệu không bao giờ tồn tại.",
+      "example": "Chỉ xảy ra ở READ UNCOMMITTED; PostgreSQL không bao giờ cho phép.",
+      "related": ["isolation-level"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "non-repeatable-read",
+      "term": "Non-repeatable read",
+      "meaning": "Trong cùng transaction, đọc lại một dòng ra giá trị khác vì transaction khác đã sửa và commit ở giữa.",
+      "example": "READ COMMITTED: lần đầu đọc số dư 100, lần sau đọc 50.",
+      "related": ["isolation-level", "phantom-read"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "phantom-read",
+      "term": "Phantom read",
+      "meaning": "Chạy lại cùng một query điều kiện trong một transaction thấy thêm hoặc mất dòng, vì transaction khác đã insert hoặc delete và commit.",
+      "example": "`SELECT count(*) FROM orders WHERE status = 'NEW'` lần đầu ra 5, lần sau ra 6.",
+      "related": ["non-repeatable-read", "isolation-level"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "write-skew",
+      "term": "Write skew",
+      "meaning": "Hai transaction cùng đọc một điều kiện, rồi mỗi bên sửa một dòng khác nhau; cả hai commit được nhưng điều kiện chung bị vi phạm. Snapshot isolation không chặn được.",
+      "example": "Hai bác sĩ cùng thấy có 2 người trực rồi cùng xin nghỉ, cuối cùng không ai trực.",
+      "related": ["snapshot-isolation", "serialization-failure"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "mvcc",
+      "term": "MVCC",
+      "meaning": "Multi-Version Concurrency Control: database giữ nhiều phiên bản của mỗi dòng, mỗi transaction đọc phiên bản phù hợp với snapshot của nó, nên đọc và ghi không chặn nhau.",
+      "example": "Một báo cáo chạy 5 phút vẫn thấy số liệu nhất quán dù trong lúc đó có hàng nghìn UPDATE.",
+      "related": ["snapshot-isolation"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "snapshot-isolation",
+      "term": "Snapshot isolation",
+      "meaning": "Mỗi transaction đọc dữ liệu như tại một thời điểm cố định (snapshot), không thấy thay đổi commit sau đó. REPEATABLE READ của PostgreSQL là snapshot isolation.",
+      "example": "Trong transaction REPEATABLE READ, đọc số dư bao nhiêu lần cũng ra cùng giá trị.",
+      "related": ["mvcc", "write-skew"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "pessimistic-locking",
+      "term": "Pessimistic locking",
+      "meaning": "Khoá dữ liệu trước khi đọc để sửa, giả định xung đột sẽ xảy ra; transaction khác muốn sửa phải chờ.",
+      "example": "`SELECT ... FOR UPDATE`, hoặc `@Lock(LockModeType.PESSIMISTIC_WRITE)` trong JPA.",
+      "related": ["optimistic-locking"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "optimistic-locking",
+      "term": "Optimistic locking",
+      "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
+      "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
+      "related": ["pessimistic-locking", "lost-update"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "serialization-failure",
+      "term": "Serialization failure",
+      "meaning": "Lỗi database ném ra (SQLSTATE `40001`) khi không thể đảm bảo kết quả như chạy lần lượt; transaction bị huỷ và ứng dụng cần chạy lại cả transaction.",
+      "example": "PostgreSQL: `ERROR: could not serialize access due to concurrent update`.",
+      "related": ["write-skew", "snapshot-isolation"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "ssi",
+      "term": "SSI",
+      "meaning": "Serializable Snapshot Isolation: cách PostgreSQL cài SERIALIZABLE. Transaction vẫn đọc snapshot không chặn nhau, database theo dõi phụ thuộc đọc–ghi và huỷ một bên khi phát hiện kết quả không thể tương đương chạy lần lượt.",
+      "example": "Hai bác sĩ cùng xin nghỉ trực ở SERIALIZABLE: một transaction nhận lỗi `40001` và phải retry.",
+      "related": ["snapshot-isolation", "serialization-failure"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "next-key-lock",
+      "term": "Next-key lock",
+      "meaning": "Khoá của InnoDB trên một bản ghi index cộng với khoảng trống ngay trước nó (gap lock), chặn transaction khác chèn dòng vào khoảng đó; dùng để chống phantom khi quét theo khoảng.",
+      "example": "`SELECT ... WHERE amount BETWEEN 100 AND 200 FOR UPDATE` chặn `INSERT` một đơn có amount = 150.",
+      "related": ["phantom-read", "consistent-read"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "consistent-read",
+      "term": "Consistent read",
+      "meaning": "Cách InnoDB đọc bằng `SELECT` thường: đọc từ snapshot, không khoá. Ngược lại, locking read (`FOR UPDATE`, `FOR SHARE`, `UPDATE`) đọc bản mới nhất và khoá dòng.",
+      "example": "Trong REPEATABLE READ, `SELECT` thường thấy số dư cũ, `SELECT ... FOR UPDATE` thấy số dư mới nhất.",
+      "related": ["mvcc", "next-key-lock"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "retry-backoff",
+      "term": "Retry với backoff",
+      "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
+      "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
+      "related": ["serialization-failure", "deadlock"],
+      "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "idempotency-key",
+      "term": "Idempotency key",
+      "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
+      "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
+      "related": ["retry-backoff"],
+      "topics": ["transaction-isolation"]
     }
   ]
 }

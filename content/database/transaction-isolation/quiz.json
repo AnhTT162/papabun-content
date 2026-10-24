@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "read-committed-reread",
+      "kind": "output",
+      "prompt": "PostgreSQL 16, isolation mặc định. Hai session chạy theo đúng thứ tự từ trên xuống. Hai lần `SELECT` của session A trả về gì?",
+      "code": "-- A: BEGIN;\n-- A: SELECT balance FROM account WHERE id = 1;\n-- B: UPDATE account SET balance = 50 WHERE id = 1;   -- tự commit ngay (autocommit)\n-- A: SELECT balance FROM account WHERE id = 1;\n-- A: COMMIT;\n-- (balance ban đầu = 100)",
+      "options": ["100 rồi 50", "100 rồi 100", "100 rồi session A bị lỗi serialization", "Session B phải chờ A commit, nên 100 rồi 100"],
+      "answer": 0,
+      "explanation": "READ COMMITTED lấy snapshot mới cho **mỗi câu lệnh**, nên lần đọc thứ hai thấy giá trị B vừa commit: [[non-repeatable-read|non-repeatable read]]. Ở REPEATABLE READ, A sẽ thấy 100 cả hai lần. `SELECT` thường không giữ lock nên B không phải chờ (MVCC)."
+    },
+    {
+      "id": "defaults",
+      "kind": "single",
+      "prompt": "Một team chuyển service từ MySQL InnoDB sang PostgreSQL mà không đổi cấu hình transaction. Isolation level mặc định thay đổi thế nào?",
+      "options": [
+        "Không đổi, cả hai đều là READ COMMITTED",
+        "Từ REPEATABLE READ xuống READ COMMITTED",
+        "Từ READ COMMITTED lên REPEATABLE READ",
+        "Từ SERIALIZABLE xuống REPEATABLE READ"
+      ],
+      "answer": 1,
+      "explanation": "InnoDB mặc định REPEATABLE READ, PostgreSQL mặc định READ COMMITTED. Code từng dựa vào việc đọc lại trong cùng transaction ra cùng giá trị có thể hành xử khác sau khi chuyển. Có thể đặt rõ level bằng `@Transactional(isolation = ...)` khi logic phụ thuộc vào nó."
+    },
+    {
+      "id": "write-skew-oncall",
+      "kind": "single",
+      "prompt": "Quy tắc: luôn phải có ít nhất 1 bác sĩ trực. An và Bình đang trực. Cùng lúc, mỗi người chạy transaction: đếm số người đang trực (thấy 2), rồi đặt chính mình nghỉ trực. Cả hai ở REPEATABLE READ của PostgreSQL. Kết quả?",
+      "options": [
+        "Một transaction bị chặn vì cả hai sửa cùng một dòng",
+        "Cả hai commit thành công, không còn ai trực",
+        "Transaction thứ hai đọc lại thấy 1 người và tự dừng",
+        "PostgreSQL báo [[deadlock]]"
+      ],
+      "answer": 1,
+      "explanation": "Đây là [[write-skew|write skew]]: mỗi transaction sửa một dòng khác nhau (dòng của chính mình), nên không xung đột ghi; mỗi bên đọc snapshot thấy 2 người trực. Snapshot isolation không chặn được. Cách chặn: SERIALIZABLE (PostgreSQL phát hiện và huỷ một bên, bên đó retry), hoặc `SELECT id FROM doctor WHERE on_call FOR UPDATE` rồi đếm ở ứng dụng (PostgreSQL không cho `FOR UPDATE` đi cùng hàm gộp như `count`)."
+    },
+    {
+      "id": "serialization-retry",
+      "kind": "single",
+      "prompt": "Ở REPEATABLE READ của PostgreSQL, một `UPDATE` báo `ERROR: could not serialize access due to concurrent update`. Ứng dụng nên làm gì?",
+      "options": [
+        "Chạy lại riêng câu `UPDATE` đó trong cùng transaction",
+        "Rollback rồi chạy lại cả transaction từ đầu, có giới hạn số lần",
+        "Hạ xuống READ UNCOMMITTED để không gặp lỗi nữa",
+        "Bỏ qua lỗi vì dữ liệu đã được transaction kia ghi"
+      ],
+      "answer": 1,
+      "explanation": "Transaction đã bị huỷ, mọi câu lệnh sau đó đều lỗi cho tới khi rollback. Phải chạy lại cả transaction để đọc dữ liệu mới và tính lại. Đây là lỗi tạm thời (SQLSTATE `40001`), retry với backoff thường sẽ thành công. READ UNCOMMITTED trong PostgreSQL chạy như READ COMMITTED và chỉ đổi lỗi thành lost update âm thầm."
+    },
+    {
+      "id": "long-transaction",
+      "kind": "single",
+      "prompt": "Một method `@Transactional` đọc đơn hàng, gọi API thanh toán bên ngoài (đôi khi mất 30 giây), rồi cập nhật trạng thái đơn. Hệ quả nào **không** đúng?",
+      "options": [
+        "Connection DB bị giữ suốt thời gian gọi API, [[connection-pool|connection pool]] dễ cạn khi tải cao",
+        "Nếu đã khoá dòng đơn hàng, các request khác sửa đơn đó phải chờ",
+        "Trên PostgreSQL, transaction đã ghi hoặc khoá dòng mà mở lâu sẽ cản việc dọn các phiên bản dòng cũ",
+        "Nếu API thanh toán thành công rồi transaction rollback, database tự huỷ giao dịch thanh toán"
+      ],
+      "answer": 3,
+      "explanation": "Database chỉ rollback được dữ liệu của chính nó; tiền đã trừ ở hệ thống thanh toán không bị huỷ. Ba ý còn lại đều đúng. Cách làm đúng: không gọi API bên ngoài khi đang mở transaction; tách thành các bước có trạng thái (tạo đơn PENDING, gọi thanh toán, cập nhật kết quả), dùng [[idempotency-key|idempotency key]] cho lời gọi thanh toán."
+    }
+  ]
+}

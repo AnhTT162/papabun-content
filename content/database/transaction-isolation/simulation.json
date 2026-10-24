@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Hai lần rút tiền, số dư chỉ bị trừ một lần",
+  "instructions": "Hai transaction rút 30 và 20 từ tài khoản có 100, mỗi bên đọc số dư rồi ghi đè giá trị tính ở ứng dụng. `UPDATE` giữ row lock tới khi `COMMIT`, và người khác chỉ thấy số dư mới sau `COMMIT`. Chạy lịch \"Xen kẽ\" để thấy row lock không cứu được lost update.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "balance", "kind": "variable", "label": "balance (account id = 1)", "valueType": "int", "initial": 100 },
+      { "id": "row", "kind": "lock", "label": "Row lock của account 1" }
+    ],
+    "threads": [
+      { "id": "t1", "name": "T1: rút 30", "steps": [
+        { "op": "read", "target": "balance", "into": "bal", "code": "SELECT balance FROM account WHERE id = 1;" },
+        { "op": "lock", "target": "row", "code": "UPDATE account SET balance = :bal - 30 ...  -- khoá dòng, chưa ai thấy giá trị mới" },
+        { "op": "write", "target": "balance", "from": "bal", "add": -30, "code": "COMMIT;  -- balance = bal - 30 hiện ra cho mọi người" },
+        { "op": "unlock", "target": "row", "code": "-- row lock nhả cùng lúc COMMIT" }
+      ] },
+      { "id": "t2", "name": "T2: rút 20", "steps": [
+        { "op": "read", "target": "balance", "into": "bal", "code": "SELECT balance FROM account WHERE id = 1;" },
+        { "op": "lock", "target": "row", "code": "UPDATE account SET balance = :bal - 20 ...  -- khoá dòng, chưa ai thấy giá trị mới" },
+        { "op": "write", "target": "balance", "from": "bal", "add": -20, "code": "COMMIT;  -- balance = bal - 20 hiện ra cho mọi người" },
+        { "op": "unlock", "target": "row", "code": "-- row lock nhả cùng lúc COMMIT" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "sequential", "title": "Lần lượt", "order": ["t1", "t1", "t1", "t1", "t2", "t2", "t2", "t2"] },
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2", "t1", "t1", "t2", "t2", "t2"] }
+    ],
+    "expect": [ { "target": "balance", "value": 50 } ],
+    "outcomes": {
+      "mismatch": "Cả hai cùng đọc 100 trước khi bên kia ghi. Row lock chỉ bắt `UPDATE` của T2 chờ T1 `COMMIT`, rồi T2 vẫn ghi đè `100 - 20` lên kết quả của T1: [[lost-update|lost update]]. Đây là hành vi của READ COMMITTED (mặc định PostgreSQL) và REPEATABLE READ của MySQL. Sửa bằng `UPDATE ... SET balance = balance - 20` (tính trong database), `SELECT ... FOR UPDATE`, hoặc cột `version`. Ở REPEATABLE READ, PostgreSQL sẽ báo lỗi serialization cho T2 thay vì ghi đè.",
+      "success": "`balance = 50`: transaction sau chỉ đọc số dư khi transaction trước đã commit. Hai request đồng thời không hứa thứ tự đó. Thử lịch \"Xen kẽ\"."
+    }
+  }
+}

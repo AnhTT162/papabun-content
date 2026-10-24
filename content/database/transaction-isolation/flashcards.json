@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "acid", "front": "ACID là gì?", "back": "Atomicity (tất cả hoặc không), Consistency (giữ ràng buộc), Isolation (chạy đồng thời như lần lượt), Durability (đã commit thì không mất)." },
+    { "id": "four-levels", "front": "Bốn isolation level của chuẩn SQL, từ thấp tới cao?", "back": "READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE." },
+    { "id": "defaults", "front": "Isolation mặc định của PostgreSQL và MySQL InnoDB?", "back": "PostgreSQL: READ COMMITTED. MySQL InnoDB: REPEATABLE READ." },
+    { "id": "non-repeatable", "front": "Non-repeatable read là gì?", "back": "Trong cùng transaction, đọc lại một dòng ra giá trị khác vì transaction khác đã sửa và commit ở giữa." },
+    { "id": "phantom", "front": "Phantom read là gì?", "back": "Chạy lại cùng query điều kiện thấy thêm (hoặc mất) dòng, vì transaction khác đã insert hoặc delete và commit." },
+    { "id": "lost-update", "front": "Bốn cách chống lost update?", "back": "UPDATE nguyên tử (`balance = balance - x`), `SELECT ... FOR UPDATE`, khoá lạc quan bằng cột `version`, hoặc SERIALIZABLE kèm retry." },
+    { "id": "write-skew", "front": "Write skew là gì?", "back": "Hai transaction cùng đọc một điều kiện rồi sửa hai dòng khác nhau, cùng commit được nhưng làm điều kiện bị vi phạm; snapshot isolation không chặn được." },
+    { "id": "mvcc", "front": "MVCC giúp gì?", "back": "Mỗi dòng có nhiều phiên bản; người đọc thấy một snapshot nên không chặn người ghi và người ghi không chặn người đọc." },
+    { "id": "retry-scope", "front": "Gặp serialization failure (`40001`) thì retry thế nào?", "back": "Retry cả transaction từ đầu, giới hạn số lần, có backoff; trong Spring, vòng retry nằm ngoài method `@Transactional`." },
+    { "id": "optimistic-vs-pessimistic", "front": "Khi nào dùng khoá lạc quan, khi nào dùng khoá bi quan?", "back": "Lạc quan khi xung đột hiếm (sửa hồ sơ); bi quan hoặc UPDATE nguyên tử khi xung đột thường xuyên trên dòng nóng (tồn kho flash sale)." }
+  ]
+}

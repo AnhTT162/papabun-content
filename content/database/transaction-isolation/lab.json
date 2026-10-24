@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Load test rút tiền: số dư cuối không về 0",
+  "context": "Service ví (Spring Boot 3, JPA/Hibernate, PostgreSQL 16 với isolation mặc định). Load test gửi đồng thời 100 request, mỗi request rút 1 từ ví có số dư 100.",
+  "buggyCode": "@Service\npublic class WalletService {\n\n    @Transactional\n    public void withdraw(long walletId, long amount) {\n        Wallet wallet = walletRepository.findById(walletId).orElseThrow();\n        if (wallet.getBalance() < amount) {\n            throw new InsufficientBalanceException(walletId);\n        }\n        wallet.setBalance(wallet.getBalance() - amount);\n        // Hibernate tự sinh: UPDATE wallet SET balance = ?, ... WHERE id = ?\n    }\n}",
+  "symptom": {
+    "description": "Cả 100 request đều trả 200 OK, không có lỗi nào trong log, nhưng số dư cuối không phải 0 và mỗi lần chạy ra một số khác.",
+    "output": "requests: 100, success: 100, failed: 0\nSELECT balance FROM wallet WHERE id = 7;\n balance\n---------\n      63"
+  },
+  "diagnosis": {
+    "question": "Vì sao 100 lần rút thành công mà số dư chỉ giảm 37?",
+    "options": [
+      "`@Transactional` không có tác dụng vì method được gọi từ chính class đó (self-invocation) nên không đi qua proxy",
+      "Ở READ COMMITTED, nhiều transaction cùng đọc một số dư, mỗi bên tính ở ứng dụng rồi ghi đè giá trị tuyệt đối, nên các lần trừ đè lên nhau (lost update)",
+      "Hibernate gom các UPDATE lại và chỉ gửi lần cuối cùng",
+      "[[connection-pool|Connection pool]] quá nhỏ nên một số UPDATE bị bỏ qua"
+    ],
+    "answer": 1,
+    "explanation": "Transaction vẫn hoạt động đúng; vấn đề là isolation. READ COMMITTED cho mỗi request đọc số dư đã commit gần nhất, vd. hai request cùng đọc 80. Hibernate sinh `UPDATE ... SET balance = 79` với giá trị tính sẵn, nên request sau ghi đè kết quả của request trước. Row lock chỉ bắt UPDATE thứ hai chờ, không bắt nó đọc lại. Đây là [[lost-update|lost update]]: không có lỗi nào được ném ra, nên rất khó phát hiện nếu không có test đồng thời."
+  },
+  "fix": {
+    "code": "// Cách 1: cập nhật nguyên tử, điều kiện số dư nằm trong chính câu UPDATE\npublic interface WalletRepository extends JpaRepository<Wallet, Long> {\n    @Modifying\n    @Query(\"update Wallet w set w.balance = w.balance - :amount \"\n         + \"where w.id = :id and w.balance >= :amount\")\n    int withdraw(@Param(\"id\") long id, @Param(\"amount\") long amount);\n}\n\n@Transactional\npublic void withdraw(long walletId, long amount) {\n    if (walletRepository.withdraw(walletId, amount) == 0) {\n        throw new InsufficientBalanceException(walletId);\n    }\n}\n\n// Cách 2: khoá bi quan khi cần đọc entity rồi xử lý nhiều bước\n@Lock(LockModeType.PESSIMISTIC_WRITE)            // sinh SELECT ... FOR UPDATE\n@Query(\"select w from Wallet w where w.id = :id\")\nOptional<Wallet> findForUpdate(@Param(\"id\") long id);\n\n// Cách 3: khoá lạc quan, hợp khi xung đột hiếm\n// (nếu entity có @Version, câu update ở cách 1 phải tự tăng version: ..., w.version = w.version + 1)\n@Version\nprivate long version;                           // UPDATE ... WHERE id = ? AND version = ?\n// xung đột ném ObjectOptimisticLockingFailureException -> retry ở ngoài @Transactional",
+    "explanation": "Với phép trừ đơn giản, cách 1 tốt nhất: database tự cộng trừ trên giá trị mới nhất và kiểm tra số dư trong cùng một câu lệnh, ở READ COMMITTED không cần retry. JPQL `update` hàng loạt bỏ qua cơ chế `@Version`, nên đừng trộn cách 1 và cách 3 trên cùng entity mà không tự tăng version. Cách 2 hợp khi phải đọc entity, kiểm tra nhiều điều kiện rồi mới ghi; giữ transaction ngắn vì request khác phải chờ lock. Cách 3 hợp khi xung đột hiếm (sửa hồ sơ); với một ví bị rút liên tục, retry sẽ nhiều và chậm hơn chờ lock. Thêm một test đồng thời (nhiều thread cùng rút) vào bộ test để bắt lỗi này."
+  }
+}

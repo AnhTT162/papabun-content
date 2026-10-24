@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "transaction-isolation",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Transaction & Isolation Level",
+  "summary": "ACID, bốn isolation level và các hiện tượng dirty read, non-repeatable read, phantom, write skew; PostgreSQL và MySQL khác nhau thế nào; bốn cách chống lost update trong code Spring/JPA.",
+  "level": "mid",
+  "order": 2,
+  "minutes": 18,
+  "prerequisites": ["index-execution-plan"],
+  "terms": ["transaction", "acid", "isolation-level", "dirty-read", "non-repeatable-read", "phantom-read", "lost-update", "write-skew", "mvcc", "snapshot-isolation", "pessimistic-locking", "optimistic-locking", "serialization-failure", "ssi", "next-key-lock", "consistent-read", "retry-backoff", "idempotency-key", "deadlock", "lock-ordering", "connection-pool"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Transaction Isolation", "url": "https://www.postgresql.org/docs/current/transaction-iso.html" },
+    { "title": "MySQL 8.0: Transaction Isolation Levels", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html" },
+    { "title": "Spring Framework: Transaction Management", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "simulation", "file": "simulation-for-update.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vậy sao không để mọi thứ ở SERIALIZABLE cho an toàn?\" Vì throughput giảm và ứng dụng phải xử lý serialization failure bằng retry ở mọi nơi. Thực tế hay dùng mặc định của database, rồi xử lý riêng các chỗ có rủi ro: UPDATE nguyên tử, `FOR UPDATE` hoặc cột `version` cho read-modify-write, unique constraint cho \"không được trùng\", và chỉ dùng SERIALIZABLE cho những luồng có điều kiện liên quan nhiều dòng." }
+  ]
+}
