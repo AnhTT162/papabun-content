@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Có index trên created_at mà báo cáo vẫn mất 2 giây",
+  "context": "Bảng `orders` (PostgreSQL 16) có 12 triệu dòng, cột `created_at` kiểu `timestamp` và đã có index `idx_orders_created_at`. Báo cáo đơn hàng theo ngày chạy ngày càng chậm.",
+  "buggyCode": "CREATE INDEX idx_orders_created_at ON orders (created_at);\n\nEXPLAIN ANALYZE\nSELECT id, customer_id, total\nFROM orders\nWHERE date(created_at) = DATE '2026-10-01';",
+  "symptom": {
+    "description": "Plan không dùng index, đọc cả bảng và bỏ đi gần 12 triệu dòng.",
+    "output": "Gather  (cost=1000.00..215433.10 rows=60000 width=24) (actual time=3.112..1873.402 rows=41250 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  ->  Parallel Seq Scan on orders  (cost=0.00..208433.10 rows=25000 width=24) (actual time=1.904..1851.775 rows=13750 loops=3)\n        Filter: (date(created_at) = '2026-10-01'::date)\n        Rows Removed by Filter: 3986250\nPlanning Time: 0.142 ms\nExecution Time: 1876.880 ms"
+  },
+  "diagnosis": {
+    "question": "Vì sao planner bỏ qua `idx_orders_created_at`?",
+    "options": [
+      "Thống kê của bảng đã cũ, chạy `ANALYZE orders` là xong",
+      "Index lưu giá trị `created_at`, còn điều kiện so sánh kết quả của `date(created_at)`, nên index không dùng để tìm được",
+      "PostgreSQL không dùng index khi query chạy song song (Parallel Seq Scan)",
+      "Index trên cột `timestamp` không hỗ trợ so sánh với kiểu `date`"
+    ],
+    "answer": 1,
+    "explanation": "B-tree được sắp theo giá trị gốc của `created_at`. Bọc cột trong hàm làm điều kiện không [[sargable]]: database phải tính `date()` cho từng dòng rồi mới so sánh được, nên chỉ còn cách đọc cả bảng. Thống kê cũ có thể làm ước lượng sai, nhưng không làm một index không phù hợp trở thành dùng được. PostgreSQL vẫn có Parallel Index Scan, và index trên `timestamp` vẫn dùng được với điều kiện khoảng."
+  },
+  "fix": {
+    "code": "-- Cách 1 (nên dùng): viết điều kiện theo khoảng trên chính cột có index\nEXPLAIN ANALYZE\nSELECT id, customer_id, total\nFROM orders\nWHERE created_at >= TIMESTAMP '2026-10-01'\n  AND created_at <  TIMESTAMP '2026-10-02';\n\n-- (rút gọn)\n-- Index Scan using idx_orders_created_at on orders  (actual time=0.031..18.774 rows=41250 loops=1)\n--   Index Cond: ((created_at >= '2026-10-01 00:00:00') AND (created_at < '2026-10-02 00:00:00'))\n-- Execution Time: 21.402 ms\n\n-- Cách 2: nếu buộc phải giữ biểu thức, tạo expression index khớp đúng biểu thức\nCREATE INDEX CONCURRENTLY idx_orders_created_date ON orders (date(created_at));\nANALYZE orders;   -- thu thống kê cho biểu thức mới, nếu không ước lượng vẫn là mặc định 0,5%",
+    "explanation": "Viết điều kiện dạng khoảng nửa mở `[ngày, ngày + 1)` trên chính cột có index: không cần index mới, và đúng cả khi giờ có phần lẻ giây. Thời gian giảm từ ~1,9 giây xuống ~21ms. [[expression-index|Expression index]] chỉ nên dùng khi không sửa được query (ví dụ query sinh từ công cụ báo cáo), vì mỗi index thêm là thêm chi phí ghi. Với cột `timestamptz`, `date()` phụ thuộc múi giờ của session nên không tạo expression index được; cách 1 vẫn đúng."
+  }
+}

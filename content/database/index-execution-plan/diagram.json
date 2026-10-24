@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Tìm customer_id = 42 trong 12 triệu đơn",
+  "nodes": [
+    { "id": "query", "label": "WHERE customer_id = 42", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "root", "label": "Root page", "kind": "database", "x": 0.85, "y": 0.05 },
+    { "id": "branch", "label": "Branch page", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "leaf", "label": "Leaf: 42 → TID", "kind": "database", "x": 0.85, "y": 0.95 },
+    { "id": "heap", "label": "Dòng trong bảng", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "seq", "label": "Seq Scan mọi page", "kind": "generic", "x": 0.1, "y": 0.5 }
+  ],
+  "edges": [
+    { "id": "query-root", "from": "query", "to": "root", "label": "bắt đầu từ gốc" },
+    { "id": "root-branch", "from": "root", "to": "branch", "label": "42 < 5000" },
+    { "id": "branch-leaf", "from": "branch", "to": "leaf", "label": "40 ≤ 42 < 80" },
+    { "id": "leaf-heap", "from": "leaf", "to": "heap", "label": "đọc dòng theo TID" },
+    { "id": "query-seq", "from": "query", "to": "seq", "label": "không có index" }
+  ],
+  "steps": [
+    { "caption": "Query tìm đơn của khách 42 trong bảng orders có 12 triệu dòng, đã có index trên customer_id.", "show": ["query"] },
+    { "caption": "B-tree bắt đầu từ root page. Mỗi page chứa hàng trăm key, nên cây chỉ cao 3–4 tầng.", "show": ["root", "query-root"], "highlight": ["query-root"] },
+    { "caption": "Ở mỗi tầng, so sánh key để chọn đúng một nhánh con. Đây là lý do tìm kiếm là O(log n).", "show": ["branch", "root-branch"], "highlight": ["root-branch"] },
+    { "caption": "Leaf page chứa key đã sắp xếp kèm vị trí dòng (TID trong PostgreSQL, primary key trong InnoDB). Các leaf nối với nhau nên tìm theo khoảng chỉ cần đi ngang.", "show": ["leaf", "branch-leaf"], "highlight": ["branch-leaf"] },
+    { "caption": "Đọc dòng từ bảng theo vị trí. Nếu index đã chứa mọi cột query cần (covering index), bước này thường được bỏ qua: Index Only Scan.", "show": ["heap", "leaf-heap"], "highlight": ["leaf-heap"] },
+    { "caption": "Không có index phù hợp thì phải Seq Scan: đọc hàng trăm nghìn page để lấy vài dòng, thay vì khoảng 5 page.", "show": ["seq", "query-seq"], "highlight": ["query-seq"] }
+  ]
+}

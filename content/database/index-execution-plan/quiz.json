@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "leftmost-prefix",
+      "kind": "single",
+      "prompt": "Bảng `orders` có index `(customer_id, created_at)`. Query nào **không** dùng được index này để tìm thẳng tới các dòng cần (không tính skip scan)?",
+      "options": [
+        "`WHERE customer_id = 42`",
+        "`WHERE customer_id = 42 AND created_at >= '2026-10-01'`",
+        "`WHERE created_at >= '2026-10-01'`",
+        "`WHERE customer_id = 42 ORDER BY created_at DESC LIMIT 10`"
+      ],
+      "answer": 2,
+      "explanation": "Index được sắp theo `customer_id` trước, rồi mới tới `created_at` bên trong mỗi khách. Điều kiện chỉ trên `created_at` không có điểm bắt đầu trong cây, nên phải quét toàn bộ index hoặc cả bảng. Lựa chọn cuối lại rất hợp: tìm thẳng tới khách 42 rồi đọc ngược 10 dòng mới nhất, không cần sort."
+    },
+    {
+      "id": "index-only-backward",
+      "kind": "output",
+      "prompt": "PostgreSQL 16, bảng `orders` 12 triệu dòng. Dòng đầu tiên dưới `Limit` trong plan in ra là gì?",
+      "code": "CREATE INDEX idx_orders_customer_created ON orders (customer_id, created_at);\nVACUUM ANALYZE orders;\n\nEXPLAIN\nSELECT customer_id, created_at\nFROM orders\nWHERE customer_id = 42\nORDER BY created_at DESC\nLIMIT 10;",
+      "options": [
+        "Index Only Scan Backward using idx_orders_customer_created on orders",
+        "Sort → Index Scan using idx_orders_customer_created on orders",
+        "Sort → Seq Scan on orders",
+        "Sort → Bitmap Heap Scan on orders"
+      ],
+      "answer": 0,
+      "explanation": "Index sắp theo `customer_id` rồi `created_at`, nên tìm thẳng tới khách 42 rồi đọc ngược (Backward) là đã đúng thứ tự `created_at DESC`, không cần Sort, và dừng sau 10 dòng. Index chứa đủ hai cột query cần nên planner chọn Index Only Scan; `VACUUM` cập nhật visibility map để lúc chạy gần như không phải đọc bảng (`Heap Fetches` ≈ 0). Các lựa chọn có Sort là hiểu lầm rằng `ORDER BY ... DESC` luôn phải sort."
+    },
+    {
+      "id": "explain-analyze-delete",
+      "kind": "single",
+      "prompt": "Muốn xem plan thật của `DELETE FROM sessions WHERE expires_at < now()` trên production **PostgreSQL** mà không xoá dữ liệu. Cách nào đúng?",
+      "options": [
+        "`EXPLAIN ANALYZE DELETE ...` vì `ANALYZE` chỉ phân tích, không chạy",
+        "`BEGIN; EXPLAIN ANALYZE DELETE ...; ROLLBACK;`",
+        "`EXPLAIN ANALYZE` không dùng được với `DELETE`",
+        "Chạy `ANALYZE sessions` rồi `DELETE`"
+      ],
+      "answer": 1,
+      "explanation": "`EXPLAIN ANALYZE` thực thi thật câu lệnh để đo thời gian, nên `DELETE` sẽ xoá thật. Bọc trong transaction rồi `ROLLBACK` để lấy plan thật mà không giữ thay đổi. Trong lúc chạy, câu lệnh vẫn giữ row lock tới khi `ROLLBACK`, và trigger hay `ON DELETE CASCADE` vẫn chạy, nên chọn lúc tải thấp. (MySQL 8 không hỗ trợ `EXPLAIN ANALYZE` cho `DELETE` một bảng.) `ANALYZE sessions` chỉ cập nhật thống kê."
+    },
+    {
+      "id": "innodb-uuid-pk",
+      "kind": "single",
+      "prompt": "Bảng InnoDB có primary key là UUID v4 lưu dạng `CHAR(36)` và 5 index phụ. Vì sao đổi primary key sang `BIGINT` tăng dần làm các index phụ nhỏ đi đáng kể?",
+      "options": [
+        "Vì `BIGINT` được nén tốt hơn",
+        "Vì mỗi dòng trong index phụ lưu kèm giá trị primary key, 8 byte thay vì 36 byte",
+        "Vì InnoDB không cho tạo index phụ trên bảng có primary key là chuỗi",
+        "Không thay đổi, kích thước index phụ không phụ thuộc primary key"
+      ],
+      "answer": 1,
+      "explanation": "Index phụ của InnoDB trỏ tới dòng bằng primary key, nên primary key dài làm mọi index phụ phình ra. UUID v4 ngẫu nhiên còn làm dòng mới chèn vào giữa clustered index, gây tách page. Nếu cần UUID, dùng UUID v7 (có thứ tự theo thời gian) lưu dạng `BINARY(16)`."
+    },
+    {
+      "id": "estimate-mismatch",
+      "kind": "single",
+      "prompt": "Plan có dòng `Index Scan using idx_orders_customer on orders (cost=0.43..8.65 rows=12 width=48) (actual time=0.05..2310.4 rows=1840000 loops=1)` và query chạy rất chậm sau khi vừa import 2 triệu dòng. Việc đầu tiên nên làm?",
+      "options": [
+        "Xoá index vì nó làm query chậm",
+        "Chạy `ANALYZE` cho bảng để cập nhật thống kê, rồi xem lại plan",
+        "Tăng `work_mem` lên 1GB",
+        "Thêm hint ép dùng Seq Scan"
+      ],
+      "answer": 1,
+      "explanation": "Planner tưởng chỉ có 12 dòng nên chọn Index Scan, nhưng thực tế có 1,84 triệu dòng. Thống kê về phân bố giá trị chưa kịp cập nhật sau đợt import lớn (auto-analyze của autovacuum chưa chạy tới). `ANALYZE` cho planner số liệu đúng; sau đó nó sẽ tự chọn cách hợp lý. Xử lý triệu chứng bằng hint hay tăng bộ nhớ không sửa được nguyên nhân."
+    }
+  ]
+}

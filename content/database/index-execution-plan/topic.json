@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "index-execution-plan",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Index & Execution Plan",
+  "summary": "B-tree index hoạt động thế nào, index nhiều cột và quy tắc cột trái nhất, covering index, cách đọc EXPLAIN ANALYZE, và vì sao có index mà query vẫn chậm.",
+  "level": "mid",
+  "order": 1,
+  "minutes": 18,
+  "prerequisites": [],
+  "terms": ["b-tree", "clustered-index", "composite-index", "covering-index", "execution-plan", "planner-statistics", "selectivity", "seq-scan", "sargable", "expression-index", "index-only-scan", "tid", "partial-index", "hot-update", "skip-scan"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Indexes", "url": "https://www.postgresql.org/docs/current/indexes.html" },
+    { "title": "PostgreSQL Documentation: Using EXPLAIN", "url": "https://www.postgresql.org/docs/current/using-explain.html" },
+    { "title": "MySQL 8.0: Clustered and Secondary Indexes", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Query chậm trên production, bạn làm gì?\" Đừng trả lời ngay \"thêm index\". Trình bày quy trình: lấy query thật từ slow query log hoặc `pg_stat_statements`, chạy `EXPLAIN (ANALYZE, BUFFERS)` trên dữ liệu thật, so `rows` ước lượng với `actual rows`, tìm node tốn nhất, rồi mới chọn cách sửa: viết lại điều kiện cho sargable, cập nhật thống kê, thêm hoặc đổi index, và đo lại sau khi sửa." },
+    { "type": "callout", "style": "warning", "markdown": "Với PostgreSQL, tạo index trên bảng lớn đang chạy production bằng `CREATE INDEX` thường sẽ chặn mọi lệnh ghi cho tới khi xong. Dùng `CREATE INDEX CONCURRENTLY` (không chạy được trong transaction, và nếu lỗi sẽ để lại index `INVALID` cần xoá rồi tạo lại)." }
+  ]
+}

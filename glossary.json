@@ -710,6 +710,126 @@
       "example": "Gọi song song user và orders; orders lỗi thì user tự bị huỷ.",
       "related": ["virtual-thread"],
       "topics": ["completable-future"]
+    },
+    {
+      "id": "b-tree",
+      "term": "B-tree index",
+      "meaning": "Loại index phổ biến nhất: key được sắp xếp trong các page tạo thành cây thấp, tìm một giá trị chỉ cần đi qua vài page từ gốc xuống lá.",
+      "example": "Bảng 12 triệu dòng có B-tree cao khoảng 3–4 tầng, tìm một `customer_id` đọc khoảng 4–5 page.",
+      "related": ["composite-index", "execution-plan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "clustered-index",
+      "term": "Clustered index",
+      "meaning": "Index mà lá của nó chứa luôn toàn bộ dòng dữ liệu, nên bảng được lưu theo thứ tự của key. Trong MySQL InnoDB đó là primary key. Không có primary key thì InnoDB dùng index UNIQUE NOT NULL đầu tiên, hoặc một row ID ẩn. PostgreSQL không có clustered index.",
+      "example": "InnoDB: index phụ trên `email` lưu kèm primary key, rồi tra tiếp clustered index để lấy dòng.",
+      "related": ["b-tree", "covering-index"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "composite-index",
+      "term": "Composite index",
+      "meaning": "Index trên nhiều cột, sắp theo cột đầu rồi tới cột sau; chỉ tìm thẳng được khi điều kiện bắt đầu từ cột trái nhất.",
+      "example": "Index `(customer_id, created_at)` giúp `WHERE customer_id = 42`, không giúp `WHERE created_at > ...`.",
+      "related": ["b-tree", "covering-index"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "covering-index",
+      "term": "Covering index",
+      "meaning": "Index chứa đủ mọi cột mà query cần, nên database trả kết quả từ index (Index Only Scan) mà thường không phải đọc bảng.",
+      "example": "Query `SELECT customer_id, created_at` với index `(customer_id, created_at)`.",
+      "related": ["composite-index", "index-only-scan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "execution-plan",
+      "term": "Execution plan",
+      "meaning": "Kế hoạch database chọn để chạy một query: đọc bảng nào, dùng index nào, join và sort theo cách nào. Xem bằng `EXPLAIN`.",
+      "example": "`EXPLAIN ANALYZE SELECT ...` in ra các node như `Index Scan`, `Hash Join`, `Sort` kèm thời gian.",
+      "related": ["planner-statistics", "seq-scan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "planner-statistics",
+      "term": "Planner statistics",
+      "meaning": "Thống kê database thu thập về dữ liệu (số dòng, giá trị phổ biến, phân bố) để ước lượng chi phí và chọn plan. Cập nhật bằng `ANALYZE`.",
+      "example": "Sau khi import 2 triệu đơn của khách mới mà chưa `ANALYZE`, thống kê phân bố chưa có giá trị mới nên planner ước lượng `customer_id = 9001` chỉ khớp vài dòng.",
+      "related": ["execution-plan", "selectivity"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "selectivity",
+      "term": "Selectivity (độ chọn lọc)",
+      "meaning": "Tỉ lệ dòng thoả điều kiện. Điều kiện chọn lọc cao (khớp ít dòng) mới đáng dùng index.",
+      "example": "`email = '...'` khớp 1 dòng: chọn lọc cao. `status = 'DONE'` khớp 95%: chọn lọc thấp.",
+      "related": ["planner-statistics", "seq-scan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "seq-scan",
+      "term": "Seq Scan",
+      "meaning": "Cách đọc tuần tự mọi page của bảng. Rẻ khi cần phần lớn bảng, rất đắt khi chỉ cần vài dòng.",
+      "example": "Plan có `Seq Scan on orders` và `Rows Removed by Filter: 11958750`.",
+      "related": ["execution-plan", "selectivity"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "sargable",
+      "term": "Sargable",
+      "meaning": "Điều kiện viết sao cho database dùng được index để tìm (Search ARGument ABLE): so sánh trực tiếp trên cột, không bọc cột trong hàm.",
+      "example": "`created_at >= '2026-10-01'` là sargable; `date(created_at) = '2026-10-01'` thì không.",
+      "related": ["expression-index", "b-tree"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "expression-index",
+      "term": "Expression index",
+      "meaning": "Index trên kết quả của một biểu thức thay vì giá trị cột gốc (MySQL gọi là functional index). Query phải dùng đúng biểu thức đó.",
+      "example": "`CREATE INDEX ON users (lower(email))` giúp `WHERE lower(email) = 'an@example.com'`.",
+      "related": ["sargable"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "index-only-scan",
+      "term": "Index Only Scan",
+      "meaning": "Cách đọc chỉ dùng index, không đọc bảng, khi index chứa đủ cột query cần. PostgreSQL vẫn phải đọc bảng với page chưa được VACUUM đánh dấu all-visible trong visibility map.",
+      "example": "Plan có `Index Only Scan ... Heap Fetches: 0`: không lần nào phải đọc bảng.",
+      "related": ["covering-index", "execution-plan"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "tid",
+      "term": "TID",
+      "meaning": "Tuple ID của PostgreSQL: vị trí vật lý của một dòng trong bảng, gồm số page và số thứ tự trong page. Index trỏ tới dòng bằng TID.",
+      "example": "`ctid = (1532,7)`: dòng thứ 7 trong page 1532.",
+      "related": ["b-tree", "clustered-index"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "partial-index",
+      "term": "Partial index",
+      "meaning": "Index chỉ chứa các dòng thoả một điều kiện `WHERE`, nên nhỏ và nhanh khi query luôn lọc theo điều kiện đó.",
+      "example": "`CREATE INDEX ON orders (created_at) WHERE status = 'PENDING'`.",
+      "related": ["expression-index", "selectivity"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "hot-update",
+      "term": "HOT update",
+      "meaning": "Heap-Only Tuple: tối ưu của PostgreSQL khi `UPDATE` không đổi cột nào có B-tree index và page còn chỗ trống, nên không phải cập nhật index.",
+      "example": "Tăng `view_count` (không có index) là HOT; đổi `email` có index thì không.",
+      "related": ["b-tree"],
+      "topics": ["index-execution-plan"]
+    },
+    {
+      "id": "skip-scan",
+      "term": "Skip scan",
+      "meaning": "Cách dùng index `(a, b)` cho điều kiện chỉ trên `b` bằng cách nhảy qua từng giá trị của `a`. Chỉ hiệu quả khi `a` có ít giá trị khác nhau.",
+      "example": "Index `(gender, birth_date)` vẫn giúp `WHERE birth_date = ...` vì `gender` chỉ có vài giá trị.",
+      "related": ["composite-index"],
+      "topics": ["index-execution-plan"]
     }
   ]
 }
