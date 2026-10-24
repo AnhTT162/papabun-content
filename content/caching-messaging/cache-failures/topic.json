@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cache-failures",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Stampede, penetration, avalanche, hot key",
+  "summary": "Bốn kiểu sự cố khiến cache không đỡ được tải: key nóng hết hạn, key không tồn tại, nhiều key hết hạn cùng lúc hoặc cụm cache sập, và hot key. Single-flight, lock Redis, hết hạn logic, làm mới sớm theo xác suất, negative caching, Bloom filter, jitter TTL, timeout và circuit breaker để bảo vệ database.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 18,
+  "prerequisites": ["cache-patterns", "local-cache"],
+  "terms": ["cache-stampede", "cache-penetration", "cache-avalanche", "hot-key", "single-flight", "logical-expiration", "probabilistic-early-expiration", "ttl-jitter", "negative-caching", "bloom-filter", "rate-limiting", "bulkhead", "ttl", "cache-hit-ratio"],
+  "references": [
+    { "title": "Vattani, Chierichetti, Lowenstein: Optimal Probabilistic Cache Stampede Prevention (VLDB 2015)", "url": "https://www.vldb.org/pvldb/vol8/p886-vattani.pdf" },
+    { "title": "Redis Documentation: Bloom filter", "url": "https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/" },
+    { "title": "Spring Framework Reference: Declarative Annotation-based Caching", "url": "https://docs.spring.io/spring-framework/reference/integration/cache/annotations.html" },
+    { "title": "Caffeine Wiki: Refresh", "url": "https://github.com/ben-manes/caffeine/wiki/Refresh" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Redis sập hoàn toàn thì hệ thống của bạn ra sao?\" Câu trả lời tốt nói được cả chuỗi: timeout Redis client ngắn để thread không bị giữ, circuit breaker để thôi gọi Redis, giới hạn số query đồng thời xuống database, và phần nào trả lỗi hay dữ liệu rút gọn để database còn phục vụ đường quan trọng (giỏ hàng, thanh toán). Kèm con số: hit ratio 97% nghĩa là mất cache làm số query tăng khoảng 33 lần, database có chịu được không đã được load test chưa." }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "topic-binding",
+      "kind": "single",
+      "prompt": "Topic exchange có ba binding: queue A với `order.*`, queue B với `order.#`, queue C với `*.vn.*`. Producer gửi routing key `order.vn.paid`. Queue nào nhận được message?",
+      "options": [
+        "Chỉ A, vì đó là binding khớp đầu tiên",
+        "A và B, vì cả hai bắt đầu bằng `order`",
+        "B và C",
+        "Cả A, B và C"
+      ],
+      "answer": 2,
+      "explanation": "`*` khớp đúng một từ, nên `order.*` chỉ khớp key hai từ như `order.paid`, không khớp `order.vn.paid`. `#` khớp không hoặc nhiều từ, nên `order.#` khớp. `*.vn.*` khớp key ba từ có từ giữa là `vn`. Exchange chép message vào mọi queue khớp, không dừng ở binding đầu tiên."
+    },
+    {
+      "id": "unroutable",
+      "kind": "single",
+      "prompt": "Producer bật publisher confirm và nhận `ack` cho một message. Các queue liên quan đều chưa có consumer nào, nhưng không queue nào có message đó. Giải thích hợp lý nhất?",
+      "options": [
+        "Broker bị lỗi đĩa ngay sau khi gửi confirm",
+        "Không khớp binding nào, và thiếu cờ `mandatory`",
+        "Message còn nằm trong buffer của channel",
+        "Confirm chỉ có tác dụng với quorum queue"
+      ],
+      "answer": 1,
+      "explanation": "Confirm nghĩa là broker đã xử lý xong message, kể cả khi xử lý là bỏ đi vì không khớp binding. Đặt `mandatory=true` để broker trả message về qua `basic.return` (Spring: `ReturnsCallback`), hoặc cấu hình alternate exchange. Confirm chỉ được gửi sau khi broker đã nhận message, nên nó không còn nằm ở buffer phía client."
+    },
+    {
+      "id": "poison-requeue",
+      "kind": "single",
+      "prompt": "Listener `@RabbitListener` với cấu hình mặc định convert JSON thành công, rồi code trong listener tự kiểm tra và ném `IllegalArgumentException` vì thiếu trường bắt buộc. Queue là classic, không có dead-letter exchange. Chuyện gì xảy ra?",
+      "options": [
+        "Message được giao lại liên tục, CPU tăng và log đầy lỗi",
+        "Message bị bỏ sau 3 lần thử theo mặc định của Spring",
+        "Message được tự động chuyển vào queue `<tên>.dlq`",
+        "Listener container dừng hẳn cho tới khi khởi động lại"
+      ],
+      "answer": 0,
+      "explanation": "Ack mode mặc định `AUTO` nack khi có exception và requeue (`defaultRequeueRejected=true`). Classic queue không có giới hạn số lần giao, nên message lỗi vĩnh viễn quay vòng mãi. Sửa: ném `AmqpRejectAndDontRequeueException` hoặc đặt `defaultRequeueRejected=false`, cấu hình dead-letter exchange, dùng quorum queue (có `delivery-limit` mặc định 20 từ 4.0)."
+    },
+    {
+      "id": "prefetch-uneven",
+      "kind": "single",
+      "prompt": "Queue có 1.000 message, mỗi message xử lý mất 2 giây. Hai consumer, prefetch 250 (mặc định Spring AMQP). Consumer thứ ba khởi động sau đó 5 giây. Điều gì dễ xảy ra?",
+      "options": [
+        "Ba consumer chia đều phần message còn lại ngay lập tức",
+        "Broker giao lại một phần message từ hai consumer cũ cho consumer mới",
+        "Consumer mới nhận được những message chưa giao, khoảng 490 cái",
+        "Consumer mới không nhận được gì cho tới khi hai consumer cũ xong"
+      ],
+      "answer": 2,
+      "explanation": "Mỗi consumer cũ đã nhận trước 250 message, tức 500 message đang nằm ở hai consumer đó. Sau 5 giây mỗi consumer chỉ xử lý được vài message. Broker không lấy lại message đã giao khi chưa ack, nên consumer mới chỉ nhận phần chưa giao (khoảng 490) và sẽ xong sớm hơn hai consumer cũ. Với việc chậm, đặt prefetch nhỏ (1–10) để chia việc đều hơn."
+    },
+    {
+      "id": "per-message-ttl",
+      "kind": "single",
+      "prompt": "Retry có độ trễ bằng một classic queue chờ, đặt TTL trên từng message (`expiration`), hết hạn thì dead-letter về queue chính. Message A có TTL 1 giờ vào trước, message B TTL 10 giây vào sau. B quay về queue chính khi nào?",
+      "options": [
+        "Sau 10 giây, vì TTL được kiểm tra cho từng message",
+        "Sau khoảng 1 giờ, khi A hết hạn và rời đầu queue",
+        "Ngay lập tức, vì TTL từng message không kích hoạt dead-letter",
+        "Không bao giờ, vì TTL của queue ghi đè TTL của message"
+      ],
+      "answer": 1,
+      "explanation": "RabbitMQ chỉ kiểm tra TTL từng message khi message tới đầu queue. B nằm sau A nên phải chờ A hết hạn. Đó là lý do dùng mỗi mức trễ một queue với `x-message-ttl` cố định cho cả queue: mọi message trong queue hết hạn theo đúng thứ tự vào."
+    },
+    {
+      "id": "choose-tool",
+      "kind": "single",
+      "prompt": "Nhu cầu nào nghiêng rõ về Kafka hơn RabbitMQ classic hay quorum queue?",
+      "options": [
+        "Chia việc xử lý ảnh cho 50 worker, mỗi việc 30 giây",
+        "Định tuyến message theo vùng và loại sự kiện bằng mẫu routing key",
+        "Ba đội đọc cùng sự kiện, một đội cần đọc lại dữ liệu tuần trước",
+        "Hàng đợi việc có hai mức ưu tiên và retry sau 1 phút"
+      ],
+      "answer": 2,
+      "explanation": "Nhiều nhóm đọc độc lập và đọc lại dữ liệu cũ cần message được giữ sau khi đọc: đó là log của Kafka (hoặc stream của RabbitMQ). Classic và quorum queue xoá message khi ack. Chia việc dài cho nhiều worker, định tuyến theo mẫu và priority cộng retry trễ là điểm mạnh của queue RabbitMQ."
+    }
+  ]
+}

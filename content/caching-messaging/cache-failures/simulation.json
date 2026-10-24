@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Key nóng hết hạn: có và không có mutex",
+  "instructions": "Key `product:42` đang được đọc rất nhiều. Bấm \"TTL hết hạn\", rồi bấm \"Request đọc key\" vài lần trước khi bấm \"DB trả kết quả\", và xem số query xuống database. Sau đó bấm \"Bật/tắt mutex\" (chỉ đổi được khi key còn hạn; mỗi lần bấm đặt lại bộ đếm) và làm lại.",
+  "config": {
+    "states": [
+      { "id": "fresh", "label": "Key còn hạn", "x": 0.5, "y": 0.1, "note": "Mọi request đọc thẳng từ Redis, database không bị hỏi." },
+      { "id": "expired", "label": "Key vừa hết hạn", "x": 0.5, "y": 0.5, "note": "Request tiếp theo sẽ miss. Điều gì xảy ra phụ thuộc vào việc có mutex hay không." },
+      { "id": "stampede", "label": "Mọi request cùng tải", "x": 0.15, "y": 0.9, "note": "Không có mutex: mỗi request miss đều tự query database cho cùng một key." },
+      { "id": "single-load", "label": "Một request tải", "x": 0.85, "y": 0.9, "note": "Có mutex: request đầu tiên giữ `lock:product:42`, các request khác chờ ngắn rồi đọc lại cache." }
+    ],
+    "initial": "fresh",
+    "events": [
+      { "id": "request", "label": "Request đọc key" },
+      { "id": "expire", "label": "TTL hết hạn" },
+      { "id": "db-done", "label": "DB trả kết quả" },
+      { "id": "toggle", "label": "Bật/tắt mutex" }
+    ],
+    "counters": [
+      { "id": "db", "label": "Query xuống database", "initial": 0 },
+      { "id": "hits", "label": "Request đọc được từ cache", "initial": 0 },
+      { "id": "waiting", "label": "Request đang chờ lock", "initial": 0 },
+      { "id": "mutex", "label": "Mutex (0 tắt, 1 bật)", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "hit", "from": "fresh", "event": "request", "to": "fresh", "label": "hit", "effects": [ { "counter": "hits", "add": 1 } ] },
+      { "id": "expire", "from": "fresh", "event": "expire", "to": "expired", "label": "hết hạn" },
+      { "id": "mutex-on", "from": "fresh", "event": "toggle", "to": "fresh", "label": "bật mutex", "guard": { "counter": "mutex", "eq": 0 }, "effects": [ { "counter": "mutex", "set": 1 }, { "counter": "db", "set": 0 }, { "counter": "hits", "set": 0 }, { "counter": "waiting", "set": 0 } ], "note": "Mutex bật: request miss phải thắng `SET lock:product:42 <token> NX PX 5000` mới được query database." },
+      { "id": "mutex-off", "from": "fresh", "event": "toggle", "to": "fresh", "label": "tắt mutex", "effects": [ { "counter": "mutex", "set": 0 }, { "counter": "db", "set": 0 }, { "counter": "hits", "set": 0 }, { "counter": "waiting", "set": 0 } ], "note": "Mutex tắt: request nào miss cũng tự tải." },
+      { "id": "miss-no-lock", "from": "expired", "event": "request", "to": "stampede", "label": "miss", "guard": { "counter": "mutex", "eq": 0 }, "effects": [ { "counter": "db", "add": 1 } ], "note": "Request đầu tiên miss và query database. Query này mất vài trăm mili giây; trong lúc đó key vẫn chưa có trong cache." },
+      { "id": "miss-lock", "from": "expired", "event": "request", "to": "single-load", "label": "miss, lấy lock", "effects": [ { "counter": "db", "add": 1 } ], "note": "Request đầu tiên miss, lấy được lock và query database." },
+      { "id": "pile-heavy", "from": "stampede", "event": "request", "to": "stampede", "label": "miss nữa", "guard": { "counter": "db", "gte": 4 }, "effects": [ { "counter": "db", "add": 1 } ], "note": "Ngoài đời, key đọc 5.000 lần mỗi giây với query 200ms là khoảng 1.000 query giống hệt nhau trước khi lần đầu kịp ghi lại cache. Database chậm đi thì query lâu hơn, càng nhiều request miss: vòng xoáy làm database sập." },
+      { "id": "pile", "from": "stampede", "event": "request", "to": "stampede", "label": "miss nữa", "effects": [ { "counter": "db", "add": 1 } ], "note": "Request này cũng miss vì lần tải đầu chưa xong, nên nó cũng query database cho cùng một key." },
+      { "id": "wait", "from": "single-load", "event": "request", "to": "single-load", "label": "chờ lock", "effects": [ { "counter": "waiting", "add": 1 } ], "note": "`SET ... NX` thất bại: request này không query database mà ngủ 20–50ms rồi đọc lại cache. Với hết hạn logic, nó trả ngay bản cũ và không phải chờ." },
+      { "id": "done-stampede", "from": "stampede", "event": "db-done", "to": "fresh", "label": "ghi cache", "note": "Mọi lần tải đều ghi cùng một giá trị vào cache. Số query xuống database bằng số request đã miss: đó là cache stampede." },
+      { "id": "done-single", "from": "single-load", "event": "db-done", "to": "fresh", "label": "ghi cache, nhả lock", "effects": [ { "counter": "hits", "add": 1 } ], "note": "Bên giữ lock ghi cache rồi nhả lock (Lua so token). Các request đang chờ đọc lại và thấy giá trị mới: nhiều request chờ, database chỉ nhận đúng một query. Bộ đếm hit chỉ tăng một để giữ mô hình đơn giản." }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở trạng thái hiện tại. Mutex chỉ đổi được khi key còn hạn; \"DB trả kết quả\" chỉ có nghĩa khi đang có request tải."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "rabbitmq",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "RabbitMQ & so sánh với Kafka",
+  "summary": "Exchange, binding và routing key; classic, quorum queue và stream; publisher confirm, ack thủ công và prefetch; dead-letter exchange, retry có độ trễ và bẫy TTL; ack mode mặc định của Spring AMQP; vì sao queue dài là nguy hiểm; khi nào chọn RabbitMQ, khi nào chọn Kafka.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 17,
+  "prerequisites": ["messaging-fundamentals"],
+  "terms": ["amqp-exchange", "routing-key", "quorum-queue", "rabbitmq-stream", "publisher-confirm", "prefetch", "dead-letter-exchange", "message-ack", "dead-letter-queue", "poison-message", "idempotent-consumer", "head-of-line-blocking", "dual-write", "outbox", "competing-consumers"],
+  "references": [
+    { "title": "RabbitMQ Documentation: Exchanges", "url": "https://www.rabbitmq.com/docs/exchanges" },
+    { "title": "RabbitMQ Documentation: Quorum Queues", "url": "https://www.rabbitmq.com/docs/quorum-queues" },
+    { "title": "RabbitMQ: Consumer Acknowledgements and Publisher Confirms", "url": "https://www.rabbitmq.com/docs/confirms" },
+    { "title": "RabbitMQ Documentation: Dead Letter Exchanges", "url": "https://www.rabbitmq.com/docs/dlx" },
+    { "title": "Spring AMQP Reference", "url": "https://docs.spring.io/spring-amqp/reference/" },
+    { "title": "RabbitMQ Documentation: Release Information", "url": "https://www.rabbitmq.com/release-information" },
+    { "title": "Spring AMQP Reference: Exception Handling", "url": "https://docs.spring.io/spring-amqp/reference/amqp/exception-handling.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Publisher confirm đã `ack` thì message chắc chắn nằm trong queue chưa?\" Chưa chắc: message không khớp binding nào vẫn được confirm rồi bị bỏ, nên cần cờ `mandatory` (Spring: `ReturnsCallback`) hoặc alternate exchange. Hỏi tiếp thường là consumer chết giữa chừng thì sao (message chưa ack được giao lại, nên consumer phải idempotent), và retry có độ trễ mà không bị head-of-line blocking (mỗi mức trễ một queue với TTL cố định)." }
+  ]
+}

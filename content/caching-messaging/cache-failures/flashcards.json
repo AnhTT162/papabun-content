@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four", "front": "Bốn kiểu sự cố cache?", "back": "Stampede (một key nóng hết hạn), penetration (key không tồn tại), avalanche (nhiều key hết hạn cùng lúc hoặc cache sập), hot key (một key làm quá tải một shard)." },
+    { "id": "sync-scope", "front": "`@Cacheable(sync = true)` chống stampede tới đâu?", "back": "Với Caffeine: một thread mỗi key trong một JVM, mỗi pod vẫn tải một lần. Với `RedisCache`: tuỳ phiên bản, khoá cả cache hoặc (3.4+ mặc định) không khoá gì. Giữa các pod cần lock theo key hoặc hết hạn logic." },
+    { "id": "lock-loser", "front": "Bên không lấy được lock chống stampede làm gì?", "back": "Chờ ngắn rồi đọc lại cache; hết lượt thì trả bản cũ hoặc lỗi. Không tự query database." },
+    { "id": "logical-expire", "front": "Hết hạn logic là gì?", "back": "Lưu giá trị kèm `softExpireAt`, TTL thật dài hơn. Quá hạn mềm thì một request làm mới nền, mọi request vẫn nhận bản cũ ngay." },
+    { "id": "xfetch", "front": "Làm mới sớm theo xác suất (XFetch) hoạt động thế nào?", "back": "Mỗi lần đọc, tính lại nếu `now - delta * beta * ln(random()) >= expiry`. Càng gần hạn và tải càng lâu thì càng dễ làm mới sớm; không cần lock." },
+    { "id": "penetration", "front": "Chặn cache penetration bằng gì?", "back": "Kiểm tra định dạng đầu vào, negative caching TTL ngắn, Bloom filter chứa id có thật, rate limit theo client." },
+    { "id": "bloom", "front": "Bloom filter sai theo hướng nào?", "back": "Có thể báo \"có thể có\" nhầm (dương tính giả), không bao giờ báo thiếu cho phần tử đã thêm. 1% dương tính giả tốn khoảng 9,6 bit mỗi phần tử." },
+    { "id": "negative-create", "front": "Bẫy của negative caching khi tạo bản ghi mới?", "back": "Entry \"không có\" còn hạn làm bản ghi mới bị coi là không tồn tại; xoá entry đó khi tạo. Không cache lỗi hay timeout như là \"không có\"." },
+    { "id": "jitter", "front": "Chống avalanche do hết hạn đồng loạt?", "back": "Cộng jitter 10–20% vào TTL, nhất là khi nạp hàng loạt; job làm mới định kỳ nên dùng TTL dài hơn chu kỳ job và ghi đè trước hạn thay vì xoá." },
+    { "id": "redis-down", "front": "Redis sập: ba thứ ngăn sự cố lan rộng?", "back": "Timeout Redis client ngắn (50–200ms), circuit breaker bỏ qua Redis, giới hạn số query tải lại xuống database và trả lỗi nhanh phần vượt." }
+  ]
+}

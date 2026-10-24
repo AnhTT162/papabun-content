@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sync-pods",
+      "kind": "single",
+      "prompt": "Key `product:42` hết hạn khi đang được đọc 3.000 lần mỗi giây, chia đều trên 40 pod. Mỗi pod dùng Caffeine (`CaffeineCacheManager`) làm cache, method có `@Cacheable(value = \"product\", sync = true)`. Khoảng bao nhiêu query xuống database cho lần tải lại này?",
+      "options": [
+        "Đúng 1, vì `sync = true` khoá key trên mọi pod",
+        "Khoảng 40, mỗi pod một lần",
+        "Khoảng 3.000, vì Caffeine bỏ qua `sync`",
+        "0, vì Spring trả bản cũ trong lúc tải lại"
+      ],
+      "answer": 1,
+      "explanation": "Với Caffeine, `sync = true` dùng `cache.get(key, loader)`: trong mỗi pod chỉ một thread tải, các thread khác chờ. Không có lock nào giữa các pod, nên mỗi pod tải một lần. Muốn còn đúng một query thì cần lock trên Redis hoặc hết hạn logic có lock làm mới. Spring Cache không tự trả bản cũ. (Với `RedisCache`, `sync = true` còn tệ hơn: tuỳ phiên bản Spring Data Redis, nó khoá cả cache hoặc không khoá gì.)"
+    },
+    {
+      "id": "lock-loser",
+      "kind": "single",
+      "prompt": "Chống stampede bằng `SET lock:k token NX PX 5000`. Request không lấy được lock nên làm gì?",
+      "options": [
+        "Tự query database luôn, để không bắt người dùng chờ",
+        "Chờ ngắn rồi đọc lại cache, hết lượt thì trả bản cũ hoặc lỗi",
+        "Xoá lock rồi lấy lại, vì có thể bên giữ lock đã chết",
+        "Ghi giá trị rỗng vào cache để các request sau khỏi tải"
+      ],
+      "answer": 1,
+      "explanation": "Mục đích của lock là chỉ một request tải. Bên thua tự query thì lock vô dụng. Xoá lock của người khác phá vỡ cơ chế; bên giữ lock chết thì lock tự hết hạn sau 5 giây. Ghi giá trị rỗng làm mọi người nhận dữ liệu sai."
+    },
+    {
+      "id": "random-ids",
+      "kind": "single",
+      "prompt": "Bot gửi 20.000 request mỗi giây với id sản phẩm ngẫu nhiên, gần như không lặp lại, đều không tồn tại. Đã có negative caching TTL 60 giây. Vì sao database vẫn quá tải, và nên thêm gì?",
+      "options": [
+        "TTL 60 giây quá ngắn; tăng negative cache lên 24 giờ",
+        "Id không lặp lại nên negative cache không hit; thêm Bloom filter và rate limit",
+        "Negative cache bị Redis đẩy ra vì thiếu bộ nhớ; tăng `maxmemory` lên",
+        "Database thiếu index trên cột id; thêm index cho bảng sản phẩm"
+      ],
+      "answer": 1,
+      "explanation": "Negative cache chỉ có ích khi cùng một id thiếu được hỏi lại. Id ngẫu nhiên không lặp lại thì lần nào cũng miss, và cache còn phình thêm 20.000 entry mỗi giây. Bloom filter trả lời \"chắc chắn không có\" mà không chạm database, cộng rate limit theo client và kiểm tra định dạng id. Id là primary key nên đã có index."
+    },
+    {
+      "id": "bloom-order",
+      "kind": "single",
+      "prompt": "Service dùng Bloom filter chặn id không tồn tại. Người dùng tạo sản phẩm mới rồi mở ngay trang chi tiết, và nhận 404. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Bloom filter báo dương tính giả cho id mới",
+        "Id mới chưa được thêm vào Bloom filter trước khi trả về cho người dùng",
+        "Bloom filter không chứa được id có kiểu UUID",
+        "Bloom filter đã đầy nên tự xoá các id cũ"
+      ],
+      "answer": 1,
+      "explanation": "Bloom filter không bao giờ báo thiếu nhầm cho phần tử **đã thêm**; dương tính giả là báo \"có thể có\" cho id không tồn tại, ngược với triệu chứng này. Ở đây filter chưa biết id mới, thường vì được cập nhật bất đồng bộ hoặc dựng lại định kỳ. Thêm id vào filter trong luồng tạo, trước khi trả kết quả. Filter đầy chỉ làm tăng dương tính giả, không xoá phần tử."
+    },
+    {
+      "id": "jitter",
+      "kind": "single",
+      "prompt": "Job nạp 1 triệu key giá sản phẩm lúc 02:00 với TTL cố định 8 giờ. Đúng 10:00 database quá tải. Cách sửa trực tiếp nhất cho nguyên nhân này?",
+      "options": [
+        "Giảm TTL xuống 1 giờ để dữ liệu luôn mới",
+        "Cộng phần ngẫu nhiên vào TTL của từng key",
+        "Chuyển cache sang Redis Cluster nhiều shard hơn",
+        "Bật `allkeys-lru` để Redis tự chọn key cần xoá"
+      ],
+      "answer": 1,
+      "explanation": "Mọi key cùng TTL nên cùng hết hạn lúc 10:00: avalanche. Jitter rải thời điểm hết hạn. TTL 1 giờ tình cờ làm đợt hết hạn đầu rơi vào 03:00 lúc ít tải, nhưng làm miss tăng suốt ngày và không bỏ được việc hết hạn đồng loạt. Thêm shard không giảm số query xuống database. Eviction policy chỉ có tác dụng khi thiếu bộ nhớ."
+    },
+    {
+      "id": "redis-down",
+      "kind": "single",
+      "prompt": "Redis cluster sập hoàn toàn. Lettuce để timeout mặc định, không có circuit breaker. Ứng dụng 40 pod phục vụ 30.000 request mỗi giây, cache hit ratio thường 97%. Hậu quả đầu tiên dễ xảy ra nhất?",
+      "options": [
+        "Database nhận gấp khoảng 33 lần số query, nhưng vẫn chạy chậm được",
+        "Request treo chờ Redis rất lâu, thread và connection cạn, API ngừng phản hồi",
+        "Spring tự chuyển sang `ConcurrentMapCache` trong JVM",
+        "Request lỗi ngay lập tức với `RedisConnectionFailureException`"
+      ],
+      "answer": 1,
+      "explanation": "Timeout mặc định của Lettuce là 60 giây, và khi mất kết nối Lettuce mặc định xếp hàng lệnh chờ kết nối lại thay vì lỗi ngay, nên mỗi lần gọi Redis treo rất lâu; thread của Tomcat bị giữ hết và API ngừng phản hồi, trước cả khi database bị đè. Đặt timeout 50–200ms và `disconnectedBehavior(REJECT_COMMANDS)`, circuit breaker bỏ qua Redis khi lỗi nhiều, và giới hạn số query tải lại xuống database. Spring không tự đổi cache provider; mặc định nó còn ném lại lỗi cache, nên cần `CacheErrorHandler` để coi lỗi Redis như miss."
+    }
+  ]
+}

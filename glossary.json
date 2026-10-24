@@ -127,7 +127,7 @@
       "meaning": "Phần tử đầu hàng bị chậm làm mọi phần tử phía sau phải chờ dù chúng không liên quan.",
       "example": "Mất một gói TCP làm mọi stream HTTP/2 trên kết nối đó dừng cho tới khi gói được gửi lại.",
       "related": ["multiplexing", "quic"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "rabbitmq"]
     },
     {
       "id": "thread-dump",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures"]
     },
     {
       "id": "hash-spreading",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq"]
     },
     {
       "id": "datasource",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine"]
+      "topics": ["storage-engine", "cache-failures"]
     },
     {
       "id": "group-commit",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq"]
     },
     {
       "id": "replication-slot",
@@ -2365,7 +2365,7 @@
       "meaning": "Tỉ lệ lần đọc tìm thấy dữ liệu trong cache. Phần còn lại (miss ratio) là tải đi xuống nguồn.",
       "example": "Hit ratio 99% nghĩa là cứ 100 lần đọc chỉ 1 lần xuống database.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "cache-failures"]
     },
     {
       "id": "ttl",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures"]
     },
     {
       "id": "cache-eviction",
@@ -2445,7 +2445,7 @@
       "meaning": "Cache cả kết quả \"không tồn tại\" (thường với TTL ngắn), để những lần tra id không có thật không đi xuống database mỗi lần.",
       "example": "Lưu `product:999999 = NONE` trong 60 giây.",
       "related": ["cache", "ttl"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "cache-failures"]
     },
     {
       "id": "message-queue",
@@ -2469,7 +2469,7 @@
       "meaning": "Nhiều consumer cùng đọc một queue, mỗi message chỉ tới một trong số đó; thêm consumer để tăng tốc độ xử lý.",
       "example": "3 pod worker cùng đọc `SQS kho`, mỗi pod xử lý khoảng một phần ba số message.",
       "related": ["message-queue"],
-      "topics": ["messaging-fundamentals", "kafka-architecture"]
+      "topics": ["messaging-fundamentals", "kafka-architecture", "rabbitmq"]
     },
     {
       "id": "message-ack",
@@ -2477,7 +2477,7 @@
       "meaning": "Acknowledge: consumer báo broker đã xử lý xong message để broker xoá nó; chưa ack thì message có thể được giao lại.",
       "example": "SQS `DeleteMessage`; RabbitMQ `basicAck`; Kafka commit offset.",
       "related": ["delivery-semantics", "visibility-timeout"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "rabbitmq"]
     },
     {
       "id": "visibility-timeout",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "rabbitmq"]
     },
     {
       "id": "dead-letter-queue",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "rabbitmq"]
     },
     {
       "id": "poison-message",
@@ -2517,7 +2517,7 @@
       "meaning": "Message không bao giờ xử lý thành công được (dữ liệu sai, phiên bản lạ), làm consumer lỗi lặp đi lặp lại nếu không được tách ra.",
       "example": "Một JSON thiếu trường bắt buộc làm consumer ném exception mỗi lần nhận.",
       "related": ["dead-letter-queue"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "rabbitmq"]
     },
     {
       "id": "fan-out",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals"]
+      "topics": ["local-cache", "redis-internals", "cache-failures"]
     },
     {
       "id": "redis-single-thread",
@@ -2734,6 +2734,126 @@
       "example": "Broker Kafka gửi dữ liệu cho consumer qua `sendfile`; bật TLS thì mất tối ưu này.",
       "related": ["kafka-partition"],
       "topics": ["kafka-architecture"]
+    },
+    {
+      "id": "amqp-exchange",
+      "term": "Exchange (RabbitMQ)",
+      "meaning": "Thành phần của RabbitMQ nhận message từ producer và chép vào các queue theo binding và routing key. Bốn loại: direct, topic, fanout, headers.",
+      "example": "Topic exchange `order.events` chép `order.vn.paid` vào queue `billing` (bind `order.*.paid`) và `email` (bind `order.#`).",
+      "related": ["routing-key", "dead-letter-exchange"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "routing-key",
+      "term": "Routing key",
+      "meaning": "Chuỗi producer gắn vào message, exchange dùng để so với binding. Với topic exchange, `*` khớp một từ, `#` khớp không hoặc nhiều từ.",
+      "example": "`order.vn.paid` khớp `order.#` và `*.vn.*`, không khớp `order.*`.",
+      "related": ["amqp-exchange"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "quorum-queue",
+      "term": "Quorum queue",
+      "meaning": "Loại queue của RabbitMQ nhân bản bằng Raft trên nhiều node, cần đa số node để chạy, luôn ghi đĩa. Lựa chọn mặc định cho dữ liệu quan trọng; thay mirrored classic queue đã bị bỏ ở 4.0. Từ 4.3 có 32 mức priority nghiêm ngặt.",
+      "example": "Queue `billing` quorum trên 3 node vẫn chạy khi mất 1 node.",
+      "related": ["rabbitmq-stream", "publisher-confirm"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "rabbitmq-stream",
+      "term": "Stream (RabbitMQ)",
+      "meaning": "Loại queue của RabbitMQ dạng log chỉ ghi nối: message không bị xoá khi đọc, consumer đọc từ offset tuỳ chọn và đọc lại được, giữ theo dung lượng hoặc thời gian.",
+      "example": "Stream `order-status` giữ 7 ngày; consumer mới đọc từ `first`.",
+      "related": ["quorum-queue", "kafka-offset"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "publisher-confirm",
+      "term": "Publisher confirm",
+      "meaning": "Cơ chế RabbitMQ báo cho producer rằng broker đã xử lý xong một message (với quorum queue: đã ghi lên đa số node). Message không khớp binding nào vẫn được confirm, nên cần thêm cờ `mandatory`.",
+      "example": "Spring: `publisher-confirm-type=correlated` và `template.mandatory=true`.",
+      "related": ["quorum-queue", "message-ack"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "prefetch",
+      "term": "Prefetch",
+      "meaning": "Số message tối đa chưa ack mà broker đẩy cho một consumer (`basic.qos` của RabbitMQ). Lớn thì throughput cao nhưng việc chia không đều; nhỏ thì chia đều cho việc chậm.",
+      "example": "Mỗi việc 3 giây: prefetch 5 thay vì mặc định 250 của Spring AMQP.",
+      "related": ["message-ack", "competing-consumers"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "dead-letter-exchange",
+      "term": "Dead-letter exchange",
+      "meaning": "Exchange mà RabbitMQ chuyển message tới khi message bị reject không requeue, hết TTL, queue vượt giới hạn độ dài hoặc vượt `delivery-limit`. Header `x-death` ghi lý do.",
+      "example": "Queue `billing` đặt `x-dead-letter-exchange=billing.dlx`, bind tới queue `billing.dlq`.",
+      "related": ["dead-letter-queue", "amqp-exchange"],
+      "topics": ["rabbitmq"]
+    },
+    {
+      "id": "cache-stampede",
+      "term": "Cache stampede",
+      "meaning": "Một key được đọc nhiều hết hạn, mọi request miss trong lúc lần tải đầu chưa xong đều tự query nguồn cho cùng một key. Còn gọi là dogpile hay thundering herd.",
+      "example": "Sản phẩm hot hết hạn lúc 09:00: 418 query giống hệt nhau trong một giây.",
+      "related": ["single-flight", "logical-expiration"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "cache-penetration",
+      "term": "Cache penetration",
+      "meaning": "Request hỏi key không tồn tại ở nguồn, cache không bao giờ có nên lần nào cũng xuống database; hay gặp khi bị dò id ngẫu nhiên.",
+      "example": "Bot gửi id sản phẩm ngẫu nhiên 20.000 lần mỗi giây.",
+      "related": ["negative-caching", "bloom-filter"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "cache-avalanche",
+      "term": "Cache avalanche",
+      "meaning": "Rất nhiều key hết hạn cùng lúc hoặc cả cụm cache sập, khiến tải dồn hết xuống database.",
+      "example": "Job nạp 2 triệu key lúc 03:00 với cùng TTL 6 giờ: 09:00 mọi key cùng hết hạn.",
+      "related": ["ttl-jitter", "cache-stampede"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "single-flight",
+      "term": "Single-flight",
+      "meaning": "Gộp các lần tải đồng thời cho cùng một key thành một: một người tải, những người khác chờ và dùng chung kết quả.",
+      "example": "Caffeine `cache.get(key, loader)`; Spring `@Cacheable(sync = true)` trong một JVM.",
+      "related": ["cache-stampede"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "logical-expiration",
+      "term": "Hết hạn logic",
+      "meaning": "Lưu giá trị kèm thời điểm hết hạn mềm, TTL thật dài hơn; quá hạn mềm thì một request làm mới nền, các request khác vẫn nhận bản cũ ngay.",
+      "example": "`{data, softExpireAt: 09:05}` với TTL Redis 1 giờ.",
+      "related": ["cache-stampede", "refresh-ahead"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "probabilistic-early-expiration",
+      "term": "Làm mới sớm theo xác suất",
+      "meaning": "Mỗi lần đọc, quyết định tải lại trước hạn với xác suất tăng dần khi gần hết hạn và khi chi phí tải lớn (thuật toán XFetch), để không phải mọi request cùng miss đúng lúc hết hạn.",
+      "example": "Tải lại nếu `now - delta * beta * ln(random()) >= expiry`.",
+      "related": ["cache-stampede", "refresh-ahead"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "ttl-jitter",
+      "term": "TTL jitter",
+      "meaning": "Cộng một khoảng ngẫu nhiên vào TTL của từng key để các key được nạp cùng lúc không hết hạn cùng lúc.",
+      "example": "`ttl = 6h + random(0, 1h)`.",
+      "related": ["cache-avalanche", "ttl"],
+      "topics": ["cache-failures"]
+    },
+    {
+      "id": "rate-limiting",
+      "term": "Rate limiting",
+      "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
+      "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
+      "related": ["bulkhead"],
+      "topics": ["cache-failures"]
     }
   ]
 }

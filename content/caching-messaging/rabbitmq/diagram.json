@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một sự kiện đơn hàng đi qua topic exchange",
+  "nodes": [
+    { "id": "producer", "label": "Order service", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "exchange", "label": "Exchange order.events", "kind": "queue", "x": 0.85, "y": 0.05 },
+    { "id": "billing-q", "label": "Queue billing (quorum)", "kind": "queue", "x": 0.1, "y": 0.5 },
+    { "id": "email-q", "label": "Queue email", "kind": "queue", "x": 0.85, "y": 0.5 },
+    { "id": "consumer", "label": "Billing worker", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "dlq", "label": "DLX → billing.dlq", "kind": "queue", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "producer-exchange", "from": "producer", "to": "exchange", "label": "order.vn.paid" },
+    { "id": "exchange-billing", "from": "exchange", "to": "billing-q", "label": "order.*.paid" },
+    { "id": "exchange-email", "from": "exchange", "to": "email-q", "label": "order.#" },
+    { "id": "billing-consumer", "from": "billing-q", "to": "consumer", "label": "push, prefetch 10" },
+    { "id": "billing-dlq", "from": "billing-q", "to": "dlq", "label": "nack, không requeue" }
+  ],
+  "steps": [
+    { "caption": "Order service gửi message với routing key order.vn.paid tới topic exchange, kèm publisher confirm và cờ mandatory.", "show": ["producer", "exchange", "producer-exchange"], "highlight": ["producer-exchange"] },
+    { "caption": "Exchange so routing key với từng binding: order.*.paid và order.# đều khớp, nên message được chép vào cả hai queue. Không khớp binding nào thì message bị bỏ, trừ khi có mandatory hoặc alternate exchange.", "show": ["billing-q", "email-q", "exchange-billing", "exchange-email"], "highlight": ["exchange-billing", "exchange-email"] },
+    { "caption": "Quorum queue ghi message lên đa số node rồi broker mới gửi confirm về producer. Lúc này producer mới được coi là gửi xong.", "show": [], "highlight": ["billing-q", "producer-exchange"] },
+    { "caption": "Broker đẩy message tới worker, tối đa 10 message chưa ack mỗi consumer. Worker xử lý xong mới ack, và broker xoá message khỏi queue.", "show": ["consumer", "billing-consumer"], "highlight": ["billing-consumer"] },
+    { "caption": "Lỗi vĩnh viễn (dữ liệu sai): worker nack không requeue, message sang dead-letter exchange rồi vào billing.dlq, kèm header x-death ghi lý do.", "show": ["dlq", "billing-dlq"], "highlight": ["billing-dlq"] }
+  ]
+}

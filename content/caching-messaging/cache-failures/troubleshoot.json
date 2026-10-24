@@ -1,0 +1,112 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Đúng 9 giờ sáng, database chạm 100% CPU",
+  "symptom": "Trang chi tiết sản phẩm của một sàn thương mại điện tử: 60 pod Spring Boot, Redis Cluster làm cache với `@Cacheable(\"product\")` qua `RedisCacheManager` (key dạng `product::1001`, Spring Data Redis 3.5), PostgreSQL phía sau. Ba ngày liền, đúng khoảng **09:00:00** CPU của PostgreSQL nhảy lên 100% trong 4–5 phút, API trả 5xx khoảng 8%, rồi tự hết. Lưu lượng lúc 09:00 chỉ cao hơn 08:55 khoảng 10%. Không có deploy nào trong ba ngày đó.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Đặt cạnh nhau số query vào database, cache miss của Redis và lưu lượng API quanh 09:00",
+          "quality": "good",
+          "feedback": "Lưu lượng gần như không đổi mà database quá tải thì nhiều khả năng cache không đỡ được tải như mọi khi. So số miss với số query là cách kiểm tra nhanh nhất.",
+          "next": "metrics"
+        },
+        {
+          "label": "Tăng `maximumPoolSize` của HikariCP từ 20 lên 60 cho mỗi pod",
+          "quality": "poor",
+          "feedback": "60 pod × 60 connection là 3.600 connection vào một PostgreSQL đang 100% CPU: càng nhiều query chạy song song, database càng chậm. Chưa biết vì sao số query tăng.",
+          "next": "metrics"
+        },
+        {
+          "label": "Nâng cấp PostgreSQL lên máy gấp đôi CPU",
+          "quality": "ok",
+          "feedback": "Có thể chịu được đợt này, nhưng tốn tiền mà không biết nguyên nhân. Nếu tải tăng do cache, lần sau nó vẫn quay lại với quy mô lớn hơn.",
+          "next": "metrics"
+        }
+      ]
+    },
+    {
+      "id": "metrics",
+      "evidence": "                08:58    08:59    09:00    09:01    09:03    09:06\nAPI req/s       41.200   41.500   45.300   45.800   45.100   44.900\nRedis hit/s     40.100   40.300   12.800   21.500   38.200   43.600\nRedis miss/s     1.100    1.200   32.500   24.300    6.900    1.300\nPG query/s       1.300    1.400   29.800   22.100    7.400    1.500\nPG CPU             22%      23%     100%     100%      91%      27%\nHikari timeout/s     0        0    2.700    1.900      300        0\n\nINFO stats cộng trên mọi master, so 08:59 với 09:06:  evicted_keys tăng 0,  expired_keys tăng 1.900.000\nINFO server:                   uptime_in_days:41",
+      "evidenceFormat": "monospace",
+      "question": "Số liệu nói gì?",
+      "choices": [
+        {
+          "label": "Rất nhiều key hết hạn cùng lúc, request miss và đổ xuống database",
+          "quality": "good",
+          "feedback": "Đúng. `evicted_keys` không tăng trên master nào loại trừ thiếu bộ nhớ, uptime 41 ngày loại trừ Redis khởi động lại. Gần 2 triệu key hết hạn trong 5 phút là hết hạn đồng loạt: cache avalanche. Số query thấp hơn số miss lúc 09:00 vì một phần request hết chờ connection Hikari trước khi kịp query.",
+          "next": "ttl"
+        },
+        {
+          "label": "Redis bị đầy bộ nhớ nên đẩy key ra",
+          "quality": "ok",
+          "feedback": "Hợp lý khi miss tăng đột ngột, nhưng `evicted_keys` không tăng cho thấy không key nào bị đẩy ra; key mất đi vì hết TTL.",
+          "next": "ttl"
+        },
+        {
+          "label": "Có đợt tấn công gửi id sản phẩm không tồn tại",
+          "quality": "poor",
+          "feedback": "Penetration làm miss tăng, nhưng lưu lượng API chỉ tăng 10% còn miss tăng gần 30 lần; và miss tự giảm dần trong 5 phút, giống key được tải lại hơn là id rác.",
+          "next": "ttl"
+        }
+      ]
+    },
+    {
+      "id": "ttl",
+      "evidence": "$ redis-cli -c --scan --pattern 'product::*'   # quét một master | head -2000 | xargs -n1 redis-cli -c PTTL | sort -n | awk 'NR==1||NR==2000'\n3601000\n3898000          <- 2.000 key mẫu đều còn 60–65 phút (đo lúc 08:00)\n\n# price-import-job (chạy 03:00 mỗi ngày, xong khoảng 03:05)\nCache productCache = cacheManager.getCache(\"product\");\nfor (Product p : allProducts) {\n    productCache.put(p.id(), p);   // RedisCacheConfiguration.entryTtl(Duration.ofHours(6))\n}\n\n# Log PostgreSQL 09:00:01–09:00:02, auto_explain\nduration: 312 ms  ... WHERE p.id = 1001   (lặp 418 lần trong 1 giây)\nduration: 287 ms  ... WHERE p.id = 2050   (lặp 366 lần trong 1 giây)",
+      "evidenceFormat": "monospace",
+      "question": "Vì sao một sản phẩm như id 1001 bị query 418 lần trong một giây?",
+      "choices": [
+        {
+          "label": "Key sản phẩm bán chạy hết hạn, mọi request miss trong lúc tải đầu chưa xong đều tự query: stampede",
+          "quality": "good",
+          "feedback": "Đúng. `@Cacheable` trên `RedisCache` không gộp các lần tải (method không có `sync`, và với Spring Data Redis 3.4+ writer mặc định cũng không khoá), nên mỗi request miss đều tự gọi repository. Query 300ms nhân với hàng nghìn request mỗi giây cho sản phẩm hot là hàng trăm query giống hệt nhau, và database chậm đi lại làm query lâu hơn.",
+          "next": "fix"
+        },
+        {
+          "label": "Hibernate bị N+1 khi tải sản phẩm",
+          "quality": "poor",
+          "feedback": "N+1 là nhiều query **khác nhau** cho một request (một query cha, N query con). Ở đây là cùng một query lặp lại từ nhiều request.",
+          "next": "fix"
+        },
+        {
+          "label": "Spring retry tự gọi lại repository khi timeout",
+          "quality": "ok",
+          "feedback": "Retry có thể nhân số query lên vài lần nếu có cấu hình, nhưng không giải thích được 418 lần. Log cho thấy key hết hạn đúng lúc tải cao.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Sửa thế nào cho hôm sau không lặp lại?",
+      "choices": [
+        {
+          "label": "Thêm jitter vào TTL và chỉ cho một request tải lại mỗi key nóng",
+          "quality": "good",
+          "feedback": "Hai lớp chặn hai nguyên nhân: jitter rải thời điểm hết hạn, còn single-flight (L1 Caffeine với `sync = true` trong JVM, lock theo key trên Redis hoặc hết hạn logic giữa các pod) chặn stampede trên sản phẩm hot. Thêm giới hạn số query tải lại xuống database để sự cố khác không làm sập database.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đổi TTL thành 24 giờ để key không hết hạn vào giờ cao điểm",
+          "quality": "ok",
+          "feedback": "Key giờ hết hạn khoảng 03:00, sát lúc job ghi lại, nên giờ cao điểm hết sự cố; nhưng job chạy cùng giờ cùng thứ tự thì không chắc ghi kịp trước hạn, nên TTL phải dài hơn hẳn chu kỳ job (ví dụ 26 giờ). Nhưng TTL vẫn đồng loạt: ngày job lỗi hoặc chạy trễ, 2 triệu key hết hạn cùng lúc khoảng 03:00 hôm sau, và sản phẩm hot vẫn không có chống stampede.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Chạy job lúc 09:00 thay vì 03:00 để làm mới cache đúng lúc hết hạn",
+          "quality": "poor",
+          "feedback": "Job ghi 2 triệu key mất 5 phút, chồng lên giờ cao điểm cả lượng ghi Redis lẫn lượng đọc database của job. Nó chỉ thay đổi thời điểm, không bỏ được việc mọi key hết hạn cùng lúc.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: hết hạn đồng loạt (avalanche) khuếch đại bởi stampede.** Job nhập giá chạy 03:00–03:05 ghi toàn bộ khoảng 2 triệu key sản phẩm với cùng TTL 6 giờ, nên mọi key hết hạn trong 09:00–09:05, đúng lúc lưu lượng buổi sáng lên cao. `@Cacheable` trên `RedisCache` không gộp các lần tải và không có lock giữa các pod, nên mỗi sản phẩm bán chạy bị hàng trăm request cùng tải lại.\n\n**Sửa**:\n- TTL dài hơn chu kỳ job cộng jitter, qua `RedisCacheConfiguration.entryTtl(TtlFunction)`: ví dụ 26 giờ cộng ngẫu nhiên 0–4 giờ. Job 03:00 ghi đè mọi key trước khi chúng hết hạn; key của sản phẩm đã ngừng bán tự hết hạn rải rác.\n- Sản phẩm hot (top vài nghìn theo lượt xem): hết hạn logic, giá trị kèm `softExpireAt`, một request lấy lock làm mới nền, các request khác trả bản cũ.\n- L1 Caffeine trước Redis cho sản phẩm hot, với `sync = true`, để mỗi pod chỉ còn một lần tải mỗi key. `sync = true` đặt thẳng trên `RedisCache` không đủ: writer mặc định của Spring Data Redis 3.4+ không khoá.\n- Semaphore giới hạn số lần tải lại cache đồng thời mỗi pod (ví dụ 10), vượt thì trả 503 nhanh cho trang chi tiết, để database còn phục vụ giỏ hàng và thanh toán.\n\n**Phòng ngừa**:\n- Cảnh báo theo `expired_keys` mỗi phút và số query tải lại cache, không chỉ CPU database.\n- Kiểm tra mọi job nạp cache hàng loạt: không có TTL cố định giống nhau cho hàng triệu key.\n- Load test có kịch bản \"toàn bộ cache lạnh\" để biết database chịu được bao nhiêu khi cache không đỡ được.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

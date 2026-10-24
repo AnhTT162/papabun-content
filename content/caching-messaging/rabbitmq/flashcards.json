@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "exchange-types", "front": "Bốn loại exchange của RabbitMQ?", "back": "`direct` (khớp đúng key), `topic` (mẫu `*` một từ, `#` nhiều từ), `fanout` (mọi queue được bind), `headers` (khớp header)." },
+    { "id": "no-loss", "front": "Ba thứ cần có để RabbitMQ không mất message?", "back": "Quorum queue (hoặc durable + persistent), publisher confirm kèm `mandatory`, ack thủ công sau khi xử lý. Consumer vẫn phải idempotent vì có thể nhận trùng." },
+    { "id": "confirm-unroutable", "front": "Publisher confirm `ack` có nghĩa message đã vào queue?", "back": "Không. Message không khớp binding nào bị bỏ mà vẫn được confirm; cần `mandatory` hoặc alternate exchange." },
+    { "id": "prefetch", "front": "Prefetch quá lớn gây gì?", "back": "Một consumer ôm nhiều message chưa ack trong khi consumer khác rảnh; consumer mới không nhận lại phần đã giao. Việc chậm thì prefetch 1–10." },
+    { "id": "spring-requeue", "front": "Mặc định Spring AMQP làm gì khi listener ném exception?", "back": "Nack và requeue (trừ lỗi fatal như convert message thất bại: reject không requeue). Với classic queue, message lỗi vĩnh viễn quay vòng mãi; dùng `AmqpRejectAndDontRequeueException` hoặc `defaultRequeueRejected=false` cùng dead-letter exchange." },
+    { "id": "quorum", "front": "Quorum queue khác classic queue thế nào?", "back": "Nhân bản bằng Raft, cần đa số node; luôn ghi đĩa; có `delivery-limit` (mặc định 20 từ 4.0); không hỗ trợ exclusive hay non-durable; priority hai mức tỉ lệ 2:1 (4.0–4.2), 32 mức nghiêm ngặt (4.3+)." },
+    { "id": "dlx-triggers", "front": "Khi nào message bị dead-letter?", "back": "Reject/nack không requeue, hết TTL, queue vượt giới hạn độ dài, vượt `delivery-limit` của quorum queue." },
+    { "id": "ttl-head", "front": "Vì sao không đặt TTL trên từng message cho retry trễ?", "back": "TTL từng message chỉ kiểm tra ở đầu queue: message TTL ngắn nằm sau message TTL dài phải chờ. Dùng mỗi mức trễ một queue với `x-message-ttl` cố định." },
+    { "id": "blocked", "front": "Vì sao một consumer chậm có thể làm mọi producer ngừng gửi?", "back": "Queue phình làm broker vượt ngưỡng bộ nhớ hoặc đĩa, broker chặn mọi publisher (`connection.blocked`)." },
+    { "id": "vs-kafka", "front": "Một câu phân biệt RabbitMQ và Kafka?", "back": "RabbitMQ: broker định tuyến, đẩy message, xoá khi ack, chia việc theo message. Kafka: log giữ theo thời gian, consumer kéo và giữ offset, đọc lại được, chia việc theo partition." }
+  ]
+}

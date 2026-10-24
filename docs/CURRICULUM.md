@@ -264,8 +264,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `local-cache` | Local & multi-level cache | mid | Caffeine, near cache, invalidation giữa các node | L Sc | ✅ |
 | 5 | `redis-internals` | Redis bên trong | mid | Kiểu dữ liệu, single thread và I/O thread, RDB/AOF, eviction, bộ nhớ | L D T | ✅ |
 | 6 | `kafka-architecture` | Kiến trúc Kafka | mid | Partition, replication, ISR, `acks`, leader election, KRaft | L D | ✅ |
-| 7 | `rabbitmq` | RabbitMQ & so sánh với Kafka | mid | Exchange, ack, prefetch, quorum queue; chọn công cụ | L D Sc | ⬜ |
-| 8 | `cache-failures` | Stampede, penetration, avalanche, hot key | senior | Lock, refresh sớm theo xác suất, Bloom filter, jitter TTL | L S T | ⬜ |
+| 7 | `rabbitmq` | RabbitMQ & so sánh với Kafka | mid | Exchange, ack, prefetch, quorum queue; chọn công cụ | L D Sc | ✅ |
+| 8 | `cache-failures` | Stampede, penetration, avalanche, hot key | senior | Lock, refresh sớm theo xác suất, Bloom filter, jitter TTL | L S T | ✅ |
 | 9 | `redis-ha-cluster` | Redis Sentinel & Cluster | senior | Replication, hash slot, failover mất dữ liệu | L D | ⬜ |
 | 10 | `redis-use-cases` | Redis cho lock, rate limit, leaderboard | senior | Lua script, sorted set cho leaderboard, đếm và rate limit bằng Redis, lock đơn giản (Redlock: xem `distributed-locks`) | L B Sc | ⬜ |
 | 11 | `kafka-producer-consumer` | Kafka producer & consumer chuyên sâu | senior | Idempotent producer, transaction, consumer group, rebalance, commit offset | L S B | ⬜ |

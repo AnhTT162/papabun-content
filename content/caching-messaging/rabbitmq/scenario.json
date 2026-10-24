@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn broker cho nền tảng giao đồ ăn",
+  "prompt": "Một nền tảng giao đồ ăn cần chọn hạ tầng messaging cho ba nhu cầu, đội 8 backend Java (Spring Boot), chạy trên Kubernetes, chưa vận hành broker nào:\n\n1. **Gán đơn cho tài xế**: khoảng 300 đơn mỗi giây giờ cao điểm. Mỗi việc gán mất 200ms–3 giây (gọi service bản đồ). Đơn VIP phải được xử lý trước. Gán lỗi thì thử lại sau 10 giây, 1 phút, 5 phút; quá 3 lần thì chuyển cho người điều phối.\n2. **Sự kiện trạng thái đơn** (`created`, `accepted`, `picked-up`, `delivered`): khoảng 2.000 sự kiện mỗi giây. Năm đội (thông báo, thanh toán tài xế, chống gian lận, phân tích, CSKH) cùng đọc. Đội phân tích muốn **đọc lại 7 ngày** khi sửa lỗi pipeline. Sự kiện của cùng một đơn phải theo đúng thứ tự.\n3. **Gửi thông báo đẩy** tới app: sự kiện cũ hơn 2 phút thì không còn ý nghĩa.\n\nĐề xuất một hay nhiều broker, cấu hình chính, và giải thích vì sao.",
+  "hints": [
+    "Nhu cầu nào cần xoá message sau khi xử lý, nhu cầu nào cần giữ để đọc lại?",
+    "Việc mất 3 giây thì nên chia theo partition hay theo từng message?",
+    "Thứ tự theo đơn hàng ảnh hưởng thế nào tới cách chọn khoá và số consumer?",
+    "Vận hành hai broker có đáng với đội 8 người không? Có lựa chọn managed nào?"
+  ],
+  "solution": "**1. Tách theo bản chất nhu cầu**\n\n- Gán đơn là **hàng đợi việc**: mỗi việc một worker, ack từng việc, priority, retry có độ trễ, xong thì xoá.\n- Sự kiện trạng thái là **luồng sự kiện**: nhiều nhóm đọc độc lập, đọc lại, thứ tự theo đơn.\n- Thông báo là việc ngắn, chịu được mất khi đã quá hạn.\n\n**2. Gán đơn: RabbitMQ quorum queue**\n\n- Queue `dispatch` (quorum, 3 replica). Đơn VIP: quorum queue 4.0–4.2 chỉ ưu tiên tương đối (tỉ lệ khoảng 2:1); từ 4.3 có priority nghiêm ngặt nhưng luồng VIP liên tục có thể làm đơn thường chờ mãi. Cách chắc chắn trên mọi phiên bản: tách queue `dispatch.vip` có nhiều consumer hơn.\n- Consumer Spring AMQP, ack thủ công sau khi gán xong, `prefetch` 5 vì mỗi việc tới 3 giây. 300 việc/giây × trung bình 1,5 giây ≈ 450 việc chạy đồng thời (định luật Little), tức khoảng 450 luồng xử lý chia trên các pod, cộng dự phòng.\n- Retry: ba queue chờ `dispatch.retry.10s`, `.1m`, `.5m` với `x-message-ttl` cố định, dead-letter quay về `dispatch`. Khi gán lỗi, consumer đọc số lần thử (header tự đặt), **tự publish** message sang đúng queue chờ của lần thử đó rồi ack; quá 3 lần thì publish sang `dispatch.manual` cho người điều phối. Delayed retry có sẵn từ 4.3 dùng backoff tuyến tính, không cho đúng dãy 10 giây, 1 phút, 5 phút.\n- Việc gán phải idempotent theo `order_id` (cập nhật có điều kiện `WHERE status = 'WAITING'`), vì message có thể được giao lại.\n\n**3. Sự kiện trạng thái: Kafka**\n\n- Topic `order-status`, key là `order_id` để mọi sự kiện của một đơn vào cùng partition và giữ thứ tự. 24 partition: đủ cho 2.000 sự kiện mỗi giây với nhiều lần dư, và cho tới 24 consumer song song mỗi nhóm.\n- `retention.ms` 7 ngày, `replication.factor=3`, `min.insync.replicas=2`, producer `acks=all`, idempotent.\n- Mỗi đội một consumer group riêng; đội phân tích đọc lại bằng cách reset offset theo thời gian (`kafka-consumer-groups --reset-offsets --to-datetime`) cho riêng nhóm của họ.\n- Service đơn hàng ghi sự kiện bằng transactional outbox để không mất sự kiện khi commit xong mà gửi lỗi.\n\n**4. Thông báo**\n\n- Service thông báo đọc topic `order-status` (consumer group riêng) và gửi push trực tiếp, hoặc đẩy vào một RabbitMQ queue `push` với `x-message-ttl` 120 giây và `x-max-length` để bỏ việc quá hạn thay vì gửi trễ.\n- Không cần dead-letter cho push quá hạn; chỉ cần đếm số bị bỏ.\n\n**5. Vận hành**\n\n- Hai broker là chi phí thật với đội 8 người. Ưu tiên bản managed (Amazon MQ for RabbitMQ hoặc CloudAMQP; Amazon MSK hoặc Confluent Cloud cho Kafka), hoặc operator trên Kubernetes (RabbitMQ Cluster Operator, Strimzi) nếu bắt buộc tự chạy.\n- Phương án một broker: chỉ Kafka, gán đơn dùng share groups (Kafka 4.2+) hoặc topic retry riêng; hoặc chỉ RabbitMQ, sự kiện trạng thái dùng stream. Cả hai đều được, đổi lại phải tự làm phần mà broker kia có sẵn.\n- Giám sát: RabbitMQ theo số message ready/unacked và tuổi message trong `dispatch`; Kafka theo consumer lag từng nhóm.",
+  "tradeoffs": [
+    {
+      "option": "RabbitMQ cho hàng đợi việc, Kafka cho luồng sự kiện",
+      "pros": [
+        "Mỗi nhu cầu dùng đúng mô hình broker",
+        "Retry, priority, TTL có sẵn cho gán đơn"
+      ],
+      "cons": [
+        "Hai hệ thống phải vận hành và giám sát",
+        "Hai thư viện, hai bộ kiến thức trong đội"
+      ]
+    },
+    {
+      "option": "Chỉ Kafka",
+      "pros": [
+        "Một hệ thống",
+        "Đọc lại và thứ tự theo key có sẵn"
+      ],
+      "cons": [
+        "Việc dài chặn cả partition nếu không dùng share groups",
+        "Retry có độ trễ và priority phải tự xây"
+      ]
+    },
+    {
+      "option": "Chỉ RabbitMQ (queue + stream)",
+      "pros": [
+        "Một hệ thống",
+        "Stream cho đọc lại, super stream cho thứ tự theo key"
+      ],
+      "cons": [
+        "Hệ sinh thái stream (connector, xử lý luồng) nhỏ hơn Kafka nhiều",
+        "Đội phân tích thường đã quen công cụ của Kafka"
+      ]
+    },
+    {
+      "option": "SQS + SNS (managed hoàn toàn)",
+      "pros": [
+        "Gần như không phải vận hành",
+        "DLQ và độ trễ gửi có sẵn"
+      ],
+      "cons": [
+        "Không đọc lại được 7 ngày",
+        "FIFO giới hạn throughput và không có priority"
+      ]
+    }
+  ]
+}
