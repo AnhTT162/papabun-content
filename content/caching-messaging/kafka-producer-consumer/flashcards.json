@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "committed-offset", "front": "Offset commit nghĩa là gì?", "back": "Vị trí message **kế tiếp** cần đọc: xử lý xong offset 41 thì commit 42." },
+    { "id": "auto-commit", "front": "Auto commit commit khi nào?", "back": "Trong lúc gọi `poll()`, ghi offset của các record poll trước đã trả về (mặc định mỗi 5 giây). Xử lý bất đồng bộ thì có thể mất message." },
+    { "id": "idempotent-producer", "front": "Idempotent producer chống được gì, không chống được gì?", "back": "Chống trùng và đảo thứ tự do retry nội bộ trong một phiên. Không chống ứng dụng tự gửi lại hay producer khởi động lại." },
+    { "id": "idempotence-off", "front": "Khi nào idempotence tự tắt?", "back": "Từ client 3.0.1/3.1.1/3.2.0: không bật tường minh mà đặt cấu hình xung đột (`acks=1`, `retries=0`, max.in.flight > 5). Đặt `enable.idempotence=true` tường minh để báo lỗi thay vì tắt." },
+    { "id": "tx-flow", "front": "Luồng transaction đọc, xử lý, ghi trong Kafka?", "back": "`beginTransaction`, `send` kết quả, `sendOffsetsToTransaction`, `commitTransaction`; consumer phía sau dùng `read_committed`." },
+    { "id": "lso", "front": "Last stable offset là gì?", "back": "Điểm consumer `read_committed` đọc tới được: trước transaction cũ nhất còn mở. Transaction treo chặn cả partition." },
+    { "id": "max-poll-interval", "front": "`max.poll.interval.ms` dùng làm gì?", "back": "Thời gian tối đa giữa hai lần `poll()` (mặc định 5 phút); quá thì consumer bị loại khỏi nhóm và partition bị chia lại (static member: chờ hết session timeout)." },
+    { "id": "offset-reset", "front": "`auto.offset.reset` mặc định là gì và bẫy gì?", "back": "`latest`: nhóm mới bỏ qua mọi message có sẵn. Đọc dữ liệu cũ cần `earliest`." },
+    { "id": "rebalance-kinds", "front": "Ba cách giảm tác động của rebalance?", "back": "`CooperativeStickyAssignor` hoặc giao thức KIP-848 (`group.protocol=consumer`), cộng static membership (`group.instance.id`)." },
+    { "id": "eos-db", "front": "Exactly-once khi ghi ra database?", "back": "Lưu offset trong cùng transaction database rồi `seek()` khi khởi động, hoặc consumer idempotent. Transaction Kafka không bao gồm database." }
+  ]
+}

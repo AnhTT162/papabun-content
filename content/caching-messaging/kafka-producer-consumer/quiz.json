@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "idempotence-scope",
+      "kind": "single",
+      "prompt": "Producer bật idempotence (mặc định). `send()` báo `TimeoutException` sau `delivery.timeout.ms`, code bắt lỗi và gọi `send()` lại cùng message. Broker thực ra đã ghi lần đầu. Kết quả?",
+      "options": [
+        "Không trùng, vì broker nhận ra cùng số thứ tự",
+        "Trùng, vì lần gửi lại là message mới với số thứ tự mới",
+        "Không trùng, vì Kafka khử trùng theo key trong 5 phút",
+        "Lần gửi lại bị từ chối với `DuplicateSequenceException`"
+      ],
+      "answer": 1,
+      "explanation": "Idempotence chỉ khử trùng retry nội bộ của client cho cùng một bản ghi. `send()` gọi lại từ ứng dụng là bản ghi mới với số thứ tự mới, nên broker ghi thêm. Kafka không khử trùng theo key. Consumer vẫn phải idempotent."
+    },
+    {
+      "id": "auto-commit-async",
+      "kind": "single",
+      "prompt": "Consumer bật auto commit, listener đẩy mỗi record sang `ExecutorService` rồi trả về ngay. Pod bị OOM kill giữa chừng. Với các record đang chờ trong executor, chuyện gì dễ xảy ra nhất?",
+      "options": [
+        "Được xử lý lại vì chưa ack",
+        "Mất, vì offset của chúng có thể đã được commit ở lần `poll()` sau",
+        "Được giao lại vì broker theo dõi record nào chưa xử lý xong",
+        "Nằm lại trong buffer của client và được xử lý khi pod khởi động"
+      ],
+      "answer": 1,
+      "explanation": "Auto commit ghi offset của các record mà `poll()` đã trả về, trong lúc gọi `poll()` lần sau, không biết chúng đã xử lý xong chưa. Vòng lặp chạy nhanh vì giao việc cho executor, nên offset đi trước việc xử lý. Pod chết là các record đó mất. Consumer group không có ack theo từng message (chỉ share groups từ 4.2 mới có)."
+    },
+    {
+      "id": "offset-reset",
+      "kind": "single",
+      "prompt": "Service mới với `group.id` mới bắt đầu đọc topic `orders` đã có 3 tháng dữ liệu, cấu hình mặc định. Nó đọc gì?",
+      "options": [
+        "Toàn bộ 3 tháng từ đầu",
+        "Chỉ message mới đến sau khi nó khởi động",
+        "Message của 7 ngày gần nhất",
+        "Báo lỗi vì không có offset đã commit"
+      ],
+      "answer": 1,
+      "explanation": "Nhóm chưa có offset dùng `auto.offset.reset`, mặc định `latest`: bắt đầu từ cuối log. Muốn đọc dữ liệu cũ thì đặt `earliest`, hoặc reset offset của nhóm bằng `kafka-consumer-groups --reset-offsets`. `none` mới là cấu hình báo lỗi."
+    },
+    {
+      "id": "lso",
+      "kind": "single",
+      "prompt": "Một producer mở transaction trên partition 3 rồi bị treo, chưa commit cũng chưa huỷ. Consumer `read_committed` của partition 3 thấy gì cho tới khi transaction hết hạn?",
+      "options": [
+        "Đọc bình thường mọi message, bỏ qua message của transaction đang mở",
+        "Dừng ở last stable offset: không đọc được message nào sau điểm bắt đầu transaction",
+        "Đọc cả message của transaction đang mở",
+        "Bị loại khỏi consumer group"
+      ],
+      "answer": 1,
+      "explanation": "Consumer `read_committed` chỉ đọc tới last stable offset, tức trước transaction cũ nhất còn mở, để giữ thứ tự. Message sau đó của producer khác cũng phải chờ. Lag tăng cho tới khi transaction bị huỷ sau `transaction.timeout.ms` (mặc định 1 phút)."
+    },
+    {
+      "id": "static-membership",
+      "kind": "single",
+      "prompt": "Nhóm 20 consumer, deploy rolling từng pod, mỗi pod khởi động lại mất 20 giây. Cấu hình nào giảm rebalance nhiều nhất mà không cần đổi broker?",
+      "options": [
+        "Giảm `session.timeout.ms` xuống 10 giây để phát hiện nhanh",
+        "Đặt `group.instance.id` cố định cho mỗi pod (static membership)",
+        "Tăng `max.poll.records` để mỗi lần poll lấy nhiều hơn",
+        "Tăng số partition của topic lên gấp đôi"
+      ],
+      "answer": 1,
+      "explanation": "Static membership: consumer có id cố định quay lại trong `session.timeout.ms` thì nhận lại đúng partition cũ, không rebalance. Mặc định 45 giây đủ cho pod khởi động lại 20 giây; đổi lại, trong 20 giây đó partition của pod không ai đọc, và `group.instance.id` phải ổn định (thường cần StatefulSet). Giảm session timeout làm rebalance xảy ra nhiều hơn. Hai lựa chọn còn lại không liên quan rebalance."
+    }
+  ]
+}

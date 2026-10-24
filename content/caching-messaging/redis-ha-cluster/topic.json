@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "redis-ha-cluster",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Redis Sentinel & Cluster",
+  "summary": "Replication bất đồng bộ, full sync và partial resync; Sentinel và quorum; Redis Cluster với 16.384 hash slot, MOVED, ASK, CROSSSLOT và hash tag; khi nào failover làm mất lệnh ghi đã xác nhận; split-brain; cấu hình Lettuce cho Cluster; ElastiCache, MemoryDB và Valkey.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 17,
+  "prerequisites": ["redis-internals"],
+  "terms": ["redis-sentinel", "redis-cluster", "hash-slot", "hash-tag", "replication-backlog", "split-brain", "read-your-writes", "hot-key", "failover"],
+  "references": [
+    { "title": "Redis Documentation: Replication", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/replication/" },
+    { "title": "Redis Documentation: High availability with Sentinel", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/" },
+    { "title": "Redis Cluster Specification", "url": "https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/" },
+    { "title": "Lettuce Reference: Redis Cluster", "url": "https://redis.github.io/lettuce/ha-sharding/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Dùng Redis làm lock hoặc lưu số dư được không, nếu đã có replica và Sentinel?\" Phải nói được: replication bất đồng bộ, nên sau failover lock vừa cấp hoặc lần trừ tiền vừa xác nhận có thể biến mất. Lock dùng để giảm việc trùng thì chấp nhận được; lock bảo vệ tính đúng đắn cần fencing token (bài Distributed lock). Số dư và tiền phải nằm ở database có transaction; Redis chỉ là cache của nó, hoặc dùng dịch vụ ghi log bền như MemoryDB nếu thật sự cần Redis làm nguồn dữ liệu." },
+    { "type": "callout", "style": "warning", "markdown": "Primary không bật persistence mà tự khởi động lại nhanh (systemd, Kubernetes) sẽ quay lại với bộ nhớ rỗng trước khi Sentinel kịp failover, và replica đồng bộ theo bản rỗng: mất toàn bộ dữ liệu ở mọi node. Hoặc bật persistence, hoặc cấu hình để primary không tự khởi động lại nhanh hơn thời gian phát hiện lỗi." }
+  ]
+}

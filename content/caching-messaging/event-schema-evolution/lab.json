@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Producer thêm một trường, consumer đứng hình",
+  "context": "Service loyalty đọc topic `order-events` (JSON, không có schema registry). Đội đơn hàng vừa deploy bản thêm trường `channel` vào event `OrderPlaced`. Consumer dùng deserializer tự viết với Jackson 2.x (Spring Boot 3).",
+  "buggyCode": "public class OrderPlacedDeserializer implements Deserializer<OrderPlaced> {\n    private final ObjectMapper mapper = new ObjectMapper()\n            .registerModule(new JavaTimeModule());\n\n    @Override\n    public OrderPlaced deserialize(String topic, byte[] data) {\n        try {\n            return mapper.readValue(data, OrderPlaced.class);\n        } catch (IOException e) {\n            throw new SerializationException(\"Cannot parse OrderPlaced\", e);\n        }\n    }\n}\n\n// application.yml\n// spring.kafka.consumer.value-deserializer: com.shop.loyalty.OrderPlacedDeserializer",
+  "symptom": {
+    "description": "Từ 14:05 (lúc đội đơn hàng deploy), consumer lag của nhóm `loyalty` trên mọi partition tăng đều, không điểm thưởng nào được cộng. Pod vẫn chạy, CPU cao, log lặp lại liên tục cùng một lỗi.",
+    "output": "ERROR o.s.k.l.KafkaMessageListenerContainer : Consumer exception\njava.lang.IllegalStateException: This error handler cannot process 'SerializationException's directly; please consider configuring an 'ErrorHandlingDeserializer' in the value and/or key deserializer\nCaused by: org.apache.kafka.common.errors.RecordDeserializationException:\n  Error deserializing VALUE for partition order-events-3 at offset 88120\nCaused by: com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException:\n  Unrecognized field \"channel\" (class com.shop.loyalty.OrderPlaced), not marked as ignorable"
+  },
+  "diagnosis": {
+    "question": "Vì sao một trường mới làm consumer dừng hẳn?",
+    "options": [
+      "Kafka từ chối message có cấu trúc khác message trước đó trong partition",
+      "Mapper tự tạo lỗi khi gặp trường lạ; lỗi xảy ra trong `poll()` nên kẹt ở offset đó",
+      "Listener ném exception nên `DefaultErrorHandler` retry vô hạn",
+      "Producer phải tăng phiên bản trong tên topic mỗi khi thêm trường"
+    ],
+    "answer": 1,
+    "explanation": "Với Jackson 2.x, `ObjectMapper` tạo trực tiếp có `FAIL_ON_UNKNOWN_PROPERTIES=true` (Jackson 3 đã đổi mặc định); mapper của Spring Boot và `JsonDeserializer` của Spring Kafka thì tắt nó, nên lỗi này chỉ gặp với mapper tự tạo. Lỗi ném ra lúc client deserialize trong `poll()`, trước khi tới listener: error handler không bỏ qua được record này, nên consumer cứ quay lại cùng offset. Thêm trường tuỳ chọn là thay đổi tương thích; consumer phải là tolerant reader."
+  },
+  "fix": {
+    "code": "public class OrderPlacedDeserializer implements Deserializer<OrderPlaced> {\n    private final ObjectMapper mapper = JsonMapper.builder()\n            .addModule(new JavaTimeModule())\n            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)   // tolerant reader\n            .build();\n    // deserialize(...) như cũ\n}\n\n// application.yml: bọc bằng ErrorHandlingDeserializer để record hỏng tới được error handler\n// spring.kafka.consumer.value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer\n// spring.kafka.consumer.properties.spring.deserializer.value.delegate.class: com.shop.loyalty.OrderPlacedDeserializer\n\n@Bean\nDefaultErrorHandler errorHandler(KafkaTemplate<String, byte[]> bytesTemplate) {\n    // template dùng ByteArraySerializer: record lỗi deserialize được gửi đi dưới dạng byte[] gốc\n    // lỗi deserialize không retry, chuyển thẳng sang order-events-dlt (tên mặc định từ Spring Kafka 3.3;\n    // DLT cần ít nhất bằng số partition của topic gốc)\n    return new DefaultErrorHandler(new DeadLetterPublishingRecoverer(bytesTemplate), new FixedBackOff(1000, 3));\n}",
+    "explanation": "Bỏ qua trường lạ giúp consumer cũ sống được qua thay đổi tương thích. `ErrorHandlingDeserializer` bắt lỗi deserialize và đưa record tới listener container như một lỗi bình thường; `DefaultErrorHandler` coi `DeserializationException` là lỗi không retry (backoff không áp dụng) và chuyển record sang DLT. Recoverer gửi lại giá trị gốc dạng byte[], nên cần template dùng `ByteArraySerializer`; template mặc định dùng `StringSerializer` sẽ lỗi khi publish và record lại bị thử lại, nên một message hỏng không làm kẹt cả partition. Về lâu dài: schema registry với kiểm tra tương thích trong CI, hoặc contract test giữa hai đội, để thay đổi phá vỡ bị chặn trước khi deploy."
+  }
+}

@@ -61,7 +61,7 @@
       "options": [
         "Message được giao lại mãi, partition đó bị kẹt cho tới khi sửa code",
         "Thử 10 lần liên tiếp, rồi log lỗi, commit offset và bỏ qua message",
-        "Message tự được gửi sang topic `<tên-topic>.DLT` sau 3 lần thử",
+        "Message tự được gửi sang topic `<tên-topic>-dlt` sau 3 lần thử",
         "Consumer dừng hẳn và rời consumer group để tránh mất dữ liệu"
       ],
       "answer": 1,

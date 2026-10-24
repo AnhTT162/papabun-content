@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "tie-order",
+      "kind": "single",
+      "prompt": "Sorted set `lb` có `alice` và `bob` cùng score 100; `alice` đạt 100 trước. `ZREVRANGE lb 0 1` trả về thứ tự nào, và vì sao?",
+      "options": [
+        "`alice`, `bob`: Redis nhớ thứ tự member được thêm vào",
+        "`bob`, `alice`: bằng score thì xếp theo từ điển, và `ZREVRANGE` đảo cả thứ tự này",
+        "`alice`, `bob`: cùng score thì theo thứ tự từ điển tăng dần",
+        "Không xác định: Redis trả thứ tự tuỳ ý khi score bằng nhau"
+      ],
+      "answer": 1,
+      "explanation": "Cùng score, sorted set xếp member theo thứ tự từ điển (`alice` trước `bob`); `ZREVRANGE` đảo toàn bộ thứ tự nên `bob` đứng trước. Redis không nhớ thời điểm thêm, nên người đạt trước (`alice`) lại xếp dưới. Muốn xếp theo thời gian thì mã hoá thời gian vào score."
+    },
+    {
+      "id": "lua-long",
+      "kind": "single",
+      "prompt": "Một Lua script duyệt 2 triệu phần tử của sorted set để tính tổng, chạy mất 4 giây. Ảnh hưởng tới các client khác?",
+      "options": [
+        "Không ảnh hưởng, vì script chạy ở luồng nền riêng của Redis",
+        "Chỉ client gửi lệnh tới cùng key đó phải chờ script xong",
+        "Mọi client của instance phải chờ, vì script chạy trên luồng chính",
+        "Redis tự chia script thành nhiều phần để xen lệnh khác"
+      ],
+      "answer": 2,
+      "explanation": "Script chạy trên luồng thực thi lệnh duy nhất và không lệnh nào được chen vào, nên cả instance đứng 4 giây. Quá `busy-reply-threshold` (mặc định 5 giây) client khác nhận `BUSY`. Tính tổng nên duy trì sẵn khi ghi, hoặc làm ở database."
+    },
+    {
+      "id": "fixed-window-burst",
+      "kind": "single",
+      "prompt": "Rate limit fixed window 100 request mỗi phút theo key `rl:{user}:{phút}`. Tối đa bao nhiêu request một người có thể gửi trong 2 giây?",
+      "options": [
+        "100, vì giới hạn là 100 mỗi phút",
+        "200: 100 ở giây cuối của phút này và 100 ở giây đầu phút sau",
+        "50, vì Redis chia đều giới hạn theo giây",
+        "Không giới hạn, vì key hết hạn mỗi phút"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi phút có bộ đếm riêng; đổi phút là bộ đếm mới. Dồn 100 request vào cuối phút 10:00 và 100 vào đầu phút 10:01 là 200 trong khoảng 2 giây. Sliding window (log hoặc ước lượng có trọng số) và token bucket không có lỗ hổng này."
+    },
+    {
+      "id": "stream-crash",
+      "kind": "single",
+      "prompt": "Consumer của Redis Stream đọc bằng `XREADGROUP`, chết trước khi `XACK`. Message đó sẽ ra sao?",
+      "options": [
+        "Mất, vì Stream xoá message khi đã giao",
+        "Tự được giao cho consumer khác ngay lập tức",
+        "Nằm trong pending list tới khi được nhận lại (đọc lại bằng ID `0`, hoặc `XAUTOCLAIM`)",
+        "Được đưa vào cuối stream để giao lại"
+      ],
+      "answer": 2,
+      "explanation": "Message đã giao mà chưa ack nằm trong pending entries list của group, gắn với consumer đã chết. Redis không tự giao lại: consumer cũ khởi động lại cùng tên có thể đọc pending list của mình bằng `XREADGROUP ... STREAMS key 0`, hoặc consumer khác dùng `XAUTOCLAIM` nhận các message chờ quá N mili giây. Số lần giao (xem bằng `XPENDING` dạng mở rộng) dùng để đưa message lỗi mãi sang stream DLQ."
+    },
+    {
+      "id": "lock-failover",
+      "kind": "single",
+      "prompt": "Job thanh toán chống chạy trùng bằng `SET lock:pay NX PX 30000` trên Redis có Sentinel. Pod A lấy lock, primary chết trước khi replica nhận lệnh, replica được đưa lên. Pod B thử lấy lock. Kết quả?",
+      "options": [
+        "B bị chặn vì lock được replicate đồng bộ",
+        "B lấy được lock, A và B cùng chạy job thanh toán",
+        "B phải chờ 30 giây cho lock cũ hết hạn",
+        "Sentinel từ chối failover khi còn lock đang giữ"
+      ],
+      "answer": 1,
+      "explanation": "Replication bất đồng bộ, nên primary mới không có `lock:pay` và cấp lock cho B. Hai job chạy song song. Lock Redis chỉ dùng để giảm việc trùng; thanh toán cần idempotency ở database (ràng buộc unique, trạng thái) hoặc fencing token."
+    }
+  ]
+}

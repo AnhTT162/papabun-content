@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases"]
     },
     {
       "id": "orm",
@@ -1125,7 +1125,7 @@
       "meaning": "Một partition hoặc shard nhận phần lớn lượt đọc/ghi trong khi phần còn lại rảnh, thường do chọn key theo thời gian hoặc theo một khách hàng quá lớn.",
       "example": "Shard theo ngày: mọi đơn mới đều ghi vào shard của hôm nay.",
       "related": ["sharding", "partition-key"],
-      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies", "kafka-troubleshooting"]
     },
     {
       "id": "gsi",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution"]
     },
     {
       "id": "replication-slot",
@@ -1725,7 +1725,7 @@
       "meaning": "Phiên bản UUID theo RFC 9562 (2024): 48 bit đầu là thời gian Unix tính bằng mili giây, phần còn lại là bit ngẫu nhiên (có thể dùng một phần làm bộ đếm). Id mới gần như tăng dần nên hợp làm khoá trong B-tree.",
       "example": "`0192b3a4-5c6d-7e8f-9a0b-1c2d3e4f5a6b`: chữ số đầu của nhóm thứ ba là `7`.",
       "related": ["surrogate-key", "clustered-index"],
-      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql"]
+      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql", "event-schema-evolution"]
     },
     {
       "id": "soft-delete",
@@ -2117,7 +2117,7 @@
       "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
       "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
       "related": ["replica-lag", "monotonic-reads"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "redis-ha-cluster"]
     },
     {
       "id": "monotonic-reads",
@@ -2133,7 +2133,7 @@
       "meaning": "Chuyển vai primary sang một replica khi primary chết: phát hiện, chọn replica mới nhất, promote, rồi chuyển ứng dụng sang.",
       "example": "Patroni promote replica có LSN mới nhất sau khi khoá leader của primary cũ hết hạn (mặc định 30 giây).",
       "related": ["split-brain", "patroni"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "redis-ha-cluster"]
     },
     {
       "id": "split-brain",
@@ -2141,7 +2141,7 @@
       "meaning": "Hai node cùng nghĩ mình là primary và cùng nhận ghi, thường do cô lập mạng; dữ liệu rẽ thành hai nhánh khó gộp lại.",
       "example": "Primary cũ bị cô lập vẫn nhận đơn hàng từ vài pod trong khi replica đã được promote.",
       "related": ["fencing", "failover"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "redis-ha-cluster"]
     },
     {
       "id": "fencing",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases"]
     },
     {
       "id": "cache-eviction",
@@ -2493,7 +2493,7 @@
       "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
       "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
       "related": ["message-ack", "idempotent-consumer"],
-      "topics": ["messaging-fundamentals", "kafka-architecture"]
+      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer"]
     },
     {
       "id": "idempotent-consumer",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer"]
     },
     {
       "id": "dead-letter-queue",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting"]
     },
     {
       "id": "poison-message",
@@ -2517,7 +2517,7 @@
       "meaning": "Message không bao giờ xử lý thành công được (dữ liệu sai, phiên bản lạ), làm consumer lỗi lặp đi lặp lại nếu không được tách ra.",
       "example": "Một JSON thiếu trường bắt buộc làm consumer ném exception mỗi lần nhận.",
       "related": ["dead-letter-queue"],
-      "topics": ["messaging-fundamentals", "rabbitmq"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting"]
     },
     {
       "id": "fan-out",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases"]
     },
     {
       "id": "redis-single-thread",
@@ -2661,7 +2661,7 @@
       "meaning": "Số thứ tự tăng dần của message trong một partition. Consumer lưu offset đã xử lý để biết đọc tiếp từ đâu.",
       "example": "Group `billing` đã commit offset 18.204 cho partition 3.",
       "related": ["kafka-partition", "consumer-group"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer"]
     },
     {
       "id": "consumer-group",
@@ -2669,7 +2669,7 @@
       "meaning": "Nhóm consumer cùng `group.id`: mỗi partition của topic được giao cho đúng một consumer trong nhóm, và nhóm lưu offset chung. Nhiều nhóm cùng đọc một topic độc lập với nhau.",
       "example": "10 pod cùng group đọc topic 6 partition: 6 pod có việc, 4 pod chờ.",
       "related": ["kafka-partition", "competing-consumers"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer"]
     },
     {
       "id": "isr",
@@ -2677,7 +2677,7 @@
       "meaning": "In-sync replicas: tập replica của một partition đang theo kịp leader. Chỉ replica trong ISR mới được bầu làm leader khi tắt unclean election.",
       "example": "Follower tụt quá 30 giây (`replica.lag.time.max.ms`) bị loại khỏi ISR.",
       "related": ["kafka-acks", "min-insync-replicas"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "kafka-troubleshooting"]
     },
     {
       "id": "kafka-acks",
@@ -2853,7 +2853,159 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures"]
+      "topics": ["cache-failures", "redis-use-cases"]
+    },
+    {
+      "id": "redis-sentinel",
+      "term": "Redis Sentinel",
+      "meaning": "Tiến trình theo dõi một primary Redis và các replica; khi đủ số Sentinel đồng ý primary đã chết, chúng bầu một Sentinel đưa replica lên làm primary và báo địa chỉ mới cho client. Không chia dữ liệu.",
+      "example": "3 Sentinel với `quorum 2` theo dõi `mymaster`; client Lettuce hỏi Sentinel địa chỉ primary hiện tại.",
+      "related": ["redis-cluster", "failover"],
+      "topics": ["redis-ha-cluster"]
+    },
+    {
+      "id": "redis-cluster",
+      "term": "Redis Cluster",
+      "meaning": "Chế độ Redis chia key vào 16.384 hash slot trên nhiều master, mỗi master có replica; các node tự phát hiện lỗi và failover mà không cần Sentinel.",
+      "example": "Cụm 3 master × 1 replica, mỗi master giữ khoảng 5.461 slot.",
+      "related": ["hash-slot", "hash-tag"],
+      "topics": ["redis-ha-cluster"]
+    },
+    {
+      "id": "hash-slot",
+      "term": "Hash slot",
+      "meaning": "Một trong 16.384 ô mà Redis Cluster chia không gian key; slot của key là `CRC16(key) mod 16384`, và mỗi slot thuộc đúng một master.",
+      "example": "Key `user:7` rơi vào slot 2.780, do master giữ dải 0–5460 phục vụ.",
+      "related": ["redis-cluster", "hash-tag"],
+      "topics": ["redis-ha-cluster"]
+    },
+    {
+      "id": "hash-tag",
+      "term": "Hash tag",
+      "meaning": "Phần trong ngoặc nhọn của tên key Redis; khi có, Redis Cluster chỉ băm phần đó để chọn slot, nhờ vậy các key liên quan nằm cùng slot và dùng được lệnh nhiều key, transaction, Lua.",
+      "example": "`{u42}:cart` và `{u42}:orders` cùng slot.",
+      "related": ["hash-slot", "redis-cluster"],
+      "topics": ["redis-ha-cluster"]
+    },
+    {
+      "id": "replication-backlog",
+      "term": "Replication backlog",
+      "meaning": "Bộ đệm vòng trên primary Redis giữ các lệnh ghi gần nhất, để replica mất kết nối ngắn nối tiếp được (partial resync) thay vì full sync.",
+      "example": "`repl-backlog-size` mặc định 1MB; ghi 10MB/s thì chỉ đủ cho khoảng 0,1 giây mất kết nối.",
+      "related": ["redis-sentinel"],
+      "topics": ["redis-ha-cluster"]
+    },
+    {
+      "id": "lua-script",
+      "term": "Lua script (Redis)",
+      "meaning": "Đoạn Lua chạy trên server Redis như một bước nguyên tử: không lệnh nào khác chen vào giữa. Dùng để gộp đọc rồi ghi; script chạy lâu chặn cả instance.",
+      "example": "Script `INCR` rồi `EXPIRE` khi giá trị bằng 1 cho rate limiter.",
+      "related": ["sorted-set"],
+      "topics": ["redis-use-cases"]
+    },
+    {
+      "id": "sorted-set",
+      "term": "Sorted set",
+      "meaning": "Kiểu dữ liệu Redis lưu member duy nhất kèm score số thực, luôn sắp theo score; lấy hạng trong O(log N), lấy khoảng M phần tử trong O(log N + M). Cùng score thì sắp theo thứ tự từ điển của member.",
+      "example": "`ZINCRBY lb 50 player:9`, `ZREVRANK lb player:9`.",
+      "related": ["lua-script"],
+      "topics": ["redis-use-cases"]
+    },
+    {
+      "id": "redis-stream",
+      "term": "Redis Stream",
+      "meaning": "Kiểu dữ liệu log chỉ ghi nối của Redis, có consumer group, ack (`XACK`) và danh sách message chưa ack để nhận lại khi consumer chết.",
+      "example": "`XREADGROUP GROUP mailer c1 COUNT 10 STREAMS emails >`.",
+      "related": ["sorted-set"],
+      "topics": ["redis-use-cases"]
+    },
+    {
+      "id": "idempotent-producer",
+      "term": "Idempotent producer",
+      "meaning": "Producer Kafka có ID và số thứ tự cho mỗi partition, để broker bỏ bản gửi lại trùng và giữ thứ tự khi client tự retry. Bật mặc định từ client 3.0.",
+      "example": "Retry sau khi mất phản hồi không tạo bản ghi thứ hai trong partition.",
+      "related": ["kafka-transaction", "kafka-acks"],
+      "topics": ["kafka-producer-consumer"]
+    },
+    {
+      "id": "kafka-transaction",
+      "term": "Transaction (Kafka)",
+      "meaning": "Cho phép producer ghi nhiều partition và commit offset của consumer như một khối; consumer `read_committed` chỉ thấy message của transaction đã commit. Nền tảng của exactly-once trong Kafka.",
+      "example": "`sendOffsetsToTransaction` rồi `commitTransaction` trong luồng đọc, xử lý, ghi.",
+      "related": ["idempotent-producer", "delivery-semantics"],
+      "topics": ["kafka-producer-consumer"]
+    },
+    {
+      "id": "consumer-rebalance",
+      "term": "Rebalance",
+      "meaning": "Quá trình chia lại partition giữa các consumer trong một group khi có consumer vào, ra, hoặc bị coi là chết. Kiểu cũ làm cả nhóm dừng trong lúc chia.",
+      "example": "Một pod deploy lại làm 24 partition bị thu hồi và chia lại.",
+      "related": ["consumer-group", "static-membership"],
+      "topics": ["kafka-producer-consumer", "kafka-troubleshooting"]
+    },
+    {
+      "id": "kip-848",
+      "term": "KIP-848",
+      "meaning": "Giao thức rebalance mới của Kafka (`group.protocol=consumer`, chính thức từ 4.0): broker điều phối việc chia partition và chia tăng dần, không còn dừng cả nhóm.",
+      "example": "GA từ Kafka 4.0; client mặc định vẫn `group.protocol=classic`, phải đặt `group.protocol=consumer` để dùng.",
+      "related": ["consumer-rebalance"],
+      "topics": ["kafka-producer-consumer"]
+    },
+    {
+      "id": "static-membership",
+      "term": "Static membership",
+      "meaning": "Consumer Kafka khai báo `group.instance.id` cố định; nếu quay lại trong session timeout thì nhận lại partition cũ mà không gây rebalance. Trong lúc vắng mặt, partition của nó không ai đọc.",
+      "example": "Pod `reconcile-3` khởi động lại sau 20 giây vẫn giữ partition 5 và 17.",
+      "related": ["consumer-rebalance"],
+      "topics": ["kafka-producer-consumer", "kafka-troubleshooting"]
+    },
+    {
+      "id": "schema-registry",
+      "term": "Schema registry",
+      "meaning": "Dịch vụ lưu các phiên bản schema của event (Avro, Protobuf, JSON Schema), cấp schema ID cho message, và kiểm tra tương thích khi đăng ký phiên bản mới.",
+      "example": "Message mang 4 byte schema ID; consumer lấy schema theo ID để đọc.",
+      "related": ["schema-compatibility"],
+      "topics": ["event-schema-evolution"]
+    },
+    {
+      "id": "schema-compatibility",
+      "term": "Tương thích schema",
+      "meaning": "Quy tắc phiên bản schema mới phải tuân theo: BACKWARD (schema mới đọc được dữ liệu cũ), FORWARD (schema cũ đọc được dữ liệu mới), FULL (cả hai); bản TRANSITIVE kiểm tra với mọi phiên bản trước.",
+      "example": "Thêm trường có mặc định là thay đổi FULL trong Avro.",
+      "related": ["schema-registry", "tolerant-reader"],
+      "topics": ["event-schema-evolution"]
+    },
+    {
+      "id": "event-carried-state",
+      "term": "Event-carried state transfer",
+      "meaning": "Event mang đủ dữ liệu cần thiết để consumer không phải gọi lại producer; đối lập với event chỉ báo hiệu (chỉ mang id).",
+      "example": "`OrderPlaced` mang danh sách sản phẩm, giá và địa chỉ giao hàng.",
+      "related": ["schema-compatibility"],
+      "topics": ["event-schema-evolution"]
+    },
+    {
+      "id": "tolerant-reader",
+      "term": "Tolerant reader",
+      "meaning": "Nguyên tắc consumer chỉ đọc trường mình cần và bỏ qua trường lạ, để producer thêm trường không làm vỡ consumer.",
+      "example": "Jackson tắt `FAIL_ON_UNKNOWN_PROPERTIES`.",
+      "related": ["schema-compatibility"],
+      "topics": ["event-schema-evolution"]
+    },
+    {
+      "id": "consumer-lag",
+      "term": "Consumer lag",
+      "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
+      "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
+      "related": ["consumer-group", "kafka-offset"],
+      "topics": ["kafka-troubleshooting"]
+    },
+    {
+      "id": "rebalance-storm",
+      "term": "Rebalance storm",
+      "meaning": "Consumer group rebalance liên tục, thường vì xử lý một lô vượt `max.poll.interval.ms` hoặc mất heartbeat; nhóm gần như không xử lý được gì và xử lý lại nhiều lần.",
+      "example": "41 lần rebalance trong một giờ khi API đối tác chậm.",
+      "related": ["consumer-rebalance", "consumer-lag"],
+      "topics": ["kafka-troubleshooting"]
     }
   ]
 }

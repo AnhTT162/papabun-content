@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Bảng xếp hạng cho sự kiện game hàng tuần",
+  "prompt": "Một game di động tổ chức giải đấu mỗi tuần (thứ Hai 00:00 tới Chủ nhật 23:59):\n\n- **5 triệu người chơi**, cao điểm **20.000 lần cộng điểm mỗi giây**.\n- Màn hình cần: **top 100**, **hạng của tôi** (kèm 5 người trên và dưới), **bảng xếp hạng bạn bè** (tối đa 200 bạn).\n- Bằng điểm thì **ai đạt trước xếp trên**.\n- Hết tuần, top 1.000 nhận thưởng; phần thưởng phải đúng, có khiếu nại thì phải giải thích được.\n- Đội có Redis Cluster (6 master), PostgreSQL và Kafka.\n\nThiết kế phần lưu trữ và các truy vấn, và nói rõ chuyện gì xảy ra nếu Redis mất dữ liệu giữa tuần.",
+  "hints": [
+    "Cấu trúc nào của Redis cho hạng của một người trong O(log N)?",
+    "Score là số thực 64 bit. Làm sao nhét cả điểm và thời điểm đạt điểm vào một số?",
+    "Một sorted set là một key, nằm trên một shard. 20.000 lệnh ghi mỗi giây có quá sức một shard không?",
+    "Nguồn sự thật để trao thưởng nên là Redis hay thứ khác?"
+  ],
+  "solution": "**1. Nguồn sự thật và luồng dữ liệu**\n\n- Mỗi lần cộng điểm là một sự kiện `ScoreAdded(playerId, delta, matchId, at)` ghi vào Kafka (partition key là `playerId` để giữ thứ tự theo người chơi), cộng với bảng `weekly_score(week, player_id, points, reached_at)` ở PostgreSQL cập nhật theo lô bởi một consumer.\n- Redis là **bản đọc nhanh**, dựng lại được từ PostgreSQL hoặc từ Kafka. Phần thưởng cuối tuần tính từ PostgreSQL, không từ Redis.\n- Consumer phải idempotent theo `matchId`, vì Kafka có thể giao lại: ghi PostgreSQL bằng `INSERT ... ON CONFLICT (match_id) DO NOTHING` vào bảng lịch sử điểm rồi cộng tổng trong cùng transaction, sau đó `ZADD` score **tuyệt đối** tính từ tổng đó. `ZADD` giá trị tuyệt đối tự idempotent: giao lại chỉ ghi lại cùng score.\n\n**2. Sorted set và score**\n\n- Key `lb:{2026-w43}` (sorted set), `EXPIREAT` sau khi trao thưởng xong vài ngày.\n- Score ghép điểm và thời gian: `score = points * 2^20 + (2^20 - 1 - secondsSinceWeekStart)`. Một tuần có 604.800 giây, nhỏ hơn 2^20; điểm tới khoảng 2^33 vẫn nằm trong 2^53 nên score chính xác tuyệt đối. Ai đạt cùng điểm sớm hơn có phần sau lớn hơn, nên xếp trên.\n- Vì score mới phụ thuộc thời điểm đạt điểm, không dùng `ZINCRBY` được. Consumer lấy tổng điểm và `reached_at` mới từ PostgreSQL (vừa cập nhật ở trên) và ghi `ZADD lb:{...} score player`. Nếu muốn giữ tổng trong Redis thay vì PostgreSQL, Lua script phải ghi nhận `matchId` trước (`SADD seen:{2026-w43} matchId`) và bỏ qua khi đã có, nếu không giao lại là cộng hai lần.\n\n**3. Truy vấn**\n\n- Top 100: `ZREVRANGE lb 0 99 WITHSCORES`, cache 1–2 giây trong JVM vì ai cũng xem, tên và avatar lấy từ cache profile.\n- Hạng của tôi: `r = ZREVRANK lb me` (đếm từ 0, hiển thị r+1), rồi `ZRANGE lb max(0, r-5) r+5 REV WITHSCORES`; chỉ số âm bị Redis hiểu là đếm từ cuối, nên phải chặn ở 0.\n- Bạn bè: `ZMSCORE lb f1 f2 ... f200`, sắp xếp ở ứng dụng; không tạo sorted set riêng cho mỗi người.\n- Hiển thị điểm: `floor(score / 2^20)`.\n\n**4. Tải và kích thước**\n\n- 20.000 `ZADD` mỗi giây, mỗi lệnh O(log N) với N = 5 triệu: một shard Redis chịu được (khoảng 100.000 lệnh đơn giản mỗi giây), nhưng là hot key trên một shard. Gộp theo lô trong consumer (pipeline 100–500 lệnh) để giảm round-trip.\n- 5 triệu member cỡ vài trăm MB: vừa một shard, nhưng mọi lần dựng lại hay chuyển slot đều chậm. Nếu sau này vượt sức một shard, chia theo vùng hoặc theo hạng đấu (bronze/silver/gold), mỗi bảng một key.\n- Đọc nhiều (top 100) đã được cache; `ZREVRANK` có thể đọc từ replica nếu chấp nhận trễ vài trăm mili giây.\n\n**5. Khi Redis mất dữ liệu**\n\n- Failover mất vài giây ghi cuối: consumer Kafka xử lý lại từ offset đã commit, idempotent theo `matchId`, nên điểm tự đúng lại.\n- Mất hẳn key: dựng lại từ `weekly_score` bằng `ZADD` theo lô vào key tạm rồi `RENAME` sang key chính, để người dùng không thấy bảng rỗng dần đầy. Trong lúc dựng, API báo bảng xếp hạng đang cập nhật.\n\n**6. Trao thưởng và khiếu nại**\n\n- Chủ nhật 23:59:59 đóng tuần: consumer ghi điểm có `at` sau mốc này vào tuần sau.\n- Chờ consumer xử lý hết sự kiện trước mốc (lag về 0 tới offset tương ứng), rồi tính top 1.000 bằng SQL `ORDER BY points DESC, reached_at ASC, player_id DESC` trên PostgreSQL (cột cuối khớp cách Redis xếp khi trùng cả điểm lẫn giây, để bảng hiển thị và kết quả trao thưởng không lệch), lưu bảng kết quả bất biến.\n- Khiếu nại: tra lại sự kiện trong Kafka (retention đủ dài) hoặc bảng lịch sử điểm.",
+  "tradeoffs": [
+    {
+      "option": "Chỉ Redis, `ZINCRBY`",
+      "pros": [
+        "Đơn giản, nhanh nhất"
+      ],
+      "cons": [
+        "Không có tie-break theo thời gian",
+        "Mất dữ liệu khi failover hoặc mất key là mất bảng xếp hạng và căn cứ trao thưởng"
+      ]
+    },
+    {
+      "option": "Redis cho đọc, PostgreSQL + Kafka làm nguồn sự thật",
+      "pros": [
+        "Dựng lại được",
+        "Trao thưởng và khiếu nại dựa trên dữ liệu bền"
+      ],
+      "cons": [
+        "Thêm consumer, cần idempotent",
+        "Bảng hiển thị trễ vài trăm mili giây"
+      ]
+    },
+    {
+      "option": "Chỉ PostgreSQL với index trên `(week, points DESC, reached_at)`",
+      "pros": [
+        "Một hệ thống, nhất quán"
+      ],
+      "cons": [
+        "Hạng của một người cần đếm số dòng xếp trên: chậm với 5 triệu dòng và 20.000 lần ghi mỗi giây"
+      ]
+    },
+    {
+      "option": "Chia bảng theo hạng đấu hoặc vùng",
+      "pros": [
+        "Mỗi key nhỏ, rải tải trên nhiều shard"
+      ],
+      "cons": [
+        "Không còn một bảng toàn cầu; top toàn cầu phải gộp từ nhiều bảng"
+      ]
+    }
+  ]
+}

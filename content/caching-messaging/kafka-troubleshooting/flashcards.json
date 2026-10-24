@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "lag-time", "front": "Vì sao đo lag theo thời gian?", "back": "Số message không cho biết người dùng chờ bao lâu; tuổi của message cũ nhất chưa xử lý cho biết, và so được với retention." },
+    { "id": "lag-skew", "front": "Lag dồn vào một partition nghĩa là gì?", "back": "Key lệch hoặc một consumer chậm. Thêm consumer không giúp, vì một partition chỉ một consumer xử lý." },
+    { "id": "lag-retention", "front": "Lag vượt retention thì sao?", "back": "Message bị xoá trước khi đọc, consumer nhảy theo `auto.offset.reset` (mặc định `latest`) và mất dữ liệu âm thầm." },
+    { "id": "storm-cause", "front": "Nguyên nhân hay gặp nhất của rebalance storm?", "back": "Một lô xử lý lâu hơn `max.poll.interval.ms`: consumer bị loại, lô xử lý lại ở pod khác, rồi lặp lại." },
+    { "id": "storm-rule", "front": "Quy tắc tránh vượt `max.poll.interval.ms`?", "back": "`max.poll.records` × thời gian tệ nhất mỗi record (có timeout) nhỏ hơn hẳn `max.poll.interval.ms`." },
+    { "id": "poison", "front": "Xử lý poison message trong Spring Kafka?", "back": "`ErrorHandlingDeserializer` cho lỗi deserialize, `DefaultErrorHandler` với `DeadLetterPublishingRecoverer` để chuyển sang DLT thay vì bỏ qua." },
+    { "id": "partitions", "front": "Chọn số partition dựa vào gì?", "back": "Throughput mục tiêu chia throughput một partition và một consumer, cộng dư cho 1–2 năm. Không giảm được, tăng thì đổi ánh xạ key." },
+    { "id": "urp", "front": "Under-replicated partitions > 0 kéo dài báo hiệu gì?", "back": "Follower không theo kịp leader: đĩa chậm, mạng, hoặc broker quá tải. Kèm theo nguy cơ ISR thiếu và producer `acks=all` bị từ chối." },
+    { "id": "add-broker", "front": "Thêm broker có tự chia lại dữ liệu không?", "back": "Không. Phải reassign partition (`kafka-reassign-partitions`, Cruise Control) có giới hạn băng thông." },
+    { "id": "record-too-large", "front": "`RecordTooLargeException` sửa thế nào?", "back": "Tăng `max.request.size` (producer) và `message.max.bytes` (broker) hoặc `max.message.bytes` (topic); tốt hơn là claim check. Consumer không bị kẹt vì batch đầu luôn được trả về." }
+  ]
+}

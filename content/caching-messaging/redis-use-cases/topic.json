@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "redis-use-cases",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Redis cho lock, rate limit, leaderboard",
+  "summary": "Lua script và Functions để gộp lệnh nguyên tử; rate limit fixed window, sliding window và token bucket trên Redis; bảng xếp hạng bằng sorted set và cách xếp người đạt trước lên trên; lock đơn giản và giới hạn của nó; khoá idempotency; session; hàng đợi bằng List và Stream; đếm bằng HyperLogLog và bitmap; khi nào không dùng Redis.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 17,
+  "prerequisites": ["redis-internals"],
+  "terms": ["lua-script", "sorted-set", "redis-stream", "rate-limiting", "idempotency-key", "hot-key", "ttl"],
+  "references": [
+    { "title": "Redis Documentation: Scripting with Lua", "url": "https://redis.io/docs/latest/develop/interact/programmability/eval-intro/" },
+    { "title": "Redis Documentation: Sorted sets", "url": "https://redis.io/docs/latest/develop/data-types/sorted-sets/" },
+    { "title": "Redis Documentation: Streams", "url": "https://redis.io/docs/latest/develop/data-types/streams/" },
+    { "title": "Redis Documentation: Distributed Locks with Redis", "url": "https://redis.io/docs/latest/develop/use/patterns/distributed-locks/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Rate limiter dựa vào Redis, vậy Redis chết thì sao?\" Phải chọn có chủ đích: fail open (cho qua) giữ trải nghiệm người dùng nhưng mất bảo vệ; fail closed (chặn) an toàn hơn cho việc tốn tiền như gửi SMS. Thường kết hợp: timeout Redis ngắn, circuit breaker, và một giới hạn thô trong JVM (mỗi pod) làm lưới an toàn khi Redis không dùng được." }
+  ]
+}

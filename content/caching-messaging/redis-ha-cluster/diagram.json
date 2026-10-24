@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lệnh ghi trong Redis Cluster và lúc failover",
+  "nodes": [
+    { "id": "client", "label": "App (Lettuce)", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "master-a", "label": "Master A (slot 0–5460)", "kind": "cache", "x": 0.85, "y": 0.05 },
+    { "id": "master-b", "label": "Master B (5461–10922)", "kind": "cache", "x": 0.1, "y": 0.5 },
+    { "id": "replica-a", "label": "Replica A", "kind": "cache", "x": 0.85, "y": 0.5 },
+    { "id": "master-c", "label": "Master C (10923–16383)", "kind": "cache", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-b", "from": "client", "to": "master-b", "label": "SET cart:{u12}" },
+    { "id": "client-a", "from": "client", "to": "master-a", "label": "theo MOVED" },
+    { "id": "a-replica", "from": "master-a", "to": "replica-a", "label": "chép bất đồng bộ" },
+    { "id": "b-vote", "from": "master-b", "to": "replica-a", "label": "bỏ phiếu" },
+    { "id": "c-vote", "from": "master-c", "to": "replica-a", "label": "bỏ phiếu" }
+  ],
+  "steps": [
+    { "caption": "Bảng slot của client đã cũ, nên lệnh SET cart:{u12} đi tới Master B. Chỉ phần trong ngoặc nhọn (u12) được băm: CRC16 mod 16384 ra slot 4941, thuộc Master A.", "show": ["client", "master-b", "client-b"], "highlight": ["client-b"] },
+    { "caption": "Master B trả MOVED kèm slot và địa chỉ Master A. Client gửi lại lệnh tới Master A; Lettuce chỉ cập nhật cả bảng slot nếu adaptive refresh bật (mặc định từ Lettuce 7).", "show": ["master-a", "client-a"], "highlight": ["client-a"] },
+    { "caption": "Master A ghi vào bộ nhớ và trả OK cho client ngay, rồi mới gửi lệnh sang Replica A. Replication là bất đồng bộ.", "show": ["replica-a", "a-replica"], "highlight": ["a-replica"] },
+    { "caption": "Master A chết trước khi Replica A nhận lệnh. Sau cluster-node-timeout, đa số master (B và C) đồng ý A đã chết và bầu Replica A lên. Cluster cần ít nhất 3 master để còn đa số.", "show": ["master-c", "b-vote", "c-vote"], "highlight": ["b-vote", "c-vote"] },
+    { "caption": "Replica A thành master của slot 0–5460, nhưng không có lệnh SET cuối: client đã nhận OK mà dữ liệu vẫn mất. Client nhận MOVED hoặc làm mới bảng slot rồi ghi vào node mới.", "show": [], "highlight": ["replica-a"] }
+  ]
+}

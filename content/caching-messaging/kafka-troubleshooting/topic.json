@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "kafka-troubleshooting",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Vận hành & sự cố Kafka",
+  "summary": "Consumer lag: đo theo thời gian, dồn hay đều, lag vượt retention; rebalance storm do `max.poll.interval.ms` và heartbeat; poison message và DLT; chọn số partition; hot partition; lỗi phía producer; under-replicated partitions, đĩa đầy, thêm broker và reassign.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 17,
+  "prerequisites": ["kafka-producer-consumer"],
+  "terms": ["consumer-lag", "rebalance-storm", "poison-message", "hot-partition", "dead-letter-queue", "consumer-rebalance", "static-membership", "isr"],
+  "references": [
+    { "title": "Apache Kafka Documentation: Monitoring", "url": "https://kafka.apache.org/documentation/#monitoring" },
+    { "title": "Apache Kafka Documentation: Basic Kafka Operations", "url": "https://kafka.apache.org/documentation/#basic_ops" },
+    { "title": "Spring for Apache Kafka Reference: Handling Exceptions", "url": "https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lag tăng, bạn có thêm consumer không?\" Câu trả lời tốt bắt đầu bằng đo: lag dồn hay đều giữa các partition, số consumer đã bằng số partition chưa, nhóm có đang rebalance không, thời gian xử lý mỗi record và downstream có chậm không. Chỉ khi lag đều, nhóm ổn định, và số consumer còn nhỏ hơn số partition thì thêm consumer mới giúp. Nếu downstream chậm, thêm consumer còn dội thêm tải vào chỗ đang nghẽn." }
+  ]
+}

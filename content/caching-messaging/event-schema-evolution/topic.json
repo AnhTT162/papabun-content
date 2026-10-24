@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "event-schema-evolution",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Thiết kế event & schema evolution",
+  "summary": "Event và command; event mang đủ dữ liệu hay chỉ báo hiệu; envelope của event; Avro, Protobuf và JSON; schema registry và các chế độ tương thích BACKWARD, FORWARD, FULL, TRANSITIVE; thay đổi an toàn và thay đổi phá vỡ; thứ tự deploy; dữ liệu cá nhân và tiền trong event.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 17,
+  "prerequisites": ["kafka-architecture"],
+  "terms": ["schema-registry", "schema-compatibility", "event-carried-state", "tolerant-reader", "outbox", "uuid-v7", "cdc"],
+  "references": [
+    { "title": "Confluent Documentation: Schema Evolution and Compatibility", "url": "https://docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html" },
+    { "title": "Apache Avro Specification: Schema Resolution", "url": "https://avro.apache.org/docs/current/specification/#schema-resolution" },
+    { "title": "Protocol Buffers: Updating A Message Type", "url": "https://protobuf.dev/programming-guides/proto3/#updating" },
+    { "title": "Martin Fowler: What do you mean by \"Event-Driven\"?", "url": "https://martinfowler.com/articles/201701-event-driven.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sao không publish thẳng thay đổi của bảng database bằng CDC cho các đội khác dùng?\" CDC thô làm schema bảng thành hợp đồng công khai: đổi tên cột hay tách bảng là vỡ mọi consumer, và event mang chi tiết nội bộ (cột kỹ thuật, trạng thái trung gian) thay vì ý nghĩa nghiệp vụ. Dùng CDC để đọc bảng outbox, nơi bạn ghi event tích hợp đã thiết kế; CDC thô chỉ hợp cho đồng bộ nội bộ trong cùng đội (ví dụ sang kho dữ liệu)." }
+  ]
+}

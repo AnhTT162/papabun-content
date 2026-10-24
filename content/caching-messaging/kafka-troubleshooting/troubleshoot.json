@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schema/troubleshoot.schema.json",
+  "title": "Lag tăng mãi, consumer bận mà không xử lý xong",
+  "symptom": "Service đối soát thanh toán đọc topic `payments` (24 partition) bằng Spring Kafka, 12 pod trong cùng consumer group, cấu hình consumer mặc định. Mỗi record gọi API của ngân hàng đối tác để xác minh giao dịch. Từ 10:00 hôm nay consumer lag tăng liên tục từ vài trăm lên 1,8 triệu message. CPU các pod thấp, không pod nào crash. Producer vẫn ghi bình thường, độ trễ ghi không đổi. Đội vận hành đã tăng lên 24 pod lúc 11:00 mà lag vẫn tăng.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn xem gì trước?",
+      "choices": [
+        { "label": "Lag theo từng partition, số lần rebalance của nhóm, và log consumer quanh 10:00", "quality": "good", "feedback": "Thêm pod không đỡ được gì là dấu hiệu vấn đề không nằm ở số consumer. Lag theo partition cho biết dồn hay đều, số lần rebalance cho biết nhóm có ổn định không.", "next": "lag" },
+        { "label": "Tăng số partition lên 48 để có thêm consumer song song", "quality": "poor", "feedback": "24 pod đã bằng 24 partition. Tăng partition còn đổi ánh xạ key và phá thứ tự giao dịch theo tài khoản, mà chưa biết vì sao consumer chậm.", "next": "lag" },
+        { "label": "Kiểm tra broker: CPU, đĩa, under-replicated partitions", "quality": "ok", "feedback": "Nên loại trừ, nhưng broker có vấn đề thường làm cả producer chậm theo. Ở đây producer vẫn ghi bình thường, nên phía consumer đáng nghi hơn.", "next": "lag" }
+      ]
+    },
+    {
+      "id": "lag",
+      "evidence": "Lag rải đều trên cả 24 partition, mỗi partition 70.000–80.000.\n\nGroup coordinator, số lần rebalance của nhóm `reconcile`:\n09:00–10:00     0\n10:00–11:00    41\n11:00–12:00    58\n\nLog một pod:\n10:07:31 WARN  [Consumer clientId=reconcile-3, groupId=reconcile] consumer poll timeout has expired. This means the time between subsequent calls to poll() was longer than the configured max.poll.interval.ms, which typically implies that the poll loop is spending too much time processing messages.\n10:07:31 INFO  Member reconcile-3-... sending LeaveGroup request to coordinator\n10:07:44 ERROR CommitFailedException: Offset commit cannot be completed since the consumer is not part of an active group for auto partition assignment",
+      "evidenceFormat": "monospace",
+      "question": "Điều gì đang xảy ra?",
+      "choices": [
+        { "label": "Một lô xử lý lâu hơn `max.poll.interval.ms`, consumer bị loại, lô bị xử lý lại ở pod khác: rebalance storm", "quality": "good", "feedback": "Đúng. Log nói rõ: thời gian giữa hai lần `poll()` vượt giới hạn. Consumer rời nhóm, commit thất bại, và partition chuyển sang pod khác bắt đầu lại từ offset cũ. Thêm pod chỉ tạo thêm rebalance.", "next": "cause" },
+        { "label": "Mạng giữa pod và broker chập chờn làm mất heartbeat", "quality": "ok", "feedback": "Mất heartbeat cho log khác (session timeout, heartbeat expired). Ở đây là poll timeout: luồng xử lý giữ quá lâu giữa hai lần poll.", "next": "cause" },
+        { "label": "Key lệch làm vài partition quá tải", "quality": "poor", "feedback": "Lag rải đều trên cả 24 partition, không dồn vào vài partition.", "next": "cause" }
+      ]
+    },
+    {
+      "id": "cause",
+      "evidence": "Cấu hình consumer: max.poll.records=500 (mặc định), max.poll.interval.ms=300000 (mặc định)\nRestTemplate gọi API ngân hàng: không đặt timeout\n\nThời gian gọi API ngân hàng (p50 / p99):\n09:00    40ms / 400ms\n10:00   900ms / 30.000ms   <- ngân hàng thông báo sự cố hiệu năng từ 09:55\n\nMetric listener: thời gian xử lý một lô 500 record lúc 10:30: 380–620 giây",
+      "evidenceFormat": "monospace",
+      "question": "Vì sao từ 10:00 nhóm không thoát được vòng rebalance?",
+      "choices": [
+        { "label": "500 record × khoảng 0,9 giây mỗi lời gọi vượt 300 giây; không có timeout nên lời gọi treo kéo lô dài thêm", "quality": "good", "feedback": "Đúng. Trước 10:00 một lô mất khoảng 20 giây. Khi API chậm, 500 × 0,9 giây là 450 giây, và các lời gọi 30 giây làm lô còn dài hơn. Mọi pod cùng vượt giới hạn, nên nhóm rebalance liên tục, mỗi lần lại xử lý lại từ đầu lô.", "next": "fix" },
+        { "label": "Spring Kafka commit sau mỗi record nên quá chậm", "quality": "poor", "feedback": "Mặc định là `AckMode.BATCH`, commit một lần sau mỗi lô. Và trước 10:00 cùng cấu hình chạy tốt.", "next": "fix" },
+        { "label": "Ngân hàng chặn vì gọi quá nhiều, cần giảm số pod", "quality": "ok", "feedback": "Có thể góp phần (24 pod cùng gọi lại khi rebalance làm tải tăng thêm), nhưng gốc là lô vượt `max.poll.interval.ms` khi mỗi lời gọi chậm đi.", "next": "fix" }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Sửa thế nào?",
+      "choices": [
+        { "label": "Đặt timeout cho lời gọi API, giảm `max.poll.records`, và khi đối tác chậm thì tạm dừng partition thay vì cố xử lý", "quality": "good", "feedback": "Timeout (ví dụ 2 giây) chặn trường hợp tệ nhất của mỗi record. `max.poll.records` 20–50 giữ lô dưới giới hạn kể cả khi chậm. Circuit breaker mở thì `pause()` consumer hoặc dừng container, chờ đối tác phục hồi, thay vì quay vòng rebalance và dội lại đối tác.", "next": "root-cause" },
+        { "label": "Tăng `max.poll.interval.ms` lên 1 giờ", "quality": "ok", "feedback": "Thoát được vòng rebalance nhanh nhất, nhưng consumer treo thật sẽ giữ partition tới 1 giờ mới bị phát hiện, và lời gọi không có timeout vẫn có thể treo mãi.", "next": "root-cause" },
+        { "label": "Tăng lên 48 pod và 48 partition", "quality": "poor", "feedback": "Mỗi lô vẫn vượt giới hạn, rebalance còn nhiều hơn, và đối tác đang chậm bị gọi gấp đôi.", "next": "root-cause" }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: rebalance storm do lô xử lý vượt `max.poll.interval.ms`, khởi phát khi API đối tác chậm.** Với `max.poll.records=500` và lời gọi HTTP không có timeout, thời gian một lô phụ thuộc hoàn toàn vào đối tác. Khi đối tác chậm, mọi consumer cùng vượt 5 phút, bị loại khỏi nhóm, commit thất bại và partition bị xử lý lại từ đầu lô ở pod khác. Thêm pod không giúp mà còn thêm rebalance. Vì mỗi lần rebalance lại xử lý lại, đối tác còn nhận các lời gọi xác minh trùng.\n\n**Sửa ngay**:\n- `max.poll.records=50`, timeout kết nối 1 giây và timeout đọc 2 giây cho client HTTP.\n- Circuit breaker quanh API ngân hàng; khi mở, dừng listener container (`KafkaListenerEndpointRegistry`) hoặc `pause()` partition, thử lại sau 30 giây.\n- Giảm về 12 pod để bớt rebalance và bớt tải lên đối tác.\n\n**Phòng ngừa**:\n- Quy tắc: `max.poll.records` × (timeout mỗi record) nhỏ hơn hẳn `max.poll.interval.ms`.\n- Lời gọi xác minh idempotent theo id giao dịch, vì xử lý lại sau rebalance là chuyện sẽ xảy ra.\n- Static membership và giao thức KIP-848 để deploy không gây rebalance toàn nhóm.\n- Cảnh báo theo số lần rebalance mỗi giờ và lag theo thời gian, không chỉ lag theo số message.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

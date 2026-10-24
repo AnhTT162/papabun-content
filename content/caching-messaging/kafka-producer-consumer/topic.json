@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "kafka-producer-consumer",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Kafka producer & consumer chuyên sâu",
+  "summary": "Producer gom lô, nén, retry và idempotence (khi nào nó tự tắt); transaction và exactly-once trong Kafka; consumer poll loop, commit offset đúng và các bẫy của auto commit; `max.poll.interval.ms`, `auto.offset.reset`; rebalance eager, cooperative, KIP-848 và static membership; song song hơn số partition; retry ở consumer và thứ tự; exactly-once khi ghi database.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 19,
+  "prerequisites": ["kafka-architecture"],
+  "terms": ["idempotent-producer", "kafka-transaction", "consumer-rebalance", "kip-848", "static-membership", "kafka-offset", "consumer-group", "delivery-semantics", "idempotent-consumer"],
+  "references": [
+    { "title": "Apache Kafka Documentation: Producer Configs", "url": "https://kafka.apache.org/documentation/#producerconfigs" },
+    { "title": "Apache Kafka Documentation: Consumer Configs", "url": "https://kafka.apache.org/documentation/#consumerconfigs" },
+    { "title": "KIP-98: Exactly Once Delivery and Transactional Messaging", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-98+-+Exactly+Once+Delivery+and+Transactional+Messaging" },
+    { "title": "KIP-848: The Next Generation of the Consumer Rebalance Protocol", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-848%3A+The+Next+Generation+of+the+Consumer+Rebalance+Protocol" },
+    { "title": "Spring for Apache Kafka Reference", "url": "https://docs.spring.io/spring-kafka/reference/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kafka có exactly-once, vậy consumer ghi database có cần idempotent không?\" Có. Exactly-once của Kafka chỉ bao luồng đọc từ Kafka và ghi lại Kafka trong cùng transaction. Ghi database, gọi API hay gửi email nằm ngoài transaction đó: chết sau khi ghi database mà trước khi commit offset là xử lý lại. Hoặc lưu offset trong cùng transaction database, hoặc làm consumer idempotent theo id của message." }
+  ]
+}

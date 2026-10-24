@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "async", "front": "Replication của Redis đồng bộ hay bất đồng bộ?", "back": "Bất đồng bộ: primary trả lời client trước khi replica nhận lệnh, nên lệnh đã xác nhận có thể mất khi failover." },
+    { "id": "sentinel-vs-cluster", "front": "Sentinel khác Redis Cluster thế nào?", "back": "Sentinel: HA cho một primary, không chia dữ liệu. Cluster: chia 16.384 slot trên nhiều master, failover có sẵn." },
+    { "id": "slot", "front": "Slot của key trong Redis Cluster tính thế nào?", "back": "`CRC16(key) mod 16384`; có hash tag `{...}` thì chỉ băm phần trong ngoặc nhọn." },
+    { "id": "moved-ask", "front": "`MOVED` và `ASK` khác nhau thế nào?", "back": "`MOVED`: slot đã thuộc node khác, client cập nhật bảng. `ASK`: slot đang chuyển, hỏi node mới một lần, không cập nhật bảng." },
+    { "id": "crossslot", "front": "Khi nào gặp lỗi `CROSSSLOT`?", "back": "Lệnh nhiều key, transaction hoặc Lua có key ở các slot khác nhau. Dùng hash tag để gom key vào một slot." },
+    { "id": "three-masters", "front": "Vì sao Redis Cluster cần ít nhất 3 master?", "back": "Failover cần đa số master đồng ý; với 2 master, mất 1 là không còn đa số." },
+    { "id": "split-brain", "front": "Split-brain làm mất ghi thế nào?", "back": "Primary ở phía thiểu số vẫn nhận ghi tới khi tự dừng, trong khi phía kia đã bầu primary mới. Giảm bằng `min-replicas-to-write`." },
+    { "id": "empty-restart", "front": "Vì sao primary không persistence không được tự khởi động lại nhanh?", "back": "Nó quay lại rỗng trước khi Sentinel kịp failover, replica đồng bộ theo và mất hết dữ liệu." },
+    { "id": "full-sync-loop", "front": "Full sync lặp mãi do đâu?", "back": "Ghi nhiều trong lúc full sync làm output buffer của replica vượt giới hạn, primary ngắt kết nối và replica sync lại từ đầu. Tăng buffer và `repl-backlog-size`." },
+    { "id": "lettuce-topology", "front": "Lettuce với Redis Cluster cần cấu hình gì sau failover?", "back": "Lettuce 6.x: bật adaptive refresh và refresh định kỳ, mặc định không tự làm mới bảng slot. Lettuce 7.x: adaptive bật sẵn, vẫn nên đặt refresh định kỳ." }
+  ]
+}

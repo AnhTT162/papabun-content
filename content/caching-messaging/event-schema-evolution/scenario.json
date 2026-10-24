@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đổi kiểu tiền trong event OrderPlaced mà không dừng ai",
+  "prompt": "Topic `orders` (Kafka, Avro, Confluent Schema Registry ở chế độ BACKWARD) có event `OrderPlaced` với trường `amount: double` tính bằng VND. Sáu đội khác đọc topic này: thanh toán, kho, email, loyalty, chống gian lận, và đội dữ liệu đọc lại từ đầu mỗi khi dựng lại kho dữ liệu (retention 90 ngày).\n\nCông ty mở bán ở Thái Lan và Singapore, cần:\n- Tiền có **mã tiền tệ** và **không sai số làm tròn** (đã có khiếu nại lệch 1 đồng).\n- Tách `shippingAddress` (một chuỗi) thành các trường có cấu trúc.\n\nKhông được dừng consumer nào, và các đội deploy theo lịch riêng trong 6 tuần tới. Đề xuất cách thay đổi schema và kế hoạch chuyển đổi.",
+  "hints": [
+    "Đổi `amount` từ `double` sang kiểu khác có tương thích BACKWARD không?",
+    "Thêm trường mới có giá trị mặc định thì ai nâng cấp trước?",
+    "Đội dữ liệu đọc lại event 90 ngày trước: chế độ tương thích hiện tại có bảo vệ họ không?",
+    "Khi nào mới được bỏ trường cũ?"
+  ],
+  "solution": "**1. Không đổi kiểu tại chỗ**\n\nĐổi `amount` từ `double` sang `decimal` hay `long` là thay đổi phá vỡ: Avro chỉ tự nâng theo chiều mở rộng (`int` lên `long`/`float`/`double`, `long` lên `float`/`double`, `float` lên `double`, và `string` với `bytes`), không có chiều `double` sang `long` hay `decimal`. Đổi nghĩa (VND sang đơn vị nhỏ nhất của tiền tệ bất kỳ) dưới cùng tên trường còn nguy hiểm hơn, vì không công cụ nào phát hiện được.\n\n**2. Thêm trường mới bên cạnh trường cũ (schema v2)**\n\n```\n{\"name\": \"amount\", \"type\": \"double\", \"doc\": \"Deprecated: dùng total\"},\n{\"name\": \"total\", \"type\": [\"null\", {\"type\": \"record\", \"name\": \"Money\",\n   \"fields\": [{\"name\": \"amountMinor\", \"type\": \"long\"},\n              {\"name\": \"currency\", \"type\": \"string\"}]}], \"default\": null},\n{\"name\": \"shippingAddress\", \"type\": \"string\"},\n{\"name\": \"shipping\", \"type\": [\"null\", \"Address\"], \"default\": null}\n```\n\n(`Address` là record định nghĩa riêng với các trường đường, phường, tỉnh, quốc gia.)\n\n- Trường mới tuỳ chọn, mặc định `null`: v2 đọc được dữ liệu v1 (BACKWARD), và v1 bỏ qua trường lạ khi đọc dữ liệu v2 (FORWARD). Tức là FULL.\n- Chuyển subject sang **`FULL_TRANSITIVE`** trước khi đăng ký v2: đội dữ liệu đọc event 90 ngày trước, nên mọi phiên bản phải đọc được với nhau, không chỉ hai bản liền nhau.\n- `amountMinor` là số nguyên đơn vị nhỏ nhất (VND không có phần lẻ, THB và SGD có 2 chữ số), tránh hoàn toàn sai số `double`. Hoặc logical type `decimal` với precision và scale cố định.\n\n**3. Thứ tự triển khai**\n\n- Tuần 1: đăng ký v2 từ CI (tắt auto-register). Producer ghi **cả hai**: `amount` như cũ (VND, để consumer cũ đúng), `total` và `shipping` mới. Đơn ngoại tệ: `amount` vẫn phải có giá trị. Quy đổi sang VND thì đội thanh toán và chống gian lận sẽ xử lý trên số đã quy đổi, nên an toàn hơn là chỉ mở bán ngoại tệ sau khi hai đội đó đã chuyển sang đọc `total`.\n- Tuần 1–5: từng đội nâng consumer lên đọc `total` khi khác `null`, fallback sang `amount` cho event cũ. Đội dữ liệu cập nhật pipeline xử lý cả hai dạng cho dữ liệu lịch sử.\n- Theo dõi: registry không biết gì về consumer. Dùng danh sách consumer group và `client.id` để biết ai đọc topic, rồi hỏi trực tiếp hoặc dùng contract test để biết ai còn đọc `amount`.\n- Xoá `amount` sau này (v3) **không** qua được `FULL_TRANSITIVE`: `amount` không có mặc định ở v1, v2, nên reader cũ cần nó. Retention của dữ liệu không liên quan, vì registry so các phiên bản schema chứ không so dữ liệu. Làm hai bước: (a) đăng ký phiên bản cho `amount` một giá trị mặc định (ví dụ `0` kèm ghi chú deprecated) và chờ mọi consumer deploy reader schema mới; (b) sau đó mới xoá `amount`, có review vì registry vẫn so với v1, v2 (đổi subject sang `BACKWARD_TRANSITIVE` cho riêng lần đăng ký này). Trước đó producer vẫn phải ghi `amount`.\n\n**4. Phương án topic mới**\n\nNếu thay đổi quá lớn (đổi cả ý nghĩa event, đổi key), tạo `orders.v2` với schema mới. Producer ghi cả hai topic qua outbox (một transaction database, hai bản ghi outbox), consumer chuyển dần, đội dữ liệu đọc lịch sử ở topic cũ và dữ liệu mới ở topic mới. Tốn gấp đôi lưu trữ và phải giữ hai topic đồng bộ trong giai đoạn chuyển.\n\n**5. Phòng ngừa**\n\n- Kiểm tra tương thích trong CI cho mọi PR đổi schema; registry đặt `FULL_TRANSITIVE` mặc định cho topic được đọc lại.\n- Quy ước tiền ngay từ đầu: không dùng `double` cho tiền trong mọi schema.\n- Mỗi topic có đội sở hữu và danh sách consumer cập nhật (AsyncAPI hoặc catalog nội bộ).",
+  "tradeoffs": [
+    {
+      "option": "Đổi kiểu `amount` tại chỗ",
+      "pros": [
+        "Schema gọn"
+      ],
+      "cons": [
+        "Registry từ chối; nếu ép thì mọi consumer cũ vỡ và đội dữ liệu không đọc lại được dữ liệu cũ"
+      ]
+    },
+    {
+      "option": "Thêm trường mới, giữ trường cũ, FULL_TRANSITIVE",
+      "pros": [
+        "Không ai phải dừng",
+        "Mỗi đội nâng theo lịch riêng"
+      ],
+      "cons": [
+        "Producer ghi hai trường trong nhiều tuần",
+        "Phải theo dõi đội nào còn dùng trường cũ"
+      ]
+    },
+    {
+      "option": "Topic mới `orders.v2`",
+      "pros": [
+        "Tự do thiết kế lại hoàn toàn",
+        "Không vướng tương thích"
+      ],
+      "cons": [
+        "Hai topic, gấp đôi lưu trữ",
+        "Consumer cần thứ tự giữa hai topic gặp khó"
+      ]
+    },
+    {
+      "option": "Event chỉ mang `orderId`, consumer gọi API lấy chi tiết",
+      "pros": [
+        "Schema event hầu như không đổi nữa"
+      ],
+      "cons": [
+        "Mọi consumer phụ thuộc API của đội đơn hàng lúc chạy",
+        "Đọc lại lịch sử chỉ thấy trạng thái hiện tại, không thấy giá lúc đặt"
+      ]
+    }
+  ]
+}

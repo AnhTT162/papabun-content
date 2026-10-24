@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Rate limiter chặn vĩnh viễn một số người dùng",
+  "context": "API gửi OTP giới hạn 5 lần mỗi phút cho mỗi số điện thoại, dùng Redis Cluster qua `StringRedisTemplate`. Timeout Lettuce 200ms. Hệ thống chạy 30 pod, deploy nhiều lần mỗi ngày.",
+  "buggyCode": "public boolean allow(String phone) {\n    String key = \"otp:\" + phone;\n    Long count = redis.opsForValue().increment(key);      // INCR\n    if (count != null && count == 1) {\n        redis.expire(key, Duration.ofMinutes(1));          // EXPIRE\n    }\n    return count != null && count <= 5;\n}",
+  "symptom": {
+    "description": "Vài chục người dùng mỗi tuần báo không bao giờ nhận được OTP, kể cả sau nhiều giờ. Đa số còn lại bình thường. Nhóm bị chặn tăng dần theo thời gian.",
+    "output": "127.0.0.1:6379> GET otp:0903123456\n\"47\"\n127.0.0.1:6379> TTL otp:0903123456\n(integer) -1          <- key không có TTL\n\n# log ứng dụng quanh lần INCR đầu của số này\n2026-10-21 10:02:11 WARN  RedisCommandTimeoutException: Command timed out after 200 millisecond(s)\n    at ...OtpRateLimiter.allow(OtpRateLimiter.java:5)"
+  },
+  "diagnosis": {
+    "question": "Vì sao key `otp:0903123456` không có TTL?",
+    "options": [
+      "`EXPIRE` không có tác dụng với key kiểu số do `INCR` tạo ra, phải dùng `SET ... EX`",
+      "`INCR` và `EXPIRE` là hai lệnh riêng; lần `EXPIRE` duy nhất bị lỗi thì key không bao giờ có TTL",
+      "Redis xoá TTL có sẵn của key mỗi lần `INCR` tăng giá trị",
+      "Hai pod cùng gọi `EXPIRE` một lúc nên TTL bị huỷ lẫn nhau"
+    ],
+    "answer": 1,
+    "explanation": "TTL chỉ được đặt khi `count == 1`, tức đúng một lần. Nếu lần đó `EXPIRE` timeout, pod bị kill giữa hai lệnh, hoặc lệnh ném exception, thì các lần sau `count` lớn hơn 1 nên không ai đặt TTL nữa. Key sống mãi và vượt 5 thì chặn vĩnh viễn. `INCR` không xoá TTL có sẵn, và `EXPIRE` gọi nhiều lần chỉ đặt lại TTL."
+  },
+  "fix": {
+    "code": "private static final RedisScript<Long> INCR_WITH_TTL = RedisScript.of(\"\"\"\n    local c = redis.call('INCR', KEYS[1])\n    if c == 1 then\n        redis.call('EXPIRE', KEYS[1], ARGV[1])\n    end\n    return c\n    \"\"\", Long.class);\n\npublic boolean allow(String phone) {\n    try {\n        Long count = redis.execute(INCR_WITH_TTL, List.of(\"otp:\" + phone), \"60\");\n        return count != null && count <= 5;\n    } catch (RedisConnectionFailureException | QueryTimeoutException e) {\n        return false;   // OTP: chặn khi Redis lỗi (fail closed), để không bị dùng gửi SMS hàng loạt\n    }\n}\n\n// Dọn key đã kẹt: SCAN otp:* trên từng master của cluster, đặt TTL cho key có TTL = -1\n// (Redis 7: EXPIRE key 60 NX chỉ đặt khi key chưa có TTL)",
+    "explanation": "Lua script chạy nguyên tử theo nghĩa không lệnh nào chen vào giữa `INCR` và `EXPIRE`, và cả script chạy trọn trên server: không còn khe để pod chết hay timeout giữa hai lệnh. (Redis không rollback: script lỗi giữa chừng thì lệnh đã ghi vẫn giữ; ở đây `EXPIRE` không lỗi nên không sao.) Key truyền qua `KEYS` để chạy đúng trên Redis Cluster. Cách khác không cần Lua: sau mỗi `INCR` gọi `EXPIRE key 60 NX` (Redis 7+); key nào lỡ mất TTL sẽ được đặt lại ngay ở request sau. Với OTP, khi Redis lỗi nên chặn (fail closed) vì cho qua là mở đường cho spam SMS tốn tiền; với API đọc thông thường thì thường cho qua (fail open). Cuối cùng phải dọn các key đang kẹt, nếu không người dùng cũ vẫn bị chặn."
+  }
+}

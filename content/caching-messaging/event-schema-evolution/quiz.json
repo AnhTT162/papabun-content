@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "backward-order",
+      "kind": "single",
+      "prompt": "Subject đặt BACKWARD. Schema mới xoá trường `note` (kiểu `string`, không có giá trị mặc định). Thứ tự deploy an toàn?",
+      "options": [
+        "Producer trước, consumer sau",
+        "Consumer trước, producer sau",
+        "Phải deploy cả hai cùng lúc",
+        "Thứ tự nào cũng được vì Avro bỏ qua trường thiếu"
+      ],
+      "answer": 1,
+      "explanation": "BACKWARD đảm bảo schema mới đọc được dữ liệu cũ: consumer đã nâng chỉ bỏ qua `note` thừa trong event cũ. Nhưng consumer cũ đọc dữ liệu mới thì thiếu `note` mà không có mặc định, nên lỗi. Vì vậy nâng consumer trước, producer sau. Avro chỉ bỏ qua trường **thừa**; trường **thiếu** cần có mặc định."
+    },
+    {
+      "id": "transitive",
+      "kind": "single",
+      "prompt": "Topic giữ event 1 năm, consumer mới thường đọc từ đầu. Subject đang BACKWARD (không transitive), có 5 phiên bản schema. Rủi ro là gì?",
+      "options": [
+        "Không có rủi ro, vì mỗi phiên bản đã tương thích với bản trước",
+        "Phiên bản 5 có thể không đọc được dữ liệu ghi bằng phiên bản 1–3",
+        "Registry sẽ xoá các phiên bản cũ sau 1 năm",
+        "Consumer mới chỉ đọc được dữ liệu ghi bằng phiên bản 5"
+      ],
+      "answer": 1,
+      "explanation": "BACKWARD chỉ kiểm tra phiên bản mới với phiên bản ngay trước. Chuỗi thay đổi (thêm trường có mặc định ở v2, bỏ mặc định ở v4, ...) có thể làm v5 không đọc được dữ liệu v1. Dữ liệu được đọc lại từ lâu cần `BACKWARD_TRANSITIVE` hoặc `FULL_TRANSITIVE`."
+    },
+    {
+      "id": "protobuf-reuse",
+      "kind": "single",
+      "prompt": "Protobuf: đội xoá trường `int64 coupon_id = 7;`, vài tháng sau thêm `int64 discount_cents = 7;`. Consumer cũ đọc message mới thấy gì?",
+      "options": [
+        "Bỏ qua trường 7 vì tên khác",
+        "Đọc giá trị `discount_cents` như là `coupon_id`, không báo lỗi gì",
+        "Báo lỗi rõ ràng \"field renamed\"",
+        "Không vấn đề gì, vì proto3 coi mọi trường là tuỳ chọn"
+      ],
+      "answer": 1,
+      "explanation": "Trên dây chỉ có số trường và kiểu mã hoá, không có tên. Cả hai đều là `int64` (cùng kiểu mã hoá varint), nên consumer cũ đọc số tiền giảm giá ra làm mã coupon mà không có lỗi nào. (Nếu kiểu mã hoá khác, ví dụ `string` sang `int64`, parser coi là trường lạ và bỏ qua: dữ liệu mất âm thầm.) Khi xoá trường, khai báo `reserved 7; reserved \"coupon_id\";`. Registry không transitive có thể không bắt được việc dùng lại, vì phiên bản đã xoá trường 7 nằm ở giữa."
+    },
+    {
+      "id": "thin-event",
+      "kind": "single",
+      "prompt": "Event chỉ mang `orderId`, consumer gọi API của service đơn hàng để lấy chi tiết. Đội phân tích đọc lại event của tháng trước để tính doanh thu theo giá lúc đặt. Vấn đề?",
+      "options": [
+        "Không vấn đề, API trả đúng dữ liệu",
+        "API trả trạng thái hiện tại của đơn, không phải giá trị lúc event xảy ra",
+        "Event không có schema nên không đọc được",
+        "Kafka không cho đọc lại event cũ"
+      ],
+      "answer": 1,
+      "explanation": "Event chỉ báo hiệu thì dữ liệu nằm ở producer, và producer chỉ có trạng thái mới nhất (đơn đã sửa giá, hoàn tiền, xoá). Đọc lại lịch sử không tái tạo được giá trị lúc đó. Đó là lý do chọn event mang đủ dữ liệu cho các luồng cần lịch sử hoặc cần chạy khi producer chết."
+    },
+    {
+      "id": "avro-new-field",
+      "kind": "single",
+      "prompt": "Avro, BACKWARD. Thay đổi nào bị registry từ chối?",
+      "options": [
+        "Thêm trường `channel` kiểu `string` có `default: \"web\"`",
+        "Xoá trường `note` không còn ai dùng",
+        "Thêm trường `channel` kiểu `string` không có giá trị mặc định",
+        "Thêm trường tuỳ chọn `[\"null\", \"string\"]` với `default: null`"
+      ],
+      "answer": 2,
+      "explanation": "BACKWARD: schema mới phải đọc được dữ liệu cũ. Dữ liệu cũ không có `channel`, và không có mặc định thì người đọc không biết điền gì, nên không tương thích. Xoá trường được chấp nhận ở BACKWARD (người đọc mới chỉ bỏ qua trường thừa), nhưng sẽ bị từ chối nếu chế độ là FORWARD hoặc FULL mà trường đó không có mặc định."
+    }
+  ]
+}

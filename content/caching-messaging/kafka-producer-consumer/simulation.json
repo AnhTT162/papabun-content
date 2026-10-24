@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Commit offset trước hay sau khi xử lý",
+  "instructions": "Mỗi lần poll lấy 10 message. Chế độ 0: xử lý xong trong vòng lặp rồi mới commit. Chế độ 1: đẩy lô sang thread pool rồi poll tiếp, auto commit ghi offset ngay lần poll sau, trước khi pool xử lý xong. Thử bấm \"Consumer chết\" ở từng trạng thái, rồi đổi chế độ (chỉ ở trạng thái chờ poll; bộ đếm được đặt lại) và so sánh.",
+  "config": {
+    "states": [
+      { "id": "idle", "label": "Chờ poll", "x": 0.5, "y": 0.1, "note": "Consumer sẵn sàng gọi `poll()`. Sau khi khởi động lại, nó đọc tiếp từ offset đã commit." },
+      { "id": "polled", "label": "Đã poll 10 message", "x": 0.5, "y": 0.5, "note": "Lô 10 message nằm trong bộ nhớ consumer, offset chưa được commit." },
+      { "id": "processed", "label": "Xử lý xong, chưa commit", "x": 0.15, "y": 0.9, "note": "Dữ liệu đã ghi xuống database, nhưng Kafka chưa biết lô này đã xong." },
+      { "id": "committed", "label": "Đã commit, chưa xử lý", "x": 0.85, "y": 0.9, "note": "Auto commit đã ghi offset của lô, trong khi thread pool vẫn đang xử lý." }
+    ],
+    "initial": "idle",
+    "events": [
+      { "id": "poll", "label": "poll()" },
+      { "id": "process", "label": "Xử lý xong lô" },
+      { "id": "commit", "label": "Commit offset" },
+      { "id": "crash", "label": "Consumer chết" },
+      { "id": "toggle", "label": "Đổi chế độ" }
+    ],
+    "counters": [
+      { "id": "done", "label": "Message đã xử lý", "initial": 0 },
+      { "id": "dup", "label": "Message sẽ bị xử lý lại", "initial": 0 },
+      { "id": "lost", "label": "Message bị mất", "initial": 0 },
+      { "id": "mode", "label": "Chế độ (0 commit sau, 1 thread pool + auto commit)", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "poll", "from": "idle", "event": "poll", "to": "polled", "label": "poll()" },
+      { "id": "to-mode-1", "from": "idle", "event": "toggle", "to": "idle", "label": "đổi chế độ", "guard": { "counter": "mode", "eq": 0 }, "effects": [ { "counter": "mode", "set": 1 }, { "counter": "done", "set": 0 }, { "counter": "dup", "set": 0 }, { "counter": "lost", "set": 0 } ], "note": "Chế độ 1: listener đẩy record sang `ExecutorService` rồi trả về ngay, auto commit bật (`enable.auto.commit=true`)." },
+      { "id": "to-mode-0", "from": "idle", "event": "toggle", "to": "idle", "label": "đổi chế độ", "effects": [ { "counter": "mode", "set": 0 }, { "counter": "done", "set": 0 }, { "counter": "dup", "set": 0 }, { "counter": "lost", "set": 0 } ], "note": "Chế độ 0: xử lý trong vòng lặp, commit sau khi xong (Spring Kafka `AckMode.BATCH`)." },
+      { "id": "process-first", "from": "polled", "event": "process", "to": "processed", "label": "xử lý", "guard": { "counter": "mode", "eq": 0 }, "effects": [ { "counter": "done", "add": 10 } ], "note": "Xử lý xong cả lô trong vòng lặp. Bước tiếp theo là commit." },
+      { "id": "commit-first", "from": "polled", "event": "commit", "to": "committed", "label": "auto commit", "guard": { "counter": "mode", "eq": 1 }, "note": "Lô đã được giao cho thread pool và vòng lặp gọi `poll()` lần nữa: auto commit ghi offset của lô này ngay trong lần poll đó." },
+      { "id": "commit-after", "from": "processed", "event": "commit", "to": "idle", "label": "commit", "note": "Commit offset kế tiếp (offset cuối + 1). Lô này sẽ không bị đọc lại." },
+      { "id": "process-after", "from": "committed", "event": "process", "to": "idle", "label": "pool xong", "effects": [ { "counter": "done", "add": 10 } ], "note": "Thread pool xử lý xong lô đã được commit từ trước. Lần này may mắn không có gì xảy ra giữa chừng." },
+      { "id": "crash-polled", "from": "polled", "event": "crash", "to": "idle", "label": "chết", "note": "Chết trước khi xử lý và trước khi commit: consumer mới đọc lại lô từ offset cũ. Không mất, không trùng (giả sử chưa record nào của lô được xử lý)." },
+      { "id": "crash-processed", "from": "processed", "event": "crash", "to": "idle", "label": "chết", "effects": [ { "counter": "dup", "add": 10 } ], "note": "Đã xử lý nhưng chưa commit: consumer mới đọc lại và xử lý lô này lần nữa. Đây là at-least-once, nên consumer phải idempotent." },
+      { "id": "crash-committed", "from": "committed", "event": "crash", "to": "idle", "label": "chết", "effects": [ { "counter": "lost", "add": 10 } ], "note": "Offset đã commit nhưng thread pool chưa xử lý xong: consumer mới đọc từ sau lô này, lô bị **mất** mà không có lỗi nào. Thread pool cộng auto commit là at-most-once." }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở trạng thái hiện tại, hoặc không có trong chế độ đang chọn. Chế độ chỉ đổi được khi đang chờ poll."
+  }
+}

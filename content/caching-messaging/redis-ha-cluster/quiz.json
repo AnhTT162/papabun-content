@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "ack-lost",
+      "kind": "single",
+      "prompt": "Redis có một primary, hai replica, Sentinel. Client nhận `OK` cho `SET order:9 PAID`, ngay sau đó primary mất điện. Sentinel đưa một replica lên. Đọc `order:9` trên primary mới có thể trả về gì?",
+      "options": [
+        "Luôn là `PAID`, vì Redis chỉ trả `OK` khi replica đã nhận lệnh",
+        "Có thể là giá trị cũ hoặc không có key, vì replication bất đồng bộ",
+        "Có thể là lỗi `READONLY` vì replica mới chưa nhận quyền ghi",
+        "Luôn là `PAID`, vì Sentinel chọn replica mới nhất"
+      ],
+      "answer": 1,
+      "explanation": "Primary trả `OK` trước khi gửi lệnh sang replica. Chết trước khi gửi kịp thì không replica nào có lệnh đó. Sentinel chọn theo `replica-priority` rồi tới replica có offset lớn nhất, nhưng replica lớn nhất cũng có thể chưa có lệnh cuối. `WAIT` giảm khả năng này, không loại bỏ được."
+    },
+    {
+      "id": "crossslot",
+      "kind": "single",
+      "prompt": "Trên Redis Cluster, Lua script đọc `cart:42` và ghi `order:42` báo lỗi `CROSSSLOT`. Sửa thế nào?",
+      "options": [
+        "Đặt tên `{u42}:cart` và `{u42}:order` để hai key cùng slot",
+        "Bật `cluster-allow-cross-slot yes` trên mọi node",
+        "Chạy script bằng `EVALSHA` thay cho `EVAL`",
+        "Gửi script tới node giữ slot của key đầu tiên"
+      ],
+      "answer": 0,
+      "explanation": "Lệnh nhiều key, transaction và Lua chỉ chạy khi mọi key cùng slot. Hash tag làm Redis chỉ băm phần trong ngoặc nhọn, nên các key có cùng `{u42}` vào cùng slot. Không có cấu hình server nào bỏ được kiểm tra này cho các key khai báo; flag `allow-cross-slot-keys` (7.0+) chỉ nới cho key không khai báo, vẫn giới hạn trong một node và không được khuyến khích. `EVALSHA` chỉ là cách gọi script đã nạp."
+    },
+    {
+      "id": "two-masters",
+      "kind": "single",
+      "prompt": "Cụm Redis Cluster có 2 master, mỗi master một replica. Một master chết hẳn. Chuyện gì xảy ra?",
+      "options": [
+        "Replica của nó được bầu lên sau `cluster-node-timeout`",
+        "Không bầu được vì 1 trên 2 master không phải đa số; cả cluster ngừng phục vụ",
+        "Master còn lại tự nhận thêm các slot của master đã chết",
+        "Client tự chuyển lệnh sang replica và tiếp tục ghi"
+      ],
+      "answer": 1,
+      "explanation": "Failover trong Redis Cluster cần đa số master đồng ý. Còn 1 trên 2 master là không đủ, nên replica không được đưa lên. Node còn lại cũng không thấy đa số master, nên sau node timeout tự chuyển cluster sang trạng thái fail và từ chối mọi lệnh, kể cả slot của chính nó. Cần ít nhất 3 master."
+    },
+    {
+      "id": "empty-restart",
+      "kind": "single",
+      "prompt": "Primary Redis không bật RDB lẫn AOF, chạy trên Kubernetes với `restartPolicy: Always`, có 2 replica và Sentinel. Primary bị OOM kill và khởi động lại sau 2 giây. Rủi ro lớn nhất?",
+      "options": [
+        "Sentinel failover hai lần liên tiếp",
+        "Primary trở lại rỗng, replica đồng bộ theo và mất toàn bộ dữ liệu",
+        "Replica bị full sync nên tốn băng thông mạng",
+        "Client nhận lỗi `READONLY` trong vài giây"
+      ],
+      "answer": 1,
+      "explanation": "Sentinel cần `down-after-milliseconds` (thường vài giây trở lên) mới coi primary là chết. Primary quay lại trước đó với bộ nhớ rỗng, vẫn là primary, và replica đồng bộ theo bản rỗng. Tài liệu chính thức của Redis cảnh báo đúng trường hợp này: tắt persistence thì không để primary tự khởi động lại nhanh."
+    },
+    {
+      "id": "lettuce-refresh",
+      "kind": "single",
+      "prompt": "Sau khi một master Redis Cluster failover, ứng dụng Spring Boot 3.5 (Lettuce 6.x, cấu hình mặc định) còn lỗi timeout kéo dài với một phần key cho tới khi restart ứng dụng, trong khi `redis-cli` đã thấy master mới. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Replica mới cần một phút để nạp RDB",
+        "Lettuce không tự làm mới bảng slot nên còn gửi lệnh tới node đã chết",
+        "Spring Cache giữ kết quả lỗi trong một phút",
+        "Cluster bus mất một phút để lan truyền cấu hình"
+      ],
+      "answer": 1,
+      "explanation": "Lettuce 6.x mặc định không làm mới topology định kỳ hay theo sự kiện. Lệnh tới node đã chết chỉ hết timeout (mặc định 60 giây), không nhận được `MOVED` để biết bảng đã đổi. Bật adaptive refresh và refresh định kỳ, và đặt timeout ngắn. Lettuce 7 bật sẵn adaptive refresh."
+    }
+  ]
+}

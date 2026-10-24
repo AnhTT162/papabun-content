@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "skewed-lag",
+      "kind": "single",
+      "prompt": "Topic 12 partition, 6 consumer. Lag của partition 7 là 2 triệu, các partition khác gần 0. Việc nào nên làm trước?",
+      "options": [
+        "Tăng lên 12 consumer để mỗi consumer giữ một partition",
+        "Xem key nào dồn vào partition 7 và consumer của nó có chậm không",
+        "Tăng số partition lên 24 để chia tải của partition 7",
+        "Giảm `max.poll.records` để mọi consumer poll nhanh hơn"
+      ],
+      "answer": 1,
+      "explanation": "Lag dồn vào một partition nghĩa là partition đó nhận nhiều hơn hẳn (key lệch) hoặc consumer giữ nó có vấn đề. Một partition chỉ do một consumer xử lý, nên thêm consumer không chia được tải của nó. Tăng partition đổi ánh xạ key nhưng một key nóng vẫn vào một partition."
+    },
+    {
+      "id": "lag-retention",
+      "kind": "single",
+      "prompt": "Retention của topic 3 ngày. Consumer group dừng 4 ngày vì lỗi, rồi khởi động lại với cấu hình mặc định. Chuyện gì xảy ra?",
+      "options": [
+        "Consumer đọc tiếp từ offset đã commit như bình thường",
+        "Offset đã bị xoá; consumer nhảy tới cuối log và bỏ qua phần còn lại",
+        "Consumer báo `OffsetOutOfRangeException` và dừng tới khi có người reset offset",
+        "Broker giữ lại dữ liệu chưa đọc cho tới khi nhóm đọc xong"
+      ],
+      "answer": 1,
+      "explanation": "Message cũ hơn 3 ngày thường đã bị xoá (retention xoá theo từng segment), offset đã commit nằm trước đầu log hiện tại. Consumer gặp offset không hợp lệ và áp dụng `auto.offset.reset`, mặc định `latest`: nhảy tới cuối, bỏ qua cả phần còn trong retention. Kafka không giữ dữ liệu theo tiến độ consumer. (Thêm nữa, offset đã commit của nhóm hết hạn sau 7 ngày kể từ khi nhóm không còn member, Kafka 2.1+.)"
+    },
+    {
+      "id": "poll-timeout",
+      "kind": "single",
+      "prompt": "Log consumer: `consumer poll timeout has expired`. Cấu hình nào liên quan trực tiếp nhất?",
+      "options": [
+        "`session.timeout.ms` và `heartbeat.interval.ms`",
+        "`max.poll.interval.ms` và `max.poll.records`",
+        "`fetch.min.bytes` và `fetch.max.wait.ms`",
+        "`request.timeout.ms` của producer"
+      ],
+      "answer": 1,
+      "explanation": "Thông báo này nghĩa là khoảng giữa hai lần `poll()` vượt `max.poll.interval.ms`, tức vòng xử lý quá lâu. Giảm `max.poll.records` hoặc làm mỗi record nhanh hơn. Session timeout liên quan heartbeat của luồng nền, cho log khác. Fetch config chỉ ảnh hưởng cách lấy dữ liệu."
+    },
+    {
+      "id": "default-error-handler",
+      "kind": "single",
+      "prompt": "Spring Kafka, `@KafkaListener` với `DefaultErrorHandler` mặc định, không cấu hình recoverer. Listener ném exception cho một record dữ liệu sai. Sau khi hết lượt thử, record đó ra sao?",
+      "options": [
+        "Được gửi sang topic `<tên>-dlt`",
+        "Bị log lỗi rồi bỏ qua; offset được commit và record coi như mất",
+        "Được thử lại mãi, chặn partition",
+        "Consumer dừng hẳn cho tới khi khởi động lại"
+      ],
+      "answer": 1,
+      "explanation": "`DefaultErrorHandler` mặc định thử 10 lần liên tiếp không nghỉ, rồi recoverer mặc định chỉ log và bỏ qua record. Muốn giữ lại thì cấu hình `DeadLetterPublishingRecoverer`, mặc định gửi sang `<topic>-dlt` (Spring Kafka 3.3+; trước đó là `<topic>.DLT`) cùng partition, nên topic DLT phải có ít nhất bằng số partition của topic gốc."
+    },
+    {
+      "id": "add-broker",
+      "kind": "single",
+      "prompt": "Cụm Kafka 3 broker đầy 85% đĩa. Thêm broker thứ 4. Đĩa của 3 broker cũ thay đổi thế nào ngay sau đó?",
+      "options": [
+        "Giảm còn khoảng 64% vì Kafka tự cân bằng partition",
+        "Không đổi tới khi reassign; broker mới chỉ nhận partition mới",
+        "Giảm dần trong vài giờ khi controller chuyển leader sang broker mới",
+        "Tăng vì broker mới sao chép dữ liệu từ các broker cũ"
+      ],
+      "answer": 1,
+      "explanation": "Kafka không tự chuyển partition có sẵn sang broker mới. Phải chạy `kafka-reassign-partitions` hoặc Cruise Control, có giới hạn băng thông để việc chép dữ liệu không làm nghẽn cụm. Đĩa broker nguồn chỉ được giải phóng khi chuyển xong; trong lúc đó partition tạm có nhiều replica hơn RF, nên với đĩa 85% hãy chuyển từng đợt nhỏ và đặt throttle."
+    }
+  ]
+}

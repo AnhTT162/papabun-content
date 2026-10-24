@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "event-vs-command", "front": "Event khác command thế nào?", "back": "Command yêu cầu việc sẽ làm, một nơi nhận, có thể bị từ chối. Event báo việc đã xảy ra (thì quá khứ), không từ chối được, nhiều bên nghe." },
+    { "id": "fat-thin", "front": "Event mang đủ dữ liệu hay chỉ báo hiệu?", "back": "Đủ dữ liệu: consumer độc lập, đọc lại được lịch sử, nhưng schema lớn. Báo hiệu: nhỏ, nhưng consumer gọi API của producer và chỉ thấy trạng thái hiện tại." },
+    { "id": "backward", "front": "BACKWARD nghĩa là gì, ai nâng trước?", "back": "Schema mới đọc được dữ liệu cũ. Nâng consumer trước. Được thêm trường có mặc định và xoá trường." },
+    { "id": "forward", "front": "FORWARD nghĩa là gì, ai nâng trước?", "back": "Schema cũ đọc được dữ liệu mới. Nâng producer trước." },
+    { "id": "transitive", "front": "Khi nào cần `_TRANSITIVE`?", "back": "Khi consumer có thể đọc dữ liệu từ nhiều phiên bản trước (retention dài, đọc lại từ đầu, event sourcing)." },
+    { "id": "safe-changes", "front": "Thay đổi schema nào an toàn?", "back": "Thêm trường tuỳ chọn có mặc định. Không đổi tên, không đổi kiểu, không tái sử dụng tên hay số trường đã xoá." },
+    { "id": "protobuf-reserved", "front": "Xoá trường Protobuf đúng cách?", "back": "Khai báo `reserved` cả số và tên trường để không ai dùng lại; trên dây chỉ có số trường." },
+    { "id": "jackson-unknown", "front": "Bẫy của `new ObjectMapper()` khi đọc event JSON?", "back": "Jackson 2.x: `FAIL_ON_UNKNOWN_PROPERTIES=true`, producer thêm trường là consumer vỡ (mapper của Spring Boot 3 và Spring Kafka đã tắt). Jackson 3 đổi mặc định thành false." },
+    { "id": "breaking", "front": "Thay đổi phá vỡ thì làm thế nào?", "back": "Topic hoặc phiên bản event mới, producer ghi cả hai trong giai đoạn chuyển, consumer chuyển dần, rồi dừng bản cũ." },
+    { "id": "money", "front": "Kiểu dữ liệu cho tiền trong event?", "back": "Số nguyên đơn vị nhỏ nhất cộng mã tiền tệ, hoặc `decimal` có precision và scale; không dùng `double`." }
+  ]
+}

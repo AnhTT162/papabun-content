@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Mỗi lần rebalance, một email bị gửi lại cho mỗi partition",
+  "context": "Service gửi email đọc topic `notifications` (12 partition) bằng `KafkaConsumer` thuần, tắt auto commit để \"chỉ commit khi gửi xong\". Deploy rolling 3 pod mỗi ngày.",
+  "buggyCode": "while (running) {\n    ConsumerRecords<String, Notification> records = consumer.poll(Duration.ofMillis(500));\n    for (ConsumerRecord<String, Notification> record : records) {\n        emailSender.send(record.value());\n        consumer.commitSync(Map.of(\n            new TopicPartition(record.topic(), record.partition()),\n            new OffsetAndMetadata(record.offset())));\n    }\n}",
+  "symptom": {
+    "description": "Sau mỗi lần deploy, khách hàng phàn nàn nhận trùng email. Log cho thấy mỗi lần rebalance có khoảng 12 email bị gửi lại, bằng số partition; một lần deploy 3 pod gây vài lần rebalance nên vài chục email trùng, và lúc tải thấp thì cùng một email có thể bị gửi lại nhiều lần. Không có lỗi nào trong log.",
+    "output": "$ kafka-consumer-groups --bootstrap-server kafka:9092 --describe --group email-sender\n\nGROUP         TOPIC          PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG\nemail-sender  notifications  0          18233           18234           1\nemail-sender  notifications  1          17990           17991           1\nemail-sender  notifications  2          18102           18103           1\n...  (mọi partition đều lag 1 dù không có message mới)"
+  },
+  "diagnosis": {
+    "question": "Vì sao luôn có đúng một message mỗi partition bị xử lý lại?",
+    "options": [
+      "`commitSync` chạy bất đồng bộ nên lần commit cuối chưa kịp gửi khi pod tắt",
+      "Offset commit phải là offset kế tiếp cần đọc; code commit offset của chính message vừa xử lý, nên consumer mới đọc lại message đó",
+      "Rebalance làm Kafka lùi offset một bước để an toàn",
+      "Deploy rolling làm hai pod cùng đọc một partition trong một lúc"
+    ],
+    "answer": 1,
+    "explanation": "Kafka hiểu offset đã commit là vị trí **bắt đầu đọc** lần sau. Commit `record.offset()` nghĩa là \"hãy đọc lại từ message này\". Sau mỗi lần rebalance (deploy), consumer nhận partition bắt đầu từ offset đã commit, nên message cuối của mỗi partition được đọc lại. Lag 1 thường trực khi không có message mới là dấu hiệu rõ. `commitSync` là đồng bộ. Rebalance không tự lùi offset."
+  },
+  "fix": {
+    "code": "while (running) {\n    ConsumerRecords<String, Notification> records = consumer.poll(Duration.ofMillis(500));\n    Map<TopicPartition, OffsetAndMetadata> toCommit = new HashMap<>();\n    for (ConsumerRecord<String, Notification> record : records) {\n        emailSender.send(record.value(), record.value().notificationId());   // id duy nhất của message làm idempotency key\n        toCommit.put(new TopicPartition(record.topic(), record.partition()),\n                     new OffsetAndMetadata(record.offset() + 1));\n    }\n    if (!toCommit.isEmpty()) {\n        consumer.commitSync(toCommit);   // một lần mỗi lô thay vì mỗi record\n    }\n}\n\n// Hoặc dùng Spring Kafka: @KafkaListener với AckMode.BATCH hoặc RECORD,\n// container tự commit đúng offset + 1.",
+    "explanation": "Commit `offset + 1`, tức message kế tiếp. Commit một lần sau mỗi lô thay vì sau mỗi record: `commitSync` từng record là một round-trip tới broker, làm consumer chậm hẳn. Commit theo lô thì chết giữa lô sẽ gửi lại phần đã xong của lô, nên vẫn cần idempotency: dùng id của message (hoặc `topic-partition-offset`) làm khoá chống trùng ở nhà cung cấp email hoặc ở bảng đã gửi. Không dùng key của record: key dùng để phân partition (khách hàng, đơn hàng), không duy nhất cho từng message. Thêm `ConsumerRebalanceListener` để commit phần đã xử lý trước khi mất partition. Spring Kafka tự lo phần offset này, nên lỗi này hay gặp ở code dùng `KafkaConsumer` trực tiếp."
+  }
+}

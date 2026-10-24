@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "incr-expire", "front": "Bẫy của `INCR` rồi `EXPIRE` khi làm rate limit?", "back": "Hai lệnh riêng: `EXPIRE` lỗi là key sống mãi và chặn người dùng vĩnh viễn. Gộp bằng Lua, hoặc `EXPIRE key ttl NX` sau mỗi `INCR`." },
+    { "id": "fixed-window", "front": "Nhược điểm của fixed window?", "back": "Cho phép gấp đôi giới hạn quanh ranh giới hai cửa sổ. Sliding window hoặc token bucket khắc phục." },
+    { "id": "leaderboard", "front": "Lệnh chính cho bảng xếp hạng?", "back": "`ZADD`/`ZINCRBY` ghi điểm, `ZRANGE lb 0 99 REV WITHSCORES` lấy top, `ZREVRANK` lấy hạng, `ZMSCORE` cho bạn bè." },
+    { "id": "tie-break", "front": "Cùng điểm, muốn ai đạt trước xếp trên?", "back": "Mã hoá thời gian vào score: `điểm * 2^20 + (2^20 - 1 - giây từ đầu kỳ)`, giữ dưới 2^53 để chính xác." },
+    { "id": "lua-atomic", "front": "Lua script trong Redis cho gì và giá là gì?", "back": "Nhiều lệnh thành một bước nguyên tử. Giá: script chạy lâu chặn cả instance." },
+    { "id": "lua-keys", "front": "Vì sao mọi key phải truyền qua `KEYS` trong Lua?", "back": "Để Redis Cluster kiểm tra các key cùng slot và gửi script tới đúng node." },
+    { "id": "idempotency", "front": "Khoá idempotency bằng Redis?", "back": "`SET idem:<key> PROCESSING NX EX 60` (TTL ngắn), thắng thì xử lý rồi ghi kết quả với TTL dài; thua thì trả kết quả đã lưu hoặc báo đang xử lý." },
+    { "id": "stream-pending", "front": "Message Stream chưa ack khi consumer chết thì sao?", "back": "Nằm trong pending list; consumer khác nhận lại bằng `XAUTOCLAIM`." },
+    { "id": "hll", "front": "HyperLogLog dùng khi nào?", "back": "Đếm phần tử phân biệt (người dùng duy nhất) với tối đa 12KB, sai số khoảng 0,81%; gộp được bằng `PFMERGE`." },
+    { "id": "not-redis", "front": "Khi nào không nên dùng Redis làm nơi lưu?", "back": "Dữ liệu không được mất (tiền, đơn hàng), cần truy vấn phức tạp, hoặc lớn hơn RAM nhiều lần." }
+  ]
+}
