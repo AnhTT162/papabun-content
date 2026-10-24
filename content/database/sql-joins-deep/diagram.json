@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đọc plan của một Hash Join",
+  "nodes": [
+    { "id": "result", "label": "Kết quả", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "hashjoin", "label": "Hash Join", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "probe", "label": "Seq Scan order_items", "kind": "database", "x": 0.1, "y": 0.5 },
+    { "id": "hash", "label": "Hash (bảng băm)", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "spill", "label": "Đĩa tạm (batch)", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "build", "label": "Index Scan orders", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "build-hash", "from": "build", "to": "hash", "label": "dựng theo order id" },
+    { "id": "hash-join", "from": "hash", "to": "hashjoin", "label": "bảng băm" },
+    { "id": "probe-join", "from": "probe", "to": "hashjoin", "label": "dò từng dòng" },
+    { "id": "join-result", "from": "hashjoin", "to": "result", "label": "dòng khớp" },
+    { "id": "hash-spill", "from": "hash", "to": "spill", "label": "vượt work_mem" }
+  ],
+  "steps": [
+    { "caption": "Plan đọc từ dưới lên. Bên nhỏ hơn (384 nghìn đơn của một cửa hàng) được đọc trước, làm build side.", "show": ["build"] },
+    { "caption": "Mỗi đơn được đưa vào bảng băm theo khoá join `order_id`, nằm trong bộ nhớ.", "show": ["hash", "build-hash"], "highlight": ["build-hash"] },
+    { "caption": "Bên lớn (30 triệu dòng hàng) chỉ được đọc một lần, làm probe side.", "show": ["probe"] },
+    { "caption": "Mỗi dòng hàng tra bảng băm theo `order_id`: chi phí gần như cố định, không cần index ở bên lớn.", "show": ["hashjoin", "probe-join", "hash-join"], "highlight": ["probe-join"] },
+    { "caption": "Các dòng khớp đi tiếp lên node phía trên (ở đây là kết quả).", "show": ["result", "join-result"], "highlight": ["join-result"] },
+    { "caption": "Bảng băm vượt `work_mem × hash_mem_multiplier` thì bị chia batch ghi ra đĩa: `EXPLAIN ANALYZE` hiện `Batches` > 1.", "show": ["spill", "hash-spill"], "highlight": ["hash-spill"] }
+  ]
+}

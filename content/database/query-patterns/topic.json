@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "query-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Các mẫu query hiệu năng",
+  "summary": "Keyset pagination thay OFFSET, đếm số dòng mà không quét cả bảng, ghi hàng loạt bằng batch, COPY và upsert, OR và UNION, bộ lọc tuỳ chọn và generic plan, IN với danh sách lớn, sửa và xoá dữ liệu lớn theo từng lô.",
+  "level": "mid",
+  "order": 11,
+  "minutes": 16,
+  "prerequisites": ["index-execution-plan", "jdbc-basics"],
+  "terms": ["keyset-pagination", "upsert", "generic-plan", "jdbc-batching", "covering-index", "bitmap-scan", "sargable", "partitioning", "dto-projection", "prepared-statement", "hot-update"],
+  "references": [
+    { "title": "PostgreSQL Documentation: INSERT ... ON CONFLICT", "url": "https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT" },
+    { "title": "MySQL 8.0: INSERT ... ON DUPLICATE KEY UPDATE", "url": "https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html" },
+    { "title": "Use The Index, Luke: Paging Through Results", "url": "https://use-the-index-luke.com/sql/partial-results/fetch-next-page" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "warning", "markdown": "`UPDATE` hoặc `DELETE` hàng triệu dòng trong một câu lệnh là một transaction khổng lồ, giữ lock trên mọi dòng đó tới khi xong. Hậu quả khác nhau theo database:\n- **InnoDB**: lỗi giữa chừng thì rollback phải áp undo log từng dòng, lâu ngang lúc chạy. Binlog chỉ được ghi khi commit, nên replica nhận cả khối một lần và trễ.\n- **PostgreSQL**: rollback gần như tức thì, nhưng để lại hàng triệu dòng chết làm bảng phình tới khi VACUUM dọn. Lượng WAL lớn làm replica trễ. Transaction chạy lâu còn giữ xmin horizon, nên VACUUM không dọn được dòng chết ở bất cứ đâu trong database.\n\nChia thành lô vài nghìn dòng, commit sau mỗi lô, và nghỉ ngắn giữa các lô khi replica bắt đầu trễ." },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Keyset pagination không nhảy được tới trang 50, vậy UI có nút số trang thì sao?\" Hỏi lại nhu cầu thật: người dùng hầu như không nhảy tới trang 50, họ lọc hoặc tìm kiếm. Phương án thường dùng là \"Tải thêm\"/cuộn vô hạn bằng keyset, giới hạn số trang hiển thị (như các công cụ tìm kiếm), và chỉ dùng `OFFSET` cho vài trang đầu, nơi nó vẫn rẻ. Tổng số trang thì hiển thị con số ước lượng hoặc \"hơn 1.000\"." }
+  ]
+}

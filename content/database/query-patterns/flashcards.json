@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "offset-cost",
+      "front": "Vì sao `OFFSET 100000` chậm dù có index?",
+      "back": "Database vẫn phải đọc và bỏ đi 100.000 dòng trước khi trả trang cần lấy; chi phí tăng theo độ sâu của trang."
+    },
+    {
+      "id": "keyset-query",
+      "front": "Keyset pagination viết thế nào?",
+      "back": "Nhớ khoá dòng cuối trang trước: `WHERE (created_at, id) < (:c, :id) ORDER BY created_at DESC, id DESC LIMIT 50`, với index `(created_at, id)`."
+    },
+    {
+      "id": "tie-breaker",
+      "front": "Vì sao keyset cần thêm `id` vào `ORDER BY`?",
+      "back": "Để thứ tự là duy nhất; nhiều dòng cùng `created_at` thì ranh giới trang không xác định và dòng bị lặp hoặc sót."
+    },
+    {
+      "id": "count-mvcc",
+      "front": "Vì sao `count(*)` trên PostgreSQL và InnoDB phải quét?",
+      "back": "Với MVCC, mỗi transaction thấy một tập dòng khác nhau, nên không có một con số tổng lưu sẵn đúng cho mọi người."
+    },
+    {
+      "id": "has-next-page",
+      "front": "Biết \"còn trang sau\" mà không cần `count(*)` thế nào?",
+      "back": "Lấy `LIMIT n + 1`: nhận được n + 1 dòng thì còn trang sau, chỉ hiển thị n dòng."
+    },
+    {
+      "id": "upsert-pg",
+      "front": "Upsert trong PostgreSQL viết thế nào và cần gì?",
+      "back": "`INSERT ... ON CONFLICT (sku) DO UPDATE SET price = EXCLUDED.price`; cần unique index hoặc constraint trên `sku`."
+    },
+    {
+      "id": "on-conflict-twice",
+      "front": "Lỗi `ON CONFLICT DO UPDATE command cannot affect row a second time` nghĩa là gì?",
+      "back": "Cùng một câu `INSERT` có hai dòng trùng khoá; lọc trùng trong batch trước khi gửi."
+    },
+    {
+      "id": "catch-all-filter",
+      "front": "Vì sao `(:status IS NULL OR status = :status)` hay làm query chậm?",
+      "back": "Một plan phải phục vụ mọi tổ hợp bộ lọc, và generic plan của prepared statement không biết giá trị thật. Sinh SQL chỉ với điều kiện có mặt."
+    },
+    {
+      "id": "batch-delete",
+      "front": "Xoá 50 triệu dòng cũ thế nào cho an toàn?",
+      "back": "Xoá theo lô vài nghìn dòng theo khoá chính, commit mỗi lô; nếu xoá theo thời gian định kỳ thì partition theo thời gian và drop partition."
+    },
+    {
+      "id": "keyset-mixed-direction",
+      "front": "Keyset với `ORDER BY created_at DESC, id ASC` viết điều kiện thế nào?",
+      "back": "Không dùng được một phép so sánh hàng vì hai cột ngược chiều: viết `created_at < :c OR (created_at = :c AND id > :id)`, hoặc giữ mọi cột cùng chiều."
+    }
+  ]
+}

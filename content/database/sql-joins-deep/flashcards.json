@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "nested-loop-when", "front": "Nested loop join hợp khi nào?", "back": "Khi bên ngoài ít dòng và bên trong có index trên khoá join: mỗi dòng ngoài tra index một lần." },
+    { "id": "hash-join-how", "front": "Hash join chạy thế nào?", "back": "Dựng bảng băm từ bên nhỏ (build), rồi đọc bên lớn một lần và tra bảng băm cho từng dòng (probe). Trong PostgreSQL chỉ dùng cho điều kiện `=`." },
+    { "id": "merge-join-mysql", "front": "MySQL có những thuật toán join nào?", "back": "Nested loop và hash join (từ 8.0.18; thay hẳn block nested loop từ 8.0.20). MySQL không có merge join." },
+    { "id": "bad-plan-root", "front": "Dấu hiệu chính của plan JOIN tệ trong `EXPLAIN ANALYZE`?", "back": "`rows` ước lượng lệch xa `actual rows`, kèm node inner của nested loop có `loops` rất lớn." },
+    { "id": "correlated-columns", "front": "Vì sao điều kiện trên nhiều cột phụ thuộc nhau bị ước lượng quá thấp?", "back": "Planner coi chúng độc lập và nhân selectivity. PostgreSQL sửa bằng `CREATE STATISTICS ... (dependencies)` rồi `ANALYZE`." },
+    { "id": "hash-batches", "front": "`Batches: 8` trong node Hash nghĩa là gì?", "back": "Bảng băm vượt `work_mem × hash_mem_multiplier` nên bị chia 8 phần ghi ra đĩa tạm." },
+    { "id": "cte-fence", "front": "CTE trong PostgreSQL có còn là rào chắn tối ưu không?", "back": "Từ PostgreSQL 12 thì không, với CTE không đệ quy, không tác dụng phụ và chỉ dùng một lần: nó được gộp vào query. `AS MATERIALIZED` ép tính riêng." },
+    { "id": "last-value-frame", "front": "Vì sao `LAST_VALUE(x) OVER (ORDER BY t)` trả giá trị của chính dòng hiện tại?", "back": "Frame mặc định khi có `ORDER BY` kết thúc ở dòng hiện tại. Viết `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`." },
+    { "id": "join-fan-out", "front": "Join `orders` với cả `order_items` và `payments` rồi `SUM(payments.amount)` sai thế nào?", "back": "Mỗi lần thanh toán bị lặp theo số dòng hàng nên tổng bị nhân lên. Gộp từng bảng con theo `order_id` trước rồi mới join." }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sql-joins-deep",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "JOIN & tối ưu query",
+  "summary": "Nested loop, hash join và merge join chạy thế nào, khi nào planner chọn sai vì ước lượng sai số dòng, extended statistics, thứ tự join, subquery thành semi-join, CTE có còn là rào chắn tối ưu, window function, LATERAL và bẫy JOIN nhân dòng.",
+  "level": "mid",
+  "order": 10,
+  "minutes": 18,
+  "prerequisites": ["index-execution-plan", "sql-fundamentals"],
+  "terms": ["nested-loop-join", "hash-join", "merge-join", "execution-plan", "planner-statistics", "cardinality-estimation", "extended-statistics", "semi-join", "cte", "window-function", "lateral-join", "join-fan-out", "correlated-subquery", "selectivity", "outer-join"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Using EXPLAIN", "url": "https://www.postgresql.org/docs/current/using-explain.html" },
+    { "title": "PostgreSQL Documentation: Extended Statistics", "url": "https://www.postgresql.org/docs/current/planner-stats.html#PLANNER-STATS-EXTENDED" },
+    { "title": "MySQL 8.0: Hash Join Optimization", "url": "https://dev.mysql.com/doc/refman/8.0/en/hash-joins.html" },
+    { "title": "PostgreSQL Documentation: Controlling the Planner with Explicit JOIN Clauses", "url": "https://www.postgresql.org/docs/current/explicit-joins.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Query đang nhanh, hôm nay tự nhiên chậm gấp 50 lần dù code không đổi. Vì sao?\" Thường là plan đổi, không phải code đổi. Thống kê được cập nhật (autovacuum `ANALYZE`, dữ liệu tăng qua một ngưỡng) làm ước lượng số dòng thay đổi, và planner chuyển từ hash join sang nested loop hoặc ngược lại. Cách điều tra: dùng `pg_stat_statements` để thấy thời gian trung bình của query tăng từ lúc nào, `auto_explain` để log plan của các lần chạy chậm, rồi so với plan cũ, tìm node có `rows` ước lượng lệch xa `actual rows`, rồi sửa nguồn của ước lượng sai thay vì ép plan." }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "join-fan-out-sum",
+      "kind": "output",
+      "prompt": "Đơn 1 có 3 dòng hàng và 2 lần thanh toán, mỗi lần 50.000. Query trả về `paid` bằng bao nhiêu?",
+      "code": "SELECT o.id, SUM(p.amount) AS paid\nFROM orders o\nJOIN order_items i ON i.order_id = o.id\nJOIN payments p ON p.order_id = o.id\nWHERE o.id = 1\nGROUP BY o.id;",
+      "options": [
+        "100.000",
+        "300.000",
+        "150.000",
+        "50.000"
+      ],
+      "answer": 1,
+      "explanation": "Hai JOIN tạo 3 × 2 = 6 dòng cho đơn 1: mỗi lần thanh toán lặp lại theo từng dòng hàng. `SUM` cộng 6 lần 50.000 = 300.000. Sửa bằng cách gộp `payments` theo `order_id` trong subquery hoặc CTE trước rồi mới join, hoặc bỏ `order_items` nếu không cần."
+    },
+    {
+      "id": "last-value-default-frame",
+      "kind": "output",
+      "prompt": "Bảng `price(day, value)` có 3 dòng: (1, 10), (2, 20), (3, 30). Cột `latest` ở dòng `day = 1` là gì?",
+      "code": "SELECT day, value,\n       LAST_VALUE(value) OVER (ORDER BY day) AS latest\nFROM price\nORDER BY day;",
+      "options": [
+        "30, giá trị cuối cùng của cả bảng",
+        "10",
+        "NULL",
+        "Lỗi: `LAST_VALUE` cần `PARTITION BY`"
+      ],
+      "answer": 1,
+      "explanation": "Có `ORDER BY` trong `OVER` thì frame mặc định là `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. Ở dòng `day = 1`, frame chỉ chứa chính nó, nên `LAST_VALUE` là 10; cả cột `latest` sẽ là 10, 20, 30. Muốn 30 cho mọi dòng thì viết `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`, hoặc `FIRST_VALUE(value) OVER (ORDER BY day DESC)`."
+    },
+    {
+      "id": "choose-join-algorithm",
+      "kind": "single",
+      "prompt": "Báo cáo join toàn bộ 2 triệu khách hàng với 50 triệu đơn hàng theo `customer_id`, tính tổng chi tiêu từng khách. Plan nào thường hợp lý nhất?",
+      "options": [
+        "Nested loop: với mỗi khách, tra index `orders(customer_id)`",
+        "Hash join: dựng bảng băm từ `customers`, đọc `orders` một lần và dò",
+        "Nested loop không index, vì đọc tuần tự luôn nhanh hơn",
+        "Bắt buộc merge join vì có hai bảng lớn"
+      ],
+      "answer": 1,
+      "explanation": "Cả hai tập đều lớn và điều kiện là `=`: đọc mỗi bảng một lần rồi dò bảng băm rẻ hơn 2 triệu lần tra index rải rác. Merge join cũng có thể hợp nếu cả hai đã được sắp theo `customer_id` qua index, nhưng không \"bắt buộc\". Nested loop chỉ thắng khi bên ngoài nhỏ, ví dụ báo cáo cho 10 khách."
+    },
+    {
+      "id": "cte-inlining",
+      "kind": "single",
+      "prompt": "PostgreSQL 16. CTE `recent` được dùng một lần: `WITH recent AS (SELECT * FROM orders WHERE created_at > now() - interval '1 day') SELECT * FROM recent WHERE customer_id = 42;`. Có index `orders(customer_id)`. Điều kiện `customer_id = 42` có được dùng khi đọc `orders` không?",
+      "options": [
+        "Không, CTE luôn được tính riêng và lưu tạm trước",
+        "Có: từ PostgreSQL 12, CTE không đệ quy, không tác dụng phụ và chỉ dùng một lần được gộp vào query chính, nên cả hai điều kiện được áp lúc đọc `orders`",
+        "Chỉ khi viết `WITH recent AS MATERIALIZED`",
+        "Chỉ khi chạy `ANALYZE` trước"
+      ],
+      "answer": 1,
+      "explanation": "Trước PostgreSQL 12, CTE là rào chắn tối ưu nên câu trả lời đầu tiên từng đúng, và nhiều bài viết cũ vẫn khuyên tránh CTE vì vậy. Từ 12, CTE kiểu này được inline. `AS MATERIALIZED` làm điều ngược lại: ép tính riêng, hữu ích khi muốn tính một lần cho nhiều chỗ dùng hoặc muốn chặn planner chọn plan tệ."
+    }
+  ]
+}

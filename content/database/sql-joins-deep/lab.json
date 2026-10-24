@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Báo cáo một cửa hàng chạy 40 giây",
+  "context": "Hệ thống bán hàng nhiều tenant trên PostgreSQL 16. `orders` có 8 triệu dòng, `order_items` 30 triệu dòng. Mỗi cửa hàng (`store_id`) thuộc đúng một merchant, mỗi merchant thuộc đúng một tenant. Cửa hàng 77 là cửa hàng lớn nhất, có 384.112 đơn. Role báo cáo chạy với `work_mem = 64MB`; thống kê vừa được `ANALYZE`.",
+  "buggyCode": "SELECT i.product_id, SUM(i.quantity) AS sold\nFROM orders o\nJOIN order_items i ON i.order_id = o.id\nWHERE o.tenant_id = 42\n  AND o.merchant_id = 9001\n  AND o.store_id = 77\nGROUP BY i.product_id;\n\n-- index: orders(store_id), order_items(order_id)",
+  "symptom": {
+    "description": "Báo cáo mất khoảng 40 giây. `EXPLAIN ANALYZE` (rút gọn, bỏ phần GROUP BY phía trên):",
+    "output": "Nested Loop  (cost=1.13..61408.22 rows=48000 width=40)\n             (actual time=0.085..39874.210 rows=1920560 loops=1)\n  ->  Index Scan using idx_orders_store on orders o\n        (cost=0.56..9805.12 rows=9600 width=16)\n        (actual time=0.031..655.402 rows=384112 loops=1)\n        Index Cond: (store_id = 77)\n        Filter: ((tenant_id = 42) AND (merchant_id = 9001))\n  ->  Index Scan using idx_order_items_order_id on order_items i\n        (cost=0.56..5.32 rows=5 width=24)\n        (actual time=0.018..0.101 rows=5 loops=384112)\n        Index Cond: (order_id = o.id)\nExecution Time: 40311.507 ms"
+  },
+  "diagnosis": {
+    "question": "Vì sao query chậm?",
+    "options": [
+      "Thiếu index trên `order_items.order_id`, nên mỗi đơn phải quét cả bảng dòng hàng",
+      "Planner ước lượng 9.600 đơn vì nhân selectivity của ba điều kiện như thể chúng độc lập, trong khi `store_id = 77` đã kéo theo hai điều kiện kia. Thực tế 384.112 đơn, nên nested loop tra index `order_items` 384.112 lần",
+      "`work_mem` quá nhỏ nên hash join tràn ra đĩa",
+      "Index Scan trên `orders` chậm; cần covering index `(store_id, tenant_id, merchant_id, id)`"
+    ],
+    "answer": 1,
+    "explanation": "So `rows=9600` với `actual rows=384112` ở node `orders`: lệch 40 lần. Thống kê từng cột nói cửa hàng 77 chiếm 4,8% bảng, tenant 42 chiếm 25%, merchant 9001 chiếm 10%. Planner nhân cả ba: 8.000.000 × 0,048 × 0,25 × 0,1 = 9.600. Với 9.600 đơn, nested loop có vẻ rẻ, nhưng thực tế node inner chạy `loops=384112` lần × 0,101ms ≈ 39 giây. Index trên `order_items.order_id` vẫn được dùng; plan không có hash join nào để tràn đĩa; và scan `orders` chỉ mất 0,65 giây."
+  },
+  "fix": {
+    "code": "-- Cho planner biết ba cột phụ thuộc nhau\nCREATE STATISTICS orders_tenant_merchant_store (dependencies)\n    ON tenant_id, merchant_id, store_id FROM orders;\nANALYZE orders;\n\n-- Plan mới (đã tắt parallel query cho dễ đọc; mặc định PostgreSQL sẽ thêm Gather và Parallel Hash Join)\nHash Join  (actual time=1180.2..4702.6 rows=1920560 loops=1)\n  Hash Cond: (i.order_id = o.id)\n  ->  Seq Scan on order_items i  (actual rows=30000000 loops=1)\n  ->  Hash  (actual rows=384112 loops=1)\n        Buckets: 524288  Batches: 1  Memory Usage: 21009kB\n        ->  Index Scan using idx_orders_store on orders o\n              (rows=380950) (actual rows=384112 loops=1)\nExecution Time: 4961.3 ms",
+    "explanation": "Với thống kê phụ thuộc, planner biết `store_id = 77` gần như quyết định luôn tenant và merchant, nên ước lượng 380.950 đơn. Ở mức đó, đọc 30 triệu dòng hàng một lần và dò bảng băm rẻ hơn 384 nghìn lần tra index, nên planner chọn hash join và query còn 5 giây. Bảng băm 21MB vừa với `work_mem × hash_mem_multiplier` (64MB × 2) nên `Batches: 1`. Nếu điều kiện thừa (`tenant_id`, `merchant_id`) chỉ để phân quyền, giữ chúng vẫn đúng; extended statistics là cách sửa không phải đổi query. Trên MySQL không có extended statistics nhiều cột: thường phải dùng index nhiều cột để optimizer ước lượng bằng index dive, hoặc dùng hint."
+  }
+}

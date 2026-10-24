@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "offset-shift-duplicate",
+      "kind": "single",
+      "prompt": "API trả danh sách bài viết mới nhất bằng `ORDER BY created_at DESC LIMIT 20 OFFSET :offset`. Người dùng đang xem trang 1 thì có 3 bài mới được đăng, rồi họ bấm sang trang 2. Họ thấy gì?",
+      "options": [
+        "Đúng 20 bài tiếp theo, không lặp",
+        "3 bài cuối của trang 1 xuất hiện lại ở đầu trang 2",
+        "Trang 2 thiếu 3 bài",
+        "Lỗi vì dữ liệu thay đổi giữa hai lần gọi"
+      ],
+      "answer": 1,
+      "explanation": "3 bài mới đứng đầu danh sách đẩy mọi bài xuống 3 vị trí. `OFFSET 20` giờ bắt đầu ở bài từng là thứ 18, nên 3 bài cuối trang 1 bị lặp. Ngược lại, xoá bài ở trang trước sẽ làm sót bài. Keyset (`WHERE (created_at, id) < (:lastCreatedAt, :lastId)`) không bị ảnh hưởng vì nó bắt đầu từ khoá của dòng cuối, không từ vị trí."
+    },
+    {
+      "id": "upsert-vs-select-insert",
+      "kind": "single",
+      "prompt": "Hai request đồng thời cùng lưu giá cho `sku = 'A1'` chưa có trong bảng, code: `if (repo.findBySku(sku).isEmpty()) repo.insert(...) else repo.update(...)`. Bảng có unique index trên `sku`. Kết quả hay gặp?",
+      "options": [
+        "Luôn đúng, vì có unique index",
+        "Cả hai đều thấy chưa có và cùng insert; một request thành công, request kia lỗi unique violation. Dùng `INSERT ... ON CONFLICT (sku) DO UPDATE` để một câu lệnh nguyên tử xử lý cả hai trường hợp",
+        "Hai dòng `A1` được tạo",
+        "Request thứ hai tự chuyển sang update"
+      ],
+      "answer": 1,
+      "explanation": "Kiểm tra rồi mới insert là hai câu lệnh riêng; giữa chúng request kia cũng kiểm tra và cũng thấy chưa có. Unique index chặn được dòng trùng (nên không có hai dòng), nhưng request thua nhận lỗi thay vì được cập nhật. Upsert để database tự quyết định insert hay update dưới khoá của chính index đó."
+    },
+    {
+      "id": "or-different-columns",
+      "kind": "single",
+      "prompt": "Bảng `customers` 20 triệu dòng, có index riêng trên `email` và trên `phone`. Query `WHERE email = :value OR phone = :value` đang chạy Seq Scan. Cách sửa nào hợp lý nhất?",
+      "options": [
+        "Tạo index nhiều cột `(email, phone)`",
+        "Viết lại thành hai query `WHERE email = :value` và `WHERE phone = :value` nối bằng `UNION`, hoặc kiểm tra vì sao planner không chọn BitmapOr (thường do kiểu tham số hoặc thống kê)",
+        "Thêm `ORDER BY id`",
+        "Tăng `work_mem`"
+      ],
+      "answer": 1,
+      "explanation": "Index `(email, phone)` chỉ tìm được theo `email` (cột đầu), không giúp vế `phone = ?`. Mỗi vế của `OR` cần index riêng: PostgreSQL có thể kết hợp chúng bằng BitmapOr, MySQL bằng index merge. Viết `UNION` (hoặc `UNION ALL` khi chắc không trùng) cho mỗi nhánh dùng index của nó một cách tường minh."
+    },
+    {
+      "id": "has-more-without-count",
+      "kind": "single",
+      "prompt": "Màn hình cần 20 dòng và biết có trang sau hay không. Query trả về 21 dòng. Ứng dụng nên làm gì?",
+      "code": "SELECT id, title FROM articles\nWHERE (created_at, id) < (:c, :id)\nORDER BY created_at DESC, id DESC\nLIMIT 21;",
+      "options": [
+        "Hiển thị 21 dòng",
+        "Hiển thị 20 dòng đầu, bật nút \"Trang sau\", và dùng dòng thứ 20 làm khoá cho trang sau",
+        "Gọi thêm `count(*)` để biết chắc",
+        "Dùng dòng thứ 21 làm khoá cho trang sau"
+      ],
+      "answer": 1,
+      "explanation": "Lấy dư một dòng cho biết còn dữ liệu mà không cần đếm cả bảng. Khoá cho trang sau là dòng cuối được hiển thị (thứ 20): dùng dòng thứ 21 làm khoá sẽ bỏ sót chính dòng đó, vì điều kiện `<` loại nó ra ở trang sau."
+    }
+  ]
+}

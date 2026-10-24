@@ -741,7 +741,7 @@
       "meaning": "Index chứa đủ mọi cột mà query cần, nên database trả kết quả từ index (Index Only Scan) mà thường không phải đọc bảng.",
       "example": "Query `SELECT customer_id, created_at` với index `(customer_id, created_at)`.",
       "related": ["composite-index", "index-only-scan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "query-patterns"]
     },
     {
       "id": "execution-plan",
@@ -749,7 +749,7 @@
       "meaning": "Kế hoạch database chọn để chạy một query: đọc bảng nào, dùng index nào, join và sort theo cách nào. Xem bằng `EXPLAIN`.",
       "example": "`EXPLAIN ANALYZE SELECT ...` in ra các node như `Index Scan`, `Hash Join`, `Sort` kèm thời gian.",
       "related": ["planner-statistics", "seq-scan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "sql-joins-deep"]
     },
     {
       "id": "planner-statistics",
@@ -757,7 +757,7 @@
       "meaning": "Thống kê database thu thập về dữ liệu (số dòng, giá trị phổ biến, phân bố) để ước lượng chi phí và chọn plan. Cập nhật bằng `ANALYZE`.",
       "example": "Sau khi import 2 triệu đơn của khách mới mà chưa `ANALYZE`, thống kê phân bố chưa có giá trị mới nên planner ước lượng `customer_id = 9001` chỉ khớp vài dòng.",
       "related": ["execution-plan", "selectivity"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "sql-joins-deep"]
     },
     {
       "id": "selectivity",
@@ -765,7 +765,7 @@
       "meaning": "Tỉ lệ dòng thoả điều kiện. Điều kiện chọn lọc cao (khớp ít dòng) mới đáng dùng index.",
       "example": "`email = '...'` khớp 1 dòng: chọn lọc cao. `status = 'DONE'` khớp 95%: chọn lọc thấp.",
       "related": ["planner-statistics", "seq-scan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "sql-joins-deep"]
     },
     {
       "id": "seq-scan",
@@ -781,7 +781,7 @@
       "meaning": "Điều kiện viết sao cho database dùng được index để tìm (Search ARGument ABLE): so sánh trực tiếp trên cột, không bọc cột trong hàm.",
       "example": "`created_at >= '2026-10-01'` là sargable; `date(created_at) = '2026-10-01'` thì không.",
       "related": ["expression-index", "b-tree"],
-      "topics": ["index-execution-plan", "partitioning-index"]
+      "topics": ["index-execution-plan", "partitioning-index", "query-patterns"]
     },
     {
       "id": "expression-index",
@@ -818,10 +818,10 @@
     {
       "id": "hot-update",
       "term": "HOT update",
-      "meaning": "Heap-Only Tuple: tối ưu của PostgreSQL khi `UPDATE` không đổi cột nào có B-tree index và page còn chỗ trống, nên không phải cập nhật index.",
+      "meaning": "Heap-Only Tuple: tối ưu của PostgreSQL khi `UPDATE` không đổi cột nào nằm trong index (trừ BRIN từ PostgreSQL 16) và page còn chỗ trống, nên không phải cập nhật index.",
       "example": "Tăng `view_count` (không có index) là HOT; đổi `email` có index thì không.",
       "related": ["b-tree"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "query-patterns"]
     },
     {
       "id": "skip-scan",
@@ -1037,7 +1037,7 @@
       "meaning": "Query trả thẳng về object chỉ chứa các cột cần dùng (DTO hoặc record), không tải entity đầy đủ.",
       "example": "`select new com.example.OrderSummary(o.id, c.name) from Order o join o.customer c`.",
       "related": ["fetch-join"],
-      "topics": ["n-plus-one"]
+      "topics": ["n-plus-one", "query-patterns"]
     },
     {
       "id": "open-session-in-view",
@@ -1077,7 +1077,7 @@
       "meaning": "Chia một bảng logic thành nhiều bảng vật lý (partition) theo giá trị của một cột, trong cùng một database. Query và ứng dụng vẫn thấy một bảng.",
       "example": "Bảng `orders` chia theo tháng: `orders_2026_10`, `orders_2026_11`...",
       "related": ["partition-key", "partition-pruning", "sharding"],
-      "topics": ["partitioning-index", "index-execution-plan"]
+      "topics": ["partitioning-index", "index-execution-plan", "query-patterns"]
     },
     {
       "id": "partition-key",
@@ -1165,7 +1165,7 @@
       "meaning": "Cách đọc của PostgreSQL: gom vị trí dòng từ một hoặc nhiều index thành bitmap theo page, rồi đọc bảng theo thứ tự vật lý (Bitmap Heap Scan). Hợp với độ chọn lọc trung bình.",
       "example": "Plan có `BitmapOr` kết hợp index trên `status` và index trên `customer_id`.",
       "related": ["seq-scan", "index-only-scan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "query-patterns"]
     },
     {
       "id": "index-bloat",
@@ -1197,7 +1197,7 @@
       "meaning": "JOIN giữ cả các dòng không khớp của một bên (LEFT/RIGHT) hoặc hai bên (FULL), điền NULL cho phía thiếu.",
       "example": "`customers LEFT JOIN orders` vẫn giữ khách chưa có đơn, với các cột của `orders` là NULL.",
       "related": ["three-valued-logic"],
-      "topics": ["sql-fundamentals"]
+      "topics": ["sql-fundamentals", "sql-joins-deep"]
     },
     {
       "id": "aggregate-function",
@@ -1213,7 +1213,7 @@
       "meaning": "Subquery tham chiếu tới cột của query bên ngoài, về logic được tính lại cho mỗi dòng bên ngoài.",
       "example": "`WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)`.",
       "related": ["outer-join"],
-      "topics": ["sql-fundamentals"]
+      "topics": ["sql-fundamentals", "sql-joins-deep"]
     },
     {
       "id": "primary-key",
@@ -1293,7 +1293,7 @@
       "meaning": "Câu SQL có tham số `?`, giá trị được bind riêng thay vì ghép chuỗi; chống SQL injection và cho phép tái sử dụng plan.",
       "example": "`ps = conn.prepareStatement(\"SELECT * FROM users WHERE email = ?\"); ps.setString(1, email);`",
       "related": ["sql-injection", "jdbc"],
-      "topics": ["jdbc-basics"]
+      "topics": ["jdbc-basics", "query-patterns"]
     },
     {
       "id": "sql-injection",
@@ -1317,7 +1317,7 @@
       "meaning": "Gom nhiều lệnh ghi (`addBatch`/`executeBatch`) để giảm số lượt đi về database.",
       "example": "MySQL cần `rewriteBatchedStatements=true` để gộp thành `INSERT` nhiều dòng.",
       "related": ["jdbc"],
-      "topics": ["jdbc-basics"]
+      "topics": ["jdbc-basics", "query-patterns"]
     },
     {
       "id": "connection-leak",
@@ -1454,6 +1454,110 @@
       "example": "`spring.datasource.hikari.maximum-pool-size=10` cấu hình kích thước pool trong Spring Boot.",
       "related": ["connection-pool", "datasource"],
       "topics": ["connection-pool"]
+    },
+    {
+      "id": "nested-loop-join",
+      "term": "Nested loop join",
+      "meaning": "Thuật toán join: với mỗi dòng của bên ngoài, tìm các dòng khớp ở bên trong (thường qua index). Rẻ khi bên ngoài ít dòng.",
+      "example": "Lấy 1 đơn hàng rồi tra index `order_items(order_id)` để lấy các dòng hàng của nó.",
+      "related": ["hash-join", "merge-join"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "hash-join",
+      "term": "Hash join",
+      "meaning": "Thuật toán join: dựng bảng băm từ bên nhỏ theo khoá join, rồi đọc bên lớn một lần và tra bảng băm cho từng dòng. PostgreSQL chỉ dùng cho điều kiện bằng.",
+      "example": "Join 384 nghìn đơn với 30 triệu dòng hàng: băm các đơn, quét dòng hàng một lần.",
+      "related": ["nested-loop-join", "merge-join"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "merge-join",
+      "term": "Merge join",
+      "meaning": "Thuật toán join: hai bên đã sắp theo khoá join được đi song song như trộn hai danh sách đã sắp. PostgreSQL có, MySQL không có.",
+      "example": "Hai bảng lớn đều có index theo `customer_id`: đọc song song theo thứ tự index.",
+      "related": ["hash-join", "nested-loop-join"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "cardinality-estimation",
+      "term": "Cardinality estimation",
+      "meaning": "Ước lượng số dòng mà mỗi bước của plan trả về, dựa trên thống kê. Planner chọn thuật toán join và thứ tự join theo ước lượng này.",
+      "example": "Ước lượng 9.600 dòng nhưng thực tế 384.112 dòng làm planner chọn nhầm nested loop.",
+      "related": ["planner-statistics", "selectivity", "extended-statistics"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "extended-statistics",
+      "term": "Extended statistics",
+      "meaning": "Thống kê trên nhiều cột cùng lúc của PostgreSQL (`CREATE STATISTICS`), giúp planner biết các cột phụ thuộc nhau thay vì coi chúng độc lập.",
+      "example": "`CREATE STATISTICS s (dependencies) ON tenant_id, store_id FROM orders; ANALYZE orders;`",
+      "related": ["cardinality-estimation", "planner-statistics"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "semi-join",
+      "term": "Semi-join",
+      "meaning": "Kiểu join chỉ kiểm tra có tồn tại dòng khớp hay không, mỗi dòng bên trái xuất hiện tối đa một lần. Anti-join là ngược lại: chỉ giữ dòng không có dòng khớp.",
+      "example": "`WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)` thường chạy thành semi-join.",
+      "related": ["correlated-subquery"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "cte",
+      "term": "CTE",
+      "meaning": "Common Table Expression: query con đặt tên bằng `WITH name AS (...)` để dùng trong query chính; `WITH RECURSIVE` cho phép đệ quy.",
+      "example": "`WITH recent AS (SELECT ...) SELECT * FROM recent WHERE ...`",
+      "related": ["correlated-subquery"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "window-function",
+      "term": "Window function",
+      "meaning": "Hàm tính trên một nhóm dòng liên quan tới dòng hiện tại (`OVER (PARTITION BY ... ORDER BY ...)`) mà không gộp các dòng lại như `GROUP BY`.",
+      "example": "`ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY created_at DESC)` đánh số đơn mới nhất của từng khách.",
+      "related": ["aggregate-function"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "lateral-join",
+      "term": "LATERAL join",
+      "meaning": "JOIN cho phép query con bên phải tham chiếu cột của bảng bên trái, như một vòng lặp chạy query con cho từng dòng.",
+      "example": "`FROM customers c CROSS JOIN LATERAL (SELECT ... WHERE o.customer_id = c.id ORDER BY created_at DESC LIMIT 3) o`",
+      "related": ["correlated-subquery", "window-function"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "join-fan-out",
+      "term": "Join fan-out",
+      "meaning": "Hiện tượng JOIN với bảng con một-nhiều làm dòng của bảng cha bị lặp lại, khiến `SUM` hay `COUNT` trên bảng cha hoặc bảng con khác bị nhân lên.",
+      "example": "Đơn có 3 dòng hàng và 2 lần thanh toán thành 6 dòng sau khi join cả hai.",
+      "related": ["cartesian-product"],
+      "topics": ["sql-joins-deep"]
+    },
+    {
+      "id": "keyset-pagination",
+      "term": "Keyset pagination",
+      "meaning": "Phân trang bằng cách nhớ khoá của dòng cuối trang trước và lấy các dòng sau khoá đó (`WHERE (created_at, id) < (?, ?)`), thay vì bỏ qua N dòng bằng `OFFSET`. Còn gọi là seek method.",
+      "example": "Trang nào cũng chỉ đọc 50 dòng nhờ index `(created_at, id)`, dù đang ở trang thứ 10.000.",
+      "related": ["sargable"],
+      "topics": ["query-patterns"]
+    },
+    {
+      "id": "upsert",
+      "term": "Upsert",
+      "meaning": "Insert nếu chưa có, update nếu đã có, trong một câu lệnh nguyên tử dựa trên unique index.",
+      "example": "PostgreSQL `INSERT ... ON CONFLICT (sku) DO UPDATE SET ...`; MySQL `INSERT ... ON DUPLICATE KEY UPDATE ...`.",
+      "related": ["constraint", "jdbc-batching"],
+      "topics": ["query-patterns"]
+    },
+    {
+      "id": "generic-plan",
+      "term": "Generic plan",
+      "meaning": "Plan của prepared statement được lập một lần mà không biết giá trị tham số, dùng lại cho mọi lần chạy. PostgreSQL có thể chuyển sang nó sau 5 lần chạy nếu ước lượng chi phí của nó không cao hơn đáng kể so với các plan riêng cho từng giá trị.",
+      "example": "5 lần đầu đều lọc theo một trạng thái hiếm, sau đó generic plan được dùng cho cả trạng thái phổ biến và chọn sai cách quét.",
+      "related": ["prepared-statement", "execution-plan"],
+      "topics": ["query-patterns"]
     }
   ]
 }
