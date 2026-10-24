@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một query đi từ code Java tới database",
+  "nodes": [
+    {"id": "app", "label": "Code: JPA / JdbcClient", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "pool", "label": "DataSource (Hikari)", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "stmt", "label": "Prepared Statement", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "conn", "label": "Connection", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "driver", "label": "JDBC driver", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "db", "label": "Database", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "app-pool", "from": "app", "to": "pool", "label": "getConnection()"},
+    {"id": "pool-conn", "from": "pool", "to": "conn", "label": "mượn từ pool"},
+    {"id": "conn-stmt", "from": "conn", "to": "stmt", "label": "prepareStatement"},
+    {"id": "stmt-driver", "from": "stmt", "to": "driver", "label": "bind tham số"},
+    {"id": "driver-db", "from": "driver", "to": "db", "label": "gửi SQL, nhận dòng"}
+  ],
+  "steps": [
+    {"caption": "Dù dùng JPA hay SQL viết tay, mọi truy cập database của Java cuối cùng đều đi qua JDBC.", "show": ["app"]},
+    {"caption": "Code xin Connection từ DataSource. Pool trả một connection đã mở sẵn, không phải bắt tay TCP, TLS và xác thực lại.", "show": ["pool", "app-pool"], "highlight": ["app-pool"]},
+    {"caption": "Connection mượn từ pool phải được close() để trả lại; quên trả là rò connection, pool cạn dần.", "show": ["conn", "pool-conn"], "highlight": ["pool-conn"]},
+    {"caption": "PreparedStatement giữ câu SQL với dấu ? và các tham số tách riêng.", "show": ["stmt", "conn-stmt"], "highlight": ["conn-stmt"]},
+    {"caption": "Driver bind tham số: giá trị người dùng không bao giờ thành cú pháp SQL.", "show": ["driver", "stmt-driver"], "highlight": ["stmt-driver"]},
+    {"caption": "Driver gửi SQL và tham số theo giao thức của database, rồi nhận kết quả về.", "show": ["db", "driver-db"], "highlight": ["driver-db"]},
+    {"caption": "Kết quả về theo lô chỉ khi fetch size được tôn trọng. PostgreSQL làm vậy khi tắt autocommit; nếu không, driver đọc hết vào bộ nhớ.", "show": [], "highlight": ["db"]}
+  ]
+}

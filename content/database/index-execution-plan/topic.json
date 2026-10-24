@@ -7,9 +7,9 @@
   "title": "Index & Execution Plan",
   "summary": "B-tree index hoạt động thế nào, index nhiều cột và quy tắc cột trái nhất, covering index, cách đọc EXPLAIN ANALYZE, và vì sao có index mà query vẫn chậm.",
   "level": "mid",
-  "order": 1,
+  "order": 5,
   "minutes": 18,
-  "prerequisites": [],
+  "prerequisites": ["sql-fundamentals"],
   "terms": ["b-tree", "clustered-index", "composite-index", "covering-index", "execution-plan", "planner-statistics", "selectivity", "seq-scan", "sargable", "expression-index", "index-only-scan", "tid", "partial-index", "hot-update", "skip-scan", "gin-index", "brin-index", "bitmap-scan", "index-bloat", "partitioning"],
   "references": [
     { "title": "PostgreSQL Documentation: Indexes", "url": "https://www.postgresql.org/docs/current/indexes.html" },

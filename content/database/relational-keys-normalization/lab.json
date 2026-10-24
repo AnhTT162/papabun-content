@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã kiểm tra email trùng mà vẫn có hai tài khoản",
+  "context": "Service đăng ký (Spring Boot, PostgreSQL). Bảng `users` có primary key `id` nhưng **không** có ràng buộc unique trên `email`; việc chống trùng do code đảm bảo. Nút \"Đăng ký\" trên app đôi khi bị bấm hai lần.",
+  "buggyCode": "@Transactional\npublic User register(String email, String password) {\n    if (userRepository.existsByEmail(email)) {\n        throw new EmailAlreadyUsedException(email);\n    }\n    return userRepository.save(new User(email, passwordEncoder.encode(password)));\n}",
+  "symptom": {
+    "description": "Thỉnh thoảng có hai tài khoản cùng email, tạo cách nhau vài mili giây. Đăng nhập sau đó lỗi vì `findByEmail` trả về hai dòng.",
+    "output": "SELECT id, email, created_at FROM users WHERE email = 'an@example.com';\n\n  id   | email          | created_at\n-------+----------------+----------------------------\n 90211 | an@example.com | 2026-10-20 09:14:03.412+07\n 90212 | an@example.com | 2026-10-20 09:14:03.418+07\n\norg.springframework.dao.IncorrectResultSizeDataAccessException:\n  Query did not return a unique result: 2 results were returned"
+  },
+  "diagnosis": {
+    "question": "Vì sao `@Transactional` và đoạn kiểm tra không chặn được bản trùng?",
+    "options": [
+      "`existsByEmail` không chạy trong transaction",
+      "Hai request chạy song song đều thấy \"chưa có\" rồi cùng `INSERT`; transaction ở READ COMMITTED không khoá một dòng chưa tồn tại, và không có ràng buộc unique nào ở database",
+      "PostgreSQL so sánh email phân biệt hoa thường nên coi là hai email khác nhau",
+      "`save` chạy ngoài transaction nên không bị rollback"
+    ],
+    "answer": 1,
+    "explanation": "Đây là kiểu check-then-act: giữa lúc kiểm tra và lúc ghi có một khe hở. Request thứ hai kiểm tra trước khi request thứ nhất commit, nên cả hai cùng thấy chưa có email. Transaction không khoá được một dòng chưa tồn tại, nên `@Transactional` không giúp gì ở đây. Hai email giống hệt nhau từng ký tự nên không phải vấn đề hoa thường. Chỉ một [[constraint|ràng buộc]] `UNIQUE` ở database mới chặn được triệt để."
+  },
+  "fix": {
+    "code": "-- 1. Dọn dữ liệu trùng trước, rồi thêm ràng buộc trên email đã chuẩn hoá\n--    (CONCURRENTLY không chạy trong transaction: với Flyway, để migration này non-transactional)\nCREATE UNIQUE INDEX CONCURRENTLY ux_users_email ON users (lower(email));\n\n// 2. Chuẩn hoá email một lần ở biên, để query dùng được đúng index\n@Transactional\npublic User register(String rawEmail, String password) {\n    String email = rawEmail.strip().toLowerCase(Locale.ROOT);\n    if (userRepository.existsByEmail(email)) {          // trả lỗi sớm cho trường hợp thường gặp\n        throw new EmailAlreadyUsedException(email);\n    }\n    try {\n        return userRepository.saveAndFlush(new User(email, passwordEncoder.encode(password)));\n    } catch (DataIntegrityViolationException e) {\n        if (isUniqueViolation(e, \"ux_users_email\")) {    // chỉ dịch đúng lỗi trùng email\n            throw new EmailAlreadyUsedException(email);\n        }\n        throw e;\n    }\n}",
+    "explanation": "Ràng buộc unique ở database là chốt chặn duy nhất không có khe hở, vì database kiểm tra tại thời điểm ghi. Lưu email đã chuẩn hoá về chữ thường để `existsByEmail` khớp index; `existsByEmailIgnoreCase` của Spring Data sinh `upper(email) = upper(?)` nên không dùng được index trên `lower(email)`. Chỉ dịch đúng lỗi vi phạm của `ux_users_email` (kiểm tra tên constraint), các vi phạm khác vẫn ném ra. `saveAndFlush` làm lỗi xảy ra ngay trong `try` thay vì lúc commit. Trước khi tạo index phải dọn các bản trùng có sẵn. Ở PostgreSQL, isolation SERIALIZABLE cũng chặn được trường hợp này nhưng phải retry; ràng buộc unique đơn giản và rẻ hơn."
+  }
+}

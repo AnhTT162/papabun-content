@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "not-in-null",
+      "kind": "output",
+      "prompt": "Bảng `customers` có 5 khách. Khách 1 giới thiệu khách 2 và 3; khách 4, 5 tự đăng ký nên `referrer_id` là `NULL`. Query tìm khách **chưa giới thiệu ai** trả về mấy dòng?",
+      "code": "-- id | referrer_id\n--  1 | NULL\n--  2 | 1\n--  3 | 1\n--  4 | NULL\n--  5 | NULL\n\nSELECT id FROM customers\nWHERE id NOT IN (SELECT referrer_id FROM customers);",
+      "options": ["0 dòng", "4 dòng: 2, 3, 4, 5", "1 dòng: 1", "Lỗi cú pháp"],
+      "answer": 0,
+      "explanation": "Subquery trả `(NULL, 1, 1, NULL, NULL)`. Với khách 2, `2 NOT IN (NULL, 1, ...)` tương đương `2 <> NULL AND 2 <> 1 ...`, trong đó `2 <> NULL` là `UNKNOWN`, nên cả biểu thức không bao giờ `TRUE`. Mọi dòng bị loại. Viết đúng: `SELECT id FROM customers c WHERE NOT EXISTS (SELECT 1 FROM customers r WHERE r.referrer_id = c.id)`, kết quả là 2, 3, 4, 5."
+    },
+    {
+      "id": "aggregates-null",
+      "kind": "output",
+      "prompt": "Cột `rating` của 4 đánh giá là `10, NULL, 20, 20`. Query trả về gì (PostgreSQL)?",
+      "code": "SELECT COUNT(*), COUNT(rating), COUNT(DISTINCT rating), AVG(rating)\nFROM reviews;",
+      "options": [
+        "4 | 3 | 2 | ≈16.67",
+        "4 | 4 | 3 | 12.5",
+        "3 | 3 | 2 | 16.67",
+        "4 | 3 | 3 | 12.5"
+      ],
+      "answer": 0,
+      "explanation": "`COUNT(*)` đếm 4 dòng. `COUNT(rating)` bỏ `NULL`: 3. `COUNT(DISTINCT rating)` đếm giá trị khác nhau không tính `NULL`: 10 và 20, tức 2. `AVG` bỏ `NULL` rồi chia cho 3: 50 / 3 ≈ 16.67 (PostgreSQL in `16.6666666666666667`). Đáp án 12.5 là hiểu lầm rằng `NULL` được tính như 0."
+    },
+    {
+      "id": "alias-in-where",
+      "kind": "single",
+      "prompt": "`SELECT price * qty AS amount FROM order_items WHERE amount > 100 ORDER BY amount;` chạy trên PostgreSQL và MySQL thì sao?",
+      "options": [
+        "Chạy được ở cả hai",
+        "Cả hai báo lỗi không biết cột `amount` ở `WHERE`; `ORDER BY amount` thì hợp lệ",
+        "Lỗi ở `ORDER BY`, còn `WHERE` hợp lệ",
+        "Chỉ PostgreSQL báo lỗi"
+      ],
+      "answer": 1,
+      "explanation": "`WHERE` chạy trước `SELECT`, nên alias `amount` chưa tồn tại: PostgreSQL báo `column \"amount\" does not exist`, MySQL báo `Unknown column 'amount' in 'where clause'`. `ORDER BY` chạy sau nên dùng được alias. Sửa: `WHERE price * qty > 100`, hoặc bọc trong subquery/CTE."
+    },
+    {
+      "id": "group-by-rule",
+      "kind": "single",
+      "prompt": "`SELECT customer_id, status, COUNT(*) FROM orders GROUP BY customer_id;` Chuyện gì xảy ra?",
+      "options": [
+        "Trả về `status` của đơn mới nhất trong mỗi nhóm",
+        "PostgreSQL báo lỗi; MySQL 8 với cấu hình mặc định (`ONLY_FULL_GROUP_BY`) cũng báo lỗi; tắt chế độ đó thì MySQL trả một `status` bất kỳ của nhóm",
+        "Tự động thêm `status` vào `GROUP BY`",
+        "Trả về `NULL` cho `status`"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi nhóm `customer_id` có thể có nhiều `status`, nên câu hỏi \"lấy status nào\" không có đáp án. Chuẩn SQL bắt mọi cột không gộp phải nằm trong `GROUP BY`. MySQL cũ (trước 5.7.5 hoặc khi tắt `ONLY_FULL_GROUP_BY`) cho chạy và trả giá trị không xác định, là nguồn lỗi âm thầm khi chuyển dữ liệu giữa các database."
+    },
+    {
+      "id": "union-all",
+      "kind": "single",
+      "prompt": "Gộp đơn của hai bảng `orders_2025` và `orders_2026` (không có đơn nào nằm ở cả hai bảng) để xuất báo cáo. Nên dùng gì?",
+      "options": ["`UNION`", "`UNION ALL`", "`JOIN`", "`INTERSECT`"],
+      "answer": 1,
+      "explanation": "Dữ liệu chắc chắn không trùng, nên `UNION ALL` cho cùng kết quả mà không tốn công sort hoặc hash để loại trùng. `UNION` trên hàng triệu dòng có thể tràn ra đĩa. Chỉ dùng `UNION` khi thật sự cần loại dòng trùng."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "logical-order", "front": "Thứ tự xử lý logic của câu SELECT?", "back": "FROM/JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT." },
+    { "id": "where-vs-having", "front": "`WHERE` khác `HAVING` thế nào?", "back": "`WHERE` lọc từng dòng trước khi gom nhóm; `HAVING` lọc nhóm sau khi gom, thường dùng hàm gộp." },
+    { "id": "alias-where", "front": "Vì sao alias đặt trong `SELECT` không dùng được ở `WHERE` nhưng dùng được ở `ORDER BY`?", "back": "`WHERE` chạy trước `SELECT` nên alias chưa tồn tại; `ORDER BY` chạy sau `SELECT`." },
+    { "id": "null-compare", "front": "`WHERE email = NULL` trả về gì?", "back": "Không dòng nào: so sánh với `NULL` ra `UNKNOWN`. Phải dùng `IS NULL`." },
+    { "id": "not-in-null", "front": "Vì sao `NOT IN (subquery)` có thể trả rỗng một cách khó hiểu?", "back": "Chỉ cần subquery trả một `NULL` là mọi so sánh thành `UNKNOWN`; dùng `NOT EXISTS` thay thế." },
+    { "id": "count-variants", "front": "`COUNT(*)`, `COUNT(col)`, `COUNT(DISTINCT col)` khác nhau thế nào?", "back": "Đếm mọi dòng; đếm dòng có `col` khác `NULL`; đếm số giá trị khác nhau không tính `NULL`." },
+    { "id": "left-join-where", "front": "`LEFT JOIN` rồi lọc bảng bên phải ở `WHERE` gây ra gì?", "back": "Các dòng được điền `NULL` bị loại, kết quả thành `INNER JOIN`; điều kiện đó phải đặt trong `ON`." },
+    { "id": "union-all", "front": "`UNION` khác `UNION ALL` thế nào?", "back": "`UNION` loại dòng trùng (tốn sort/hash); `UNION ALL` giữ nguyên và nhanh hơn." },
+    { "id": "sum-null", "front": "`SUM(amount)` trên nhóm chỉ toàn `NULL` (hoặc không có dòng) ra gì?", "back": "`NULL`, không phải 0; dùng `COALESCE(SUM(amount), 0)`." }
+  ]
+}

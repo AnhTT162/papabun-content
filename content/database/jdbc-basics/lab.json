@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Ô tìm kiếm người dùng trả về cả tài khoản admin",
+  "context": "Trang quản trị (PostgreSQL) cho nhân viên CSKH tìm khách theo email, có cột để sắp xếp. Query được ghép chuỗi cho nhanh vì \"chỉ nội bộ dùng\". Endpoint chỉ cho xem tài khoản khách (`role = 'CUSTOMER'`).",
+  "buggyCode": "public List<UserRow> search(String keyword, String sortColumn) throws SQLException {\n    String sql = \"SELECT id, email, role FROM users \"\n            + \"WHERE role = 'CUSTOMER' AND email LIKE '%\" + keyword + \"%' \"\n            + \"ORDER BY \" + sortColumn;\n    try (Connection conn = dataSource.getConnection();\n         Statement st = conn.createStatement();\n         ResultSet rs = st.executeQuery(sql)) {\n        return mapRows(rs);\n    }\n}",
+  "symptom": {
+    "description": "Audit log cho thấy một tài khoản CSKH gọi API với tham số lạ, và kết quả có cả email của các tài khoản admin.",
+    "output": "GET /internal/users?keyword=%25'%20OR%20role%3D'ADMIN'%20--&sortColumn=id\n\nSQL thực thi:\nSELECT id, email, role FROM users WHERE role = 'CUSTOMER' AND email LIKE '%%' OR role='ADMIN' --%' ORDER BY id\n\n  id | email                  | role\n-----+------------------------+----------\n   1 | root@company.example   | ADMIN\n   2 | ops@company.example    | ADMIN\n ... (48.213 dòng, gồm mọi khách và mọi admin)"
+  },
+  "diagnosis": {
+    "question": "Điều gì cho phép người dùng lấy được tài khoản admin?",
+    "options": [
+      "Thiếu index trên cột `role` nên điều kiện bị bỏ qua",
+      "Giá trị `keyword` được ghép thẳng vào câu SQL nên trở thành cú pháp: `' OR role='ADMIN' --` đóng chuỗi, thêm điều kiện `OR`, và `--` biến phần còn lại thành comment",
+      "`Statement` không hỗ trợ `LIKE`",
+      "Driver tự bỏ điều kiện `role = 'CUSTOMER'` khi có `ORDER BY`"
+    ],
+    "answer": 1,
+    "explanation": "Đây là [[sql-injection|SQL injection]]. Dấu `'` trong input đóng chuỗi `LIKE`, `OR role='ADMIN'` thêm điều kiện mới, và vì `AND` ưu tiên hơn `OR`, điều kiện thành `(role = 'CUSTOMER' AND email LIKE '%%') OR role = 'ADMIN'`. `--` biến toàn bộ phần còn lại (`%' ORDER BY id`) thành comment, nên câu SQL vẫn hợp lệ trên PostgreSQL. (MySQL chỉ coi `--` là comment khi theo sau là khoảng trắng, nên kẻ tấn công sẽ dùng `-- ` hoặc `#`.) `sortColumn` cũng là một lỗ hổng injection khác ở `ORDER BY`. \"Chỉ nội bộ dùng\" không phải là biện pháp bảo vệ."
+  },
+  "fix": {
+    "code": "private static final Map<String, String> SORT_COLUMNS = Map.of(\n        \"id\", \"id\", \"email\", \"email\", \"created\", \"created_at\");   // whitelist cho phần không bind được\n\npublic List<UserRow> search(String keyword, String sortKey) throws SQLException {\n    String orderBy = SORT_COLUMNS.getOrDefault(sortKey, \"id\");\n    String sql = \"SELECT id, email, role FROM users \"\n            + \"WHERE role = 'CUSTOMER' AND email LIKE ? ESCAPE '\\\\' \"\n            + \"ORDER BY \" + orderBy;\n    try (Connection conn = dataSource.getConnection();\n         PreparedStatement ps = conn.prepareStatement(sql)) {\n        ps.setString(1, \"%\" + escapeLike(keyword) + \"%\");          // giá trị đi qua tham số\n        try (ResultSet rs = ps.executeQuery()) {\n            return mapRows(rs);\n        }\n    }\n}\n\nprivate static String escapeLike(String s) {\n    return s.replace(\"\\\\\", \"\\\\\\\\\").replace(\"%\", \"\\\\%\").replace(\"_\", \"\\\\_\");\n}",
+    "explanation": "Giá trị người dùng đi qua [[prepared-statement|PreparedStatement]] nên không bao giờ thành cú pháp SQL. Tên cột sắp xếp không bind được bằng `?`, nên chỉ chọn từ một whitelist cố định. Escape `%` và `_` để người dùng không dùng ký tự đại diện quét cả bảng. Thêm vào đó: phân quyền ở tầng service (không tin vào điều kiện trong câu SQL), và user của ứng dụng trong database chỉ có quyền tối thiểu. Câu `ESCAPE '\\\\'` ở đây là cú pháp PostgreSQL; MySQL đã dùng `\\\\` làm ký tự escape mặc định cho `LIKE`."
+  }
+}

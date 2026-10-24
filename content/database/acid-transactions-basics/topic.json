@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "acid-transactions-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "ACID & transaction cơ bản",
+  "summary": "Transaction và bốn đảm bảo ACID, autocommit, WAL và durability, lỗi giữa transaction trong PostgreSQL và MySQL, DDL gây implicit commit, savepoint, và đặt ranh giới transaction cho đúng.",
+  "level": "foundation",
+  "order": 3,
+  "minutes": 12,
+  "prerequisites": ["relational-keys-normalization"],
+  "terms": ["transaction", "acid", "autocommit", "wal", "savepoint", "constraint", "idempotency-key", "isolation-level", "deadlock", "undo-log", "implicit-commit", "self-invocation", "dirty-checking", "dual-write"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Transactions", "url": "https://www.postgresql.org/docs/current/tutorial-transactions.html" },
+    { "title": "PostgreSQL Documentation: Write-Ahead Logging", "url": "https://www.postgresql.org/docs/current/wal-intro.html" },
+    { "title": "MySQL 8.0: Statements That Cause an Implicit Commit", "url": "https://dev.mysql.com/doc/refman/8.0/en/implicit-commit.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Chữ C trong ACID khác chữ C trong CAP thế nào?\" C của ACID là dữ liệu thoả mọi ràng buộc sau mỗi transaction. C của CAP là mọi node trả về cùng dữ liệu mới nhất (linearizability) trong hệ phân tán. Hai khái niệm trùng chữ nhưng không liên quan, và nhầm lẫn này là bẫy phỏng vấn kinh điển." }
+  ]
+}

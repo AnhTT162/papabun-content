@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "acid-letters", "front": "Bốn chữ cái ACID nghĩa là gì?", "back": "Atomicity (tất cả hoặc không), Consistency (giữ ràng buộc), Isolation (chạy đồng thời không thấy trạng thái dở dang), Durability (đã commit thì không mất)." },
+    { "id": "autocommit-default", "front": "JDBC, PostgreSQL và MySQL mặc định chạy câu lệnh thế nào?", "back": "Autocommit: mỗi câu lệnh là một transaction tự commit." },
+    { "id": "no-transactional", "front": "Không có `@Transactional`, hai lời gọi `repository.save` liên tiếp chạy thế nào?", "back": "Mỗi lời gọi tự mở và commit transaction riêng; lỗi giữa hai lời gọi không rollback được lời gọi đầu." },
+    { "id": "durability-wal", "front": "Database đảm bảo durability bằng cách nào?", "back": "Ghi WAL/redo log xuống đĩa và `fsync` trước khi báo commit thành công; sập máy thì phát lại log." },
+    { "id": "pg-aborted", "front": "Trong PostgreSQL, một câu lệnh lỗi giữa transaction thì sao?", "back": "Cả transaction bị hỏng; mọi lệnh sau đó báo `current transaction is aborted` cho tới khi `ROLLBACK` (hoặc rollback về savepoint)." },
+    { "id": "mysql-implicit-commit", "front": "Chạy `ALTER TABLE` giữa một transaction MySQL thì sao?", "back": "DDL gây implicit commit: mọi thay đổi trước đó bị commit luôn và không rollback được nữa." },
+    { "id": "consistency-owner", "front": "Chữ C trong ACID do ai đảm bảo?", "back": "Database đảm bảo các ràng buộc đã khai báo; quy tắc nghiệp vụ không khai báo được là trách nhiệm của ứng dụng." },
+    { "id": "tx-boundary", "front": "Ranh giới transaction nên đặt thế nào?", "back": "Ôm đúng một đơn vị nghiệp vụ, chỉ chứa thao tác database; không gọi API ngoài hay chờ người dùng bên trong." },
+    { "id": "commit-unknown", "front": "Mạng đứt ngay sau khi gửi `COMMIT` thì sao?", "back": "Client không biết commit thành công hay chưa; retry mù có thể ghi hai lần, nên thao tác quan trọng cần idempotency key." }
+  ]
+}

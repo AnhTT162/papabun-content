@@ -7,9 +7,9 @@
   "title": "Transaction & Isolation Level",
   "summary": "ACID, bốn isolation level và các hiện tượng dirty read, non-repeatable read, phantom, write skew; PostgreSQL và MySQL khác nhau thế nào; bốn cách chống lost update trong code Spring/JPA.",
   "level": "mid",
-  "order": 2,
+  "order": 6,
   "minutes": 18,
-  "prerequisites": ["index-execution-plan"],
+  "prerequisites": ["acid-transactions-basics", "index-execution-plan"],
   "terms": ["transaction", "acid", "isolation-level", "dirty-read", "non-repeatable-read", "phantom-read", "lost-update", "write-skew", "mvcc", "snapshot-isolation", "pessimistic-locking", "optimistic-locking", "serialization-failure", "ssi", "next-key-lock", "consistent-read", "retry-backoff", "idempotency-key", "deadlock", "lock-ordering", "connection-pool"],
   "references": [
     { "title": "PostgreSQL Documentation: Transaction Isolation", "url": "https://www.postgresql.org/docs/current/transaction-iso.html" },

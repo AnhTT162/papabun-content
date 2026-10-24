@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "jdbc-role", "front": "JDBC đứng ở đâu so với JPA/Hibernate?", "back": "Bên dưới: Hibernate, JdbcTemplate, MyBatis đều sinh SQL rồi chạy qua JDBC driver." },
+    { "id": "prepared-injection", "front": "Vì sao PreparedStatement chống được SQL injection?", "back": "Giá trị tham số gửi tách khỏi câu SQL (hoặc được driver escape đúng), nên không bao giờ thành cú pháp." },
+    { "id": "bind-identifier", "front": "Có bind tên cột trong `ORDER BY ?` được không?", "back": "Không: tham số chỉ thay giá trị; `ORDER BY ?` sắp xếp theo một hằng số. Tên cột phải chọn từ whitelist." },
+    { "id": "pg-fetch-size", "front": "Điều kiện để PostgreSQL JDBC đọc kết quả theo lô?", "back": "Tắt autocommit và đặt `setFetchSize(n)` (ResultSet forward-only); nếu không, driver đọc toàn bộ vào bộ nhớ." },
+    { "id": "mysql-batch", "front": "Vì sao `executeBatch()` với MySQL vẫn chậm?", "back": "Không bật `rewriteBatchedStatements=true` thì driver gửi từng lệnh riêng; bật lên mới gộp thành `INSERT` nhiều dòng." },
+    { "id": "identity-batch", "front": "Vì sao Hibernate không batch insert khi id dùng `GenerationType.IDENTITY`?", "back": "Phải chạy từng `INSERT` để database trả id ngay; dùng `SEQUENCE` (PostgreSQL), hoặc id sinh ở ứng dụng như UUID v7 (MySQL không có sequence), để batch được." },
+    { "id": "leak", "front": "Dấu hiệu rò connection trong HikariCP?", "back": "Pool cạn dần, request lỗi `Connection is not available, request timed out after 30000ms`; bật `leakDetectionThreshold` để tìm chỗ quên trả." },
+    { "id": "socket-timeout", "front": "Vì sao phải đặt `socketTimeout` cho JDBC driver?", "back": "Nhiều driver mặc định chờ vô hạn; database treo hay mạng rơi gói tin có thể giữ thread rất lâu." },
+    { "id": "getint-null", "front": "`rs.getInt(\"age\")` với giá trị `NULL` trả về gì?", "back": "0; phải gọi `rs.wasNull()` hoặc dùng `getObject(\"age\", Integer.class)` để nhận `null`." }
+  ]
+}

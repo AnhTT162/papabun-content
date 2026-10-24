@@ -229,10 +229,10 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `sql-fundamentals` | ✚ SQL cốt lõi | foundation | Thứ tự thực thi logic của `SELECT`, `GROUP BY`/`HAVING`, các loại JOIN, `NULL` và logic ba giá trị, `NOT IN` với NULL | A L B | ⬜ |
-| 2 | `relational-keys-normalization` | ✚ Khoá, ràng buộc & chuẩn hoá | foundation | Primary/foreign/unique key, constraint, 1NF–3NF, surrogate và natural key | A L B | ⬜ |
-| 3 | `acid-transactions-basics` | ✚ ACID & transaction cơ bản | foundation | Commit/rollback, atomicity, durability, autocommit, vì sao transaction dài nguy hiểm | A L B | ⬜ |
-| 4 | `jdbc-basics` | ✚ JDBC & cách ứng dụng nói chuyện với DB | junior | Connection, `PreparedStatement` và SQL injection, batch, fetch size, auto-commit; ORM đứng ở đâu | L D B | ⬜ |
+| 1 | `sql-fundamentals` | ✚ SQL cốt lõi | foundation | Thứ tự thực thi logic của `SELECT`, `GROUP BY`/`HAVING`, các loại JOIN, `NULL` và logic ba giá trị, `NOT IN` với NULL | A L B | ✅ |
+| 2 | `relational-keys-normalization` | ✚ Khoá, ràng buộc & chuẩn hoá | foundation | Primary/foreign/unique key, constraint, 1NF–3NF, surrogate và natural key | A L B | ✅ |
+| 3 | `acid-transactions-basics` | ✚ ACID & transaction cơ bản | foundation | Commit/rollback, atomicity, durability, autocommit, vì sao transaction dài nguy hiểm | A L B | ✅ |
+| 4 | `jdbc-basics` | ✚ JDBC & cách ứng dụng nói chuyện với DB | junior | Connection, `PreparedStatement` và SQL injection, batch, fetch size, auto-commit; ORM đứng ở đâu | L D B | ✅ |
 | 5 | `index-execution-plan` | Index & Execution Plan | mid | B-tree, composite, covering, EXPLAIN, các loại index | A L D B | ✅ |
 | 6 | `transaction-isolation` | Transaction & Isolation Level | mid | Hiện tượng, PostgreSQL và MySQL, lost update | A L S B | ✅ |
 | 7 | `optimistic-pessimistic-locking` | ✚ Optimistic & pessimistic locking | mid | `@Version`, `SELECT ... FOR UPDATE`, `NOWAIT`/`SKIP LOCKED`, retry khi xung đột, chọn cách nào | L S B | ⬜ |
@@ -437,7 +437,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | JVM | 2 | 2 | 7 | 0 | 11 |
 | Spring | 2 | 9 | 6 | 0 | 17 |
 | Testing | 2 | 6 | 1 | 0 | 9 |
-| Database | 4 | 12 | 8 | 4 | 24 |
+| Database | 4 | 12 | 8 | 8 | 24 |
 | Caching & Messaging | 2 | 5 | 6 | 0 | 13 |
 | Security | 3 | 5 | 4 | 0 | 12 |
 | Performance & Troubleshooting | 2 | 4 | 9 | 1 | 15 |
@@ -446,4 +446,4 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
 | System Design | 3 | 3 | 14 | 0 | 20 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **94** | **107** | **16** | **252** |
+| **Tổng** | **51** | **94** | **107** | **20** | **252** |

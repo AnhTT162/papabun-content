@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pg-fetch-autocommit",
+      "kind": "output",
+      "prompt": "PostgreSQL JDBC, bảng `events` có 20 triệu dòng, heap 1GB. Đoạn code này kết thúc thế nào?",
+      "code": "try (Connection conn = dataSource.getConnection();      // autocommit mặc định = true\n     PreparedStatement ps = conn.prepareStatement(\"SELECT * FROM events\")) {\n    ps.setFetchSize(1000);\n    try (ResultSet rs = ps.executeQuery()) {\n        while (rs.next()) {\n            exporter.write(rs);\n        }\n    }\n}",
+      "options": [
+        "Đọc theo lô 1.000 dòng và xuất xong bình thường",
+        "OutOfMemoryError: khi autocommit bật, driver PostgreSQL bỏ qua fetch size và đọc toàn bộ kết quả vào bộ nhớ",
+        "Lỗi cú pháp vì `SELECT *`",
+        "Chỉ đọc 1.000 dòng đầu"
+      ],
+      "answer": 1,
+      "explanation": "PostgreSQL JDBC chỉ dùng cursor để đọc theo lô khi connection không ở chế độ autocommit (và ResultSet forward-only). Ở đây autocommit bật, nên driver kéo cả 20 triệu dòng vào heap trước khi `rs.next()` đầu tiên trả về. Sửa: `conn.setAutoCommit(false)` (hoặc chạy trong `@Transactional(readOnly = true)`) cùng với fetch size."
+    },
+    {
+      "id": "order-by-param",
+      "kind": "output",
+      "prompt": "PostgreSQL. Danh sách trả về được sắp xếp thế nào?",
+      "code": "PreparedStatement ps = conn.prepareStatement(\n        \"SELECT id, email FROM users ORDER BY ?\");\nps.setString(1, \"email\");\nResultSet rs = ps.executeQuery();",
+      "options": [
+        "Theo email tăng dần",
+        "Không theo cột nào: `?` được bind thành chuỗi hằng `'email'`, nên mọi dòng có cùng khoá sắp xếp; thứ tự là tuỳ ý",
+        "Lỗi: không được dùng tham số ở ORDER BY",
+        "Theo id"
+      ],
+      "answer": 1,
+      "explanation": "Tham số chỉ thay giá trị, không thay tên cột. PostgreSQL nhận `ORDER BY $1` với giá trị `'email'`, tức sắp xếp theo một biểu thức hằng giống nhau ở mọi dòng (gõ thẳng `ORDER BY 'email'` thì PostgreSQL còn báo lỗi `non-integer constant in ORDER BY`). Không có lỗi nào, nên bug này dễ lọt qua review. Tên cột phải chọn từ whitelist rồi ghép vào câu SQL."
+    },
+    {
+      "id": "mysql-rewrite-batch",
+      "kind": "single",
+      "prompt": "Import 100.000 dòng vào MySQL bằng `addBatch()` và `executeBatch()` mỗi 1.000 dòng, nhưng vẫn mất vài phút. Nguyên nhân thường gặp nhất?",
+      "options": [
+        "MySQL không hỗ trợ batch",
+        "Chưa bật `rewriteBatchedStatements=true`, nên driver vẫn gửi 100.000 câu `INSERT` riêng lẻ",
+        "Batch size 1.000 quá lớn",
+        "Phải dùng `Statement` thay vì `PreparedStatement` để batch"
+      ],
+      "answer": 1,
+      "explanation": "Không có tuỳ chọn này, Connector/J gửi từng lệnh trong batch thành một lượt đi về riêng. Bật lên thì driver gộp thành `INSERT ... VALUES (...), (...), ...`, thường nhanh hơn hàng chục lần. Nên commit theo từng lô thay vì một transaction khổng lồ."
+    },
+    {
+      "id": "identity-no-batch",
+      "kind": "single",
+      "prompt": "Đã đặt `hibernate.jdbc.batch_size=50`, nhưng log vẫn thấy từng câu `INSERT` riêng cho entity có `@GeneratedValue(strategy = GenerationType.IDENTITY)`. Vì sao?",
+      "options": [
+        "`batch_size` chỉ áp dụng cho `UPDATE`",
+        "Với `IDENTITY`, Hibernate phải chạy `INSERT` ngay để lấy id do database sinh, nên không gom batch được",
+        "Phải gọi `flush()` sau mỗi entity",
+        "Do `@Transactional(readOnly = true)`"
+      ],
+      "answer": 1,
+      "explanation": "Hibernate cần id ngay khi `persist` để đưa entity vào persistence context. Với `IDENTITY`, id chỉ có sau khi `INSERT` chạy xong, nên từng câu phải thực thi riêng. Dùng `SEQUENCE` với `allocationSize` (PostgreSQL) thì Hibernate lấy trước một khối id và batch được insert."
+    },
+    {
+      "id": "connection-leak",
+      "kind": "single",
+      "prompt": "Sau khi deploy, khoảng 20 phút thì mọi API dùng database đều lỗi `HikariPool-1 - Connection is not available, request timed out after 30000ms`; restart thì hết, rồi lại bị. CPU và database đều rảnh. Nghi ngờ đầu tiên?",
+      "options": [
+        "Database quá tải",
+        "Rò connection: một đoạn code mượn connection mà không đóng, pool cạn dần",
+        "Thiếu index",
+        "`maximumPoolSize` quá lớn"
+      ],
+      "answer": 1,
+      "explanation": "Database rảnh mà pool cạn dần theo thời gian, restart thì hết: đó là dấu hiệu connection không được trả về. Tìm code dùng `DataSource` mà không có try-with-resources, hoặc giữ connection qua thread khác. Bật `leakDetectionThreshold` (ví dụ 20 giây) để Hikari log stack trace nơi connection bị mượn quá lâu."
+    }
+  ]
+}

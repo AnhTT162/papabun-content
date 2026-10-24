@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đối soát cuối ngày lệch tiền sau một lỗi chuyển khoản",
+  "context": "Service ví (Spring Boot 3, JPA, PostgreSQL). Chuyển tiền trừ ví gửi, kiểm tra hạn mức qua một service khác, rồi cộng ví nhận. Hôm qua service hạn mức lỗi trong 3 phút.",
+  "buggyCode": "@Service\npublic class TransferService {\n\n    public void transfer(long fromId, long toId, long amount) {\n        Wallet from = walletRepository.findById(fromId).orElseThrow();\n        from.setBalance(from.getBalance() - amount);\n        walletRepository.save(from);\n\n        limitClient.checkDailyLimit(fromId, amount);   // ném LimitServiceException khi service hạn mức lỗi\n\n        Wallet to = walletRepository.findById(toId).orElseThrow();\n        to.setBalance(to.getBalance() + amount);\n        walletRepository.save(to);\n    }\n}",
+  "symptom": {
+    "description": "Khách báo bị trừ tiền nhưng người nhận không nhận được, và API đã trả lỗi 500. Đối soát cuối ngày cho thấy tổng số dư mọi ví giảm.",
+    "output": "Reconciliation 2026-10-21\n  Tổng số dư đầu ngày      : 48.215.300.000\n  Tổng nạp trong ngày      : +1.204.500.000\n  Tổng rút trong ngày      :   -987.100.000\n  Tổng số dư cuối ngày (kỳ vọng): 48.432.700.000\n  Tổng số dư cuối ngày (thực tế): 48.391.200.000\n  CHÊNH LỆCH               :    -41.500.000  (17 giao dịch chuyển khoản lỗi)"
+  },
+  "diagnosis": {
+    "question": "Vì sao ví gửi bị trừ dù chuyển khoản báo lỗi?",
+    "options": [
+      "`save` của ví nhận bị lỗi optimistic lock",
+      "Method không có `@Transactional`, nên `save(from)` chạy trong transaction riêng của repository và commit ngay; exception sau đó không có gì để rollback",
+      "PostgreSQL không rollback được khi exception là RuntimeException",
+      "Hibernate chỉ flush khi kết thúc request"
+    ],
+    "answer": 1,
+    "explanation": "Không có transaction bao ngoài, mỗi lời gọi `save` của Spring Data tự mở và commit một transaction ([[autocommit]] ở mức nghiệp vụ). Tiền đã bị trừ và commit trước khi `checkDailyLimit` ném lỗi. Hai bước trừ và cộng không còn [[acid|atomic]]. Hibernate không đợi hết request mới flush khi chạy ngoài transaction: `save` đã commit xong."
+  },
+  "fix": {
+    "code": "@Service\npublic class TransferFacade {          // bean riêng: gọi service ngoài TRƯỚC khi mở transaction\n    public void transfer(long fromId, long toId, long amount) {\n        limitClient.checkDailyLimit(fromId, amount);\n        transferService.transfer(fromId, toId, amount);   // đi qua proxy nên @Transactional có tác dụng\n    }\n}\n\n@Service\npublic class TransferService {\n\n    @Transactional   // một transaction cho cả trừ và cộng\n    public void transfer(long fromId, long toId, long amount) {\n        // khoá hai ví theo thứ tự id tăng dần: hai lệnh chuyển ngược chiều cùng lúc sẽ không deadlock\n        Map<Long, Wallet> locked = walletRepository.lockAllByIdOrdered(List.of(fromId, toId)).stream()\n                .collect(Collectors.toMap(Wallet::getId, w -> w));\n        Wallet from = locked.get(fromId);\n        Wallet to = locked.get(toId);\n        from.debit(amount);    // ném InsufficientBalanceException (unchecked) nếu không đủ\n        to.credit(amount);\n        // commit một lần khi method kết thúc; exception unchecked thì rollback cả hai\n    }\n}\n\n// WalletRepository\n@Lock(LockModeType.PESSIMISTIC_WRITE)                       // sinh SELECT ... FOR UPDATE\n@Query(\"select w from Wallet w where w.id in :ids order by w.id\")\nList<Wallet> lockAllByIdOrdered(@Param(\"ids\") List<Long> ids);",
+    "explanation": "`@Transactional` đặt cả trừ và cộng vào một transaction: hoặc cả hai được commit, hoặc không gì cả. Lời gọi service hạn mức nằm ở bean khác, chạy **trước** khi transaction mở, vì transaction giữ connection từ đầu method: chờ mạng bên trong sẽ chiếm connection của pool. Không tách bằng một method khác trong cùng class được, vì gọi nội bộ không đi qua proxy ([[self-invocation]]) nên `@Transactional` mất tác dụng. Mặc định Spring chỉ rollback với exception unchecked (bài Exceptions). Với các khoản đã lệch, cần job đối soát và bút toán điều chỉnh, vì không thể rollback sau khi đã commit."
+  }
+}

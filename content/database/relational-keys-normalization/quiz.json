@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "which-nf-violated",
+      "kind": "single",
+      "prompt": "Bảng `order_items(order_id, product_id, quantity, product_name, customer_name)` có primary key `(order_id, product_id)`. Trong các lựa chọn sau, cột nào vi phạm 2NF?",
+      "options": [
+        "`quantity`",
+        "`product_name`, vì chỉ phụ thuộc `product_id`, một phần của key",
+        "`order_id`",
+        "Không cột nào"
+      ],
+      "answer": 1,
+      "explanation": "`product_name` chỉ phụ thuộc `product_id`, tức một phần của key ghép, nên vi phạm 2NF. `customer_name` cũng phụ thuộc một phần key (`order_id`, qua khách của đơn), nên cũng vi phạm. `quantity` phụ thuộc cả cặp `(order_id, product_id)`, nên hợp lệ. Ngoại lệ có chủ đích: lưu tên sản phẩm **tại thời điểm mua** là phi chuẩn hoá hợp lý, nhưng khi đó nó là dữ liệu lịch sử chứ không phải bản sao."
+    },
+    {
+      "id": "fk-restrict",
+      "kind": "single",
+      "prompt": "`orders.customer_id` tham chiếu `customers.id` với `ON DELETE RESTRICT`. Xoá một khách còn đơn hàng thì sao?",
+      "options": [
+        "Khách bị xoá, đơn giữ nguyên với `customer_id` cũ",
+        "Lệnh xoá bị từ chối với lỗi vi phạm foreign key",
+        "Khách và mọi đơn của khách bị xoá",
+        "`customer_id` của các đơn thành `NULL`"
+      ],
+      "answer": 1,
+      "explanation": "`RESTRICT` chặn xoá dòng cha khi còn dòng con tham chiếu. Lựa chọn thứ ba là `CASCADE`, thứ tư là `SET NULL`. Lựa chọn đầu tiên là thứ foreign key sinh ra để ngăn: dòng con trỏ tới dòng cha không còn tồn tại."
+    },
+    {
+      "id": "mysql-check-legacy",
+      "kind": "single",
+      "prompt": "Bảng trên MySQL 5.7 có `CHECK (quantity > 0)`. Chạy `INSERT ... quantity = -5` thì sao?",
+      "options": [
+        "Báo lỗi vi phạm ràng buộc",
+        "Thành công: MySQL trước 8.0.16 parse `CHECK` nhưng không thực thi",
+        "Tự đổi thành 0",
+        "Báo lỗi cú pháp ngay khi tạo bảng"
+      ],
+      "answer": 1,
+      "explanation": "MySQL chỉ thực thi `CHECK` từ 8.0.16. Trước đó cú pháp được chấp nhận nhưng bị bỏ qua, nên dữ liệu sai lọt vào âm thầm. Ràng buộc cũng **không được lưu** vào định nghĩa bảng, nên nâng cấp lên 8.0.16+ không làm nó tự có hiệu lực. Phải chạy `ALTER TABLE ... ADD CONSTRAINT ... CHECK (...)`, và lệnh này kiểm tra dữ liệu cũ nên sẽ lỗi nếu còn dòng vi phạm."
+    },
+    {
+      "id": "unique-race",
+      "kind": "single",
+      "prompt": "Cách nào **chắc chắn** không có hai tài khoản trùng email khi nhiều request đăng ký chạy đồng thời?",
+      "options": [
+        "Gọi `existsByEmail` trước khi `save`, trong `@Transactional`",
+        "Đặt `@Transactional(isolation = READ_COMMITTED)`",
+        "Ràng buộc `UNIQUE` trên email ở database, bắt lỗi vi phạm để trả thông báo",
+        "Dùng `synchronized` trên method đăng ký"
+      ],
+      "answer": 2,
+      "explanation": "Chỉ database kiểm tra unique đúng tại thời điểm ghi. `synchronized` chỉ khoá trong một JVM, nên chạy nhiều instance là hỏng. Kiểm tra rồi ghi luôn có khe hở. READ COMMITTED không khoá dòng chưa tồn tại."
+    },
+    {
+      "id": "natural-key-change",
+      "kind": "single",
+      "prompt": "Hệ thống dùng `email` làm primary key của `users`, và 12 bảng khác tham chiếu tới nó. Người dùng muốn đổi email. Vấn đề chính là gì?",
+      "options": [
+        "Không có vấn đề, `UPDATE` một dòng là xong",
+        "Phải cập nhật khoá ngoại ở 12 bảng (hoặc dùng `ON UPDATE CASCADE`), tốn kém và dễ khoá lâu; đây là lý do nên dùng surrogate key",
+        "Email không thể làm primary key",
+        "Chỉ cần xoá rồi tạo lại user"
+      ],
+      "answer": 1,
+      "explanation": "Natural key có nghĩa nghiệp vụ nên có thể thay đổi. Khi nó là primary key, mọi bảng tham chiếu phải đổi theo. Surrogate key (`id` vô nghĩa) không bao giờ phải đổi; email chỉ cần `UNIQUE`."
+    }
+  ]
+}

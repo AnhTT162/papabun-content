@@ -7,7 +7,7 @@
   "title": "Partitioning & Global/Local Index",
   "summary": "Chia bảng lớn theo range/list/hash, partition pruning, local index và global index khác nhau thế nào trong PostgreSQL, MySQL, Oracle; vì sao unique key phải chứa partition key; xoá dữ liệu bằng drop partition; mở rộng sang sharding và DynamoDB GSI/LSI.",
   "level": "senior",
-  "order": 4,
+  "order": 8,
   "minutes": 20,
   "prerequisites": ["index-execution-plan"],
   "terms": ["partitioning", "partition-key", "partition-pruning", "local-index", "global-index", "sharding", "hot-partition", "gsi", "lsi", "brin-index", "sargable"],

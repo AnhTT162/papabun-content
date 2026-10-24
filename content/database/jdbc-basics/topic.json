@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jdbc-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "JDBC & cách ứng dụng nói chuyện với DB",
+  "summary": "Luồng một query qua DataSource, Connection, PreparedStatement và driver; chống SQL injection; fetch size và OOM; batch; rò connection; timeout; ORM nằm ở đâu.",
+  "level": "junior",
+  "order": 4,
+  "minutes": 14,
+  "prerequisites": ["acid-transactions-basics"],
+  "terms": ["jdbc", "prepared-statement", "sql-injection", "fetch-size", "jdbc-batching", "connection-leak", "connection-pool", "autocommit", "datasource", "try-with-resources", "orm", "n-plus-one", "tls-handshake"],
+  "references": [
+    { "title": "PostgreSQL JDBC: Getting results based on a cursor", "url": "https://jdbc.postgresql.org/documentation/query/#getting-results-based-on-a-cursor" },
+    { "title": "MySQL Connector/J: Configuration Properties", "url": "https://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html" },
+    { "title": "OWASP SQL Injection Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Dùng JPA rồi thì còn SQL injection không?\" Vẫn còn nếu ghép chuỗi vào JPQL/HQL (`\"... where name = '\" + name + \"'\"`), vào native query, hoặc vào `ORDER BY` động. JPA chỉ an toàn khi dùng tham số (`:name`, Criteria API). Tên cột động vẫn phải đi qua whitelist." }
+  ]
+}

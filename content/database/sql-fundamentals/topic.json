@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sql-fundamentals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "SQL cốt lõi",
+  "summary": "Thứ tự xử lý logic của SELECT, WHERE và HAVING, GROUP BY, các loại JOIN và bẫy LEFT JOIN, NULL và logic ba giá trị, NOT IN với NULL, hàm gộp, UNION và UNION ALL.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["logical-query-order", "three-valued-logic", "outer-join", "aggregate-function", "correlated-subquery"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Queries (SELECT)", "url": "https://www.postgresql.org/docs/current/queries.html" },
+    { "title": "PostgreSQL Documentation: Comparison Functions and Operators (NULL)", "url": "https://www.postgresql.org/docs/current/functions-comparison.html" },
+    { "title": "MySQL 8.0: MySQL Handling of GROUP BY", "url": "https://dev.mysql.com/doc/refman/8.0/en/group-by-handling.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`NOT IN` và `NOT EXISTS` khác nhau thế nào?\" Về kết quả: `NOT IN` trả rỗng khi subquery có `NULL`, `NOT EXISTS` thì không bị ảnh hưởng. Về hiệu năng: planner thường biến `NOT EXISTS` thành anti-join hiệu quả; `NOT IN` khó tối ưu hơn vì phải xử lý trường hợp `NULL`. Mặc định nên dùng `NOT EXISTS`." }
+  ]
+}

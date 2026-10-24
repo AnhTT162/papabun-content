@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Báo cáo \"mọi khách hàng\" mà thiếu khách không có đơn",
+  "context": "Bảng `customers` có 1.200 khách. Phòng kinh doanh cần số đơn tháng 10 của **từng** khách, kể cả khách không mua gì (để gọi chăm sóc). Query dùng `LEFT JOIN` để giữ khách không có đơn.",
+  "buggyCode": "SELECT c.id, c.name, COUNT(o.id) AS orders_in_oct\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.created_at >= '2026-10-01'\n  AND o.created_at <  '2026-11-01'\nGROUP BY c.id, c.name\nORDER BY orders_in_oct;",
+  "symptom": {
+    "description": "Báo cáo chỉ có 830 dòng, và không dòng nào có `orders_in_oct = 0`, dù chắc chắn có khách không mua gì trong tháng 10.",
+    "output": " id  | name         | orders_in_oct\n-----+--------------+---------------\n 512 | Trần Thị Mai |             1\n  87 | Lê Văn Hùng  |             1\n ...\n(830 rows)"
+  },
+  "diagnosis": {
+    "question": "Vì sao khách không có đơn trong tháng 10 biến mất khỏi kết quả?",
+    "options": [
+      "`COUNT(o.id)` bỏ qua dòng có giá trị `NULL` nên khách đó bị loại",
+      "Điều kiện thời gian nằm ở `WHERE`, chạy sau khi join: khách không có đơn nào (cột `o.*` là `NULL`, điều kiện ra `UNKNOWN`) và khách chỉ có đơn tháng khác (điều kiện ra `FALSE`) đều bị loại",
+      "`GROUP BY` bỏ những nhóm không có đơn",
+      "Thiếu index trên `orders.customer_id` nên database bỏ qua một số khách"
+    ],
+    "answer": 1,
+    "explanation": "Theo [[logical-query-order|thứ tự logic]], `LEFT JOIN` chạy trước và tạo dòng `(khách, NULL...)` cho khách không có đơn trong bảng. Sau đó `WHERE` so sánh `NULL >= '2026-10-01'` ra `UNKNOWN`, và `WHERE` chỉ giữ dòng `TRUE`. Khách chỉ có đơn ở tháng khác cũng biến mất: dòng của họ có `created_at` thật nhưng nằm ngoài tháng 10, nên điều kiện ra `FALSE`. Kết quả tương đương `INNER JOIN` với đơn tháng 10. `COUNT(o.id)` bỏ qua `NULL` khi đếm nhưng không loại nhóm: nếu dòng còn tới được `GROUP BY` thì nó cho ra 0. Index chỉ ảnh hưởng tốc độ, không ảnh hưởng kết quả."
+  },
+  "fix": {
+    "code": "SELECT c.id, c.name, COUNT(o.id) AS orders_in_oct\nFROM customers c\nLEFT JOIN orders o\n       ON o.customer_id = c.id\n      AND o.created_at >= '2026-10-01'      -- điều kiện của bảng bên phải nằm trong ON\n      AND o.created_at <  '2026-11-01'\nGROUP BY c.id, c.name\nORDER BY orders_in_oct;\n\n-- (1200 rows), 370 khách có orders_in_oct = 0",
+    "explanation": "Điều kiện trong `ON` quyết định đơn nào được ghép với khách; khách không có đơn khớp vẫn được giữ với `NULL`. Điều kiện trong `WHERE` lọc sau khi join xong. Quy tắc: với `LEFT JOIN`, điều kiện trên bảng bên phải đặt ở `ON`; điều kiện trên bảng bên trái đặt ở `WHERE`. Ngoại lệ có chủ đích: `WHERE o.id IS NULL` để tìm khách **không** có đơn (anti-join)."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Thứ tự xử lý logic của một câu SELECT",
+  "nodes": [
+    { "id": "from", "label": "FROM / JOIN", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "where", "label": "WHERE", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "group", "label": "GROUP BY", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "having", "label": "HAVING", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "select", "label": "SELECT / DISTINCT", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "order", "label": "ORDER BY / LIMIT", "kind": "client", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "from-where", "from": "from", "to": "where", "label": "từng dòng" },
+    { "id": "where-group", "from": "where", "to": "group", "label": "dòng còn lại" },
+    { "id": "group-having", "from": "group", "to": "having", "label": "từng nhóm" },
+    { "id": "having-select", "from": "having", "to": "select", "label": "nhóm còn lại" },
+    { "id": "select-order", "from": "select", "to": "order", "label": "cột và alias" }
+  ],
+  "steps": [
+    { "caption": "FROM và JOIN tạo ra tập dòng làm việc. LEFT JOIN điền NULL cho phía phải ở bước này.", "show": ["from"] },
+    { "caption": "WHERE lọc từng dòng, chỉ giữ dòng có điều kiện TRUE (UNKNOWN bị loại). Alias của SELECT chưa tồn tại ở đây.", "show": ["where", "from-where"], "highlight": ["from-where"] },
+    { "caption": "GROUP BY gom các dòng còn lại thành nhóm. Từ đây mỗi nhóm thành một dòng.", "show": ["group", "where-group"], "highlight": ["where-group"] },
+    { "caption": "HAVING lọc nhóm, thường bằng hàm gộp: HAVING COUNT(*) >= 3.", "show": ["having", "group-having"], "highlight": ["group-having"] },
+    { "caption": "SELECT tính biểu thức, hàm cửa sổ và đặt alias; DISTINCT loại dòng trùng.", "show": ["select", "having-select"], "highlight": ["having-select"] },
+    { "caption": "ORDER BY dùng được alias vì SELECT đã chạy xong; LIMIT cắt kết quả cuối cùng.", "show": ["order", "select-order"], "highlight": ["select-order"] }
+  ]
+}

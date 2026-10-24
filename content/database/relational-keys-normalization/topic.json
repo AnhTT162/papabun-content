@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "relational-keys-normalization",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Khoá, ràng buộc & chuẩn hoá",
+  "summary": "Primary, unique, foreign và composite key; surrogate và natural key; NOT NULL, CHECK, UNIQUE; vì sao ràng buộc phải nằm ở database; chuẩn hoá 1NF–3NF và khi nào phi chuẩn hoá.",
+  "level": "foundation",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["sql-fundamentals"],
+  "terms": ["primary-key", "foreign-key", "constraint", "surrogate-key", "normalization", "clustered-index", "expression-index"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Constraints", "url": "https://www.postgresql.org/docs/current/ddl-constraints.html" },
+    { "title": "MySQL 8.0: CHECK Constraints", "url": "https://dev.mysql.com/doc/refman/8.0/en/create-table-check-constraints.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Có nên dùng foreign key không, nghe nói hệ thống lớn bỏ foreign key?\" Trong một database, foreign key gần như luôn đáng giá: nó chặn dữ liệu mồ côi mà code không chặn nổi. Lý do bỏ thường là sharding (dữ liệu nằm ở nhiều database khác nhau) hoặc online migration của một số công cụ MySQL. Khi bỏ, phải có thay thế: job đối soát định kỳ và xoá có kiểm soát." }
+  ]
+}

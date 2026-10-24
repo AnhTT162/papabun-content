@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pg-aborted-transaction",
+      "kind": "output",
+      "prompt": "PostgreSQL 16, bảng `t` có ràng buộc `UNIQUE (code)` và đã có dòng `code = 'A'`. Sau khi chạy hết đoạn lệnh, bảng có những `code` nào mới?",
+      "code": "BEGIN;\nINSERT INTO t (code) VALUES ('B');\nINSERT INTO t (code) VALUES ('A');   -- trùng unique\nINSERT INTO t (code) VALUES ('C');\nCOMMIT;",
+      "options": [
+        "B và C",
+        "Không có dòng mới nào",
+        "Chỉ B",
+        "B, A và C"
+      ],
+      "answer": 1,
+      "explanation": "Lệnh thứ hai lỗi làm cả transaction hỏng. `INSERT 'C'` bị từ chối với `current transaction is aborted, commands ignored until end of transaction block`, và `COMMIT` của transaction hỏng thực chất là `ROLLBACK`. Vì vậy cả `B` cũng mất. Trên MySQL thì khác: lỗi chỉ huỷ câu lệnh trùng, nên `COMMIT` lưu `B` và `C`. Trong psql, `COMMIT` của transaction hỏng in ra `ROLLBACK`; qua JDBC, pgjdbc từ 42.2.15 ném `PSQLException` ở `commit()` để ứng dụng không tưởng là đã lưu. Tuỳ chọn `autosave=conservative` của driver tự đặt savepoint trước mỗi lệnh để transaction tiếp tục được sau lỗi."
+    },
+    {
+      "id": "mysql-ddl-commit",
+      "kind": "output",
+      "prompt": "MySQL 8, `autocommit` mặc định (= 1). Sau khi chạy đoạn lệnh, cột `status` của các đơn có giá trị gì?",
+      "code": "START TRANSACTION;\nUPDATE orders SET status = 'ARCHIVED' WHERE created_at < '2025-01-01';\nALTER TABLE orders ADD COLUMN archived_at DATETIME NULL;\nUPDATE orders SET status = 'BROKEN';   -- giả sử phát hiện sai và muốn huỷ\nROLLBACK;",
+      "options": [
+        "Giữ nguyên trạng thái ban đầu, vì đã ROLLBACK",
+        "`ARCHIVED` cho đơn cũ, các đơn khác giữ nguyên",
+        "`BROKEN` cho mọi đơn: `ALTER TABLE` gây implicit commit và kết thúc transaction, session quay về autocommit, nên `UPDATE` sau tự commit và `ROLLBACK` không còn gì để huỷ",
+        "Lỗi, vì không được chạy `ALTER TABLE` trong transaction"
+      ],
+      "answer": 2,
+      "explanation": "`START TRANSACTION` chỉ tắt autocommit tới khi transaction kết thúc. `ALTER TABLE` commit transaction đang mở (giữ `ARCHIVED`), tự commit chính nó, và từ đó không còn transaction nào mở. `UPDATE ... 'BROKEN'` chạy ở chế độ autocommit nên commit ngay, ghi đè mọi đơn. `ROLLBACK` cuối không có gì để huỷ. PostgreSQL thì cho DDL nằm trong transaction, nên `ROLLBACK` huỷ được tất cả. Migration trên MySQL không nên trộn DDL và DML trong cùng một transaction."
+    },
+    {
+      "id": "spring-no-tx",
+      "kind": "single",
+      "prompt": "Service Spring không có `@Transactional` gọi `orderRepository.save(order)` rồi `paymentRepository.save(payment)`. Lệnh thứ hai ném exception. Kết quả?",
+      "options": [
+        "Cả hai bị rollback",
+        "`order` đã được commit, `payment` không có",
+        "Không có gì được lưu vì Spring rollback cả request",
+        "Phụ thuộc isolation level"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi method của repository Spring Data tự có transaction riêng. Không có transaction bao ngoài thì `save(order)` commit ngay khi trả về. Spring không có khái niệm \"rollback cả request\". Isolation level không liên quan tới atomicity giữa hai lời gọi."
+    },
+    {
+      "id": "durability-tradeoff",
+      "kind": "single",
+      "prompt": "Đặt `synchronous_commit = off` trong PostgreSQL để tăng throughput ghi log sự kiện. Rủi ro là gì?",
+      "options": [
+        "Dữ liệu có thể bị hỏng (corrupt) khi sập máy",
+        "Khi sập, có thể mất các transaction vừa commit trong khoảng vài trăm mili giây gần nhất, nhưng database vẫn nhất quán",
+        "Mất tính atomicity",
+        "Transaction khác đọc được dữ liệu chưa commit"
+      ],
+      "answer": 1,
+      "explanation": "Commit được báo thành công trước khi WAL được `fsync`, nên sập máy có thể mất một khoảng ngắn các commit gần nhất (tối đa khoảng 3 lần `wal_writer_delay`). WAL vẫn được ghi theo thứ tự nên database không bị hỏng, và atomicity cùng isolation không đổi. Chấp nhận được với log sự kiện, không chấp nhận được với giao dịch tiền."
+    },
+    {
+      "id": "long-transaction",
+      "kind": "single",
+      "prompt": "Ranh giới transaction nào hợp lý nhất cho \"tạo đơn hàng, gọi cổng thanh toán (1–5 giây), cập nhật trạng thái đơn\"?",
+      "options": [
+        "Một transaction ôm cả ba bước để đảm bảo atomicity",
+        "Transaction 1 tạo đơn ở trạng thái PENDING; gọi cổng thanh toán ngoài transaction; transaction 2 cập nhật trạng thái theo kết quả",
+        "Không dùng transaction, để mỗi lệnh tự commit",
+        "Một transaction với isolation SERIALIZABLE"
+      ],
+      "answer": 1,
+      "explanation": "Database không rollback được tiền đã trừ ở cổng thanh toán, nên ôm lời gọi đó trong transaction không mang lại atomicity thật mà chỉ giữ connection và lock trong nhiều giây. Tách thành các bước có trạng thái, kèm idempotency key khi gọi thanh toán và job xử lý đơn treo ở PENDING."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "pk-vs-unique", "front": "Primary key khác unique key thế nào?", "back": "Mỗi bảng một primary key, không được `NULL`; unique key có thể có nhiều cái và (trừ khi khai báo `NOT NULL`) cho phép `NULL`." },
+    { "id": "fk-actions", "front": "Ba hành vi phổ biến của foreign key khi xoá dòng cha?", "back": "`RESTRICT`/`NO ACTION` chặn xoá; `CASCADE` xoá theo; `SET NULL` đặt khoá ngoại về `NULL`." },
+    { "id": "surrogate-natural", "front": "Vì sao thường dùng surrogate key làm primary key thay vì email?", "back": "Natural key có thể thay đổi và kéo theo sửa mọi bảng tham chiếu; giữ `UNIQUE` trên email là đủ để chống trùng." },
+    { "id": "1nf", "front": "1NF yêu cầu gì?", "back": "Mỗi ô chứa một giá trị nguyên tử, không có nhóm lặp hay danh sách trong một cột." },
+    { "id": "2nf", "front": "2NF yêu cầu gì?", "back": "Đạt 1NF, và với key nhiều cột thì mọi cột khác phụ thuộc vào toàn bộ key chứ không vào một phần." },
+    { "id": "3nf", "front": "3NF yêu cầu gì?", "back": "Đạt 2NF, và không có phụ thuộc bắc cầu: cột không phải key không phụ thuộc vào cột không phải key khác." },
+    { "id": "check-then-act", "front": "Vì sao kiểm tra trùng trong code rồi mới `INSERT` vẫn sinh bản trùng?", "back": "Hai request đồng thời cùng thấy \"chưa có\" rồi cùng chèn; chỉ ràng buộc `UNIQUE` ở database chặn được." },
+    { "id": "mysql-check", "front": "MySQL bắt đầu thực thi ràng buộc `CHECK` từ phiên bản nào?", "back": "8.0.16; các bản trước parse cú pháp nhưng bỏ qua." },
+    { "id": "denormalize", "front": "Khi nào phi chuẩn hoá là hợp lý?", "back": "Khi cần đọc nhanh (tổng tiền lưu sẵn) hoặc cần giữ giá trị tại thời điểm giao dịch (giá, tên sản phẩm lúc mua)." }
+  ]
+}
