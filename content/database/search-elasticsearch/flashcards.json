@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "like-wildcard", "front": "Vì sao `LIKE '%từ khoá%'` chậm?", "back": "Ký tự `%` ở đầu làm B-tree không dùng được, nên database quét mọi dòng." },
+    { "id": "inverted-index", "front": "Inverted index lưu gì?", "back": "Mỗi từ (sau analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất." },
+    { "id": "analyzer-parts", "front": "Analyzer gồm những phần nào?", "back": "Character filter (ví dụ bỏ HTML), tokenizer (tách từ), token filter (chữ thường, bỏ dấu, đồng nghĩa)." },
+    { "id": "same-analyzer", "front": "Nguyên nhân số một của \"tìm không ra\" trong Elasticsearch?", "back": "Analyzer lúc ghi và lúc tìm khác nhau, nên các từ không khớp nhau." },
+    { "id": "text-keyword", "front": "Trường `text` và `keyword` khác nhau thế nào?", "back": "`text` được phân tích để tìm kiếm toàn văn; `keyword` giữ nguyên để lọc, sắp xếp và gom nhóm." },
+    { "id": "nrt", "front": "Vì sao vừa ghi vào Elasticsearch xong tìm chưa thấy?", "back": "Tài liệu chỉ tìm thấy sau refresh (mặc định 1 giây). Cần thấy ngay thì ghi với `refresh=wait_for`." },
+    { "id": "nested", "front": "Vì sao tìm \"đỏ và size L\" lại khớp sản phẩm có biến thể \"đỏ M\" và \"xanh L\"?", "back": "Mảng object bị làm phẳng thành các mảng giá trị riêng. Dùng kiểu `nested` để khớp trong cùng một phần tử." },
+    { "id": "alias-reindex", "front": "Đổi mapping của index đang chạy thế nào?", "back": "Tạo index mới, nạp lại dữ liệu, rồi chuyển alias sang index mới trong một lệnh nguyên tử." },
+    { "id": "deep-paging", "front": "Vì sao `from + size` bị giới hạn 10.000?", "back": "Mỗi shard phải trả `from + size` kết quả để trộn. Duyệt sâu thì dùng `search_after` với point in time." },
+    { "id": "pg-enough", "front": "Khi nào không cần Elasticsearch?", "back": "Dữ liệu vài triệu dòng, tìm đơn giản: PostgreSQL `tsvector` + GIN, hoặc `pg_trgm` cho `LIKE '%...%'` và lỗi gõ, thường đã đủ." }
+  ]
+}

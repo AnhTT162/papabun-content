@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "rolling-compat", "front": "Vì sao rolling deploy buộc migration phải tương thích hai chiều?", "back": "Code cũ và code mới chạy cùng lúc trên một schema, và rollback ứng dụng cũng chạy trên schema mới." },
+    { "id": "expand-contract", "front": "Các bước expand-contract khi đổi tên một cột?", "back": "Thêm cột mới, ghi cả hai, backfill, chuyển đọc sang cột mới, thôi ghi cột cũ, cuối cùng mới xoá cột cũ." },
+    { "id": "edit-applied", "front": "Sửa một file migration Flyway đã chạy thì sao?", "back": "Checksum lệch, `validate` báo lỗi ở lần chạy sau. Luôn viết migration mới." },
+    { "id": "pg-rewrite", "front": "DDL nào trên PostgreSQL ghi lại cả bảng dưới `ACCESS EXCLUSIVE`?", "back": "Phần lớn `ALTER COLUMN TYPE` (ví dụ int sang bigint) và `ADD COLUMN` với default volatile như `gen_random_uuid()`." },
+    { "id": "not-valid", "front": "Thêm foreign key hay CHECK vào bảng lớn mà không chặn ghi thế nào?", "back": "`ADD CONSTRAINT ... NOT VALID` (lock ngắn), rồi `VALIDATE CONSTRAINT` quét bảng mà không chặn ghi." },
+    { "id": "cic-invalid", "front": "`CREATE INDEX CONCURRENTLY` lỗi giữa chừng để lại gì?", "back": "Một index `INVALID` vẫn làm chậm mọi lần ghi; phải `DROP INDEX CONCURRENTLY` rồi tạo lại." },
+    { "id": "mysql-algorithm", "front": "Vì sao nên ghi rõ `ALGORITHM` và `LOCK` trong `ALTER TABLE` của MySQL?", "back": "Để lệnh báo lỗi thay vì âm thầm dùng `COPY` và chặn ghi khi thao tác không hỗ trợ cách nhanh hơn." },
+    { "id": "backfill", "front": "Backfill hàng trăm triệu dòng thế nào cho an toàn?", "back": "Lô nhỏ theo khoảng primary key, mỗi lô một transaction, nghỉ giữa lô, dừng khi replica lag cao, chạy lại được." },
+    { "id": "drop-column-order", "front": "Xoá một cột mà entity JPA đang map: làm theo thứ tự nào?", "back": "Deploy code bỏ mapping trước, chờ hết pod cũ, rồi mới chạy migration xoá cột." },
+    { "id": "ddl-auto", "front": "`spring.jpa.hibernate.ddl-auto` nên đặt gì ở production?", "back": "`validate` hoặc `none`; schema do Flyway/Liquibase quản lý, không bao giờ dùng `update`." }
+  ]
+}

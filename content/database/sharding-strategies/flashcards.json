@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "when-shard", "front": "Khi nào sharding là cần thiết thật sự?", "back": "Khi một primary không chịu nổi lượng ghi hoặc dữ liệu quá lớn để vận hành (restore, index, VACUUM), sau khi đã thử máy lớn hơn, replica, cache, partitioning và lưu trữ dữ liệu cũ." },
+    { "id": "good-shard-key", "front": "Shard key tốt cần những tính chất gì?", "back": "Nhiều giá trị, phân bố đều, có trong hầu hết query, và gom dữ liệu của cùng một transaction về một shard (ví dụ `tenant_id`)." },
+    { "id": "mod-n", "front": "Vì sao `hash(key) % N` gây khó khi thêm shard?", "back": "Đổi N từ 8 lên 9 thì khoảng 8/9 số key đổi shard, gần như phải chép lại toàn bộ dữ liệu." },
+    { "id": "logical-shard", "front": "Logical shard giải quyết vấn đề gì?", "back": "Chia key vào nhiều bucket cố định rồi gán bucket cho máy; thêm máy chỉ cần chuyển vài bucket thay vì chia lại mọi key." },
+    { "id": "directory", "front": "Ưu và nhược điểm của directory sharding?", "back": "Linh hoạt nhất, chuyển riêng từng tenant được; đổi lại thêm một lần tra cứu, nên phải cache và giữ directory luôn sẵn sàng." },
+    { "id": "scatter-gather", "front": "Scatter-gather tốn kém ở đâu?", "back": "Hỏi mọi shard, chờ shard chậm nhất, tải nhân theo số shard; phân trang bằng OFFSET càng sâu càng đắt." },
+    { "id": "global-unique", "front": "Giữ email unique toàn hệ thống khi user nằm trên nhiều shard thế nào?", "back": "Bảng tra cứu theo email (database riêng hoặc shard theo email): ghi nó trước để giữ chỗ, rồi ghi dữ liệu chính, kèm job đối soát." },
+    { "id": "reference-table", "front": "Reference table trong hệ thống sharding là gì?", "back": "Bảng nhỏ dùng chung (tiền tệ, quốc gia) được chép lên mọi shard để JOIN vẫn chạy cục bộ." },
+    { "id": "big-tenant", "front": "Xử lý một tenant chiếm phần lớn tải thế nào?", "back": "Directory đặt riêng nó lên một shard; nếu vượt cả một máy thì chia tiếp theo key thứ hai bên trong tenant đó." },
+    { "id": "resharding-steps", "front": "Các bước resharding không dừng hệ thống?", "back": "Chép snapshot, áp tiếp thay đổi từ binlog/WAL, so sánh dữ liệu, dừng ghi vài giây để đổi định tuyến, giữ dữ liệu cũ một thời gian." }
+  ]
+}

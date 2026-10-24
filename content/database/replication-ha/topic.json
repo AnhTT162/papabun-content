@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "replication-ha",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Replication & high availability",
+  "summary": "Physical và logical replication trong PostgreSQL và MySQL, async, sync và semi-sync (và lúc semi-sync lặng lẽ thành async), đo replica lag cho đúng, read-your-writes khi đọc từ replica, failover tự động và cách chống split brain bằng lease và fencing, những gì ứng dụng Java phải làm khi primary đổi.",
+  "level": "senior",
+  "order": 20,
+  "minutes": 20,
+  "prerequisites": ["storage-engine", "backup-restore", "mvcc-vacuum"],
+  "terms": ["streaming-replication", "logical-replication", "synchronous-replication", "semi-sync-replication", "replica-lag", "relay-log", "gtid", "read-your-writes", "monotonic-reads", "failover", "split-brain", "fencing", "patroni", "pg-rewind", "wal", "binlog", "replication-slot", "hot-standby-feedback", "rpo-rto", "delayed-replica", "primary-key", "hikaricp"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Log-Shipping Standby Servers", "url": "https://www.postgresql.org/docs/current/warm-standby.html" },
+    { "title": "MySQL 8.0: Semisynchronous Replication", "url": "https://dev.mysql.com/doc/refman/8.0/en/replication-semisync.html" },
+    { "title": "Patroni Documentation: Replication modes", "url": "https://patroni.readthedocs.io/en/latest/replication_modes.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bật sync replication rồi thì có còn cần backup không?\" Vẫn cần. Replication chép **mọi** thay đổi, kể cả `DELETE` nhầm hay migration hỏng, sang replica trong vài mili giây; nó bảo vệ trước việc **máy** chết, không bảo vệ trước việc **dữ liệu** sai. Muốn quay lại trước lỗi logic thì cần backup kèm WAL/binlog để PITR, hoặc delayed replica (bài Backup, restore & PITR). Và sync replication chỉ đảm bảo replica đã **ghi nhận** WAL, không đảm bảo replica đã áp dữ liệu, nên đọc từ nó ngay sau commit vẫn có thể thấy dữ liệu cũ, trừ khi dùng `remote_apply`." }
+  ]
+}

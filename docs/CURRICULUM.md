@@ -62,15 +62,15 @@ Thứ tự **học** khác thứ tự **viết** (mục 4): học theo tầng xu
 
 ## 4. Thứ tự viết
 
-Theo thứ tự đã chốt trong spec của app (mục 9, "Sau MVP"), ưu tiên theo lời khuyên của SA. Trong mỗi track, viết bài Nền trước rồi tới bài Vững và Sâu, để bài sau dùng được bài trước làm `prerequisites`.
+Thứ tự do người học chốt ngày 2026-10-24 (thay thứ tự cũ theo spec của app). Trong mỗi track, viết bài Nền trước rồi tới bài Vững và Sâu, để bài sau dùng được bài trước làm `prerequisites`.
 
 | Đợt | Track |
 |---|---|
-| 1 | Database (phần còn lại) → Performance & Troubleshooting → Security |
-| 2 | Spring → Testing → System Design |
-| 3 | Caching & Messaging → Cloud & DevOps → Nền tảng CS (phần còn lại) |
-| 4 | JVM → Distributed Systems → Design → Solution Architect |
-| Xen kẽ | Core Java và Concurrency (phần còn lại), khi bài ở đợt khác cần chúng làm bài nền |
+| 1 | Database (phần còn lại) → Caching & Messaging → Spring → Concurrency (phần còn lại) |
+| 2 | Design → Distributed Systems → Performance & Troubleshooting |
+| 3 | Security → Testing → System Design → Cloud & DevOps |
+| 4 | Nền tảng CS, Core Java, JVM (phần còn lại) → Solution Architect |
+| Xen kẽ | Bài ở track khác khi một bài đang viết cần nó làm bài nền |
 
 ## 5. Khái niệm dùng chung: bài nào giải thích chính
 
@@ -246,13 +246,13 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 15 | `nosql-overview` | NoSQL: chọn loại nào | mid | Document, key-value, wide-column, graph; mô hình theo access pattern | L Sc | ✅ |
 | 16 | `backup-restore` | Backup, restore & PITR | mid | Logical và physical backup, PITR dựa trên WAL/binlog, diễn tập restore (RPO/RTO: xem `high-availability-dr`) | L Sc | ✅ |
 | 17 | `locking-deadlock-db` | Lock & deadlock trong database | senior | Row và table lock, gap lock, đọc deadlock log, lock timeout, advisory lock | L D T | ✅ |
-| 18 | `mvcc-vacuum` | MVCC, VACUUM & undo log | senior | Phiên bản dòng PostgreSQL và InnoDB, autovacuum, bloat, XID wraparound | L D T | ⬜ |
+| 18 | `mvcc-vacuum` | MVCC, VACUUM & undo log | senior | Phiên bản dòng PostgreSQL và InnoDB, autovacuum, bloat, XID wraparound | L D T | ✅ |
 | 19 | `partitioning-index` | Partitioning & Global/Local Index | senior | Pruning, local và global, unique key, DynamoDB GSI/LSI | A L D Sc | ✅ |
-| 20 | `replication-ha` | Replication & high availability | senior | Sync và async, replica lag, read-your-writes, failover, split brain | L D T | ⬜ |
-| 21 | `sharding-strategies` | Sharding | senior | Hash, range, directory; resharding; query xuyên shard; Vitess, Citus | L D Sc | ⬜ |
-| 22 | `schema-migration` | Migration không downtime | senior | Flyway/Liquibase, expand-contract, online DDL, backfill lớn | L B Sc | ⬜ |
-| 23 | `search-elasticsearch` | ✚ Search engine & Elasticsearch | senior | Inverted index, analyzer, relevance, đồng bộ từ DB, khi nào không cần | L D Sc | ⬜ |
-| 24 | `postgres-vs-mysql` | ✚ PostgreSQL và MySQL: khác nhau ở đâu | senior | Lưu trữ (heap và clustered), MVCC, replication, index, tính năng; chọn cho dự án mới | L Sc | ⬜ |
+| 20 | `replication-ha` | Replication & high availability | senior | Sync và async, replica lag, read-your-writes, failover, split brain | L D T | ✅ |
+| 21 | `sharding-strategies` | Sharding | senior | Hash, range, directory; resharding; query xuyên shard; Vitess, Citus | L D Sc | ✅ |
+| 22 | `schema-migration` | Migration không downtime | senior | Flyway/Liquibase, expand-contract, online DDL, backfill lớn | L B Sc | ✅ |
+| 23 | `search-elasticsearch` | ✚ Search engine & Elasticsearch | senior | Inverted index, analyzer, relevance, đồng bộ từ DB, khi nào không cần | L D Sc | ✅ |
+| 24 | `postgres-vs-mysql` | ✚ PostgreSQL và MySQL: khác nhau ở đâu | senior | Lưu trữ (heap và clustered), MVCC, replication, index, tính năng; chọn cho dự án mới | L Sc | ✅ |
 
 ### 8. Caching & Messaging (`caching-messaging`)
 

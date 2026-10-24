@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Một PostgreSQL 6TB cho cả nền tảng SaaS",
+  "prompt": "Nền tảng bán hàng SaaS có **4.000 tenant** (cửa hàng), chạy trên **một PostgreSQL 16** primary cộng hai replica, đã ở loại máy lớn nhất mà đội chấp nhận chi trả.\n\n- Dữ liệu **6TB**, tăng khoảng 250GB mỗi tháng.\n- Cao điểm **18.000 transaction ghi mỗi giây**; CPU primary 75% lúc cao điểm, dự kiến lượng ghi gấp đôi trong 12 tháng.\n- Diễn tập restore mất **9 giờ**, trong khi cam kết RTO là 2 giờ. VACUUM bảng `order_items` mất 14 giờ.\n- 97% query có `tenant_id`. Tenant lớn nhất chiếm 12% lượng ghi; 20 tenant lớn nhất chiếm 45%.\n- Người mua đăng nhập bằng email, email **unique trên toàn nền tảng**. Đội vận hành có dashboard xem doanh thu của mọi tenant.\n- Có 60 pod ứng dụng Spring Boot, mỗi pod một HikariCP 10 connection.\n\nThiết kế sharding: shard key, cách gán, số shard, xử lý tenant lớn, email unique, dashboard, và kế hoạch chuyển đổi không dừng hệ thống.",
+  "hints": [
+    "Shard key nào cho phép gần như mọi transaction nằm trọn trong một shard? Bảng nào không có cột đó?",
+    "Nếu sau này cần chuyển riêng tenant lớn nhất sang máy riêng, cách gán theo `hash(tenant_id) % 8` có làm được không?",
+    "Số shard nên tính từ cả tải ghi lẫn thời gian restore một shard. 6TB restore mất 9 giờ thì mỗi shard nên lớn cỡ nào?",
+    "Email unique không thể kiểm tra bằng constraint khi user nằm rải rác trên nhiều shard. Dữ liệu đăng nhập có cần nằm cùng shard với tenant không?"
+  ],
+  "solution": "**1. Shard key: `tenant_id`.**\n\nMọi bảng nghiệp vụ (đơn, sản phẩm, tồn kho, khách của cửa hàng) đều có `tenant_id`, và primary key thành `(tenant_id, id)`. Toàn bộ dữ liệu của một tenant nằm trên một shard, nên transaction đặt hàng và JOIN vẫn là cục bộ như hiện nay. Primary key chứa `tenant_id` còn là điều kiện để logical replication lọc theo tenant ở bước 6. Bảng dùng chung nhỏ (tiền tệ, gói dịch vụ, quốc gia) là reference table, chép lên mọi shard.\n\n**2. Cách gán: logical shard + directory.**\n\n- Băm `tenant_id` vào **1.024 bucket** cố định; bảng directory `bucket → shard` (và ngoại lệ `tenant → shard`) chỉ vài nghìn dòng, có **số phiên bản**. Ứng dụng cache nó; shard kiểm tra phiên bản kèm request và từ chối phiên bản cũ.\n- Thêm máy hay cân bằng tải chỉ là chuyển vài bucket. Directory cho phép đặt riêng một tenant lớn mà không đổi công thức cho các tenant khác.\n\n**3. Số shard: 8 shard vật lý cộng 1 shard riêng cho tenant lớn nhất.**\n\n- Tải ghi: tenant lớn nhất (12%, khoảng 2.200 tx/s, sau một năm khoảng 4.300) có shard riêng. 88% còn lại chia cho 8 shard: khoảng 2.000 tx/s mỗi shard, gấp đôi sau một năm vẫn ổn. Nhóm 20 tenant lớn được rải để không shard nào gánh quá nhiều.\n- Dung lượng: khoảng 700GB mỗi shard lúc đầu, khoảng 1TB sau 12 tháng. Theo tốc độ diễn tập hiện tại (1,5 giờ mỗi TB) restore một shard khoảng 1–1,5 giờ; máy nhỏ hơn thường restore chậm hơn, và RTO còn gồm thời gian phát hiện, quyết định, phát lại WAL và đổi endpoint. Vì vậy: lên kế hoạch tách bucket sang 12–16 shard trước khi shard nào vượt khoảng 1TB.\n- Hỏng primary của một shard thì RTO đạt được bằng **failover sang replica** (vài phút); restore chỉ dành cho lỗi dữ liệu logic hoặc mất cả vùng.\n\n**4. Email unique toàn nền tảng: tài khoản người mua là dữ liệu toàn cục.**\n\n- Một người mua dùng một tài khoản ở mọi cửa hàng. Database toàn cục nhỏ (có replica và failover) giữ `buyer_account(buyer_id, email UNIQUE, password_hash, ...)`. Mỗi cửa hàng có `customer(tenant_id, buyer_id, ...)` trên shard của tenant đó.\n- Đăng ký: tạo `buyer_account` trước (constraint chặn trùng), rồi tạo `customer` ở shard của tenant khi người đó mua lần đầu. Bước sau lỗi thì có job đối soát.\n- Mọi lượt đăng nhập phụ thuộc database này: cần HA, cache phiên đăng nhập và rate limit.\n- ID: giữ kiểu `bigint` (đổi sang `uuid` trên 6TB là ghi lại mọi bảng, index và client). Chuyển nguồn sinh sang ID 64 bit kiểu snowflake, hoặc chia dải sequence cho từng shard, và `setval` để dải mới không trùng dải cũ. UUID v7 chỉ dùng cho bảng mới.\n\n**5. Dashboard xuyên tenant: không chạy trên shard.**\n\nCDC (Debezium) từ mọi shard đổ về một kho phân tích (ClickHouse, BigQuery...). Dashboard trễ vài phút là chấp nhận được, và query nặng không làm chậm OLTP. Thao tác vận hành theo một tenant thì tra directory rồi đi thẳng shard đó.\n\n**6. Chuyển đổi không dừng hệ thống.**\n\n1. **Chuẩn bị trong database hiện tại** (bài Migration không downtime): thêm `tenant_id` vào bảng còn thiếu và backfill theo lô có điều tốc (primary đang ở 75% CPU); đổi primary key bằng `CREATE UNIQUE INDEX CONCURRENTLY` rồi `ADD CONSTRAINT ... PRIMARY KEY USING INDEX`, sửa các foreign key tham chiếu; sửa mọi query để luôn lọc theo `tenant_id` (test, và log các query thiếu `tenant_id`).\n2. **Lớp định tuyến trước**: đưa routing DataSource (hoặc Citus/ShardingSphere) vào, ban đầu mọi bucket trỏ về database hiện tại. Chạy vài tuần trước khi động tới dữ liệu.\n3. **Chuyển từng nhóm bucket**:\n   - Logical replication có row filter chép dữ liệu của nhóm sang shard mới và áp tiếp thay đổi. Đóng băng migration DDL trong lúc chuyển, theo dõi slot và WAL tồn trên primary, cân nhắc chép từ standby (bản 16+).\n   - So số dòng và checksum theo tenant; cho một phần lượt đọc đi cả hai bên và so kết quả.\n   - Cắt chuyển: trigger trong database cũ từ chối ghi của các tenant trong nhóm; chờ transaction đang mở kết thúc; chờ bên mới đạt đúng LSN của nguồn; `setval` sequence nếu còn dùng; bật replication ngược từ shard mới về database cũ; đổi directory (tăng phiên bản); mở ghi ở shard mới.\n   - Bắt đầu với tenant nhỏ; tenant lớn nhất chuyển cuối, vào giờ thấp điểm của chính nó.\n4. **Quay lại** (nếu cần) là cắt chuyển theo chiều ngược, nhờ replication ngược đang chạy.\n5. **Bỏ database cũ**: chuyển **mọi** tenant ra các shard mới, kể cả phần lẽ ra ở lại, rồi tắt replication ngược và bỏ hẳn máy cũ. Xoá theo lô 5TB trên máy cũ sẽ tạo bloat khổng lồ và không làm file nhỏ lại.\n\n**7. Vận hành.**\n\n- Connection: 60 pod × 9 shard × 10 = 5.400, mỗi shard vẫn 600 connection mà đa số rảnh. Giảm pool mỗi shard xuống 2–3 hoặc đặt PgBouncer chế độ transaction trước mỗi shard.\n- Migration chạy trên mọi shard bằng một công cụ chung, viết kiểu expand-contract để chịu được lúc một nửa số shard đã đổi.\n- Giám sát và cảnh báo theo shard; mỗi shard có replica và PITR riêng.",
+  "tradeoffs": [
+    {
+      "option": "Sharding trong ứng dụng (routing DataSource + directory)",
+      "pros": [
+        "Toàn quyền kiểm soát vị trí tenant",
+        "Không thêm thành phần hạ tầng mới",
+        "Giữ nguyên PostgreSQL thường trên mỗi shard"
+      ],
+      "cons": [
+        "Tự viết công cụ chuyển bucket, đối soát, migration nhiều shard",
+        "Mọi đội phải nhớ luôn truyền shard key"
+      ]
+    },
+    {
+      "option": "Citus",
+      "pros": [
+        "Co-location và reference table có sẵn",
+        "Query xuyên shard và rebalance có sẵn",
+        "Ứng dụng gần như không đổi"
+      ],
+      "cons": [
+        "Thêm node điều phối",
+        "Một số tính năng PostgreSQL và extension bị hạn chế trên bảng phân tán",
+        "Đặt riêng một tenant cần `isolate_tenant_to_new_shard`"
+      ]
+    },
+    {
+      "option": "Distributed SQL (CockroachDB, YugabyteDB)",
+      "pros": [
+        "Tự chia, tự cân bằng, unique toàn cục bằng constraint",
+        "Transaction xuyên shard được hỗ trợ"
+      ],
+      "cons": [
+        "Latency ghi cao hơn vì đồng thuận",
+        "Chuyển cả hệ thống sang database khác, khác biệt về tính năng và hiệu năng",
+        "Chi phí và kinh nghiệm vận hành mới"
+      ]
+    },
+    {
+      "option": "Không shard: máy lớn hơn, lưu trữ dữ liệu cũ, tách module",
+      "pros": [
+        "Đơn giản nhất",
+        "Không đổi mô hình dữ liệu"
+      ],
+      "cons": [
+        "Đã ở máy lớn nhất chấp nhận được, chỉ mua thêm vài tháng",
+        "Không giải quyết restore 9 giờ"
+      ]
+    }
+  ]
+}

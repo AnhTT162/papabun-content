@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Khoá chính int sắp tràn sau 34 ngày",
+  "prompt": "Bảng `orders` trên PostgreSQL 14 có khoá chính `id integer` lấy từ sequence. Giá trị lớn nhất hiện tại là **1.700.000.000**; `integer` tối đa là 2.147.483.647. Trung bình **150 đơn mỗi giây** (cao điểm 900).\n\n- `orders`: 900 triệu dòng, 420GB cả index.\n- `order_items`: 3,1 tỉ dòng, 1,1TB, cột `order_id integer` có foreign key tới `orders(id)`.\n- Hệ thống chạy 24/7, cửa sổ bảo trì tối đa 5 phút mỗi tháng. Có một replica async cho báo cáo. Đĩa còn trống 2,5TB.\n- Ứng dụng Spring Boot dùng `Integer id` trong entity; app mobile đọc `id` trong JSON.\n\nLập kế hoạch đổi sang `bigint` trước khi tràn, không dừng hệ thống quá cửa sổ bảo trì.",
+  "hints": [
+    "Còn bao nhiêu ngày? `ALTER TABLE orders ALTER COLUMN id TYPE bigint` giữ lock gì và trong bao lâu với 420GB?",
+    "Có thể chuẩn bị một cột `bigint` song song trong lúc hệ thống vẫn chạy không? Dòng mới ghi trong lúc backfill thì sao?",
+    "Primary key và foreign key cần index nào có sẵn để bước chuyển chỉ mất vài giây?",
+    "Ngoài database, những chỗ nào trong code và client đang giả định id là số 32 bit?"
+  ],
+  "solution": "**0. Thời gian còn lại**: (2.147.483.647 − 1.700.000.000) / 150 ≈ 2,98 triệu giây ≈ **34 ngày** theo trung bình; một đợt khuyến mãi kéo dài ở mức cao điểm rút xuống còn vài ngày. Bắt đầu ngay và đặt cảnh báo khi sequence vượt 90% (`SELECT last_value FROM orders_id_seq`).\n\n**Vì sao không `ALTER COLUMN TYPE` thẳng**: lệnh này ghi lại toàn bộ bảng và dựng lại mọi index dưới `ACCESS EXCLUSIVE`, tức `orders` ngừng phục vụ cả đọc lẫn ghi hàng giờ, và `order_items` 1,1TB còn lâu hơn. Không vừa cửa sổ 5 phút.\n\n**1. Ứng dụng trước (làm song song với bước 2)**\n- Entity đổi `Integer` thành `Long`, DTO và các API nội bộ cũng vậy. JDBC đọc `int4` vào `Long` không vấn đề, nhưng nếu đặt `ddl-auto=validate` thì Hibernate thấy `int4` khác `bigint` và không cho ứng dụng khởi động: tạm đặt `none` trong giai đoạn chuyển, hoặc dùng `@Column(columnDefinition = \"integer\")` tới sau bước chuyển.\n- JSON: số tới 2^53 an toàn với JavaScript, nên app mobile không cần đổi; kiểm tra client nào parse `id` thành kiểu 32 bit (ví dụ `Int` trên một số nền tảng cũ).\n- Tìm các bảng khác, cache key, message Kafka và service khác lưu `order_id` dạng int.\n\n**2. Chuẩn bị cột mới cho `orders`, không dừng hệ thống**\n1. `ALTER TABLE orders ADD COLUMN id_new bigint;` (chỉ sửa metadata, đặt `lock_timeout`).\n2. Trigger `BEFORE INSERT OR UPDATE` đặt `NEW.id_new := NEW.id`, để mọi dòng mới hoặc vừa sửa đều có giá trị.\n3. Backfill theo lô: `UPDATE orders SET id_new = id WHERE id >= ? AND id < ? + 10000 AND id_new IS NULL`, nghỉ giữa các lô, dừng khi replica lag vượt 30 giây. Ở khoảng 20.000 dòng mỗi giây, 900 triệu dòng mất khoảng 12,5 giờ. Mỗi dòng sinh một phiên bản mới, bảng phình gần gấp đôi: theo dõi autovacuum và dung lượng đĩa.\n4. `CREATE UNIQUE INDEX CONCURRENTLY orders_id_new_key ON orders (id_new);`\n5. Ràng buộc không null mà không quét dưới lock mạnh: `ADD CONSTRAINT id_new_not_null CHECK (id_new IS NOT NULL) NOT VALID`, rồi `VALIDATE CONSTRAINT`.\n\n**3. `order_items.order_id`**: làm tương tự với `order_id_new bigint`: trigger, backfill 3,1 tỉ dòng (khoảng 43 giờ ở cùng tốc độ), index `CONCURRENTLY` trên `order_id_new`, và `CHECK (order_id_new IS NOT NULL) NOT VALID` rồi `VALIDATE`. Dung lượng: trường hợp xấu nhất mọi update đều không HOT, hai bảng phình thêm khoảng 1,5TB, cộng index mới (khoảng 20GB và 70GB), tức khoảng 1,6TB, vừa với 2,5TB trống nhưng sát nếu tính cả WAL và archive. Backfill từng đợt và để vacuum dọn giữa các đợt. Replica báo cáo sẽ nhận lượng WAL lớn trong suốt thời gian backfill: theo dõi lag.\n\n**4. Bước chuyển trong cửa sổ 5 phút.** Giả định `id` là `serial` (nếu là identity column thì phải `DROP IDENTITY` rồi tạo identity mới với `START WITH`). Trước đó liệt kê mọi foreign key trỏ vào `orders(id)` (`SELECT conrelid::regclass, conname FROM pg_constraint WHERE confrelid = 'orders'::regclass`): bảng `payments`, `shipments`... cũng phải chuẩn bị cột `bigint` như `order_items`, và có mặt trong cùng transaction. Một transaction với `SET lock_timeout = '5s'`:\n```sql\nBEGIN;\nLOCK TABLE orders, order_items IN ACCESS EXCLUSIVE MODE;\nALTER TABLE order_items DROP CONSTRAINT order_items_order_id_fkey;\nALTER TABLE orders DROP CONSTRAINT orders_pkey;\nALTER TABLE orders ALTER COLUMN id_new SET NOT NULL;      -- nhanh nhờ CHECK đã VALIDATE\nALTER TABLE orders RENAME COLUMN id TO id_old;\nALTER TABLE orders RENAME COLUMN id_new TO id;\nALTER TABLE orders ADD CONSTRAINT orders_pkey PRIMARY KEY USING INDEX orders_id_new_key;\nALTER SEQUENCE orders_id_seq AS bigint OWNED BY orders.id;\nALTER TABLE orders ALTER COLUMN id SET DEFAULT nextval('orders_id_seq');\nALTER TABLE orders ALTER COLUMN id_old DROP NOT NULL, ALTER COLUMN id_old DROP DEFAULT;\nALTER TABLE orders DROP CONSTRAINT id_new_not_null;\n\n-- order_items: CHECK (order_id_new IS NOT NULL) đã NOT VALID + VALIDATE từ trước\nALTER TABLE order_items ALTER COLUMN order_id_new SET NOT NULL;\nALTER TABLE order_items RENAME COLUMN order_id TO order_id_old;\nALTER TABLE order_items RENAME COLUMN order_id_new TO order_id;\nALTER TABLE order_items ALTER COLUMN order_id_old DROP NOT NULL;   -- code mới không ghi cột cũ nữa\nALTER TABLE order_items DROP CONSTRAINT order_id_new_not_null;\nALTER TABLE order_items ADD CONSTRAINT order_items_order_id_fkey\n  FOREIGN KEY (order_id) REFERENCES orders (id) NOT VALID;\nDROP TRIGGER ... ;  -- các trigger đồng bộ\nCOMMIT;\n```\nSau đó, ngoài cửa sổ: `ALTER TABLE order_items VALIDATE CONSTRAINT order_items_order_id_fkey;` (quét bảng nhưng không chặn ghi). Diễn tập toàn bộ kịch bản trên bản sao dữ liệu thật và đo thời gian lock trước khi làm trên production. Lưu ý `ALTER SEQUENCE ... AS bigint` để sequence không dừng ở giới hạn int.\n\n**5. Dọn dẹp**: sau vài ngày ổn định, `DROP COLUMN id_old` (chỉ sửa metadata), bỏ index cũ nếu còn, `pg_repack` nếu bảng phình nhiều.\n\n**Phương án dự phòng nếu không kịp**: `ALTER SEQUENCE orders_id_seq MINVALUE -2147483648 RESTART WITH -2147483648` cho thêm khoảng 2,1 tỉ giá trị âm. Mua được thời gian, nhưng mọi code giả định id dương, sắp xếp theo id để lấy đơn mới nhất hay keyset pagination đều sai. Chỉ dùng khi bất đắc dĩ và có kế hoạch chuyển tiếp.",
+  "tradeoffs": [
+    {
+      "option": "ALTER COLUMN TYPE bigint thẳng",
+      "pros": [
+        "Một lệnh, không có trạng thái trung gian"
+      ],
+      "cons": [
+        "Khoá cả đọc lẫn ghi hàng giờ trên 420GB và 1,1TB",
+        "Sinh hàng TB WAL; lock được replay trên replica chặn hoặc huỷ query báo cáo"
+      ]
+    },
+    {
+      "option": "Cột mới + trigger + backfill + chuyển trong một transaction ngắn",
+      "pros": [
+        "Không dừng hệ thống, chỉ cần vài giây lock",
+        "Mỗi bước dừng lại hoặc làm lại được"
+      ],
+      "cons": [
+        "Nhiều bước, phải diễn tập",
+        "Bảng phình tạm thời, tốn đĩa và I/O nhiều ngày"
+      ]
+    },
+    {
+      "option": "Logical replication sang bảng hoặc cluster mới đã dùng bigint, rồi chuyển",
+      "pros": [
+        "Bảng mới gọn, không phình",
+        "Có thể kết hợp nâng cấp phiên bản PostgreSQL"
+      ],
+      "cons": [
+        "Bước chuyển phức tạp hơn (sequence, ghi trong lúc chuyển)",
+        "Cần gấp đôi dung lượng hoặc một cluster mới"
+      ]
+    },
+    {
+      "option": "Sequence chạy sang số âm",
+      "pros": [
+        "Làm trong vài giây, mua thêm khoảng 2,1 tỉ giá trị"
+      ],
+      "cons": [
+        "Phá mọi logic giả định id dương và tăng dần",
+        "Chỉ hoãn vấn đề"
+      ]
+    }
+  ]
+}

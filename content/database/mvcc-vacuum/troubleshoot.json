@@ -1,0 +1,148 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Bảng orders phình gấp 8 lần dù autovacuum chạy liên tục",
+  "symptom": "Cảnh báo đĩa của PostgreSQL primary chạm 85%. Bảng `orders` (52 triệu dòng) từ 18GB hôm qua lên 150GB, API tra đơn chậm từ 15ms lên 400ms. Hệ thống cập nhật khoảng 3.400 dòng `orders` mỗi giây, trong khoảng 550 transaction ghi. Không có deploy hay migration nào trong 2 ngày.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn làm gì đầu tiên?",
+      "choices": [
+        {
+          "label": "Xem `pg_stat_user_tables`: số dòng chết và lần autovacuum gần nhất của `orders`",
+          "quality": "good",
+          "feedback": "Bảng to lên nhanh mà số dòng sống không đổi thì nghi ngay dòng chết. Thống kê này cho biết autovacuum có chạy không và có dọn được không.",
+          "next": "stats"
+        },
+        {
+          "label": "Chạy `VACUUM FULL orders` để thu hồi dung lượng ngay",
+          "quality": "poor",
+          "feedback": "`VACUUM FULL` khoá `ACCESS EXCLUSIVE` suốt thời gian ghi lại bảng, tức `orders` ngừng phục vụ cả đọc lẫn ghi. Nó cũng cần thêm chỗ trống cỡ bảng mới trong khi đĩa đã gần đầy. Và nếu dòng chết chưa được phép dọn, bảng mới vẫn phải chép chúng.",
+          "next": "full"
+        },
+        {
+          "label": "Tăng `autovacuum_max_workers` từ 3 lên 8",
+          "quality": "ok",
+          "feedback": "Chưa biết autovacuum chậm hay bị chặn. Thêm worker mà không tăng cost limit thì mỗi worker còn chạy chậm hơn, và đổi tham số này phải restart (trước bản 18). Xem số liệu trước.",
+          "next": "stats"
+        }
+      ]
+    },
+    {
+      "id": "full",
+      "evidence": "10:12 VACUUM FULL orders;  -- session 7210\n10:12 pg_stat_activity: 214 session wait_event_type = Lock, relation orders\n10:13 HikariPool-1 - Connection is not available, request timed out after 30000ms\n10:13 df -h /var/lib/postgresql: 87% used",
+      "evidenceFormat": "monospace",
+      "question": "Toàn bộ API đơn hàng đứng. Làm gì?",
+      "choices": [
+        {
+          "label": "Huỷ session 7210 bằng `pg_cancel_backend(7210)` rồi điều tra số liệu",
+          "quality": "good",
+          "feedback": "Đúng. Huỷ `VACUUM FULL` không mất dữ liệu: bảng cũ vẫn nguyên, bản đang ghi dở bị bỏ. Giờ xem vì sao dòng chết tích lại.",
+          "next": "stats"
+        }
+      ]
+    },
+    {
+      "id": "stats",
+      "evidence": "SELECT n_live_tup, n_dead_tup, last_autovacuum, autovacuum_count\nFROM pg_stat_user_tables WHERE relname = 'orders';\n\n n_live_tup | n_dead_tup |    last_autovacuum     | autovacuum_count\n------------+------------+------------------------+------------------\n   52104311 |  379612004 | 2026-10-24 10:04:51+07 |              412\n\nTrung bình 3 tuần trước: n_dead_tup ~ 2 triệu, autovacuum_count tăng ~ 30 lần mỗi ngày",
+      "evidenceFormat": "monospace",
+      "question": "Autovacuum vừa chạy 8 phút trước, và đã chạy rất nhiều lần, nhưng có 380 triệu dòng chết. Vì sao?",
+      "choices": [
+        {
+          "label": "Có thứ đang giữ lùi xmin horizon nên autovacuum chạy mà không được phép dọn",
+          "quality": "good",
+          "feedback": "Đúng hướng. Autovacuum chạy nhiều lần là vì dòng chết luôn vượt ngưỡng, nhưng mỗi lần lại không dọn được gì. Log autovacuum sẽ xác nhận.",
+          "next": "log"
+        },
+        {
+          "label": "Autovacuum bị hãm tốc độ quá mạnh nên không theo kịp",
+          "quality": "ok",
+          "feedback": "Nếu chỉ chậm thì sau mỗi lần chạy, số dòng chết phải giảm đáng kể. Ở đây nó chạy xong rồi bắt đầu lại liên tục mà không giảm. Xem log để biết mỗi lần nó dọn được bao nhiêu.",
+          "next": "log"
+        },
+        {
+          "label": "Thống kê `n_dead_tup` sai, cần chạy `ANALYZE orders`",
+          "quality": "poor",
+          "feedback": "Thống kê có thể lệch một chút, nhưng bảng thật sự tăng từ 18GB lên 150GB với số dòng sống không đổi, nên dòng chết là có thật.",
+          "next": "log"
+        }
+      ]
+    },
+    {
+      "id": "log",
+      "evidence": "LOG:  automatic vacuum of table \"shop.public.orders\": index scans: 0\n      pages: 0 removed, 19650114 remain, 19650114 scanned (100.00% of total)\n      tuples: 1204 removed, 431716315 remain, 379611830 are dead but not yet removable\n      removable cutoff: 88123004, which was 61204417 XIDs old when operation ended\n      ...\n      system usage: CPU: user: 98.12 s, system: 41.30 s, elapsed: 512.44 s",
+      "evidenceFormat": "monospace",
+      "question": "Horizon cũ 61 triệu XID, tức khoảng 31 giờ ở tốc độ 550 transaction mỗi giây. Tìm thứ giữ nó ở đâu?",
+      "choices": [
+        {
+          "label": "Xem `backend_xmin` trong `pg_stat_activity` trên primary, rồi tới slot và các replica",
+          "quality": "good",
+          "feedback": "Đúng thứ tự: transaction trên primary là nguyên nhân hay gặp nhất, sau đó là replication slot, `pg_stat_replication.backend_xmin` của replica bật `hot_standby_feedback`, và prepared transaction.",
+          "next": "primary"
+        },
+        {
+          "label": "Restart PostgreSQL để đóng mọi transaction cũ",
+          "quality": "poor",
+          "feedback": "Restart làm gián đoạn mọi ứng dụng, và không giải quyết được nếu thứ giữ horizon là replication slot, prepared transaction, hay query trên replica: những thứ đó còn nguyên sau restart.",
+          "next": "primary"
+        }
+      ]
+    },
+    {
+      "id": "primary",
+      "evidence": "-- Trên primary\nSELECT pid, state, age(backend_xmin) AS xmin_age, now() - xact_start AS xact_age\nFROM pg_stat_activity WHERE backend_xmin IS NOT NULL ORDER BY xmin_age DESC LIMIT 3;\n\n  pid  | state  | xmin_age | xact_age\n-------+--------+----------+----------\n 18233 | active |     2210 | 00:00:04\n 18240 | active |     1935 | 00:00:03\n 18102 | idle in transaction | 812 | 00:00:01\n\nSELECT slot_name, active, xmin, catalog_xmin FROM pg_replication_slots;\n\n slot_name  | active |   xmin   | catalog_xmin\n------------+--------+----------+--------------\n replica_bi | t      | 88123004 |\n replica_ha | t      |          |\n(0 rows trong pg_prepared_xacts)",
+      "evidenceFormat": "monospace",
+      "question": "Trên primary không có transaction cũ. Slot `replica_bi` có `xmin = 88123004`, đúng bằng horizon. Nghĩa là gì?",
+      "choices": [
+        {
+          "label": "Replica BI bật `hot_standby_feedback` và có query đang giữ snapshot từ 31 giờ trước",
+          "quality": "good",
+          "feedback": "Đúng. Với `hot_standby_feedback = on`, replica báo `xmin` của các query đang chạy trên nó về primary qua slot, và primary giữ lại dòng chết cho chúng. Một query dài trên replica giữ lùi horizon của primary.",
+          "next": "replica"
+        },
+        {
+          "label": "Replica BI bị lag 31 giờ nên primary phải giữ WAL",
+          "quality": "ok",
+          "feedback": "Slot đang `active`, và lag làm giữ WAL (cột `restart_lsn`), không làm giữ dòng chết. Cột `xmin` của slot vật lý chỉ có giá trị khi replica gửi feedback về snapshot.",
+          "next": "replica"
+        },
+        {
+          "label": "Slot bị bỏ quên, cần `pg_drop_replication_slot('replica_bi')` ngay",
+          "quality": "poor",
+          "feedback": "Slot đang active, tức replica vẫn đang dùng. Xoá nó làm replica BI mất chỗ bám và phải dựng lại nếu WAL đã bị xoá. Nguyên nhân nằm ở phía replica.",
+          "next": "replica"
+        }
+      ]
+    },
+    {
+      "id": "replica",
+      "evidence": "-- Trên replica_bi\nSHOW hot_standby_feedback;   -- on\n\nSELECT pid, usename, application_name, now() - query_start AS runtime, left(query, 50)\nFROM pg_stat_activity WHERE state = 'active' ORDER BY query_start LIMIT 2;\n\n  pid  |  usename  | application_name |  runtime  | left\n-------+-----------+------------------+-----------+---------------------------------------------\n 30411 | bi_reader | dashboard-export | 31:02:17  | SELECT o.*, c.segment FROM orders o JOIN cust\n 30598 | bi_reader | dashboard-export | 00:00:12  | SELECT date_trunc('day', created_at), count(",
+      "evidenceFormat": "monospace",
+      "question": "Đã tìm ra query giữ horizon. Khôi phục thế nào?",
+      "choices": [
+        {
+          "label": "Huỷ query 30411 trên replica, chờ autovacuum dọn, rồi thu nhỏ bảng bằng `pg_repack` vào giờ thấp điểm",
+          "quality": "good",
+          "feedback": "Đúng. Sau khi huỷ, horizon tiến lên và lần autovacuum tiếp theo dọn được dòng chết, API nhanh lại. Nhưng file bảng **không tự nhỏ đi**: chỗ trống chỉ được dùng lại. Muốn trả dung lượng thì `pg_repack`, nhớ chừa đủ chỗ trống trên đĩa.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Huỷ query 30411, rồi chạy `VACUUM FULL orders` để trả dung lượng ngay",
+          "quality": "poor",
+          "feedback": "Dọn dòng chết thì đúng, nhưng `VACUUM FULL` lại khoá cả bảng trong suốt thời gian ghi lại. Với bảng production đang phục vụ, dùng `pg_repack`.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tắt `hot_standby_feedback` trên replica BI và để query chạy tiếp",
+          "quality": "ok",
+          "feedback": "Primary sẽ dọn được, nhưng khi bản cũ mà query cần bị dọn và WAL dọn dẹp tới replica, replica phải chờ tối đa `max_standby_streaming_delay` (mặc định 30 giây) rồi huỷ query với lỗi `canceling statement due to conflict with recovery`. Đây là lựa chọn hợp lý về lâu dài, nhưng cần báo trước cho đội BI.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: một query xuất dữ liệu 31 giờ trên replica BI, cộng `hot_standby_feedback = on`, giữ lùi xmin horizon của primary.** Mọi phiên bản cũ của `orders` sinh ra trong 31 giờ (3.400 dòng mỗi giây × 31 giờ ≈ 380 triệu) đều phải giữ lại vì query đó *có thể* cần thấy. Autovacuum chạy liên tục, quét cả bảng mỗi lần, mà không được dọn gì. Đọc chậm vì index trỏ tới cả các phiên bản chết, và mỗi lần tra phải duyệt qua chúng.\n\n**Sửa ngay**: huỷ query trên replica (`pg_cancel_backend(30411)`), theo dõi lần autovacuum tiếp theo dọn được dòng chết. Sau đó `pg_repack` bảng và `REINDEX INDEX CONCURRENTLY` các index phình khi đĩa đủ chỗ.\n\n**Sửa đúng**:\n- Role `bi_reader` trên replica có `statement_timeout` (ví dụ 30 phút) và `idle_in_transaction_session_timeout`.\n- Chọn rõ một trong hai: replica cho query dài thì tắt `hot_standby_feedback` và chấp nhận query bị huỷ khi xung đột; hoặc giữ feedback nhưng giới hạn thời gian query. Xuất dữ liệu lớn nên đi qua data warehouse (CDC hoặc logical replication), không chạy trên replica dùng chung.\n- Replica dùng cho failover (`replica_ha`) không phục vụ query dài: bật feedback thì query dài giữ horizon của primary; tắt feedback thì việc áp WAL bị dừng tới `max_standby_streaming_delay`, replica tụt lại và failover chậm hơn hoặc mất nhiều dữ liệu hơn.\n\n**Phòng ngừa**:\n- Cảnh báo khi `age(backend_xmin)` của bất kỳ session nào trên primary, cột `xmin` của slot, hoặc `backend_xmin` trong `pg_stat_replication` vượt khoảng 1 giờ ở tốc độ ghi bình thường.\n- Cảnh báo theo tỉ lệ `n_dead_tup / n_live_tup` của các bảng lớn, và khi log autovacuum có số lớn ở `dead but not yet removable`.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

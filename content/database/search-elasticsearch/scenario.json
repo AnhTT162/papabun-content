@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Tìm kiếm sản phẩm chậm 4 giây và tìm không ra",
+  "prompt": "Sàn thương mại điện tử có **8 triệu sản phẩm** trong MySQL 8.0. Ô tìm kiếm đang chạy:\n\n```sql\nSELECT ... FROM products\nWHERE status = 'ACTIVE' AND (name LIKE '%ao khoac%' OR description LIKE '%ao khoac%')\nORDER BY sold_count DESC LIMIT 20 OFFSET ?;\n```\n\n- p95 **4 giây**, cao điểm 1.500 lượt tìm mỗi giây, database CPU 90% vào giờ khuyến mãi.\n- Khách gõ \"ao khoac\" không thấy \"Áo khoác gió\"; gõ \"áo khoác nam\" không thấy sản phẩm có tên \"Áo khoác gió dành cho nam\".\n- Cần lọc theo danh mục, khoảng giá, thương hiệu; hiển thị số lượng theo từng thương hiệu (facet); gợi ý khi đang gõ.\n- Giá và tồn kho đổi khoảng **2.000 lần mỗi giây** (đồng bộ từ kho và chương trình giảm giá).\n- Đội 6 người, chưa ai vận hành Elasticsearch.\n\nĐề xuất giải pháp tìm kiếm, cách đồng bộ dữ liệu và cách vận hành.",
+  "hints": [
+    "Vì sao query hiện tại vừa chậm vừa tìm không ra? Đó là hai vấn đề khác nhau hay một?",
+    "Có giải pháp nào trong chính MySQL hoặc PostgreSQL không? Nó thiếu gì so với yêu cầu facet, xếp hạng và tiếng Việt không dấu?",
+    "Nếu dùng Elasticsearch, cái gì là nguồn sự thật, và dữ liệu đi sang đó thế nào khi ứng dụng ghi?",
+    "2.000 thay đổi giá và tồn kho mỗi giây có cần đi hết sang index tìm kiếm không?"
+  ],
+  "solution": "**1. Chẩn đoán**: `LIKE '%...%'` không dùng được index nên mỗi lượt tìm quét hàng triệu dòng (chậm, ăn CPU), và nó so khớp chuỗi y nguyên nên không hiểu không dấu, không hiểu từ đảo thứ tự hay xen giữa. `OFFSET` sâu còn đắt thêm. Cần một inverted index có analyzer tiếng Việt.\n\n**2. Chọn công cụ**\n\n- MySQL `FULLTEXT` (InnoDB) có xếp hạng cơ bản nhưng mặc định bỏ qua từ ngắn hơn 3 ký tự (`innodb_ft_min_token_size`), tức bỏ qua \"áo\", \"ao\" (hạ xuống thì phải dựng lại index), có stopword mặc định, xử lý không dấu phụ thuộc collation, không có facet, kiểm soát analyzer hạn chế, và vẫn chạy trên chính database đang quá tải.\n- PostgreSQL FTS + `pg_trgm` + `unaccent` đủ cho nhiều hệ thống vài triệu dòng, nhưng ở đây là MySQL, facet và xếp hạng phải tự viết, và 1.500 lượt tìm mỗi giây vẫn đè lên database OLTP.\n- **Chọn Elasticsearch (hoặc OpenSearch) dạng dịch vụ được quản lý**, vì đội chưa có kinh nghiệm vận hành: tách tải tìm kiếm khỏi database, có analyzer, BM25, facet (aggregation), gợi ý khi gõ.\n\n**3. Mapping**\n\n- `name`: `text` với analyzer gồm tokenizer `icu_tokenizer` (hoặc `standard`), `lowercase`, cộng multi-field `name.folded` đã qua `asciifolding` (bỏ dấu) và `name.raw` kiểu `keyword`.\n- Truy vấn `multi_match` trên `name^3`, `name.folded^2`, `brand^2`, `description`; `match_phrase` với `slop` để \"áo khoác nam\" ưu tiên tài liệu có các từ gần nhau.\n- `brand`: `text` để tìm, cộng `brand.raw` kiểu `keyword` cho facet.\n- `category_id`, `brand.raw`, `price`, `in_stock`: `keyword`/số để lọc trong `filter` (không tính điểm, được cache) và gom nhóm làm facet.\n- `function_score` cộng điểm theo `sold_count` (dạng log) để sản phẩm bán chạy lên trên mà không đè hẳn độ liên quan.\n- Gợi ý khi gõ: trường `search_as_you_type` trên `name`.\n- `dynamic: strict` để không có trường lạ lọt vào.\n\n**4. Đồng bộ**\n\n- Database là nguồn sự thật. Debezium đọc binlog (`binlog_format = ROW`) đẩy thay đổi vào Kafka, key là `product_id` để giữ thứ tự theo sản phẩm. Indexer gộp dữ liệu (tên thương hiệu, đường dẫn danh mục) và `bulk` thao tác `index` cả tài liệu với `_id = product_id`, `version_type=external` theo cột `updated_version`; lỗi 409 (bản cũ đến muộn) được coi là thành công. Debezium cần `binlog_format = ROW`, `binlog_row_image = FULL`, GTID, quyền replication, và binlog giữ đủ lâu để connector bắt kịp sau sự cố.\n- Xoá và ẩn sản phẩm cũng là sự kiện: `status <> 'ACTIVE'` thì ghi tài liệu với `active: false` (soft delete, lọc khi tìm) thay vì xoá cứng, để sự kiện cũ đến muộn không làm sản phẩm sống lại sau `gc_deletes` (60 giây).\n- **Giá và tồn kho**: 2.000 thay đổi mỗi giây qua bulk không phải tải lớn với cụm 3 node; vấn đề là mỗi lần ghi để lại một tài liệu chết và thêm merge. Gộp theo sản phẩm trong cửa sổ vài giây rồi đẩy bản mới nhất (mọi thay đổi giá vẫn được đẩy, để lọc và sắp xếp theo giá đúng); tồn kho chỉ đẩy khi `in_stock` đổi trạng thái. Trang kết quả lấy số tồn chính xác của 20 sản phẩm từ database hoặc cache theo id.\n- Có job đối soát hằng đêm (đếm và so mẫu ngẫu nhiên) và luôn dựng lại được toàn bộ index từ database.\n\n**5. Kích thước và vận hành**\n\n- 8 triệu tài liệu khoảng 2KB là khoảng 16GB dữ liệu nguồn; index (kèm các multi-field) cỡ vài chục GB: 2 primary shard trên 3 node, với `number_of_replicas: 2` để mỗi node giữ đủ một bản dữ liệu: 1.500 lượt tìm mỗi giây chia đều, và mất 1 node vẫn phục vụ đủ.\n- Ứng dụng đọc qua alias `products`; đổi analyzer là reindex sang `products_v2` (tắt refresh và replica khi nạp), chạy indexer ghi cả hai, rồi chuyển alias.\n- Phân trang: giới hạn khoảng 50 trang trong giao diện; cần sâu hơn (xuất dữ liệu) thì `search_after`.\n- Đo chất lượng: lưu các truy vấn không có kết quả và tỉ lệ bấm vào kết quả, dùng nó để thêm từ đồng nghĩa và chỉnh trọng số.\n\n**6. Kết quả mong đợi**: database không còn gánh tìm kiếm; tìm kiếm thường dưới 100ms; dữ liệu tìm kiếm trễ vài giây so với database, điều mà người dùng chấp nhận được với tên và mô tả sản phẩm.",
+  "tradeoffs": [
+    {
+      "option": "MySQL FULLTEXT",
+      "pros": [
+        "Không thêm hệ thống mới",
+        "Dữ liệu luôn mới nhất"
+      ],
+      "cons": [
+        "Vẫn đè lên database đang quá tải",
+        "Bỏ qua từ dưới 3 ký tự theo mặc định, không có facet, xử lý tiếng Việt không dấu hạn chế"
+      ]
+    },
+    {
+      "option": "PostgreSQL FTS + pg_trgm + unaccent",
+      "pros": [
+        "Đủ cho vài triệu dòng với nhu cầu đơn giản",
+        "Nhất quán ngay trong transaction"
+      ],
+      "cons": [
+        "Phải chuyển database hoặc thêm một PostgreSQL riêng để tìm",
+        "Xếp hạng, facet, gợi ý phải tự viết",
+        "`ts_rank` chậm khi nhiều dòng khớp"
+      ]
+    },
+    {
+      "option": "Elasticsearch/OpenSearch được quản lý + CDC",
+      "pros": [
+        "Tách tải tìm kiếm khỏi database",
+        "Analyzer, BM25, facet, gợi ý có sẵn",
+        "Mở rộng bằng shard và replica"
+      ],
+      "cons": [
+        "Thêm Kafka, Debezium, indexer và một cụm phải theo dõi",
+        "Dữ liệu tìm kiếm trễ vài giây",
+        "Phải có đối soát và dựng lại index"
+      ]
+    }
+  ]
+}

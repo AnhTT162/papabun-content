@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "add-column-default",
+      "kind": "single",
+      "prompt": "PostgreSQL 16, bảng `orders` 300GB đang nhận ghi. Trong bốn câu dưới đây, câu nào giữ `ACCESS EXCLUSIVE` lâu nhất?",
+      "code": "-- (1)\nALTER TABLE orders ADD COLUMN note text;\n-- (2)\nALTER TABLE orders ADD COLUMN created_by text DEFAULT 'system';\n-- (3)\nALTER TABLE orders ADD COLUMN public_id uuid DEFAULT gen_random_uuid();\n-- (4)\nALTER TABLE orders ADD COLUMN archived_at timestamptz DEFAULT now();",
+      "options": [
+        "Câu (1), vì phải ghi giá trị NULL vào mọi dòng",
+        "Câu (2), vì default là chuỗi phải lưu vào từng dòng",
+        "Câu (3), vì default volatile buộc ghi lại cả bảng",
+        "Câu (4), vì `now()` phải được tính cho từng dòng"
+      ],
+      "answer": 2,
+      "explanation": "Từ PostgreSQL 11, `ADD COLUMN` không default hoặc với default không volatile chỉ sửa metadata: giá trị được tính một lần và lưu trong catalog. `now()` là stable, trả về thời điểm bắt đầu transaction, nên cũng chỉ tính một lần. `gen_random_uuid()` là volatile, mỗi dòng phải có giá trị riêng, nên PostgreSQL ghi lại toàn bộ bảng và index dưới `ACCESS EXCLUSIVE`. Cách an toàn: thêm cột không default, đặt default cho dòng mới, rồi backfill theo lô."
+    },
+    {
+      "id": "rename-rolling",
+      "kind": "single",
+      "prompt": "Một release vừa đổi tên cột vừa đổi entity. Deploy rolling 10 pod. Cách sắp xếp nào đúng?",
+      "options": [
+        "Chạy migration đổi tên trước, rồi rollout code mới thật nhanh",
+        "Rollout code mới trước, chạy migration đổi tên sau khi rollout xong",
+        "Thêm cột mới, đồng bộ hai cột, chuyển code qua vài release, xoá cột cũ sau",
+        "Đặt `maxUnavailable: 0` để luôn đủ pod cũ phục vụ trong lúc rollout"
+      ],
+      "answer": 2,
+      "explanation": "Đổi tên trước thì pod cũ hỏng tới khi bị thay; rollout trước thì pod mới hỏng tới khi migration chạy. Rollout nhanh chỉ thu hẹp khoảng lỗi, không xoá được nó, và rollback vẫn hỏng. `maxUnavailable: 0` giữ nhiều pod cũ hơn, tức nhiều pod lỗi hơn sau khi schema đổi. Expand-contract giữ mọi thời điểm đều có schema mà cả bản cũ lẫn bản mới dùng được. Một view tự cập nhật được với tên cột mới cũng là cách khả thi, nhưng phức tạp hơn (entity trỏ vào view, ràng buộc và index vẫn ở bảng gốc)."
+    },
+    {
+      "id": "cic-in-flyway",
+      "kind": "output",
+      "prompt": "Migration Flyway trên PostgreSQL có hai câu dưới đây và báo lỗi ngay khi chạy, chưa tạo được gì. Nguyên nhân?",
+      "options": [
+        "Flyway không cho trộn lệnh thường với lệnh phải chạy ngoài transaction",
+        "`CONCURRENTLY` cần quyền superuser, và user của Flyway không có quyền đó",
+        "Bảng đang có transaction mở nên `CONCURRENTLY` từ chối chạy ngay lập tức",
+        "Flyway không hỗ trợ cú pháp `CONCURRENTLY` riêng của PostgreSQL"
+      ],
+      "answer": 0,
+      "explanation": "Flyway tự nhận ra `CREATE INDEX CONCURRENTLY` không chạy được trong transaction và sẽ chạy file đó ngoài transaction, nhưng chỉ khi mọi lệnh trong file đều như vậy. File này trộn với `SET`, nên Flyway báo phát hiện cả lệnh transactional lẫn non-transactional trong cùng migration. Cách sửa: để `CONCURRENTLY` một mình một file (đặt `lock_timeout` ở cấu hình kết nối hoặc `SET` trong file trước), hoặc bật `mixed=true` và chấp nhận file mất tính nguyên tử. Không cần superuser, chỉ cần là chủ bảng; transaction đang mở không làm lệnh lỗi mà làm nó phải chờ.",
+      "code": "-- V57__index_orders_customer.sql\nSET lock_timeout = '5s';\nCREATE INDEX CONCURRENTLY idx_orders_customer ON orders (customer_id);"
+    },
+    {
+      "id": "big-update-backfill",
+      "kind": "single",
+      "prompt": "Cần điền cột mới cho 400 triệu dòng trên MySQL 8.0 có hai replica. Đồng nghiệp đề xuất một câu `UPDATE events SET source = 'web' WHERE source IS NULL;` chạy đêm. Rủi ro lớn nhất?",
+      "options": [
+        "MySQL giới hạn số dòng mà một câu `UPDATE` được phép sửa trong một lần",
+        "Transaction khổng lồ: khoá nhiều dòng, undo lớn, replica áp một luồng nên trễ",
+        "Câu lệnh sẽ chạy bằng `ALGORITHM=COPY` và khoá cả bảng tới khi xong",
+        "Binlog không ghi được transaction lớn hơn `max_allowed_packet`, replica sẽ dừng"
+      ],
+      "answer": 1,
+      "explanation": "Một câu `UPDATE` 400 triệu dòng là một transaction: khoá các dòng nó chạm tới đến khi commit, undo log phình, rollback khi lỗi mất hàng giờ, và replica chỉ bắt đầu áp sau khi source commit, bằng một worker. `ALGORITHM` chỉ áp cho DDL. Binlog chia transaction lớn thành nhiều event, nhưng có giới hạn `max_binlog_cache_size` và có thể làm đầy đĩa. Cách đúng: lô vài nghìn dòng theo khoảng primary key, nghỉ giữa lô, theo dõi replica lag. Không có index trên `source`, ở REPEATABLE READ InnoDB còn đặt next-key lock lên mọi dòng đã quét, tức gần như khoá cả bảng."
+    }
+  ]
+}

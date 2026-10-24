@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "search-elasticsearch",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Search engine & Elasticsearch",
+  "summary": "Vì sao `LIKE '%từ khoá%'` chậm, inverted index và analyzer (kể cả tiếng Việt có dấu và không dấu), xếp hạng BM25, shard, segment và near real-time, đồng bộ dữ liệu từ database bằng CDC, reindex không downtime qua alias, phân trang sâu, và khi nào full-text search của PostgreSQL là đủ.",
+  "level": "senior",
+  "order": 23,
+  "minutes": 20,
+  "prerequisites": ["index-execution-plan", "replication-ha"],
+  "terms": ["inverted-index", "analyzer", "bm25", "near-real-time", "lucene-segment", "index-alias", "search-after", "gin-index", "trigram-index", "cdc", "outbox", "dual-write", "keyset-pagination", "sargable"],
+  "references": [
+    { "title": "Elasticsearch Guide: Text analysis", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis.html" },
+    { "title": "Elasticsearch Guide: Near real-time search", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/near-real-time.html" },
+    { "title": "PostgreSQL Documentation: Full Text Search", "url": "https://www.postgresql.org/docs/current/textsearch.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sao không ghi thẳng vào database và Elasticsearch trong cùng một request?\" Đó là [[dual-write|dual write]]: hai hệ thống không có transaction chung. Database commit xong mà ghi Elasticsearch lỗi (hoặc timeout nhưng thật ra đã ghi) thì hai bên lệch nhau âm thầm; hai request sửa cùng sản phẩm còn có thể đến Elasticsearch theo thứ tự ngược. Cách đúng: database là nguồn sự thật, thay đổi đi qua [[outbox|outbox]] hoặc CDC đọc WAL/binlog, consumer ghi vào Elasticsearch idempotent theo id và kèm phiên bản (`version_type=external`) để bản cũ đến muộn không đè bản mới. Và luôn có cách dựng lại toàn bộ index từ database." }
+  ]
+}

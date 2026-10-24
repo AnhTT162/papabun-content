@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "analyzer-mismatch",
+      "kind": "output",
+      "prompt": "Index dưới đây đã có tài liệu `{\"name\": \"Áo Khoác Gió\"}`. Truy vấn `term` tìm `ao khoac` trên `name.folded` trả về gì?",
+      "code": "PUT products\n{\n  \"settings\": { \"analysis\": { \"analyzer\": {\n    \"folded\": { \"tokenizer\": \"standard\", \"filter\": [\"lowercase\", \"asciifolding\"] } } } },\n  \"mappings\": { \"properties\": {\n    \"name\": { \"type\": \"text\",\n      \"fields\": { \"folded\": { \"type\": \"text\", \"analyzer\": \"folded\" } } } } }\n}\n\nGET products/_search\n{ \"query\": { \"term\": { \"name.folded\": \"ao khoac\" } } }",
+      "options": [
+        "Tìm thấy, vì `name.folded` đã bỏ dấu và chữ hoa lúc ghi",
+        "Không thấy, vì `term` không phân tích câu hỏi thành từng từ",
+        "Tìm thấy nhưng điểm thấp hơn vì câu hỏi không khớp dấu",
+        "Lỗi, vì truy vấn `term` không dùng được trên trường `text`"
+      ],
+      "answer": 1,
+      "explanation": "Lúc ghi, `name.folded` lưu các từ `ao`, `khoac`, `gio`. `term` không cho câu hỏi đi qua analyzer, nên nó tìm đúng một từ là chuỗi \"ao khoac\" có dấu cách, mà không có từ nào như vậy. Dùng `match` thì câu hỏi được phân tích thành `ao` và `khoac` và khớp. `term` chạy được trên `text` mà không báo lỗi, nên lỗi này dễ lọt qua kiểm thử."
+    },
+    {
+      "id": "dual-write-order",
+      "kind": "single",
+      "prompt": "Service sản phẩm cập nhật database rồi gọi thẳng API của Elasticsearch trong cùng request. Hai request đổi giá cùng một sản phẩm gần như cùng lúc: A đặt 100, B đặt 120, B commit sau. Elasticsearch có thể sai thế nào?",
+      "options": [
+        "Không sai được, vì Elasticsearch tự sắp xếp theo thời điểm nhận",
+        "Lưu giá 100 nếu lời gọi của A tới Elasticsearch đến sau của B",
+        "Có hai tài liệu cho cùng sản phẩm, một giá 100 và một giá 120",
+        "Elasticsearch từ chối lời gọi thứ hai vì xung đột phiên bản nội bộ"
+      ],
+      "answer": 1,
+      "explanation": "Thứ tự commit ở database và thứ tự lời gọi tới Elasticsearch không ràng buộc nhau: A có thể bị chậm mạng hay GC rồi ghi đè B. Cùng `_id` nên không sinh hai tài liệu. Phiên bản nội bộ tự tăng không biết bản nào mới hơn ở database. Cách đúng: đồng bộ qua outbox hoặc CDC, giữ thứ tự theo sản phẩm, và gửi phiên bản của database với `version_type=external` để bản cũ bị bỏ qua."
+    },
+    {
+      "id": "nested-flattening",
+      "kind": "single",
+      "prompt": "Mapping khai báo `variants` là `object` (mặc định). Sản phẩm có `variants: [{color: \"đỏ\", size: \"M\"}, {color: \"xanh\", size: \"L\"}]`. Lọc `variants.color = đỏ` AND `variants.size = L` cho kết quả gì?",
+      "options": [
+        "Không khớp, vì không biến thể nào vừa màu đỏ vừa size L",
+        "Khớp, vì mảng object bị lưu thành mảng giá trị riêng theo trường",
+        "Lỗi mapping, vì kiểu `object` không chứa được một mảng",
+        "Khớp hoặc không, tuỳ shard nào đang giữ tài liệu đó"
+      ],
+      "answer": 1,
+      "explanation": "Với kiểu `object`, Lucene lưu `variants.color: [đỏ, xanh]` và `variants.size: [M, L]`, mất quan hệ giữa các trường trong cùng một phần tử. Cả hai điều kiện đều đúng nên tài liệu khớp, dù không biến thể nào là \"đỏ L\". Kiểu `nested` lưu mỗi phần tử thành tài liệu ẩn riêng và cần truy vấn `nested`, tốn hơn khi index và tìm."
+    },
+    {
+      "id": "pg-trigram",
+      "kind": "single",
+      "prompt": "PostgreSQL, bảng `customers` 3 triệu dòng. Màn hình hỗ trợ tìm theo một phần tên hoặc email (`ILIKE '%nguyen%'`). Cách rẻ nhất để không quét cả bảng?",
+      "options": [
+        "Index B-tree trên `lower(name)` và `lower(email)`",
+        "Đồng bộ bảng sang Elasticsearch qua Debezium",
+        "Extension `pg_trgm` với index GIN `gin_trgm_ops` trên hai cột",
+        "Partition bảng theo chữ cái đầu của tên"
+      ],
+      "answer": 2,
+      "explanation": "Index trigram tách chuỗi thành các cụm 3 ký tự, nên `LIKE`/`ILIKE` có `%` ở đầu vẫn dùng được index, và hỗ trợ cả tìm gần đúng bằng `similarity`. B-tree chỉ giúp khi biết phần đầu chuỗi. Partition theo chữ cái đầu cũng vậy, và chuỗi cần tìm nằm giữa tên. Elasticsearch làm được nhưng thêm cả một hệ thống cho một màn hình nội bộ. Với tên tiếng Việt, `ILIKE '%nguyen%'` không khớp \"Nguyễn\": tạo index trigram trên biểu thức bỏ dấu, ví dụ một hàm `IMMUTABLE` bọc `unaccent`."
+    }
+  ]
+}

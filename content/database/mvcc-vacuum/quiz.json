@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "vacuum-blocked-by-snapshot",
+      "kind": "output",
+      "prompt": "PostgreSQL 16. Session A mở transaction rồi để đó; session B cập nhật 1 triệu dòng và commit; sau đó chạy `VACUUM (VERBOSE) orders`. Dòng `tuples` trong output gần nhất với gì?",
+      "code": "-- Session A\nBEGIN ISOLATION LEVEL REPEATABLE READ;\nSELECT count(*) FROM customers;   -- lấy snapshot, chưa commit\n\n-- Session B\nUPDATE orders SET status = 'ARCHIVED' WHERE created_at < '2025-01-01';  -- 1.000.000 dòng\n\n-- Session C\nVACUUM (VERBOSE) orders;",
+      "options": [
+        "`0 removed, ... 1000000 are dead but not yet removable`",
+        "`1000000 removed, ... 0 are dead but not yet removable`",
+        "Lỗi: không thể vacuum khi có transaction đang mở",
+        "VACUUM chờ session A commit rồi mới chạy"
+      ],
+      "answer": 0,
+      "explanation": "Snapshot của A được lấy trước khi B commit, nên A vẫn có thể cần thấy các bản cũ, kể cả trên bảng `orders` mà A chưa đọc tới: PostgreSQL không biết A sẽ đọc bảng nào. Horizon dừng ở snapshot của A, nên VACUUM chạy bình thường (không bị chặn, không chờ) nhưng không dọn được gì."
+    },
+    {
+      "id": "disk-not-shrinking",
+      "kind": "single",
+      "prompt": "Sau khi xoá 70% dòng của một bảng PostgreSQL 200GB và để autovacuum chạy xong, dung lượng file bảng gần như không đổi. Giải thích đúng nhất?",
+      "options": [
+        "VACUUM thường chỉ đánh dấu chỗ trống để dùng lại, trừ page trống cuối file",
+        "Autovacuum chưa chạy thật, vì `DELETE` không tính là dòng chết",
+        "Dung lượng chỉ giảm sau khi checkpoint tiếp theo chạy xong",
+        "PostgreSQL giữ dòng đã xoá trong undo log cho tới khi purge"
+      ],
+      "answer": 0,
+      "explanation": "Dòng bị `DELETE` là dòng chết, autovacuum dọn được nếu horizon cho phép, nhưng chỗ của chúng chỉ được ghi lại vào free space map cho dòng mới dùng. File chỉ ngắn lại khi các page cuối hoàn toàn trống. Muốn trả dung lượng: `pg_repack`, hoặc `VACUUM FULL` nếu chấp nhận khoá cả bảng. Undo log và purge là cơ chế của InnoDB."
+    },
+    {
+      "id": "innodb-long-transaction",
+      "kind": "single",
+      "prompt": "MySQL 8.0, REPEATABLE READ. Một transaction mở `SELECT` rồi bị bỏ quên 6 giờ, trong khi bảng `stock` bị cập nhật liên tục. Hậu quả chính là gì?",
+      "options": [
+        "Mọi `UPDATE` lên `stock` bị chặn vì transaction cũ đang giữ lock đọc",
+        "History list tăng, undo không được purge, và đọc dòng hay bị sửa chậm dần",
+        "InnoDB tự huỷ transaction đó sau `innodb_lock_wait_timeout`",
+        "Bảng `stock` phình vì mỗi phiên bản cũ nằm lại trong clustered index"
+      ],
+      "answer": 1,
+      "explanation": "`SELECT` thường là consistent read, không khoá, nên không chặn `UPDATE`; `innodb_lock_wait_timeout` chỉ áp cho việc chờ lock. Nhưng read view cũ buộc InnoDB giữ toàn bộ undo từ 6 giờ trước: history list dài ra, undo tablespace to lên, và mỗi consistent read với snapshot cũ phải đi chuỗi phiên bản rất dài. Clustered index chỉ chứa bản mới nhất, nên bảng không phình theo kiểu PostgreSQL."
+    },
+    {
+      "id": "xid-consumption",
+      "kind": "single",
+      "prompt": "Một job PostgreSQL xử lý 10 triệu dòng. Cách viết nào đốt XID nhanh nhất?",
+      "options": [
+        "Một transaction duy nhất, `UPDATE` 10 triệu dòng trong một câu lệnh",
+        "Một transaction, mỗi dòng `UPDATE` trong một `SAVEPOINT` riêng",
+        "Một transaction chỉ đọc, `SELECT` 10 triệu dòng theo cursor",
+        "100 transaction, mỗi transaction `UPDATE` 100.000 dòng"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi subtransaction có ghi được cấp một XID riêng, nên 10 triệu savepoint tốn khoảng 10 triệu XID; và quá 64 subtransaction trong một transaction còn làm việc kiểm tra snapshot chậm hẳn. Một câu `UPDATE` lớn chỉ tốn một XID; 100 lô tốn 100 XID; transaction chỉ đọc không được cấp XID."
+    },
+    {
+      "id": "anti-wraparound-alter",
+      "kind": "single",
+      "prompt": "Migration `ALTER TABLE events ADD COLUMN source text` đứng im 20 phút. `pg_stat_activity` cho thấy `autovacuum: VACUUM public.events (to prevent wraparound)` đang chạy. Vì sao lần này `ALTER` phải chờ?",
+      "options": [
+        "Mọi autovacuum đều giữ `ACCESS EXCLUSIVE` trên bảng",
+        "`ADD COLUMN` phải ghi lại cả bảng nên chờ vacuum xong trước",
+        "Autovacuum chống wraparound không tự huỷ khi có ai xin lock xung đột",
+        "Autovacuum đang chặn mọi câu lệnh ghi vì XID đã cạn"
+      ],
+      "answer": 2,
+      "explanation": "Vacuum giữ `SHARE UPDATE EXCLUSIVE`, xung đột với `ALTER TABLE`. Autovacuum thường tự huỷ để nhường, còn bản chống wraparound thì chạy tới cùng vì nó bảo vệ database khỏi ngừng ghi. `ADD COLUMN` không default không ghi lại bảng, và XID chưa cạn (khi đó database báo lỗi chứ không treo). Cách xử lý: đặt `lock_timeout` cho migration và chờ vacuum xong, hoặc chạy `VACUUM FREEZE` chủ động trước khi bảng tới ngưỡng."
+    }
+  ]
+}

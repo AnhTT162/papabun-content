@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một query đi qua lớp định tuyến shard",
+  "nodes": [
+    {
+      "id": "app",
+      "label": "Ứng dụng",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "router",
+      "label": "Lớp định tuyến",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "dir",
+      "label": "Directory (bucket → shard)",
+      "kind": "cache",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "s1",
+      "label": "Shard 1",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "s2",
+      "label": "Shard 2",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "app-router",
+      "from": "app",
+      "to": "router",
+      "label": "query + tenant_id"
+    },
+    {
+      "id": "router-dir",
+      "from": "router",
+      "to": "dir",
+      "label": "tra shard của tenant"
+    },
+    {
+      "id": "router-s1",
+      "from": "router",
+      "to": "s1",
+      "label": "chỉ một shard"
+    },
+    {
+      "id": "router-s2",
+      "from": "router",
+      "to": "s2",
+      "label": "scatter (mọi shard)"
+    },
+    {
+      "id": "s1-s2",
+      "from": "s1",
+      "to": "s2",
+      "label": "chuyển bucket"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Ứng dụng gửi query kèm shard key, ở đây là tenant_id. Lớp định tuyến có thể là thư viện trong ứng dụng, proxy (VTGate của Vitess) hay node điều phối (Citus).",
+      "show": [
+        "app",
+        "router",
+        "app-router"
+      ],
+      "highlight": [
+        "app-router"
+      ]
+    },
+    {
+      "caption": "tenant_id được băm vào một trong 1.024 bucket; bảng directory nhỏ (được cache) cho biết bucket đó đang nằm ở shard nào.",
+      "show": [
+        "dir",
+        "router-dir"
+      ],
+      "highlight": [
+        "router-dir"
+      ]
+    },
+    {
+      "caption": "Query có shard key chỉ chạm một shard: nhanh như database một máy, và transaction vẫn là transaction cục bộ.",
+      "show": [
+        "s1",
+        "router-s1"
+      ],
+      "highlight": [
+        "router-s1"
+      ]
+    },
+    {
+      "caption": "Query thiếu shard key phải hỏi mọi shard rồi trộn kết quả. Latency bằng shard chậm nhất, và tải nhân lên theo số shard.",
+      "show": [
+        "s2",
+        "router-s2"
+      ],
+      "highlight": [
+        "router-s1",
+        "router-s2"
+      ]
+    },
+    {
+      "caption": "Resharding: chép một bucket sang shard khác, áp tiếp thay đổi từ binlog/WAL, dừng ghi vài giây rồi đổi directory. Dữ liệu các bucket khác không phải di chuyển.",
+      "show": [
+        "s1-s2"
+      ],
+      "highlight": [
+        "s1-s2",
+        "dir"
+      ]
+    }
+  ]
+}

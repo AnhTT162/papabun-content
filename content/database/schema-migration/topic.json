@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "schema-migration",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Migration không downtime",
+  "summary": "Flyway và Liquibase chạy migration thế nào và chạy ở đâu, vì sao rolling deploy buộc schema tương thích với cả code cũ lẫn mới, expand-contract từng bước, các DDL nguy hiểm trên PostgreSQL và MySQL cùng cách làm an toàn, online DDL và gh-ost, backfill hàng trăm triệu dòng, và đổi khoá chính int sang bigint khi sắp tràn.",
+  "level": "senior",
+  "order": 22,
+  "minutes": 20,
+  "prerequisites": ["locking-deadlock-db", "replication-ha"],
+  "terms": ["schema-migration", "expand-contract", "rolling-deployment", "online-ddl", "backfill", "table-rewrite", "lock-timeout", "lock-queue", "metadata-lock", "constraint", "foreign-key", "table-bloat", "replica-lag", "implicit-commit"],
+  "references": [
+    { "title": "PostgreSQL Documentation: ALTER TABLE", "url": "https://www.postgresql.org/docs/current/sql-altertable.html" },
+    { "title": "MySQL 8.4: Online DDL Operations", "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html" },
+    { "title": "Flyway Documentation: Migrations", "url": "https://documentation.red-gate.com/fd/migrations-271585107.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Migration lỗi thì rollback thế nào?\" Trong thực tế hiếm khi rollback schema: script `down` ít được test, và xoá cột vừa thêm có thể làm mất dữ liệu đã ghi vào đó. Cách an toàn là **roll forward**: viết migration mới để sửa. Expand-contract làm việc này dễ, vì mỗi bước expand đều tương thích với code cũ, nên rollback **ứng dụng** về bản trước vẫn chạy được mà không phải đụng tới schema. Bước contract (xoá cột, xoá bảng) chỉ làm khi đã chắc không còn đường quay lại, và nên có backup hoặc giữ dữ liệu cũ thêm một thời gian." }
+  ]
+}

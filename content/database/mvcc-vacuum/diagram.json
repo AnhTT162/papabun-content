@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một UPDATE trong PostgreSQL và InnoDB",
+  "nodes": [
+    {"id": "pg-new", "label": "Tuple mới (xmin=101)", "kind": "generic", "x": 0.1, "y": 0.05},
+    {"id": "row", "label": "Dòng mới nhất", "kind": "generic", "x": 0.85, "y": 0.05},
+    {"id": "pg-old", "label": "Tuple cũ (xmax=101)", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "undo", "label": "Undo log", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "vacuum", "label": "VACUUM", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "purge", "label": "Purge thread", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "old-new", "from": "pg-old", "to": "pg-new", "label": "ctid trỏ bản mới"},
+    {"id": "vacuum-old", "from": "vacuum", "to": "pg-old", "label": "dọn khi hết ai thấy"},
+    {"id": "row-undo", "from": "row", "to": "undo", "label": "DB_ROLL_PTR"},
+    {"id": "purge-undo", "from": "purge", "to": "undo", "label": "xoá undo hết dùng"}
+  ],
+  "steps": [
+    {"caption": "PostgreSQL: transaction 101 chạy UPDATE. Nó không sửa tại chỗ mà ghi một tuple mới vào bảng, với xmin = 101.", "show": ["pg-new"]},
+    {"caption": "Tuple cũ vẫn nằm trong bảng, được đặt xmax = 101 và trỏ sang bản mới. Transaction có snapshot trước 101 vẫn đọc tuple cũ.", "show": ["pg-old", "old-new"], "highlight": ["old-new"]},
+    {"caption": "Khi không snapshot nào còn có thể thấy tuple cũ, VACUUM đánh dấu chỗ của nó để dùng lại. Một transaction mở lâu chặn bước này, và bảng phình.", "show": ["vacuum", "vacuum-old"], "highlight": ["vacuum-old"]},
+    {"caption": "InnoDB: UPDATE sửa thẳng dòng trong clustered index, nên bảng luôn chứa bản mới nhất.", "show": ["row"]},
+    {"caption": "Bản cũ được ghi vào undo log; dòng giữ con trỏ tới nó. Consistent read đi ngược chuỗi này để dựng bản mà snapshot của nó cần thấy.", "show": ["undo", "row-undo"], "highlight": ["row-undo"]},
+    {"caption": "Purge thread xoá undo khi không read view nào còn cần. Transaction mở lâu làm history list dài ra và các lần đọc phải đi chuỗi dài hơn.", "show": ["purge", "purge-undo"], "highlight": ["purge-undo"]}
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "mvcc-vacuum",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "MVCC, VACUUM & undo log",
+  "summary": "PostgreSQL lưu phiên bản dòng ngay trong bảng (xmin, xmax) còn InnoDB lưu trong undo log; VACUUM và purge dọn gì, vì sao bị chặn (xmin horizon, transaction dài, replication slot, hot_standby_feedback); bảng phình và cách thu hồi dung lượng; tinh chỉnh autovacuum; XID wraparound và freeze.",
+  "level": "senior",
+  "order": 18,
+  "minutes": 20,
+  "prerequisites": ["transaction-isolation", "storage-engine"],
+  "terms": ["mvcc", "vacuum", "autovacuum", "xmin-horizon", "table-bloat", "hot-update", "fillfactor", "visibility-map", "hint-bits", "xid-wraparound", "tuple-freezing", "undo-log", "read-view", "innodb-purge", "history-list-length", "hot-standby-feedback", "replication-slot", "pg-repack", "index-bloat", "tid", "clustered-index", "index-only-scan", "savepoint"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Routine Vacuuming", "url": "https://www.postgresql.org/docs/current/routine-vacuuming.html" },
+    { "title": "MySQL 8.0: InnoDB Multi-Versioning", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html" },
+    { "title": "MySQL 8.0: Purge Configuration", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-purge-configuration.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Autovacuum ăn I/O lúc cao điểm, tắt nó cho bảng lớn được không?\" Không nên. Tắt autovacuum thì dòng chết tích lại, bảng và index phình, plan sai vì thống kê cũ; và khi bảng tới `autovacuum_freeze_max_age` thì PostgreSQL vẫn ép chạy vacuum chống wraparound, lần này phải quét gần cả bảng, không tự nhường lock, và đúng lúc bạn không chọn. Cách đúng là cho nó chạy **thường hơn và nhỏ hơn**: giảm `autovacuum_vacuum_scale_factor` cho bảng lớn, tăng `autovacuum_vacuum_cost_limit` để mỗi lần xong nhanh, và nếu muốn thì chạy `VACUUM` chủ động vào giờ thấp điểm." }
+  ]
+}

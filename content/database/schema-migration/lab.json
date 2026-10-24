@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đổi tên một cột, 6 phút lỗi 500",
+  "context": "Service khách hàng (Spring Boot 3, JPA, PostgreSQL 16) chạy 12 pod, deploy kiểu rolling update trên Kubernetes (`maxUnavailable: 1`, `maxSurge: 3`). Flyway chạy khi pod mới khởi động. Bản mới đổi tên cột `phone` thành `phone_number` cho nhất quán với API.",
+  "buggyCode": "-- V42__rename_phone.sql\nALTER TABLE customers RENAME COLUMN phone TO phone_number;\n\n// Customer.java (bản mới)\n@Entity\n@Table(name = \"customers\")\npublic class Customer {\n    @Id private Long id;\n    private String name;\n    @Column(name = \"phone_number\")      // bản cũ: @Column(name = \"phone\")\n    private String phoneNumber;\n}",
+  "symptom": {
+    "description": "Migration chạy thành công trong 40ms ngay khi pod mới đầu tiên khởi động. Từ lúc đó tới khi rollout xong (khoảng 6 phút), tỉ lệ lỗi 500 tăng vọt rồi giảm dần. Sau đó mọi thứ bình thường. Đội thử rollback ứng dụng về bản trước trên staging thì lỗi 100%.",
+    "output": "10:02:11 pod customer-7f9c (bản cũ) ERROR o.h.engine.jdbc.spi.SqlExceptionHelper -\n  ERROR: column c1_0.phone does not exist\n  Hint: Perhaps you meant to reference the column \"c1_0.phone_number\".\n10:02:11 ... 500 GET /customers/88123\n\nTỉ lệ lỗi của API khách hàng theo phút: 10:02 92% | 10:03 70% | 10:04 45% | 10:05 20% | 10:06 5% | 10:07 0%"
+  },
+  "diagnosis": {
+    "question": "Vì sao lỗi, và vì sao giảm dần?",
+    "options": [
+      "Migration giữ `ACCESS EXCLUSIVE` lâu nên query bị huỷ cho tới khi lock được nhả",
+      "Pod cũ vẫn phục vụ và vẫn truy vấn cột `phone` đã bị đổi tên; lỗi giảm theo số pod cũ",
+      "Hibernate của pod cũ cache SQL với tên cột cũ; cache hết hạn thì tự hết lỗi",
+      "PostgreSQL cần vài phút để cập nhật thống kê sau khi đổi tên cột"
+    ],
+    "answer": 1,
+    "explanation": "`RENAME COLUMN` chỉ sửa metadata nên rất nhanh; lock không phải vấn đề. Vấn đề là tương thích: rolling update để code cũ và mới cùng chạy, mà schema chỉ có một. Ngay khi migration chạy, mọi pod cũ hỏng, và tỉ lệ lỗi giảm khi chúng lần lượt bị thay. Hibernate sinh SQL từ mapping của chính pod đó, nên pod cũ cứ gửi `phone` cho tới khi bị tắt. Rollback ứng dụng cũng hỏng vì schema đã đổi. Thống kê của planner không liên quan tới tên cột."
+  },
+  "fix": {
+    "code": "-- Release 1 (expand): thêm cột mới và giữ hai cột đồng bộ bằng trigger\n-- V42__add_phone_number.sql\nSET lock_timeout = '5s';\nALTER TABLE customers ADD COLUMN phone_number text;\n\nCREATE FUNCTION customers_sync_phone() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  IF TG_OP = 'INSERT' THEN\n    NEW.phone_number := COALESCE(NEW.phone_number, NEW.phone);\n    NEW.phone := COALESCE(NEW.phone, NEW.phone_number);\n  ELSIF NEW.phone IS DISTINCT FROM OLD.phone THEN        -- code cũ sửa cột cũ\n    NEW.phone_number := NEW.phone;\n  ELSIF NEW.phone_number IS DISTINCT FROM OLD.phone_number THEN  -- code mới sửa cột mới\n    NEW.phone := NEW.phone_number;\n  END IF;\n  RETURN NEW;\nEND $$;\n\nCREATE TRIGGER trg_customers_sync_phone BEFORE INSERT OR UPDATE ON customers\n  FOR EACH ROW EXECUTE FUNCTION customers_sync_phone();\n\n-- Code release 1 vẫn map cột cũ: @Column(name = \"phone\")\n\n-- Job backfill theo lô (chạy sau release 1, lặp tới khi hết):\nUPDATE customers SET phone_number = phone\nWHERE id >= :from AND id < :from + 5000 AND phone_number IS NULL AND phone IS NOT NULL;\n\n-- Chỉ deploy release 2 khi câu sau trả về 0:\n-- SELECT count(*) FROM customers WHERE phone_number IS NULL AND phone IS NOT NULL;\n\n-- Release 2: code map @Column(name = \"phone_number\"); trigger vẫn giữ cột cũ cập nhật,\n--            nên rollback về release 1 vẫn an toàn.\n\n-- Release 3 (contract), khi không còn pod nào của release 1 và chắc không quay lại.\n-- V45 chạy lúc pod release 3 khởi động, khi pod release 2 vẫn còn: an toàn vì release 2 không map `phone`.\n-- V45__drop_phone.sql\nDROP TRIGGER trg_customers_sync_phone ON customers;\nDROP FUNCTION customers_sync_phone();\nALTER TABLE customers DROP COLUMN phone;",
+    "explanation": "Mỗi release chỉ đưa schema tới trạng thái mà **cả bản đang chạy lẫn bản sắp tới** đều dùng được. Release 1 thêm cột và trigger; code cũ ghi `phone`, trigger chép sang `phone_number`. Release 2 đọc ghi cột mới, trigger chép ngược lại cột cũ, nên nếu phải rollback về release 1 thì dữ liệu vẫn đúng. Chỉ khi chắc không còn ai dùng cột cũ mới xoá nó. Nếu có service khác hay báo cáo đọc trực tiếp bảng này, họ cũng phải chuyển xong trước release 3. Nhiều đội còn chuyển Flyway ra một bước riêng trước rollout, để migration không chạy giữa lúc pod đang khởi động."
+  }
+}

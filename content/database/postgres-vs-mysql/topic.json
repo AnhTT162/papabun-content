@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "postgres-vs-mysql",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "PostgreSQL và MySQL: khác nhau ở đâu",
+  "summary": "Heap và clustered index, hai cách làm MVCC, isolation mặc định và gap lock, physical và binlog replication, mô hình connection, tính năng SQL và index, những khác biệt hành vi hay gây bug khi chuyển đổi (collation, ép kiểu, DDL, CHECK, TIMESTAMP), vòng đời phiên bản, và cách chọn cho một dự án mới.",
+  "level": "senior",
+  "order": 24,
+  "minutes": 18,
+  "prerequisites": ["storage-engine", "mvcc-vacuum", "replication-ha"],
+  "terms": ["clustered-index", "mvcc", "vacuum", "undo-log", "hot-update", "gap-lock", "isolation-level", "streaming-replication", "binlog", "pgbouncer", "partial-index", "exclusion-constraint", "jsonb", "gin-index", "collation", "implicit-commit", "upsert", "uuid-v7", "xid-wraparound", "snapshot-isolation", "ssi"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Index Types", "url": "https://www.postgresql.org/docs/current/indexes-types.html" },
+    { "title": "MySQL 8.4: Clustered and Secondary Indexes", "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-index-types.html" },
+    { "title": "MySQL 8.4: Character Sets and Collations", "url": "https://dev.mysql.com/doc/refman/8.4/en/charset-general.html" },
+    { "title": "PostgreSQL Documentation: Row Security Policies", "url": "https://www.postgresql.org/docs/current/ddl-rowsecurity.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vậy cái nào nhanh hơn?\" Không có câu trả lời chung, và nói một cái \"nhanh hơn\" là dấu hiệu chưa hiểu sâu. Trả lời theo workload: tra theo primary key và đọc theo khoảng primary key thì InnoDB có lợi vì dữ liệu nằm ngay trong clustered index; bảng nhiều index mà `UPDATE` liên tục cột có index thì PostgreSQL ghi nhiều hơn (mỗi phiên bản mới cần entry mới trong mọi index) và phải VACUUM; query phân tích phức tạp thì planner, hash join và parallel query của PostgreSQL thường mạnh hơn; rất nhiều connection ngắn thì mô hình thread của MySQL nhẹ hơn mô hình process của PostgreSQL nếu không có pooler. Sau đó nói cách bạn sẽ **đo** bằng workload thật." },
+    { "type": "callout", "style": "warning", "markdown": "Chuyển một ứng dụng từ MySQL sang PostgreSQL (hoặc ngược lại) hiếm khi chỉ là đổi driver. Các bug hay gặp: so sánh chuỗi không còn bỏ qua hoa thường và dấu, unique index cho phép `Nam` và `nam` cùng tồn tại, `WHERE varchar_col = 123` từ chạy được thành lỗi kiểu, `GROUP BY` thiếu cột, upsert khác cú pháp, thứ tự `NULL` khi sắp xếp khác nhau, và câu lệnh sau lỗi trong transaction PostgreSQL bị từ chối cho tới khi rollback. Chạy toàn bộ test trên database đích từ sớm, đừng tin H2 hay chế độ tương thích." }
+  ]
+}

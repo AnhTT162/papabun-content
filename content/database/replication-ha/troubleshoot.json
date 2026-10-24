@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Replica MySQL trễ 3 giờ mỗi đêm",
+  "symptom": "MySQL 8.0.36, một source và hai replica (async, GTID, source đặt `binlog_transaction_dependency_tracking = WRITESET`). Báo cáo tồn kho chạy lúc 03:00 trên replica thường cho ra số liệu của gần 2 giờ trước. Cảnh báo `replica lag > 300s` bắn từ khoảng 01:05 tới 04:00 mỗi đêm, rồi tự hết. Source không có gì bất thường, CPU dưới 20%. Trên replica, một core CPU chạy 100%, các core khác gần như rảnh. Đêm qua có buổi diễn tập failover lúc 02:30, và phải hoãn vì \"replica chưa sẵn sàng\".",
+  "steps": [
+    {
+      "id": "start",
+      "question": "03:40, cảnh báo đang bật. Bạn làm gì đầu tiên?",
+      "choices": [
+        {
+          "label": "Xem `SHOW REPLICA STATUS` để biết phần nhận log hay phần áp log đang chậm",
+          "quality": "good",
+          "feedback": "Lag có thể nằm ở receiver (mạng, source) hoặc applier. Hai GTID set và vị trí relay log cho biết ngay.",
+          "next": "status"
+        },
+        {
+          "label": "`STOP REPLICA; START REPLICA;` để replica kết nối lại",
+          "quality": "poor",
+          "feedback": "Nếu applier đang áp dở một transaction lớn, dừng replica sẽ rollback phần đã áp (InnoDB phải áp ngược undo), rồi bắt đầu lại từ đầu transaction. Lag còn tăng thêm.",
+          "next": "status"
+        },
+        {
+          "label": "Tăng `replica_parallel_workers` từ 4 lên 16",
+          "quality": "ok",
+          "feedback": "Chỉ có ích nếu có nhiều transaction độc lập đang chờ áp. Một core 100% và các core khác rảnh gợi ý chỉ một luồng đang làm việc. Xem trạng thái trước.",
+          "next": "status"
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "evidence": "mysql> SHOW REPLICA STATUS\\G\n         Replica_IO_Running: Yes\n        Replica_SQL_Running: Yes\n      Seconds_Behind_Source: 9612\n         Retrieved_Gtid_Set: 3e1f5a2c-...:1-88231950\n          Executed_Gtid_Set: 3e1f5a2c-...:1-88231003\n            Relay_Log_Space: 1873220114\n\nsource> SELECT @@gtid_executed;\n3e1f5a2c-...:1-88231952",
+      "evidenceFormat": "monospace",
+      "question": "Lag nằm ở đâu?",
+      "choices": [
+        {
+          "label": "Ở applier: replica đã nhận đủ log nhưng chưa áp transaction 88231004 và gần 950 transaction sau nó",
+          "quality": "good",
+          "feedback": "Đúng. `Retrieved_Gtid_Set` đã gần bằng source, nên mạng và receiver ổn. Các transaction sau đó nằm sẵn trong relay log, chờ được áp.",
+          "next": "workers"
+        },
+        {
+          "label": "Ở mạng: relay log 1,8GB nghĩa là băng thông giữa hai máy không đủ",
+          "quality": "poor",
+          "feedback": "Relay log lớn nghĩa là replica đã **nhận** về nhiều log mà chưa áp. Nếu mạng chậm, `Retrieved_Gtid_Set` sẽ tụt sau source, còn relay log thì nhỏ.",
+          "next": "workers"
+        },
+        {
+          "label": "Source ghi binlog chậm vì đĩa của source quá tải",
+          "quality": "poor",
+          "feedback": "Source không có dấu hiệu quá tải, và replica đã nhận gần hết transaction của source.",
+          "next": "workers"
+        }
+      ]
+    },
+    {
+      "id": "workers",
+      "evidence": "SELECT WORKER_ID, APPLYING_TRANSACTION, APPLYING_TRANSACTION_START_APPLY_TIMESTAMP AS started\nFROM performance_schema.replication_applier_status_by_worker;\n\n WORKER_ID | APPLYING_TRANSACTION     | started\n-----------+--------------------------+---------------------\n         1 | 3e1f5a2c-...:88231004    | 2026-10-24 01:00:24\n         2 | 3e1f5a2c-...:88231005    | 2026-10-24 01:00:24\n         3 | 3e1f5a2c-...:88231006    | 2026-10-24 01:00:24\n         4 | 3e1f5a2c-...:88231007    | 2026-10-24 01:00:24\n\nSHOW PROCESSLIST (rút gọn):\n Id 12  system user  State: Applying batch of row changes (delete)\n Id 13  system user  State: Waiting for preceding transaction to commit\n Id 14  system user  State: Waiting for preceding transaction to commit\n Id 15  system user  State: Waiting for preceding transaction to commit",
+      "evidenceFormat": "monospace",
+      "question": "Vì sao chỉ một luồng thực sự làm việc?",
+      "choices": [
+        {
+          "label": "Transaction 88231004 chỉ được áp bởi một worker; các worker khác áp xong phần mình nhưng phải chờ nó commit trước",
+          "quality": "good",
+          "feedback": "Đúng. Một transaction không chia được cho nhiều worker. Với `replica_preserve_commit_order = ON` (mặc định từ 8.0.27), các transaction sau phải commit theo đúng thứ tự của source, nên chúng xếp hàng sau transaction lớn.",
+          "next": "table"
+        },
+        {
+          "label": "Parallel replication chưa bật nên replica chỉ dùng một luồng",
+          "quality": "poor",
+          "feedback": "Có bốn worker đang có transaction, nên parallel replication đã bật. Vấn đề là thứ tự commit.",
+          "next": "table"
+        },
+        {
+          "label": "Worker 1 bị một query báo cáo trên replica khoá dòng",
+          "quality": "ok",
+          "feedback": "Có thể kiểm tra bằng `sys.innodb_lock_waits`, nhưng ở đây một core CPU chạy 100% nghĩa là worker đang làm việc chứ không ngồi chờ. Và chờ row lock sẽ hết sau `innodb_lock_wait_timeout` (50 giây) rồi replica thử lại theo `replica_transaction_retries`, không kéo dài 3 giờ.",
+          "next": "table"
+        }
+      ]
+    },
+    {
+      "id": "table",
+      "evidence": "-- Log của job dọn dẹp trên source\n01:00:02 DELETE FROM audit_events WHERE created_at < NOW() - INTERVAL 90 DAY\n01:00:23 604812 rows affected (21.4 sec)\n\n-- mysqlbinlog cho GTID 3e1f5a2c-...:88231004\n#261024  1:00:02 ... Delete_rows: table id 412 ... (15120 event như vậy)\n\nmysql> SHOW CREATE TABLE audit_events\\G\nCREATE TABLE `audit_events` (\n  `actor_id` bigint NOT NULL,\n  `action` varchar(64) NOT NULL,\n  `payload` json DEFAULT NULL,\n  `created_at` datetime NOT NULL\n) ENGINE=InnoDB  -- khoảng 3,1 triệu dòng, không có PRIMARY KEY, không có index",
+      "evidenceFormat": "monospace",
+      "question": "Source xoá trong 21 giây. Vì sao replica cần gần 3 giờ?",
+      "choices": [
+        {
+          "label": "Bảng không có primary key hay index, nên mỗi event dòng trên replica phải quét cả bảng để tìm dòng cần xoá",
+          "quality": "good",
+          "feedback": "Đúng. Source quét bảng một lần. Với binlog ROW, replica nhận 15.120 event, mỗi event chứa khoảng 40 dòng, và không có khoá để tìm nên mỗi event là một lần quét 3,1 triệu dòng. Khoảng 0,7 giây mỗi lần quét × 15.120 ≈ 2 giờ 56 phút.",
+          "next": "fix"
+        },
+        {
+          "label": "Đĩa của replica chậm hơn đĩa của source",
+          "quality": "ok",
+          "feedback": "Có thể đúng một phần, nhưng không giải thích được chênh lệch 500 lần. Và replica đang dùng hết một core CPU, không phải chờ I/O.",
+          "next": "fix"
+        },
+        {
+          "label": "Binlog ROW chứa toàn bộ cột `payload` JSON nên áp chậm",
+          "quality": "poor",
+          "feedback": "Kích thước event ảnh hưởng tới mạng và relay log, nhưng log đã nhận đủ. Thời gian nằm ở việc tìm dòng, không phải đọc event.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Làm gì để hết lag và không tái diễn?",
+      "choices": [
+        {
+          "label": "Thêm primary key cho `audit_events` vào giờ thấp điểm, xoá theo lô vài nghìn dòng, và bật `sql_require_primary_key`",
+          "quality": "good",
+          "feedback": "Có khoá thì replica tìm từng dòng bằng index. Xoá theo lô cho mỗi transaction nhỏ, các worker áp song song được, và lag chỉ còn vài giây. Lưu ý thêm cột `AUTO_INCREMENT` làm khoá chính phải ghi lại bảng và **không cho DML đồng thời** trên source, rồi lại được áp trên replica bằng một luồng; bảng đang nhận ghi thì dùng gh-ost hoặc pt-online-schema-change.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Bỏ qua transaction đó trên replica bằng một transaction rỗng cùng GTID",
+          "quality": "poor",
+          "feedback": "Replica sẽ không bao giờ xoá 604.812 dòng đó: dữ liệu giữa source và replica khác nhau âm thầm. Sau failover, dữ liệu \"sống lại\".",
+          "next": "root-cause"
+        },
+        {
+          "label": "Cho job chạy với `binlog_format = STATEMENT` để replica chỉ chạy lại câu `DELETE`",
+          "quality": "ok",
+          "feedback": "Replica chỉ quét bảng một lần nên nhanh, và `NOW()` vẫn ra đúng vì binlog ghi kèm thời điểm của source. Nhưng nhiều câu khác không an toàn với STATEMENT, và `binlog_format` đã deprecated từ 8.0.34. Đây là cách chữa cháy, không phải cách sửa gốc.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: bảng không có primary key, cộng một `DELETE` 600 nghìn dòng trong một transaction.** Với binlog ROW, replica phải tìm từng dòng; không có khoá nên mỗi event là một lần quét cả bảng. Cả transaction chỉ do một worker áp, và các transaction sau phải chờ nó commit để giữ thứ tự.\n\n**Vì sao diễn tập failover thất bại**: replica đã nhận đủ log nên không mất dữ liệu, nhưng muốn promote thì phải áp hết relay log trước, tức RTO thực tế là gần 3 giờ chứ không phải vài phút. Lag ở applier làm hỏng RTO; lag ở receiver làm hỏng RPO.\n\n**Sửa đúng**:\n- Thêm primary key cho mọi bảng (`ALTER TABLE audit_events ADD COLUMN id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY`, hoặc dùng invisible primary key nếu ứng dụng có câu `SELECT *` hay `INSERT` không ghi tên cột).\n- Bật `sql_require_primary_key = ON` (hoặc `sql_generate_invisible_primary_key = ON` từ 8.0.30) để bảng mới không thể thiếu khoá.\n- Job dọn dẹp xoá theo lô: `DELETE FROM audit_events WHERE created_at < ? ORDER BY id LIMIT 5000`, lặp tới khi hết, nghỉ ngắn giữa các lô. Về lâu dài, partition theo tháng và drop partition cũ (bài Partitioning).\n\n**Phòng ngừa**:\n- Đo lag bằng bảng heartbeat (`pt-heartbeat`), không chỉ `Seconds_Behind_Source`.\n- Truy vấn định kỳ tìm bảng không có primary key trong `information_schema`.\n- Cảnh báo khi một transaction trên source ảnh hưởng quá vài chục nghìn dòng (theo dõi kích thước transaction trong binlog, hoặc cột `ROWS_AFFECTED` trong `performance_schema.events_statements_history_long`).",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

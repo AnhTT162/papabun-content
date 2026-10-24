@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "stale-read-after-write",
+      "kind": "output",
+      "prompt": "Spring Boot định tuyến transaction `readOnly = true` sang replica async (lag thường 50–200ms). Người dùng đổi tên rồi trang tải lại ngay. Trang hiển thị gì?",
+      "code": "@Transactional\npublic void rename(long id, String name) {\n    users.findById(id).orElseThrow().setName(name);   // ghi vào primary\n}\n\n@Transactional(readOnly = true)\npublic UserView profile(long id) {                   // đọc từ replica\n    return users.findViewById(id);\n}\n\n// Controller: rename(42, \"An\") rồi trình duyệt gọi ngay profile(42)",
+      "options": [
+        "Luôn là tên mới, vì commit đã xong trước khi trả response",
+        "Có lúc là tên cũ, vì replica chưa áp kịp thay đổi",
+        "Lỗi, vì replica phát hiện dữ liệu đang bị sửa",
+        "Luôn là tên cũ cho tới khi cache của Hibernate hết hạn"
+      ],
+      "answer": 1,
+      "explanation": "Commit xong ở primary không có nghĩa replica async đã nhận và áp. Request đọc tới trong khoảng lag sẽ thấy tên cũ, nên lỗi chỉ xuất hiện lúc có lúc không. Cách sửa: đọc từ primary trong vài giây sau khi người đó ghi, hoặc chờ replica áp tới vị trí log của lần ghi. Persistence context của Hibernate chỉ sống trong một transaction nên không giữ tên cũ qua request khác."
+    },
+    {
+      "id": "semi-sync-silent-async",
+      "kind": "single",
+      "prompt": "MySQL bật semi-sync với một replica, `rpl_semi_sync_source_timeout = 10000`. Replica bị treo 5 phút vì đĩa lỗi. Trong 5 phút đó, các commit trên source thế nào?",
+      "options": [
+        "Mỗi commit chờ tối đa 10 giây rồi báo lỗi cho ứng dụng",
+        "Commit treo cho tới khi replica hoạt động trở lại",
+        "Lần đầu chờ 10 giây, sau đó chạy như async, không lỗi gì",
+        "Source tự chuyển sang read-only để bảo vệ dữ liệu"
+      ],
+      "answer": 2,
+      "explanation": "Hết timeout, source tắt semi-sync và tiếp tục commit theo kiểu async, ứng dụng không nhận lỗi nào. Nếu source chết trong khoảng đó, các commit chưa sang replica sẽ mất dù hệ thống \"đang bật semi-sync\". Phải cảnh báo theo `Rpl_semi_sync_source_status`. Semi-sync tự bật lại khi replica theo kịp."
+    },
+    {
+      "id": "pg-single-sync-standby",
+      "kind": "single",
+      "prompt": "PostgreSQL đặt `synchronous_standby_names = 'replica1'` và `synchronous_commit = on`. Replica1 mất mạng. Điều gì xảy ra với ứng dụng?",
+      "options": [
+        "Commit chạy như async và tự chuyển lại sync khi replica1 kết nối lại",
+        "Commit báo lỗi ngay vì không có replica sync",
+        "Commit thành công nhưng PostgreSQL ghi warning vào log",
+        "Commit treo vô hạn; huỷ thì dữ liệu vẫn đã commit trên primary"
+      ],
+      "answer": 3,
+      "explanation": "PostgreSQL không có timeout cho sync replication: commit chờ replica xác nhận mãi. Huỷ câu lệnh thì PostgreSQL cảnh báo rằng transaction đã commit cục bộ nhưng có thể chưa sang replica. Cách tránh: hai replica với `ANY 1 (replica1, replica2)`, hoặc để Patroni quản lý danh sách sync. Hành vi tự rơi về async là của MySQL semi-sync."
+    },
+    {
+      "id": "split-brain-prevention",
+      "kind": "single",
+      "prompt": "Primary bị cô lập mạng khỏi phần còn lại nhưng vẫn nhận ghi từ một số pod ở cùng mạng con. Hệ thống promote replica. Cơ chế nào ngăn hai primary cùng nhận ghi?",
+      "options": [
+        "Replica mới gửi lệnh shutdown tới primary cũ qua kết nối replication",
+        "Primary cũ phải giữ lease trong etcd; không gia hạn được thì tự chuyển read-only",
+        "Health check của load balancer tự bỏ primary cũ ra khỏi danh sách",
+        "PostgreSQL tự phát hiện có hai timeline và dừng node cũ"
+      ],
+      "answer": 1,
+      "explanation": "Node bị cô lập không nhận được lệnh nào từ bên ngoài, nên nó phải tự dừng: Patroni hạ primary xuống read-only khi không gia hạn được khoá leader, trước khi khoá hết hạn và replica được promote (với điều kiện Patroni trên node đó không bị treo, nên thường bật thêm watchdog). Load balancer cũng có thể bị cô lập cùng phía. Timeline chỉ được so khi node cũ kết nối lại, lúc đó dữ liệu đã rẽ nhánh và phải dùng `pg_rewind`."
+    },
+    {
+      "id": "seconds-behind-zero",
+      "kind": "single",
+      "prompt": "Replica MySQL báo `Seconds_Behind_Source: 0`, nhưng đơn hàng tạo trên source 2 phút trước chưa có trên replica. Giải thích hợp lý nhất?",
+      "options": [
+        "Đồng hồ hai máy lệch nhau nên con số bị âm rồi làm tròn về 0",
+        "Receiver tụt hậu vì mạng; applier đã áp hết phần đã nhận nên báo 0",
+        "Đơn hàng nằm trong transaction chưa commit trên source",
+        "Replica dùng semi-sync nên luôn báo 0 dù chưa áp"
+      ],
+      "answer": 1,
+      "explanation": "`Seconds_Behind_Source` chỉ so event mà applier đang áp với giờ hiện tại. Khi receiver nhận chậm và applier đã áp xong mọi thứ trong relay log, con số là 0 dù replica thiếu dữ liệu. MySQL đã trừ phần lệch đồng hồ đo lúc kết nối. Transaction chưa commit thì không có trên source với người khác, nên đề bài không phải trường hợp đó. Đo lag tin cậy bằng bảng heartbeat được ghi mỗi giây trên source."
+    }
+  ]
+}

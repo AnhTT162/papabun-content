@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đồng bộ dữ liệu từ database sang Elasticsearch",
+  "nodes": [
+    {"id": "app", "label": "Ứng dụng ghi", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "indexer", "label": "Indexer", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "cdc", "label": "Debezium + Kafka", "kind": "queue", "x": 0.85, "y": 0.5},
+    {"id": "es", "label": "Elasticsearch", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "api", "label": "API tìm kiếm", "kind": "client", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "app-db", "from": "app", "to": "db", "label": "ghi dữ liệu"},
+    {"id": "db-cdc", "from": "db", "to": "cdc", "label": "đọc WAL"},
+    {"id": "cdc-indexer", "from": "cdc", "to": "indexer", "label": "sự kiện thay đổi"},
+    {"id": "indexer-es", "from": "indexer", "to": "es", "label": "bulk index theo id"},
+    {"id": "api-es", "from": "api", "to": "es", "label": "query qua alias"}
+  ],
+  "steps": [
+    {"caption": "Ứng dụng chỉ ghi vào database. Database là nguồn sự thật; Elasticsearch là bản sao để tìm kiếm.", "show": ["app", "db", "app-db"], "highlight": ["app-db"]},
+    {"caption": "Debezium đọc WAL qua replication slot và đẩy từng thay đổi (kể cả xoá) vào Kafka, theo thứ tự trong mỗi khoá. Connector dừng lâu thì slot giữ WAL và đĩa của database đầy dần: theo dõi `pg_replication_slots`.", "show": ["cdc", "db-cdc"], "highlight": ["db-cdc"]},
+    {"caption": "Indexer dựng tài liệu tìm kiếm (gộp tên, thương hiệu, danh mục), kèm phiên bản để bản cũ đến muộn không đè bản mới.", "show": ["indexer", "cdc-indexer"], "highlight": ["cdc-indexer"]},
+    {"caption": "Elasticsearch cho văn bản qua analyzer (tách từ, chữ thường, bỏ dấu) rồi ghi vào inverted index. Sau lần refresh tiếp theo (mặc định 1 giây) mới tìm thấy được.", "show": ["es", "indexer-es"], "highlight": ["indexer-es"]},
+    {"caption": "API tìm kiếm luôn đọc qua alias. Reindex sang index mới rồi chuyển alias, ứng dụng không cần đổi gì.", "show": ["api", "api-es"], "highlight": ["api-es"]}
+  ]
+}

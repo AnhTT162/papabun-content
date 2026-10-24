@@ -725,7 +725,7 @@
       "meaning": "Index mà lá của nó chứa luôn toàn bộ dòng dữ liệu, nên bảng được lưu theo thứ tự của key. Trong MySQL InnoDB đó là primary key. Không có primary key thì InnoDB dùng index UNIQUE NOT NULL đầu tiên, hoặc một row ID ẩn. PostgreSQL không có clustered index.",
       "example": "InnoDB: index phụ trên `email` lưu kèm primary key, rồi tra tiếp clustered index để lấy dòng.",
       "related": ["b-tree", "covering-index"],
-      "topics": ["index-execution-plan", "relational-keys-normalization", "storage-engine", "data-modeling"]
+      "topics": ["index-execution-plan", "relational-keys-normalization", "storage-engine", "data-modeling", "mvcc-vacuum", "postgres-vs-mysql"]
     },
     {
       "id": "composite-index",
@@ -781,7 +781,7 @@
       "meaning": "Điều kiện viết sao cho database dùng được index để tìm (Search ARGument ABLE): so sánh trực tiếp trên cột, không bọc cột trong hàm.",
       "example": "`created_at >= '2026-10-01'` là sargable; `date(created_at) = '2026-10-01'` thì không.",
       "related": ["expression-index", "b-tree"],
-      "topics": ["index-execution-plan", "partitioning-index", "query-patterns"]
+      "topics": ["index-execution-plan", "partitioning-index", "query-patterns", "search-elasticsearch"]
     },
     {
       "id": "expression-index",
@@ -797,7 +797,7 @@
       "meaning": "Cách đọc chỉ dùng index, không đọc bảng, khi index chứa đủ cột query cần. PostgreSQL vẫn phải đọc bảng với page chưa được VACUUM đánh dấu all-visible trong visibility map.",
       "example": "Plan có `Index Only Scan ... Heap Fetches: 0`: không lần nào phải đọc bảng.",
       "related": ["covering-index", "execution-plan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "mvcc-vacuum"]
     },
     {
       "id": "tid",
@@ -805,7 +805,7 @@
       "meaning": "Tuple ID của PostgreSQL: vị trí vật lý của một dòng trong bảng, gồm số page và số thứ tự trong page. Index trỏ tới dòng bằng TID.",
       "example": "`ctid = (1532,7)`: dòng thứ 7 trong page 1532.",
       "related": ["b-tree", "clustered-index"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "mvcc-vacuum"]
     },
     {
       "id": "partial-index",
@@ -813,7 +813,7 @@
       "meaning": "Index chỉ chứa các dòng thoả một điều kiện `WHERE`, nên nhỏ và nhanh khi query luôn lọc theo điều kiện đó.",
       "example": "`CREATE INDEX ON orders (created_at) WHERE status = 'PENDING'`.",
       "related": ["expression-index", "selectivity"],
-      "topics": ["index-execution-plan", "data-modeling"]
+      "topics": ["index-execution-plan", "data-modeling", "postgres-vs-mysql"]
     },
     {
       "id": "hot-update",
@@ -821,7 +821,7 @@
       "meaning": "Heap-Only Tuple: tối ưu của PostgreSQL khi `UPDATE` không đổi cột nào nằm trong index (trừ BRIN từ PostgreSQL 16) và page còn chỗ trống, nên không phải cập nhật index.",
       "example": "Tăng `view_count` (không có index) là HOT; đổi `email` có index thì không.",
       "related": ["b-tree"],
-      "topics": ["index-execution-plan", "query-patterns"]
+      "topics": ["index-execution-plan", "query-patterns", "mvcc-vacuum", "postgres-vs-mysql"]
     },
     {
       "id": "skip-scan",
@@ -853,7 +853,7 @@
       "meaning": "Mức độ một transaction được thấy thay đổi của các transaction chạy đồng thời. Chuẩn SQL có 4 mức: READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE.",
       "example": "`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;` hoặc `@Transactional(isolation = Isolation.REPEATABLE_READ)`.",
       "related": ["dirty-read", "non-repeatable-read", "phantom-read"],
-      "topics": ["transaction-isolation", "acid-transactions-basics"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "postgres-vs-mysql"]
     },
     {
       "id": "dirty-read",
@@ -893,7 +893,7 @@
       "meaning": "Multi-Version Concurrency Control: database giữ nhiều phiên bản của mỗi dòng, mỗi transaction đọc phiên bản phù hợp với snapshot của nó, nên đọc và ghi không chặn nhau.",
       "example": "Một báo cáo chạy 5 phút vẫn thấy số liệu nhất quán dù trong lúc đó có hàng nghìn UPDATE.",
       "related": ["snapshot-isolation"],
-      "topics": ["transaction-isolation", "storage-engine"]
+      "topics": ["transaction-isolation", "storage-engine", "mvcc-vacuum", "postgres-vs-mysql"]
     },
     {
       "id": "snapshot-isolation",
@@ -901,7 +901,7 @@
       "meaning": "Mỗi transaction đọc dữ liệu như tại một thời điểm cố định (snapshot), không thấy thay đổi commit sau đó. REPEATABLE READ của PostgreSQL là snapshot isolation.",
       "example": "Trong transaction REPEATABLE READ, đọc số dư bao nhiêu lần cũng ra cùng giá trị.",
       "related": ["mvcc", "write-skew"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "postgres-vs-mysql"]
     },
     {
       "id": "pessimistic-locking",
@@ -933,7 +933,7 @@
       "meaning": "Serializable Snapshot Isolation: cách PostgreSQL cài SERIALIZABLE. Transaction vẫn đọc snapshot không chặn nhau, database theo dõi phụ thuộc đọc–ghi và huỷ một bên khi phát hiện kết quả không thể tương đương chạy lần lượt.",
       "example": "Hai bác sĩ cùng xin nghỉ trực ở SERIALIZABLE: một transaction nhận lỗi `40001` và phải retry.",
       "related": ["snapshot-isolation", "serialization-failure"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "postgres-vs-mysql"]
     },
     {
       "id": "next-key-lock",
@@ -1077,7 +1077,7 @@
       "meaning": "Chia một bảng logic thành nhiều bảng vật lý (partition) theo giá trị của một cột, trong cùng một database. Query và ứng dụng vẫn thấy một bảng.",
       "example": "Bảng `orders` chia theo tháng: `orders_2026_10`, `orders_2026_11`...",
       "related": ["partition-key", "partition-pruning", "sharding"],
-      "topics": ["partitioning-index", "index-execution-plan", "query-patterns"]
+      "topics": ["partitioning-index", "index-execution-plan", "query-patterns", "sharding-strategies"]
     },
     {
       "id": "partition-key",
@@ -1085,7 +1085,7 @@
       "meaning": "Cột (hoặc các cột) quyết định một dòng nằm ở partition nào. Nên là cột mà hầu hết query và việc xoá dữ liệu đều lọc theo.",
       "example": "`PARTITION BY RANGE (created_at)`: `created_at` là partition key.",
       "related": ["partitioning", "partition-pruning"],
-      "topics": ["partitioning-index", "nosql-overview"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies"]
     },
     {
       "id": "partition-pruning",
@@ -1109,7 +1109,7 @@
       "meaning": "Một index cho cả bảng partition, trỏ tới dòng ở bất kỳ partition nào. Tra nhanh và unique được trên cột không phải partition key, nhưng phải bảo trì khi drop hoặc truncate partition.",
       "example": "Oracle: `CREATE UNIQUE INDEX ux_order_no ON orders (order_no);` trên bảng partition, index không chia partition thì mặc định là global.",
       "related": ["local-index", "partitioning"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "sharding-strategies"]
     },
     {
       "id": "sharding",
@@ -1117,7 +1117,7 @@
       "meaning": "Chia dữ liệu qua nhiều database server (shard), mỗi shard giữ một phần dòng theo shard key. Mở rộng được ghi vượt một máy, nhưng query, transaction và index qua nhiều shard phức tạp hơn nhiều.",
       "example": "Khách có `hash(customer_id) % 8 = 3` nằm ở shard số 3.",
       "related": ["partitioning", "hot-partition"],
-      "topics": ["partitioning-index", "nosql-overview"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies"]
     },
     {
       "id": "hot-partition",
@@ -1125,7 +1125,7 @@
       "meaning": "Một partition hoặc shard nhận phần lớn lượt đọc/ghi trong khi phần còn lại rảnh, thường do chọn key theo thời gian hoặc theo một khách hàng quá lớn.",
       "example": "Shard theo ngày: mọi đơn mới đều ghi vào shard của hôm nay.",
       "related": ["sharding", "partition-key"],
-      "topics": ["partitioning-index", "nosql-overview"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies"]
     },
     {
       "id": "gsi",
@@ -1149,7 +1149,7 @@
       "meaning": "Generalized Inverted Index của PostgreSQL: index đảo ngược, ánh xạ từng phần tử (key JSON, phần tử mảng, từ, trigram) tới các dòng chứa nó.",
       "example": "`CREATE INDEX ON products USING gin (attributes jsonb_path_ops)` cho `WHERE attributes @> '{\"color\":\"red\"}'`.",
       "related": ["b-tree", "brin-index"],
-      "topics": ["index-execution-plan", "data-modeling"]
+      "topics": ["index-execution-plan", "data-modeling", "search-elasticsearch", "postgres-vs-mysql"]
     },
     {
       "id": "brin-index",
@@ -1173,7 +1173,7 @@
       "meaning": "Index chiếm nhiều dung lượng hơn mức cần vì chứa entry chết và page gần rỗng sau nhiều lần UPDATE/DELETE; làm index chậm và tốn cache.",
       "example": "Index 30GB cho bảng chỉ 8GB dữ liệu; `REINDEX INDEX CONCURRENTLY` thu về 3GB.",
       "related": ["b-tree", "hot-update"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "mvcc-vacuum"]
     },
     {
       "id": "logical-query-order",
@@ -1221,7 +1221,7 @@
       "meaning": "Cột hoặc nhóm cột định danh duy nhất mỗi dòng, không được NULL; mỗi bảng có một primary key.",
       "example": "`id bigint PRIMARY KEY` của bảng `users`.",
       "related": ["foreign-key", "surrogate-key"],
-      "topics": ["relational-keys-normalization"]
+      "topics": ["relational-keys-normalization", "replication-ha"]
     },
     {
       "id": "foreign-key",
@@ -1229,7 +1229,7 @@
       "meaning": "Cột tham chiếu tới primary/unique key của bảng khác; database chặn giá trị không tồn tại và quy định hành vi khi dòng cha bị xoá.",
       "example": "`orders.customer_id REFERENCES customers(id) ON DELETE RESTRICT`.",
       "related": ["primary-key", "constraint"],
-      "topics": ["relational-keys-normalization", "optimistic-pessimistic-locking", "locking-deadlock-db"]
+      "topics": ["relational-keys-normalization", "optimistic-pessimistic-locking", "locking-deadlock-db", "schema-migration"]
     },
     {
       "id": "constraint",
@@ -1237,7 +1237,7 @@
       "meaning": "Quy tắc dữ liệu do database thực thi khi ghi: NOT NULL, UNIQUE, PRIMARY KEY, FOREIGN KEY, CHECK.",
       "example": "`CHECK (quantity > 0)` chặn dòng có số lượng âm.",
       "related": ["primary-key", "foreign-key"],
-      "topics": ["relational-keys-normalization", "acid-transactions-basics"]
+      "topics": ["relational-keys-normalization", "acid-transactions-basics", "schema-migration"]
     },
     {
       "id": "surrogate-key",
@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha"]
     },
     {
       "id": "savepoint",
@@ -1277,7 +1277,7 @@
       "meaning": "Điểm đánh dấu trong transaction để rollback một phần mà không huỷ cả transaction.",
       "example": "`SAVEPOINT s1; ... ROLLBACK TO s1;`",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "mvcc-vacuum"]
     },
     {
       "id": "jdbc",
@@ -1333,7 +1333,7 @@
       "meaning": "Bản ghi cách hoàn tác thay đổi của InnoDB: dùng để rollback và để transaction khác đọc phiên bản cũ của dòng (MVCC). PostgreSQL không có undo log.",
       "example": "Rollback một `UPDATE` 5 triệu dòng trong InnoDB phải áp ngược 5 triệu thay đổi từ undo log.",
       "related": ["wal", "acid"],
-      "topics": ["acid-transactions-basics", "storage-engine"]
+      "topics": ["acid-transactions-basics", "storage-engine", "mvcc-vacuum", "postgres-vs-mysql"]
     },
     {
       "id": "implicit-commit",
@@ -1341,7 +1341,7 @@
       "meaning": "MySQL tự commit transaction đang mở trước (và sau) một số câu lệnh, chủ yếu là DDL như `ALTER TABLE`, `CREATE INDEX`.",
       "example": "`START TRANSACTION; UPDATE ...; ALTER TABLE ...;` thì `UPDATE` đã được commit, không rollback được.",
       "related": ["autocommit", "transaction"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "schema-migration", "postgres-vs-mysql"]
     },
     {
       "id": "self-invocation",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch"]
     },
     {
       "id": "datasource",
@@ -1397,7 +1397,7 @@
       "meaning": "Thời gian tối đa một câu lệnh chờ lấy khoá trước khi báo lỗi. `NOWAIT` báo lỗi ngay thay vì chờ.",
       "example": "PostgreSQL `SET LOCAL lock_timeout = '2s'` (giá trị `0` nghĩa là chờ vô hạn); MySQL `innodb_lock_wait_timeout` mặc định 50 giây.",
       "related": ["pessimistic-locking", "skip-locked", "deadlock"],
-      "topics": ["optimistic-pessimistic-locking", "locking-deadlock-db"]
+      "topics": ["optimistic-pessimistic-locking", "locking-deadlock-db", "schema-migration"]
     },
     {
       "id": "aggregate-root",
@@ -1429,7 +1429,7 @@
       "meaning": "Connection pooler nhẹ đứng giữa ứng dụng và PostgreSQL. Ở chế độ transaction, nhiều connection phía client dùng chung một số ít connection thật tới database.",
       "example": "500 pod mỗi pod mở 5 connection tới PgBouncer (2.500), PgBouncer chỉ giữ 60 connection thật tới PostgreSQL.",
       "related": ["connection-pool", "max-connections"],
-      "topics": ["connection-pool"]
+      "topics": ["connection-pool", "sharding-strategies", "postgres-vs-mysql"]
     },
     {
       "id": "max-lifetime",
@@ -1453,7 +1453,7 @@
       "meaning": "Thư viện connection pool JDBC nhanh và gọn, là pool mặc định của Spring Boot từ bản 2.0.",
       "example": "`spring.datasource.hikari.maximum-pool-size=10` cấu hình kích thước pool trong Spring Boot.",
       "related": ["connection-pool", "datasource"],
-      "topics": ["connection-pool"]
+      "topics": ["connection-pool", "replication-ha"]
     },
     {
       "id": "nested-loop-join",
@@ -1541,7 +1541,7 @@
       "meaning": "Phân trang bằng cách nhớ khoá của dòng cuối trang trước và lấy các dòng sau khoá đó (`WHERE (created_at, id) < (?, ?)`), thay vì bỏ qua N dòng bằng `OFFSET`. Còn gọi là seek method.",
       "example": "Trang nào cũng chỉ đọc 50 dòng nhờ index `(created_at, id)`, dù đang ở trang thứ 10.000.",
       "related": ["sargable"],
-      "topics": ["query-patterns"]
+      "topics": ["query-patterns", "sharding-strategies", "search-elasticsearch"]
     },
     {
       "id": "upsert",
@@ -1549,7 +1549,7 @@
       "meaning": "Insert nếu chưa có, update nếu đã có, trong một câu lệnh nguyên tử dựa trên unique index.",
       "example": "PostgreSQL `INSERT ... ON CONFLICT (sku) DO UPDATE SET ...`; MySQL `INSERT ... ON DUPLICATE KEY UPDATE ...`.",
       "related": ["constraint", "jdbc-batching"],
-      "topics": ["query-patterns", "views-procedures-triggers"]
+      "topics": ["query-patterns", "views-procedures-triggers", "postgres-vs-mysql"]
     },
     {
       "id": "generic-plan",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch"]
     },
     {
       "id": "replication-slot",
@@ -1709,7 +1709,7 @@
       "meaning": "Cơ chế PostgreSQL ghi nhớ một bên nhận (replica, Debezium) đã đọc WAL tới đâu và giữ lại WAL chưa được đọc. Bên nhận dừng lâu thì WAL tích tụ, có thể làm đầy đĩa.",
       "example": "`SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) FROM pg_replication_slots;`",
       "related": ["cdc", "wal"],
-      "topics": ["views-procedures-triggers", "backup-restore"]
+      "topics": ["views-procedures-triggers", "backup-restore", "mvcc-vacuum", "replication-ha"]
     },
     {
       "id": "hot-row",
@@ -1725,7 +1725,7 @@
       "meaning": "Phiên bản UUID theo RFC 9562 (2024): 48 bit đầu là thời gian Unix tính bằng mili giây, phần còn lại là bit ngẫu nhiên (có thể dùng một phần làm bộ đếm). Id mới gần như tăng dần nên hợp làm khoá trong B-tree.",
       "example": "`0192b3a4-5c6d-7e8f-9a0b-1c2d3e4f5a6b`: chữ số đầu của nhóm thứ ba là `7`.",
       "related": ["surrogate-key", "clustered-index"],
-      "topics": ["data-modeling"]
+      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql"]
     },
     {
       "id": "soft-delete",
@@ -1757,7 +1757,7 @@
       "meaning": "Kiểu JSON nhị phân của PostgreSQL: đã phân tích sẵn, bỏ khoảng trắng và khoá trùng, hỗ trợ toán tử như `@>` và GIN index.",
       "example": "`WHERE attributes @> '{\"ram_gb\": 8}'` dùng GIN index trên cột `attributes`.",
       "related": ["gin-index", "eav"],
-      "topics": ["data-modeling", "nosql-overview"]
+      "topics": ["data-modeling", "nosql-overview", "postgres-vs-mysql"]
     },
     {
       "id": "eav",
@@ -1773,7 +1773,7 @@
       "meaning": "Ràng buộc của PostgreSQL: không có hai dòng nào thoả cùng lúc mọi phép so sánh đã khai báo, ví dụ cùng phòng và khoảng thời gian chồng nhau.",
       "example": "`EXCLUDE USING gist (room_id WITH =, during WITH &&)` chặn đặt trùng phòng.",
       "related": ["constraint"],
-      "topics": ["data-modeling"]
+      "topics": ["data-modeling", "postgres-vs-mysql"]
     },
     {
       "id": "key-value-store",
@@ -1813,7 +1813,7 @@
       "meaning": "Một cách cụ thể ứng dụng đọc hoặc ghi dữ liệu: lọc theo gì, sắp theo gì, lấy bao nhiêu, tần suất ra sao. NoSQL thiết kế khoá theo danh sách access pattern.",
       "example": "\"Lấy 50 tin nhắn mới nhất của một cuộc trò chuyện\", vài nghìn lần mỗi giây.",
       "related": ["partition-key"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "sharding-strategies"]
     },
     {
       "id": "clustering-key",
@@ -1877,7 +1877,7 @@
       "meaning": "Binary log của MySQL: ghi lại mọi thay đổi dữ liệu theo thứ tự commit, dùng cho replication và PITR.",
       "example": "`mysqlbinlog --stop-datetime='2026-10-24 14:05:11' binlog.000042 | mysql` (thời gian hiểu theo múi giờ của máy chạy `mysqlbinlog`).",
       "related": ["pitr", "cdc"],
-      "topics": ["backup-restore"]
+      "topics": ["backup-restore", "replication-ha", "postgres-vs-mysql"]
     },
     {
       "id": "wal-archiving",
@@ -1893,7 +1893,7 @@
       "meaning": "Replica cố ý áp thay đổi trễ một khoảng thời gian, để còn kịp dừng lại trước khi một lỗi logic (xoá nhầm) được áp vào nó.",
       "example": "PostgreSQL `recovery_min_apply_delay = '1h'`; MySQL 8.0.23+ `SOURCE_DELAY = 3600` (bản cũ `MASTER_DELAY`).",
       "related": ["pitr"],
-      "topics": ["backup-restore"]
+      "topics": ["backup-restore", "replication-ha"]
     },
     {
       "id": "rpo-rto",
@@ -1901,7 +1901,7 @@
       "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
       "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
       "related": ["pitr"],
-      "topics": ["backup-restore"]
+      "topics": ["backup-restore", "replication-ha"]
     },
     {
       "id": "table-lock",
@@ -1917,7 +1917,7 @@
       "meaning": "Hàng đợi các yêu cầu lock trên cùng một đối tượng. Yêu cầu mới xung đột với một yêu cầu đang chờ phía trước cũng phải chờ, dù không xung đột với lock đang được giữ. MySQL có hành vi tương tự với metadata lock: yêu cầu độc quyền đang chờ được ưu tiên hơn các yêu cầu đọc mới.",
       "example": "`ALTER TABLE` chờ sau một báo cáo dài khiến mọi `SELECT` mới cũng phải chờ.",
       "related": ["table-lock", "lock-timeout"],
-      "topics": ["locking-deadlock-db"]
+      "topics": ["locking-deadlock-db", "schema-migration"]
     },
     {
       "id": "metadata-lock",
@@ -1925,7 +1925,7 @@
       "meaning": "Lock của MySQL bảo vệ cấu trúc bảng: transaction đang mở giữ lock dùng chung trên mọi bảng nó đã chạm, còn DDL cần lock độc quyền.",
       "example": "`SHOW PROCESSLIST` hiện `Waiting for table metadata lock` khi `ALTER TABLE` chờ một transaction chưa commit.",
       "related": ["table-lock", "lock-queue"],
-      "topics": ["locking-deadlock-db"]
+      "topics": ["locking-deadlock-db", "schema-migration"]
     },
     {
       "id": "gap-lock",
@@ -1933,7 +1933,7 @@
       "meaning": "Lock của InnoDB trên khoảng trống giữa hai bản ghi index, chặn insert vào khoảng đó. Gap lock của các transaction khác nhau không chặn nhau.",
       "example": "`SELECT ... WHERE email = 'x@y.z' FOR UPDATE` khi chưa có email đó sẽ khoá khoảng trống nơi nó sẽ được chèn.",
       "related": ["next-key-lock", "insert-intention-lock"],
-      "topics": ["locking-deadlock-db"]
+      "topics": ["locking-deadlock-db", "postgres-vs-mysql"]
     },
     {
       "id": "insert-intention-lock",
@@ -1942,6 +1942,414 @@
       "example": "Hai transaction cùng giữ gap lock trên cùng một khoảng rồi cùng insert vào khoảng đó thì deadlock.",
       "related": ["gap-lock", "next-key-lock"],
       "topics": ["locking-deadlock-db"]
+    },
+    {
+      "id": "vacuum",
+      "term": "VACUUM",
+      "meaning": "Lệnh bảo trì của PostgreSQL: dọn dòng chết (phiên bản cũ không ai còn thấy) để chỗ của chúng được dùng lại, cập nhật visibility map và freeze dòng cũ. Không chặn đọc ghi.",
+      "example": "`VACUUM (VERBOSE) orders;` in ra số dòng chết đã dọn và số dòng chưa được phép dọn.",
+      "related": ["autovacuum", "mvcc", "table-bloat"],
+      "topics": ["mvcc-vacuum", "postgres-vs-mysql"]
+    },
+    {
+      "id": "autovacuum",
+      "term": "Autovacuum",
+      "meaning": "Tiến trình nền của PostgreSQL tự chạy VACUUM và ANALYZE cho từng bảng khi số dòng chết hoặc dòng thay đổi vượt ngưỡng.",
+      "example": "Mặc định chạy khi dòng chết vượt `50 + 20% × số dòng` (bản 18 chặn trần 100 triệu); bảng lớn thường hạ `autovacuum_vacuum_scale_factor` xuống 0.01.",
+      "related": ["vacuum", "xid-wraparound"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "xmin-horizon",
+      "term": "Xmin horizon",
+      "meaning": "Mốc XID cũ nhất mà còn snapshot nào đó có thể cần thấy. VACUUM chỉ dọn được dòng chết cũ hơn mốc này.",
+      "example": "Một transaction `idle in transaction` từ 3 giờ trước giữ horizon đứng yên, VACUUM báo \"dead but not yet removable\".",
+      "related": ["vacuum", "mvcc", "hot-standby-feedback"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "table-bloat",
+      "term": "Table bloat",
+      "meaning": "Bảng chiếm nhiều dung lượng hơn mức cần vì chứa dòng chết hoặc chỗ trống chưa dùng lại sau nhiều lần UPDATE/DELETE.",
+      "example": "Bảng 52 triệu dòng thường chỉ 18GB nhưng đang chiếm 150GB.",
+      "related": ["index-bloat", "vacuum", "pg-repack"],
+      "topics": ["mvcc-vacuum", "schema-migration"]
+    },
+    {
+      "id": "fillfactor",
+      "term": "Fillfactor",
+      "meaning": "Tỉ lệ phần trăm mỗi page được lấp khi ghi dữ liệu mới; phần còn lại chừa cho UPDATE sau này, giúp PostgreSQL làm HOT update trong cùng page.",
+      "example": "`ALTER TABLE orders SET (fillfactor = 85);` (mặc định 100 cho bảng).",
+      "related": ["hot-update", "page"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "visibility-map",
+      "term": "Visibility map",
+      "meaning": "Bản đồ hai bit cho mỗi page của bảng PostgreSQL: all-visible (mọi dòng đều thấy được với mọi transaction) và all-frozen. VACUUM bỏ qua page đã đánh dấu, Index Only Scan nhờ nó mà khỏi đọc bảng.",
+      "example": "Bảng vừa nạp dữ liệu chưa vacuum: Index Only Scan vẫn có `Heap Fetches` rất lớn.",
+      "related": ["vacuum", "index-only-scan"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "hint-bits",
+      "term": "Hint bits",
+      "meaning": "Các bit PostgreSQL ghi vào tuple khi lần đầu biết transaction tạo hoặc xoá nó đã commit hay abort, để lần đọc sau khỏi tra trạng thái commit.",
+      "example": "Lần `SELECT` đầu tiên sau khi nạp 10 triệu dòng chạy chậm và ghi đĩa vì phải đặt hint bit. Nạp bằng `COPY ... FREEZE` vào bảng vừa tạo trong cùng transaction thì tránh được lượt ghi này.",
+      "related": ["mvcc", "vacuum"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "xid-wraparound",
+      "term": "XID wraparound",
+      "meaning": "XID của PostgreSQL chỉ 32 bit, quay vòng sau khoảng 4 tỉ transaction. Tuple chưa được freeze có thể bị coi là \"ở tương lai\" và biến mất, nên PostgreSQL ngừng nhận transaction ghi trước khi tới đó.",
+      "example": "Log (PostgreSQL 14+): `WARNING: database \"shop\" must be vacuumed within 39985967 transactions`.",
+      "related": ["tuple-freezing", "autovacuum"],
+      "topics": ["mvcc-vacuum", "postgres-vs-mysql"]
+    },
+    {
+      "id": "tuple-freezing",
+      "term": "Freeze",
+      "meaning": "VACUUM đánh dấu tuple đủ cũ là \"frozen\": luôn được coi là đã commit trong quá khứ, không còn phụ thuộc XID tạo ra nó. Đây là cách PostgreSQL tránh XID wraparound.",
+      "example": "`SELECT relname, age(relfrozenxid) FROM pg_class WHERE relkind = 'r' ORDER BY 2 DESC LIMIT 5;`",
+      "related": ["xid-wraparound", "vacuum"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "read-view",
+      "term": "Read view",
+      "meaning": "Snapshot của InnoDB: danh sách transaction đang chạy lúc tạo, dùng để quyết định phiên bản nào của dòng được thấy; bản quá mới thì dựng lại từ undo log.",
+      "example": "Ở REPEATABLE READ, read view được tạo ở `SELECT` thường đầu tiên và dùng tới hết transaction.",
+      "related": ["consistent-read", "undo-log"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "innodb-purge",
+      "term": "Purge",
+      "meaning": "Việc nền của InnoDB: xoá undo log không còn read view nào cần, và xoá hẳn các bản ghi đã bị delete-mark. Tương đương VACUUM của PostgreSQL.",
+      "example": "`innodb_purge_threads` mặc định 4 luồng purge (MySQL 8.0).",
+      "related": ["undo-log", "history-list-length"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "history-list-length",
+      "term": "History list length",
+      "meaning": "Số undo log (xấp xỉ số transaction đã commit) mà InnoDB chưa purge. Tăng mãi nghĩa là có transaction cũ đang giữ read view.",
+      "example": "`SHOW ENGINE INNODB STATUS` ghi `History list length 18420331`: cần tìm transaction cũ trong `information_schema.innodb_trx`.",
+      "related": ["innodb-purge", "undo-log"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "hot-standby-feedback",
+      "term": "hot_standby_feedback",
+      "meaning": "Tham số của replica PostgreSQL: báo `xmin` của các query đang chạy trên replica về primary, để primary không dọn những phiên bản mà query đó còn cần. Đổi lại, query dài trên replica làm bảng trên primary phình.",
+      "example": "Tắt nó thì query trên replica có thể bị huỷ với `canceling statement due to conflict with recovery`.",
+      "related": ["xmin-horizon", "replication-slot"],
+      "topics": ["mvcc-vacuum", "replication-ha"]
+    },
+    {
+      "id": "pg-repack",
+      "term": "pg_repack",
+      "meaning": "Extension của PostgreSQL ghi lại bảng hoặc index để thu hồi dung lượng phình, trong khi bảng vẫn đọc ghi được; chỉ cần lock mạnh trong chốc lát lúc bắt đầu và lúc đổi bảng.",
+      "example": "`pg_repack --table=public.orders shop`; tài liệu khuyên chừa chỗ trống khoảng gấp đôi bảng cộng index.",
+      "related": ["table-bloat", "vacuum"],
+      "topics": ["mvcc-vacuum"]
+    },
+    {
+      "id": "streaming-replication",
+      "term": "Streaming replication",
+      "meaning": "Physical replication của PostgreSQL: primary gửi WAL dạng byte liên tục sang replica, replica áp lại và trở thành bản sao y hệt cả cluster, chỉ đọc.",
+      "example": "`primary_conninfo = 'host=db1 user=replicator'` trên replica, theo dõi bằng `pg_stat_replication` trên primary.",
+      "related": ["wal", "logical-replication"],
+      "topics": ["replication-ha", "postgres-vs-mysql"]
+    },
+    {
+      "id": "logical-replication",
+      "term": "Logical replication",
+      "meaning": "Replication gửi thay đổi theo dòng (insert, update, delete) thay vì byte của file dữ liệu; chọn được bảng, chạy được giữa các phiên bản khác nhau. Logical replication của PostgreSQL không chép DDL.",
+      "example": "PostgreSQL: `CREATE PUBLICATION orders_pub FOR TABLE orders;` rồi `CREATE SUBSCRIPTION` ở phía nhận.",
+      "related": ["streaming-replication", "cdc"],
+      "topics": ["replication-ha", "sharding-strategies"]
+    },
+    {
+      "id": "synchronous-replication",
+      "term": "Synchronous replication",
+      "meaning": "Commit chỉ trả về khi ít nhất một replica xác nhận đã nhận log, nên primary chết không mất commit; đổi lại commit chậm thêm một vòng mạng và có thể treo khi replica chết.",
+      "example": "PostgreSQL: `synchronous_standby_names = 'ANY 1 (r1, r2)'`.",
+      "related": ["semi-sync-replication", "replica-lag"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "semi-sync-replication",
+      "term": "Semi-sync replication",
+      "meaning": "Chế độ của MySQL: commit chờ ít nhất một replica ghi transaction vào relay log; quá `rpl_semi_sync_source_timeout` thì tự chuyển về async mà không báo lỗi.",
+      "example": "Theo dõi `SHOW STATUS LIKE 'Rpl_semi_sync_source_status'`: `OFF` nghĩa là đang chạy async.",
+      "related": ["synchronous-replication", "relay-log"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "replica-lag",
+      "term": "Replica lag",
+      "meaning": "Độ trễ giữa lúc thay đổi commit trên primary và lúc replica áp xong nó. Đọc từ replica trong khoảng này thấy dữ liệu cũ.",
+      "example": "`pg_stat_replication.replay_lag = 00:00:04.2`; MySQL `Seconds_Behind_Source: 9612`.",
+      "related": ["read-your-writes", "streaming-replication"],
+      "topics": ["replication-ha", "schema-migration"]
+    },
+    {
+      "id": "relay-log",
+      "term": "Relay log",
+      "meaning": "File trên replica MySQL chứa các event binlog đã nhận từ source nhưng có thể chưa áp. Relay log lớn nghĩa là nhận nhanh hơn áp.",
+      "example": "`Relay_Log_Space: 1873220114` trong `SHOW REPLICA STATUS`.",
+      "related": ["binlog", "semi-sync-replication"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "gtid",
+      "term": "GTID",
+      "meaning": "Global Transaction ID của MySQL: mã duy nhất `uuid:số` cho mỗi transaction, giúp replica biết chính xác đã áp tới đâu và failover không cần tính vị trí file binlog.",
+      "example": "`Executed_Gtid_Set: 3e1f5a2c-...:1-88231003`.",
+      "related": ["binlog", "failover"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "read-your-writes",
+      "term": "Read-your-writes",
+      "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
+      "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
+      "related": ["replica-lag", "monotonic-reads"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "monotonic-reads",
+      "term": "Monotonic reads",
+      "meaning": "Đảm bảo một người dùng không thấy dữ liệu \"đi lùi\": đã thấy bản mới thì lần đọc sau không thấy bản cũ hơn.",
+      "example": "Gắn mỗi người dùng với một replica cố định thay vì chọn ngẫu nhiên mỗi request.",
+      "related": ["read-your-writes", "replica-lag"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "failover",
+      "term": "Failover",
+      "meaning": "Chuyển vai primary sang một replica khi primary chết: phát hiện, chọn replica mới nhất, promote, rồi chuyển ứng dụng sang.",
+      "example": "Patroni promote replica có LSN mới nhất sau khi khoá leader của primary cũ hết hạn (mặc định 30 giây).",
+      "related": ["split-brain", "patroni"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "split-brain",
+      "term": "Split brain",
+      "meaning": "Hai node cùng nghĩ mình là primary và cùng nhận ghi, thường do cô lập mạng; dữ liệu rẽ thành hai nhánh khó gộp lại.",
+      "example": "Primary cũ bị cô lập vẫn nhận đơn hàng từ vài pod trong khi replica đã được promote.",
+      "related": ["fencing", "failover"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "fencing",
+      "term": "Fencing",
+      "meaning": "Cơ chế chắc chắn node cũ không thể ghi nữa trước khi node mới nhận vai: lease tự hết hạn, watchdog khởi động lại máy, hoặc STONITH tắt nguồn node cũ.",
+      "example": "Patroni hạ primary xuống read-only khi không gia hạn được khoá leader trong etcd; watchdog khởi động lại máy nếu chính Patroni treo.",
+      "related": ["split-brain", "patroni"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "patroni",
+      "term": "Patroni",
+      "meaning": "Công cụ quản lý high availability cho PostgreSQL: lưu khoá leader trong etcd, Consul hoặc ZooKeeper, tự failover và tự hạ primary khi mất lease.",
+      "example": "`patronictl list` cho thấy node nào là Leader, node nào là Replica và lag của từng node.",
+      "related": ["failover", "fencing"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "pg-rewind",
+      "term": "pg_rewind",
+      "meaning": "Công cụ PostgreSQL tua data directory của primary cũ về điểm rẽ nhánh với primary mới, để nó quay lại làm replica mà không phải chép lại toàn bộ.",
+      "example": "Cần `wal_log_hints = on` hoặc data checksum bật từ trước.",
+      "related": ["failover", "split-brain"],
+      "topics": ["replication-ha"]
+    },
+    {
+      "id": "shard-key",
+      "term": "Shard key",
+      "meaning": "Cột (hoặc các cột) quyết định một dòng nằm ở shard nào. Nên có trong hầu hết query và gom dữ liệu của cùng một transaction về một shard.",
+      "example": "SaaS chọn `tenant_id`: mọi đơn, sản phẩm, khách của một cửa hàng nằm chung shard.",
+      "related": ["sharding", "partition-key"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "logical-shard",
+      "term": "Logical shard",
+      "meaning": "Đơn vị chia cố định và nhiều hơn số máy (ví dụ 1.024 bucket); mỗi máy giữ nhiều logical shard. Thêm máy chỉ cần chuyển vài bucket, không phải chia lại mọi key.",
+      "example": "`bucket = hash(tenant_id) % 1024`, rồi bảng định tuyến ghi bucket 0–127 nằm ở shard 1.",
+      "related": ["sharding", "resharding"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "directory-sharding",
+      "term": "Directory sharding",
+      "meaning": "Gán dòng vào shard bằng một bảng tra cứu (key hoặc bucket → shard) thay vì công thức cố định, nên chuyển riêng từng tenant được.",
+      "example": "Tenant lớn nhất được ghi riêng trong directory là nằm ở shard 9.",
+      "related": ["logical-shard", "shard-key"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "resharding",
+      "term": "Resharding",
+      "meaning": "Thay đổi cách chia dữ liệu giữa các shard (thêm máy, tách shard nóng), thường bằng cách chép dữ liệu, áp tiếp thay đổi từ log rồi đổi định tuyến.",
+      "example": "Chuyển bucket 512–639 từ shard 4 sang shard 9, chỉ dừng ghi các bucket đó vài giây.",
+      "related": ["logical-shard", "cdc"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "scatter-gather",
+      "term": "Scatter-gather",
+      "meaning": "Query thiếu shard key phải gửi tới mọi shard rồi trộn kết quả; latency bằng shard chậm nhất và tải nhân theo số shard.",
+      "example": "`SELECT ... ORDER BY updated_at DESC LIMIT 50` không có `tenant_id` hỏi cả 8 shard.",
+      "related": ["sharding", "shard-key"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "reference-table",
+      "term": "Reference table",
+      "meaning": "Bảng nhỏ dùng chung được chép đầy đủ lên mọi shard, để JOIN với nó vẫn chạy cục bộ trên từng shard.",
+      "example": "Citus: `SELECT create_reference_table('currencies');`",
+      "related": ["sharding", "scatter-gather"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "schema-migration",
+      "term": "Schema migration",
+      "meaning": "Thay đổi cấu trúc database (bảng, cột, index, ràng buộc) bằng các script có phiên bản, chạy theo thứ tự và được ghi lại, thường bằng Flyway hoặc Liquibase.",
+      "example": "`V42__add_phone_number.sql` được Flyway ghi vào `flyway_schema_history` sau khi chạy.",
+      "related": ["expand-contract", "online-ddl"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "expand-contract",
+      "term": "Expand-contract",
+      "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
+      "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
+      "related": ["schema-migration", "backfill", "rolling-deployment"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "rolling-deployment",
+      "term": "Rolling deployment",
+      "meaning": "Cách deploy thay dần từng instance cũ bằng instance mới, nên trong lúc rollout có cả hai phiên bản code cùng phục vụ.",
+      "example": "Kubernetes `RollingUpdate` với `maxUnavailable: 1` thay 12 pod lần lượt trong vài phút.",
+      "related": ["expand-contract"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "online-ddl",
+      "term": "Online DDL",
+      "meaning": "Thay đổi schema mà bảng vẫn đọc ghi được trong lúc chạy. MySQL có `ALGORITHM=INSTANT`, `INPLACE` (thường cho ghi đồng thời) và `COPY` (chặn ghi); công cụ như gh-ost làm việc này bằng bảng bóng.",
+      "example": "`ALTER TABLE orders ADD COLUMN note text, ALGORITHM=INSTANT;` báo lỗi nếu không làm được kiểu instant.",
+      "related": ["schema-migration", "metadata-lock", "table-rewrite"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "backfill",
+      "term": "Backfill",
+      "meaning": "Điền dữ liệu cho cột hoặc bảng mới từ dữ liệu cũ, chạy theo lô nhỏ để không tạo transaction khổng lồ.",
+      "example": "`UPDATE customers SET phone_number = phone WHERE id >= 1000000 AND id < 1005000 AND phone_number IS NULL;`",
+      "related": ["expand-contract", "replica-lag"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "table-rewrite",
+      "term": "Table rewrite",
+      "meaning": "DDL buộc database chép toàn bộ bảng sang file mới và dựng lại index, thường dưới lock mạnh; với bảng lớn có thể mất hàng giờ.",
+      "example": "PostgreSQL: `ALTER TABLE orders ALTER COLUMN id TYPE bigint` ghi lại cả bảng dưới `ACCESS EXCLUSIVE`.",
+      "related": ["online-ddl", "lock-queue"],
+      "topics": ["schema-migration"]
+    },
+    {
+      "id": "co-location",
+      "term": "Co-location",
+      "meaning": "Đặt các shard của nhiều bảng có cùng khoảng shard key lên cùng một node, để JOIN và transaction theo key đó chạy cục bộ trên một node.",
+      "example": "Citus: `orders` và `order_items` cùng phân tán theo `tenant_id` nên đơn và chi tiết đơn của tenant 42 nằm chung node.",
+      "related": ["sharding", "shard-key"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "replica-identity",
+      "term": "Replica identity",
+      "meaning": "Cột PostgreSQL ghi kèm vào WAL để logical replication xác định dòng nào bị `UPDATE`/`DELETE`; mặc định là primary key. `REPLICA IDENTITY FULL` ghi cả dòng cũ, rất tốn.",
+      "example": "Row filter `WHERE (tenant_id = 42)` cho `UPDATE` chỉ chạy được khi `tenant_id` nằm trong primary key.",
+      "related": ["logical-replication", "primary-key"],
+      "topics": ["sharding-strategies"]
+    },
+    {
+      "id": "inverted-index",
+      "term": "Inverted index",
+      "meaning": "Cấu trúc của search engine: mỗi từ (sau khi qua analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất, nên tra một từ không phải quét mọi tài liệu.",
+      "example": "Từ `khoac` → tài liệu 12, 98, 1.204...",
+      "related": ["analyzer", "bm25"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "analyzer",
+      "term": "Analyzer",
+      "meaning": "Chuỗi xử lý văn bản trước khi đưa vào inverted index và trước khi tìm: character filter, tokenizer, rồi token filter (chữ thường, bỏ dấu, đồng nghĩa).",
+      "example": "\"Áo Khoác Gió\" qua `standard` + `lowercase` + `asciifolding` thành `ao`, `khoac`, `gio`.",
+      "related": ["inverted-index"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "bm25",
+      "term": "BM25",
+      "meaning": "Công thức xếp hạng mặc định của Elasticsearch và Lucene: điểm tăng theo số lần từ xuất hiện (có trần), cao hơn với từ hiếm trong cả tập, và ưu tiên trường ngắn.",
+      "example": "Hai sản phẩm cùng có \"áo khoác\": tên ngắn \"Áo khoác gió\" được điểm cao hơn tên dài \"Áo khoác gió dáng rộng chống nước nhiều túi\".",
+      "related": ["inverted-index"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "near-real-time",
+      "term": "Near real-time",
+      "meaning": "Elasticsearch không cho tìm thấy tài liệu ngay khi ghi, mà sau lần refresh tiếp theo (mặc định mỗi giây) tạo segment mới có thể tìm được.",
+      "example": "Ghi rồi tìm ngay thì có thể chưa thấy; ghi với `refresh=wait_for` để chờ.",
+      "related": ["lucene-segment"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "lucene-segment",
+      "term": "Segment",
+      "meaning": "Phần bất biến của một index Lucene. Tài liệu mới vào segment mới; xoá và update chỉ đánh dấu tài liệu cũ, tới khi merge gộp segment mới thật sự dọn.",
+      "example": "Update giá một sản phẩm 1.000 lần để lại 999 bản đã xoá chờ merge.",
+      "related": ["near-real-time", "inverted-index"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "index-alias",
+      "term": "Index alias",
+      "meaning": "Tên phụ trỏ tới một hoặc nhiều index Elasticsearch. Ứng dụng đọc ghi qua alias, nên reindex sang index mới chỉ cần chuyển alias trong một lệnh nguyên tử.",
+      "example": "`POST _aliases` với `remove products_v1` và `add products_v2` cho alias `products`.",
+      "related": ["lucene-segment"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "search-after",
+      "term": "search_after",
+      "meaning": "Cách phân trang sâu trong Elasticsearch: gửi giá trị sắp xếp của kết quả cuối trang trước thay vì `from`, thường kèm point in time để kết quả ổn định.",
+      "example": "`\"search_after\": [1729750000000, \"p-88123\"]` với sắp xếp theo `updated_at` rồi trường `keyword` `product_id` (không sắp xếp được theo `_id` từ bản 8).",
+      "related": ["keyset-pagination"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "trigram-index",
+      "term": "Trigram index",
+      "meaning": "Index của extension `pg_trgm` trong PostgreSQL: tách chuỗi thành các cụm 3 ký tự, nên `LIKE`/`ILIKE` có `%` ở đầu và tìm gần đúng vẫn dùng được index.",
+      "example": "`CREATE INDEX ON customers USING gin (name gin_trgm_ops);` rồi `WHERE name ILIKE '%nguyen%'`.",
+      "related": ["gin-index"],
+      "topics": ["search-elasticsearch"]
+    },
+    {
+      "id": "collation",
+      "term": "Collation",
+      "meaning": "Quy tắc so sánh và sắp xếp chuỗi của database: có phân biệt hoa thường, có phân biệt dấu hay không, thứ tự chữ cái. Ảnh hưởng tới `=`, `ORDER BY`, `LIKE` và unique index.",
+      "example": "MySQL `utf8mb4_0900_ai_ci` coi `Nam`, `nam` và `Năm` là bằng nhau khi so sánh; PostgreSQL mặc định phân biệt.",
+      "related": ["expression-index"],
+      "topics": ["postgres-vs-mysql"]
     }
   ]
 }

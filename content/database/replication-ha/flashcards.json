@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "physical-vs-logical", "front": "Physical và logical replication khác nhau thế nào?", "back": "Physical gửi WAL dạng byte, replica là bản sao cả cluster, cùng major version. Logical gửi thay đổi theo dòng, chọn được bảng và khác phiên bản được; của PostgreSQL thì không chép DDL." },
+    { "id": "async-risk", "front": "Rủi ro chính của async replication khi failover?", "back": "Các commit chưa kịp gửi sang replica bị mất: RPO bằng lag lúc sự cố." },
+    { "id": "semi-sync-fallback", "front": "MySQL semi-sync làm gì khi replica không trả lời kịp?", "back": "Sau `rpl_semi_sync_source_timeout` (mặc định 10 giây) nó lặng lẽ chuyển về async; theo dõi `Rpl_semi_sync_source_status`." },
+    { "id": "pg-sync-hang", "front": "PostgreSQL có một replica sync duy nhất và nó chết thì sao?", "back": "Mọi commit chờ vô hạn. Dùng quorum `ANY 1 (s1, s2)` hoặc chế độ synchronous của Patroni." },
+    { "id": "read-your-writes", "front": "Ba cách đảm bảo read-your-writes khi đọc từ replica?", "back": "Đọc từ primary trong vài giây sau khi ghi; chờ replica áp tới LSN/GTID của lần ghi; hoặc `synchronous_commit = remote_apply` (với quorum chỉ một replica chắc chắn đã áp)." },
+    { "id": "seconds-behind", "front": "Vì sao `Seconds_Behind_Source = 0` chưa chắc replica đã theo kịp?", "back": "Nó chỉ đo phần applier so với event đã nhận; receiver tụt vì mạng thì vẫn có thể báo 0. Dùng bảng heartbeat." },
+    { "id": "one-txn-one-worker", "front": "Vì sao một `DELETE` lớn làm replica MySQL trễ dù có nhiều worker?", "back": "Một transaction chỉ do một worker áp, và các transaction sau phải chờ nó commit để giữ thứ tự." },
+    { "id": "no-pk-replica", "front": "Vì sao bảng không có primary key làm replica MySQL rất chậm?", "back": "Với binlog ROW, replica phải tìm từng dòng; không có khoá thì mỗi event phải quét cả bảng." },
+    { "id": "split-brain", "front": "Split brain là gì, chống bằng gì?", "back": "Hai node cùng nghĩ mình là primary và cùng nhận ghi. Chống bằng lease trong hệ đồng thuận và fencing: primary cũ phải tự dừng ghi hoặc bị cắt hẳn." },
+    { "id": "applier-lag-rto", "front": "Replica đã nhận đủ log nhưng chưa áp: ảnh hưởng RPO hay RTO?", "back": "RTO: không mất dữ liệu, nhưng phải áp hết log tồn mới promote được." }
+  ]
+}

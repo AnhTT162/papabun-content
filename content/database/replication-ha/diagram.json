@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Commit qua replica sync và async, và lease chống split brain",
+  "nodes": [
+    {"id": "app", "label": "Ứng dụng", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "primary", "label": "Primary", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "sync", "label": "Replica sync", "kind": "database", "x": 0.1, "y": 0.5},
+    {"id": "async", "label": "Replica async", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "dcs", "label": "etcd (leader lease)", "kind": "service", "x": 0.1, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "app-primary", "from": "app", "to": "primary", "label": "COMMIT"},
+    {"id": "primary-async", "from": "primary", "to": "async", "label": "WAL, không chờ"},
+    {"id": "primary-sync", "from": "primary", "to": "sync", "label": "WAL, chờ xác nhận"},
+    {"id": "primary-dcs", "from": "primary", "to": "dcs", "label": "gia hạn lease"}
+  ],
+  "steps": [
+    {"caption": "Ứng dụng gửi COMMIT. Primary ghi WAL (hoặc binlog) xuống đĩa của chính nó.", "show": ["app", "primary", "app-primary"], "highlight": ["app-primary"]},
+    {"caption": "Async: primary báo commit xong ngay, log được gửi sau. Replica trễ từ vài mili giây tới vài giờ; primary chết lúc này thì phần chưa gửi bị mất.", "show": ["async", "primary-async"], "highlight": ["primary-async"]},
+    {"caption": "Sync: commit chỉ trả về khi replica xác nhận đã ghi log. Không mất commit khi primary chết, đổi lại mỗi commit thêm một vòng mạng, và replica sync chết thì commit treo.", "show": ["sync", "primary-sync"], "highlight": ["primary-sync"]},
+    {"caption": "Patroni giữ khoá leader trong etcd với thời hạn (TTL). Primary phải gia hạn liên tục mới được tiếp tục nhận ghi.", "show": ["dcs", "primary-dcs"], "highlight": ["primary-dcs"]},
+    {"caption": "Primary bị cô lập mạng thì không gia hạn được, và tự hạ xuống read-only trước khi lease hết hạn. Chỉ sau đó replica sync mới được promote, nên hai primary không cùng nhận ghi, miễn là primary cũ kịp tự hạ; watchdog khởi động lại máy nếu chính Patroni bị treo.", "show": [], "highlight": ["dcs", "sync"]}
+  ]
+}

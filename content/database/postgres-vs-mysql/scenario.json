@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn database cho hệ thống đặt lịch khám",
+  "prompt": "Bạn là tech lead cho sản phẩm mới: **đặt lịch khám cho chuỗi 300 phòng khám** (mỗi phòng khám là một tenant), chạy trên AWS.\n\n- Bệnh nhân tìm phòng khám **gần nhất** còn lịch trống theo chuyên khoa.\n- Mỗi bác sĩ không được có hai lịch hẹn **chồng giờ**; giờ cao điểm có nhiều người tranh cùng một khung giờ.\n- Mỗi phòng khám tự định nghĩa **biểu mẫu khai báo** riêng (các trường khác nhau), cần tìm kiếm theo vài trường trong đó.\n- Dữ liệu y tế: phòng khám này không được thấy dữ liệu của phòng khám khác; cần audit.\n- Dự kiến 2 triệu lịch hẹn mỗi tháng, đọc nhiều hơn ghi khoảng 20 lần.\n- Đội 5 backend Java, đã vận hành MySQL 5 năm, chưa từng vận hành PostgreSQL.\n\nChọn PostgreSQL hay MySQL, giải thích theo từng yêu cầu, và nêu những gì đội phải chuẩn bị.",
+  "hints": [
+    "Yêu cầu \"không chồng giờ\" giữ đúng thế nào khi hai người cùng đặt một khung giờ? Database nào biểu diễn được nó bằng một ràng buộc?",
+    "Tìm \"gần nhất\" cần index gì? Cả hai database đều có không?",
+    "Biểu mẫu tự định nghĩa: JSON column và index trên trường trong JSON ở mỗi database thế nào?",
+    "Kinh nghiệm vận hành của đội đáng giá bao nhiêu? PostgreSQL có những việc vận hành nào mà MySQL không có?"
+  ],
+  "solution": "**Đề xuất: PostgreSQL (Amazon RDS hoặc Aurora PostgreSQL)**, vì ba yêu cầu cốt lõi được database đảm bảo trực tiếp thay vì code tự giữ. Kinh nghiệm MySQL của đội là chi phí thật, nên kèm kế hoạch học vận hành rõ ràng.\n\n**1. Không chồng giờ: exclusion constraint** (`starts_at`, `ends_at` kiểu `timestamptz`; với `timestamp` thì phép ép sang `tstzrange` không immutable và lệnh báo lỗi).\n```sql\nCREATE EXTENSION btree_gist;\nALTER TABLE appointments ADD CONSTRAINT no_overlap\n  EXCLUDE USING gist (doctor_id WITH =, tstzrange(starts_at, ends_at) WITH &&)\n  WHERE (status <> 'CANCELLED');\n```\nHai transaction cùng đặt khung giờ chồng nhau thì một bên nhận lỗi `23P01` (exclusion violation), kể cả ở READ COMMITTED; ứng dụng báo \"khung giờ vừa có người đặt\". Biên mặc định `[)` cho phép hai lịch nối tiếp nhau (9:00–9:30 và 9:30–10:00). Thêm ràng buộc vào bảng đã có dữ liệu thì khoá bảng trong lúc dựng index. PostgreSQL 18 có cách viết mới `PRIMARY KEY (doctor_id, during WITHOUT OVERLAPS)`. Với MySQL phải tự giữ: khoá dòng của bác sĩ bằng `SELECT ... FOR UPDATE` rồi kiểm tra chồng giờ, hoặc chia lịch thành các slot cố định và đặt unique key `(doctor_id, slot_start)`. Cả hai cách đều được, nhưng mọi đường ghi (kể cả script tay) phải tuân thủ.\n\n**2. Tìm gần nhất: PostGIS.** Cột `geography(Point)`, index GiST, `ORDER BY location <-> :point LIMIT 20` dùng được index để lấy các điểm gần nhất. MySQL 8.0+ có kiểu spatial với SRID và `ST_Distance_Sphere`, nhưng SPATIAL index chỉ dùng cho điều kiện dạng hình chữ nhật bao (`MBRContains`, `ST_Within`), không cho `ORDER BY` theo khoảng cách: phải lọc theo khung bao rồi tự sắp xếp; với 300 phòng khám thì thật ra cả hai đều đủ, nên đây không phải yếu tố quyết định.\n\n**3. Biểu mẫu tự định nghĩa: `jsonb`.** Lưu câu trả lời vào `form_answers jsonb`, index GIN `jsonb_path_ops` cho truy vấn chứa (`@>`), và index biểu thức cho vài trường hay lọc. MySQL có `JSON` với index qua cột sinh hoặc multi-valued index, làm được nhưng phải khai báo từng trường cần index.\n\n**4. Cô lập dữ liệu giữa phòng khám: row-level security.** Mọi bảng có `clinic_id`; `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` (chỉ tạo policy thì không có tác dụng) và policy `USING (clinic_id = current_setting('app.clinic_id')::bigint)` trên mỗi bảng. Ứng dụng gọi `SELECT set_config('app.clinic_id', ?, true)` đầu mỗi transaction (`SET LOCAL` không nhận bind parameter, và ngoài transaction thì không có tác dụng). Chưa đặt biến thì câu lệnh báo lỗi, tức chặn an toàn. Đây là lớp bảo vệ thứ hai bên cạnh việc lọc trong code: quên `WHERE clinic_id = ?` thì database vẫn chặn. Lưu ý: role của ứng dụng không được là chủ bảng (hoặc phải `FORCE ROW LEVEL SECURITY`), không là superuser hay có `BYPASSRLS` (hai loại này luôn bỏ qua RLS), và giá trị đặt theo transaction để không rò sang request khác qua connection pool. Audit dùng trigger ghi bảng lịch sử hoặc extension `pgaudit`.\n\n**5. Tải**: 2 triệu lịch hẹn mỗi tháng là khoảng 0,8 lần ghi mỗi giây trung bình, vài chục lúc cao điểm: rất nhỏ với cả hai database. Đọc nhiều thì thêm read replica và cache. Hiệu năng không phải lý do chọn.\n\n**6. Đội cần chuẩn bị gì khi chuyển sang PostgreSQL**\n- Connection: mỗi connection là một process, giữ pool nhỏ, đặt PgBouncer chế độ transaction khi số pod tăng. RDS Proxy ghim connection (mất khả năng dùng chung) khi session gọi `SET`/`set_config`, nên không hợp với cách đặt biến RLS ở trên.\n- VACUUM: theo dõi `n_dead_tup`, tuổi XID (`age(datfrozenxid)`), transaction `idle in transaction`; đặt `idle_in_transaction_session_timeout` và `statement_timeout` cho role ứng dụng.\n- Khác biệt hành vi: so sánh chuỗi phân biệt hoa thường (email nên dùng `citext` hoặc unique index trên `lower(email)`), lỗi giữa transaction làm hỏng cả transaction, DDL nằm được trong transaction.\n- Migration: Flyway, các mẫu DDL an toàn (`CONCURRENTLY`, `NOT VALID`, `lock_timeout`).\n- Nâng cấp major version mỗi vài năm (mỗi bản hỗ trợ 5 năm): diễn tập bằng blue/green deployment của RDS hoặc `pg_upgrade`.\n- Test tích hợp chạy trên PostgreSQL thật (Testcontainers), không dùng H2.\n\n**Khi nào chọn MySQL thì hợp lý hơn**: nếu thời hạn ra mắt rất gấp và không có ai trong đội có thể dành thời gian học vận hành PostgreSQL, MySQL với slot cố định cộng unique key và kiểm tra `clinic_id` chặt trong code vẫn đáp ứng được yêu cầu. Quyết định nên ghi thành ADR, nêu rõ cái giá của từng hướng.",
+  "tradeoffs": [
+    {
+      "option": "PostgreSQL",
+      "pros": [
+        "Exclusion constraint chặn chồng giờ ngay trong database",
+        "Row-level security cho cô lập tenant",
+        "PostGIS, jsonb với GIN"
+      ],
+      "cons": [
+        "Đội phải học vận hành mới: VACUUM, connection, nâng cấp major",
+        "Khác biệt hành vi so với thói quen MySQL"
+      ]
+    },
+    {
+      "option": "MySQL",
+      "pros": [
+        "Đội đã vận hành 5 năm",
+        "Mô hình thread chịu nhiều connection tốt",
+        "Đủ cho tải của bài toán"
+      ],
+      "cons": [
+        "Chống chồng giờ và cô lập tenant phải giữ ở code",
+        "Index trên JSON phải khai báo từng trường"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "heap-vs-clustered", "front": "Khác biệt gốc trong cách lưu bảng của PostgreSQL và InnoDB?", "back": "PostgreSQL lưu heap, mọi index trỏ tới vị trí vật lý; InnoDB lưu bảng là clustered index theo primary key, index phụ chứa primary key." },
+    { "id": "random-pk", "front": "Vì sao UUID v4 làm primary key gây hại cho InnoDB nhiều hơn?", "back": "Chèn ngẫu nhiên vào clustered index làm tách page liên tục, và mọi index phụ phình theo độ rộng khoá." },
+    { "id": "update-cost", "front": "Vì sao `UPDATE` cột có index đắt hơn ở PostgreSQL?", "back": "Mỗi `UPDATE` tạo phiên bản mới và cần entry mới trong mọi index, trừ HOT update (không đổi cột có index, page còn chỗ); rồi VACUUM phải dọn bản cũ." },
+    { "id": "default-isolation", "front": "Isolation mặc định của PostgreSQL và InnoDB?", "back": "PostgreSQL READ COMMITTED; InnoDB REPEATABLE READ với gap lock." },
+    { "id": "connection-model", "front": "Mô hình connection khác nhau thế nào?", "back": "PostgreSQL một process mỗi connection nên cần pooler như PgBouncer; MySQL một thread mỗi connection." },
+    { "id": "collation-trap", "front": "Collation mặc định của MySQL 8.0 gây bất ngờ gì khi chuyển sang PostgreSQL?", "back": "`utf8mb4_0900_ai_ci` bỏ qua hoa thường và dấu; PostgreSQL phân biệt, nên so sánh và unique index cho kết quả khác." },
+    { "id": "implicit-cast", "front": "`WHERE varchar_col = 123` trên MySQL có vấn đề gì?", "back": "MySQL đổi chuỗi thành số để so: không dùng được index và `'123abc'` cũng khớp. PostgreSQL báo lỗi kiểu." },
+    { "id": "check-before-8016", "front": "`CHECK` constraint trên MySQL trước 8.0.16 làm gì?", "back": "Được parse rồi bỏ qua, không kiểm tra gì; dữ liệu cũ có thể vi phạm." },
+    { "id": "upsert-diff", "front": "Upsert của hai bên khác nhau thế nào?", "back": "PostgreSQL `ON CONFLICT (cột)` chỉ định ràng buộc; MySQL `ON DUPLICATE KEY UPDATE` chạy khi trùng bất kỳ unique key nào." },
+    { "id": "pg-only", "front": "Ba tính năng PostgreSQL có mà MySQL không có?", "back": "Partial index, exclusion constraint, và DDL rollback được trong transaction." }
+  ]
+}

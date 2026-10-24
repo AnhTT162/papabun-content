@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "collation-unique",
+      "kind": "output",
+      "prompt": "Cùng một script chạy trên MySQL 8.4 (charset mặc định) và PostgreSQL 16 (collation mặc định). Kết quả câu `INSERT` thứ hai?",
+      "code": "CREATE TABLE users (email varchar(255) NOT NULL UNIQUE);\nINSERT INTO users VALUES ('an@example.com');\nINSERT INTO users VALUES ('An@Example.com');",
+      "options": [
+        "Cả hai database đều báo trùng khoá",
+        "MySQL báo trùng khoá; PostgreSQL chèn thành công",
+        "MySQL chèn thành công; PostgreSQL báo trùng khoá",
+        "Cả hai database đều chèn thành công"
+      ],
+      "answer": 1,
+      "explanation": "Collation mặc định `utf8mb4_0900_ai_ci` của MySQL so sánh không phân biệt hoa thường, nên unique index coi hai email là một. PostgreSQL so sánh theo collation phân biệt hoa thường, nên chấp nhận cả hai. Muốn email unique không phân biệt hoa thường trên PostgreSQL: `citext`, hoặc `CREATE UNIQUE INDEX ON users (lower(email))`."
+    },
+    {
+      "id": "secondary-index-lookup",
+      "kind": "single",
+      "prompt": "Bảng InnoDB `orders` có primary key `id` và index phụ trên `customer_id`. Query `SELECT total FROM orders WHERE customer_id = 42` đi thế nào?",
+      "options": [
+        "Tra index `customer_id` lấy vị trí vật lý của dòng rồi đọc dòng",
+        "Tra index `customer_id` lấy giá trị `id`, rồi tra clustered index để lấy `total`",
+        "Quét clustered index vì index phụ không chứa `total`",
+        "Đọc thẳng `total` từ index phụ vì InnoDB lưu mọi cột trong mọi index"
+      ],
+      "answer": 1,
+      "explanation": "Index phụ của InnoDB lưu giá trị primary key thay vì vị trí vật lý, nên mỗi dòng khớp cần thêm một lần tra clustered index. Đổi lại, dòng di chuyển trong clustered index (tách page) thì index phụ không phải sửa. Trỏ tới vị trí vật lý là cách của PostgreSQL. Thêm `total` vào index (`(customer_id, total)`) thì thành covering index và bỏ được lần tra thứ hai."
+    },
+    {
+      "id": "error-in-transaction",
+      "kind": "single",
+      "prompt": "Trong một transaction, câu `INSERT` thứ hai bị lỗi trùng khoá; code bắt exception rồi chạy tiếp một `UPDATE` và `COMMIT`. Hai database xử lý thế nào?",
+      "options": [
+        "Cả hai đều commit `INSERT` đầu và `UPDATE`",
+        "Cả hai đều rollback toàn bộ khi gặp lỗi đầu tiên",
+        "MySQL commit `INSERT` đầu và `UPDATE`; PostgreSQL từ chối `UPDATE` tới khi rollback",
+        "PostgreSQL commit `INSERT` đầu và `UPDATE`; MySQL từ chối `UPDATE` tới khi rollback"
+      ],
+      "answer": 2,
+      "explanation": "MySQL chỉ huỷ câu lệnh lỗi, transaction vẫn tiếp tục. PostgreSQL đánh dấu transaction hỏng: mọi câu sau báo `current transaction is aborted`, và `COMMIT` thực chất thành rollback. Muốn tiếp tục sau lỗi trên PostgreSQL thì đặt `SAVEPOINT` trước câu có thể lỗi rồi `ROLLBACK TO SAVEPOINT`, hoặc dùng `ON CONFLICT DO NOTHING`."
+    },
+    {
+      "id": "update-heavy-indexes",
+      "kind": "single",
+      "prompt": "Bảng `sessions` có 8 index, cột `last_seen_at` (có index) được cập nhật liên tục. Trên PostgreSQL, vì sao bảng và index phình nhanh?",
+      "options": [
+        "PostgreSQL ghi đè dòng tại chỗ nhưng index B-tree không tự cân bằng lại",
+        "Đổi cột có index thì không HOT được, nên ghi dòng mới và entry ở cả 8 index",
+        "PostgreSQL không có undo log nên phải giữ mọi phiên bản cũ mãi mãi",
+        "B-tree của mỗi index phải dựng lại một phần sau mỗi lần `UPDATE`"
+      ],
+      "answer": 1,
+      "explanation": "Đổi một cột có index B-tree thì PostgreSQL không dùng HOT update được (index BRIN không tính, từ bản 16): phiên bản mới nằm ở vị trí khác, nên mọi index, kể cả những index không liên quan tới `last_seen_at`, đều cần entry mới. Đây là write amplification đặc trưng của mô hình heap. Cách giảm: bỏ index trên cột cập nhật liên tục nếu không thật cần, hạ `fillfactor`, hoặc tách cột đó ra bảng riêng. InnoDB sửa dòng tại chỗ và chỉ sửa index chứa cột bị đổi."
+    }
+  ]
+}

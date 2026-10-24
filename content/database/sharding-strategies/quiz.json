@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "shard-key-choice",
+      "kind": "single",
+      "prompt": "Hệ thống đặt hàng: hầu hết query là \"đơn của khách X\", \"chi tiết đơn Y của khách X\", và transaction đặt hàng ghi `orders`, `order_items`, `payments` của một khách. Shard key nào hợp lý nhất?",
+      "options": [
+        "`order_id`, vì nó phân bố đều nhất trên các shard",
+        "`created_at`, để dữ liệu cũ nằm gọn ở các shard cũ",
+        "`customer_id`, áp cho cả ba bảng",
+        "Mỗi bảng chọn key riêng phù hợp với bảng đó"
+      ],
+      "answer": 2,
+      "explanation": "Shard theo `customer_id` cho cả ba bảng thì mọi dữ liệu của một khách nằm chung shard: query \"đơn của khách X\" chạm một shard và transaction đặt hàng vẫn là cục bộ. Theo `order_id` thì đều nhưng danh sách đơn của một khách phải hỏi mọi shard. Theo `created_at` thì mọi đơn mới dồn vào một shard. Mỗi bảng một key thì transaction đặt hàng trải qua nhiều shard."
+    },
+    {
+      "id": "offset-scatter",
+      "kind": "output",
+      "prompt": "Bảng `products` shard theo `tenant_id` trên 8 shard. Trang quản trị chạy query dưới đây qua lớp định tuyến. Mỗi shard phải trả về tối đa bao nhiêu dòng?",
+      "code": "SELECT id, name, updated_at\nFROM products\nORDER BY updated_at DESC\nLIMIT 50 OFFSET 950;",
+      "options": [
+        "50 dòng: lớp định tuyến chia OFFSET đều cho các shard",
+        "1.000 dòng: mỗi shard trả 950 + 50 dòng đầu theo thứ tự",
+        "7 dòng: 50 dòng chia đều cho 8 shard",
+        "50 dòng: mỗi shard tự bỏ 950 dòng đầu rồi trả 50"
+      ],
+      "answer": 1,
+      "explanation": "Không biết trước 1.000 dòng mới nhất phân bố thế nào giữa các shard, nên mỗi shard phải trả 1.000 dòng đầu của nó, tổng 8.000 dòng, để lớp định tuyến trộn rồi lấy dòng 951–1.000. Nếu mỗi shard tự bỏ 950 dòng thì kết quả sai. Đây là lý do dùng keyset pagination (`WHERE updated_at < ?`), và query quản trị xuyên tenant nên chạy trên kho phân tích."
+    },
+    {
+      "id": "add-shard-modulo",
+      "kind": "single",
+      "prompt": "Dữ liệu đang chia theo `hash(customer_id) % 4` trên 4 shard. Thêm shard thứ năm và đổi công thức thành `% 5`. Khoảng bao nhiêu phần dữ liệu phải chuyển chỗ?",
+      "options": [
+        "Khoảng 20%: chỉ phần dành cho shard mới",
+        "Khoảng 25%: một phần tư của mỗi shard cũ",
+        "Khoảng 80%: hầu hết key đổi shard",
+        "0%: chỉ dữ liệu mới vào shard thứ năm"
+      ],
+      "answer": 2,
+      "explanation": "Một key giữ nguyên chỗ chỉ khi `hash % 4 == hash % 5`, tức khoảng 1/5 số key; 4/5 còn lại đổi shard. Chuyển chỉ khoảng 1/5 là điều logical shard (nhiều bucket cố định) hoặc consistent hashing mang lại. Để dữ liệu cũ đứng yên thì phải tra được key đó nằm đâu, tức là cần directory."
+    },
+    {
+      "id": "cross-shard-unique",
+      "kind": "single",
+      "prompt": "User shard theo `tenant_id`, nhưng email phải unique toàn hệ thống. Cách nào đúng?",
+      "options": [
+        "Tạo `UNIQUE (email)` trên bảng `users` ở từng shard, như database một máy",
+        "Trước khi tạo user, hỏi mọi shard xem email đã có chưa, chưa có thì tạo",
+        "Bảng `user_email` riêng chia theo email, ghi vào đó trước khi tạo user",
+        "Dùng `hash(email)` làm `user_id` để trùng email là trùng khoá chính"
+      ],
+      "answer": 2,
+      "explanation": "Constraint trên từng shard chỉ chặn trùng trong shard đó. Hỏi mọi shard rồi mới ghi có khoảng hở: hai đăng ký cùng email ở hai shard có thể cùng thấy \"chưa có\". `user_id` từ `hash(email)` chỉ chặn trùng nếu các bản trùng cùng rơi vào một shard, mà user shard theo tenant. Bảng tra cứu chia theo chính email biến kiểm tra unique thành constraint trong một shard; ghi nó trước rồi tạo user, nếu bước sau lỗi thì xoá chỗ giữ hoặc để job đối soát dọn."
+    }
+  ]
+}

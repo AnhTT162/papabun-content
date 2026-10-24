@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "pg-update-versions", "front": "`UPDATE` một dòng trong PostgreSQL thực sự làm gì?", "back": "Ghi một tuple mới (`xmin` = transaction hiện tại) và đặt `xmax` cho tuple cũ; tuple cũ nằm lại trong bảng tới khi VACUUM dọn." },
+    { "id": "innodb-versions", "front": "InnoDB giữ phiên bản cũ của dòng ở đâu?", "back": "Trong undo log. Dòng trong clustered index luôn là bản mới nhất, có `DB_ROLL_PTR` trỏ về bản cũ." },
+    { "id": "xmin-horizon", "front": "Xmin horizon là gì, vì sao quan trọng?", "back": "`xmin` nhỏ nhất của các snapshot còn sống. VACUUM chỉ dọn được dòng chết cũ hơn nó, nên ai giữ lùi nó thì bảng phình." },
+    { "id": "horizon-holders", "front": "Bốn thứ hay giữ lùi xmin horizon?", "back": "Transaction dài hoặc `idle in transaction`, replication slot bị bỏ quên, replica bật `hot_standby_feedback` chạy query dài, prepared transaction treo." },
+    { "id": "vacuum-vs-full", "front": "VACUUM và VACUUM FULL khác nhau thế nào?", "back": "VACUUM đánh dấu chỗ trống để dùng lại, không chặn đọc ghi, không trả dung lượng. VACUUM FULL ghi lại bảng dưới `ACCESS EXCLUSIVE`; production dùng `pg_repack` thay thế." },
+    { "id": "autovacuum-threshold", "front": "Khi nào autovacuum chạy cho một bảng, và bẫy với bảng lớn?", "back": "Khi dòng chết vượt `50 + 0,2 × số dòng`. Bảng 1 tỉ dòng phải chờ 200 triệu dòng chết (bản 18 chặn trần 100 triệu), nên hạ `autovacuum_vacuum_scale_factor` riêng cho bảng đó." },
+    { "id": "wraparound", "front": "XID wraparound là gì, phòng thế nào?", "back": "XID 32 bit quay vòng sau khoảng 4 tỉ; tuple chưa freeze sẽ bị coi là \"tương lai\". VACUUM freeze tuple cũ; theo dõi `age(datfrozenxid)`." },
+    { "id": "anti-wraparound-lock", "front": "Vì sao autovacuum chống wraparound có thể làm migration bị kẹt?", "back": "Autovacuum thường tự nhường khi có ai xin lock xung đột, còn bản chống wraparound thì không, nên `ALTER TABLE` phải chờ nó." },
+    { "id": "history-list", "front": "History list length của InnoDB tăng tới hàng triệu nghĩa là gì?", "back": "Purge không xoá được undo vì có transaction cũ còn read view; tìm nó trong `information_schema.innodb_trx`." },
+    { "id": "rollback-cost", "front": "Rollback transaction lớn: PostgreSQL và InnoDB khác nhau thế nào?", "back": "PostgreSQL gần như tức thì (chỉ đánh dấu aborted). InnoDB phải áp ngược từng thay đổi từ undo, có thể mất hàng giờ." }
+  ]
+}
