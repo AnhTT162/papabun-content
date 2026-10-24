@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "string-pool",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "String & String Pool",
+  "summary": "Vì sao String immutable, String Pool và intern hoạt động thế nào, khi nào == ra true, Compact Strings và bẫy ghép chuỗi trong vòng lặp.",
+  "level": "junior",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["immutable", "string-pool", "string-interning", "compact-strings", "constant-folding", "string-deduplication", "hash-code"],
+  "references": [
+    { "title": "Javadoc String (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" },
+    { "title": "JLS §3.10.5 String Literals", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-3.html#jls-3.10.5" },
+    { "title": "JEP 254: Compact Strings", "url": "https://openjdk.org/jeps/254" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`new String(\"hello\")` tạo bao nhiêu object?\" Một String mới trên heap, cộng literal `\"hello\"` trong pool nếu chưa có. Ý ghi điểm: hai object dùng chung một mảng `byte[]`, vì constructor chỉ copy tham chiếu tới mảng." }
+  ]
+}

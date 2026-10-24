@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "future-vs-cf", "front": "`CompletableFuture` hơn `Future` cũ ở điểm nào?", "back": "Nối tiếp được các bước (`thenApply`, `thenCompose`...), gộp nhiều future, xử lý lỗi trong chuỗi, và tự hoàn thành bằng `complete()` mà không cần chặn bằng `get()`." },
+    { "id": "apply-vs-compose", "front": "`thenApply` khác `thenCompose` thế nào?", "back": "`thenApply` biến đổi giá trị (như `map`); `thenCompose` dùng khi hàm trả về `CompletableFuture` (như `flatMap`), tránh kiểu future lồng future." },
+    { "id": "default-executor", "front": "`supplyAsync` không truyền executor thì chạy ở đâu?", "back": "`ForkJoinPool.commonPool()`, dùng chung cho cả JVM với khoảng số core − 1 thread; không hợp với IO blocking." },
+    { "id": "join-vs-get", "front": "`join()` khác `get()` thế nào?", "back": "`join()` ném `CompletionException` (unchecked); `get()` ném `ExecutionException` và `InterruptedException` (checked), và có bản nhận timeout." },
+    { "id": "allof-result", "front": "`CompletableFuture.allOf(...)` trả về gì?", "back": "`CompletableFuture<Void>`: chỉ báo tất cả đã xong; lấy kết quả bằng `join()` từng future sau đó." },
+    { "id": "exceptionally-handle-when", "front": "`exceptionally`, `handle`, `whenComplete` khác nhau thế nào?", "back": "`exceptionally` chỉ chạy khi lỗi và trả giá trị thay thế; `handle` luôn chạy và trả giá trị mới; `whenComplete` luôn chạy nhưng giữ nguyên kết quả." },
+    { "id": "cancel-no-interrupt", "front": "`completableFuture.cancel(true)` có dừng task đang chạy không?", "back": "Không. Nó chỉ chuyển future sang trạng thái huỷ; tham số interrupt không có tác dụng với `CompletableFuture`." },
+    { "id": "completion-exception", "front": "Trong `exceptionally` ở cuối chuỗi, lỗi gốc nằm ở đâu?", "back": "Thường bị bọc trong `CompletionException`, lỗi gốc lấy bằng `ex.getCause()`." },
+    { "id": "threadlocal-lost", "front": "Vì sao trace id trong MDC biến mất trong log của callback `thenApplyAsync`?", "back": "MDC dựa trên `ThreadLocal`; callback chạy trên thread khác của executor nên không có context, phải copy context khi nộp task." }
+  ]
+}

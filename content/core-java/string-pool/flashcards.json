@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "equals-vs-identity", "front": "`==` và `equals` khác nhau thế nào với String?", "back": "`==` so sánh hai biến có trỏ cùng một object không; `equals` so sánh nội dung từng ký tự." },
+    { "id": "literal-pooled", "front": "Hai literal `\"hi\"` ở hai chỗ khác nhau trong code có cùng object không?", "back": "Có. Literal được intern vào String Pool nên mọi literal cùng nội dung dùng chung một object." },
+    { "id": "runtime-not-pooled", "front": "Chuỗi đọc từ request hay tạo bằng `StringBuilder.toString()` có nằm trong String Pool không?", "back": "Không. Chuỗi tạo lúc runtime là object mới trên heap, trừ khi gọi `intern()`." },
+    { "id": "constant-folding", "front": "Vì sao `\"Ja\" + \"va\" == \"Java\"` là `true`?", "back": "Compiler gộp biểu thức hằng thành một literal `\"Java\"` lúc compile, nên nó cũng nằm trong pool." },
+    { "id": "pool-location", "front": "String Pool nằm ở vùng nhớ nào từ Java 7?", "back": "Trong heap (trước đó ở PermGen), nên chuỗi trong pool không còn ai tham chiếu vẫn được GC dọn." },
+    { "id": "why-immutable", "front": "Nêu 3 lợi ích của việc String là immutable.", "back": "Chia sẻ an toàn qua String Pool, cache được `hashCode` (key tốt cho HashMap), và thread-safe không cần lock." },
+    { "id": "loop-concat", "front": "Vì sao không nên ghép chuỗi bằng `+=` trong vòng lặp lớn?", "back": "Mỗi vòng tạo String mới và copy toàn bộ nội dung cũ, tổng chi phí O(n²). Dùng `StringBuilder`." },
+    { "id": "compact-strings", "front": "Compact Strings (Java 9) thay đổi gì?", "back": "Dữ liệu chuyển từ `char[]` sang `byte[]` kèm `coder`: chuỗi Latin-1 chỉ tốn 1 byte mỗi ký tự thay vì 2." },
+    { "id": "password-char-array", "front": "Vì sao API bảo mật hay nhận mật khẩu dạng `char[]` thay vì String?", "back": "`char[]` xoá được ngay sau khi dùng; String immutable nằm trong bộ nhớ tới khi GC dọn và có thể lộ trong heap dump." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "checked-vs-unchecked", "front": "Checked exception khác unchecked exception thế nào?", "back": "Checked (mọi `Throwable` không thuộc nhánh `RuntimeException` hay `Error`, ví dụ `IOException`) bắt buộc `catch` hoặc khai báo `throws`; unchecked (`RuntimeException` và con) thì không." },
+    { "id": "error-vs-exception", "front": "`Error` khác `Exception` thế nào?", "back": "`Error` là lỗi nghiêm trọng của JVM như `OutOfMemoryError`, `StackOverflowError`, ứng dụng thường không phục hồi được và không nên bắt." },
+    { "id": "keep-cause", "front": "Khi bọc một exception sang loại khác, cần làm gì để không mất nguyên nhân gốc?", "back": "Truyền exception gốc vào constructor làm `cause`: `new XxxException(\"...\", e)`; stack trace sẽ có `Caused by:`." },
+    { "id": "twr-order", "front": "try-with-resources đóng resource theo thứ tự nào, và trước hay sau `catch`?", "back": "Ngược với thứ tự mở, và đóng xong rồi mới chạy `catch` và `finally`." },
+    { "id": "suppressed", "front": "Thân `try` ném lỗi, `close()` cũng ném lỗi. Lỗi nào được ném ra?", "back": "Lỗi của thân `try`; lỗi của `close()` được gắn vào nó dưới dạng suppressed, xem bằng `getSuppressed()`." },
+    { "id": "finally-return", "front": "`return` trong `finally` gây ra điều gì?", "back": "Nuốt mất exception đang được ném (và ghi đè giá trị `return` trong `try`)." },
+    { "id": "interrupted-handling", "front": "Bắt `InterruptedException` mà không ném lại được thì phải làm gì?", "back": "Gọi `Thread.currentThread().interrupt()` để khôi phục cờ interrupt cho code phía trên biết." },
+    { "id": "transactional-rollback", "front": "`@Transactional` của Spring mặc định rollback với exception nào?", "back": "Chỉ `RuntimeException` và `Error`; checked exception sẽ commit, trừ khi khai báo `rollbackFor`." },
+    { "id": "fast-throw", "front": "Vì sao log production có `NullPointerException` mà không có stack trace?", "back": "JIT bật OmitStackTraceInFastThrow: exception ném lặp lại nhiều lần được thay bằng bản tạo sẵn không có stack trace." }
+  ]
+}

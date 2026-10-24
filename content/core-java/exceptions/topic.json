@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "exceptions",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Exceptions",
+  "summary": "Checked và unchecked, giữ cause khi bọc lỗi, try-with-resources và suppressed exception, bẫy finally, InterruptedException, rollback của @Transactional và vì sao log mất stack trace.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["checked-exception", "unchecked-exception", "exception-chaining", "try-with-resources", "suppressed-exception", "thread-interrupt", "fast-throw", "jit"],
+  "references": [
+    { "title": "Java Tutorials: Exceptions", "url": "https://docs.oracle.com/javase/tutorial/essential/exceptions/index.html" },
+    { "title": "JLS §14.20.3 try-with-resources", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-14.html#jls-14.20.3" },
+    { "title": "Spring Framework: Rolling Back a Declarative Transaction", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Nên dùng checked hay unchecked exception?\" Checked cho lỗi bên ngoài mà bên gọi xử lý được ngay; unchecked cho lỗi lập trình và cho lỗi hạ tầng chỉ xử lý ở một handler chung. Nêu thêm lý do thực tế: checked exception không đi qua được lambda và làm chữ ký method của mọi tầng phải khai báo `throws`." }
+  ]
+}

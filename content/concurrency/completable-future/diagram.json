@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Chuỗi CompletableFuture cho trang hồ sơ",
+  "nodes": [
+    { "id": "user", "label": "async: user", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "orders", "label": "async: orders", "kind": "database", "x": 0.85, "y": 0.05 },
+    { "id": "combine", "label": "thenCombine", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "reco", "label": "thenCompose gợi ý", "kind": "external", "x": 0.85, "y": 0.5 },
+    { "id": "fallback", "label": "exceptionally", "kind": "generic", "x": 0.85, "y": 0.95 },
+    { "id": "response", "label": "Response", "kind": "client", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "user-combine", "from": "user", "to": "combine", "label": "User" },
+    { "id": "orders-combine", "from": "orders", "to": "combine", "label": "List<Order>" },
+    { "id": "combine-reco", "from": "combine", "to": "reco", "label": "Profile" },
+    { "id": "reco-response", "from": "reco", "to": "response", "label": "thành công" },
+    { "id": "reco-fallback", "from": "reco", "to": "fallback", "label": "lỗi hoặc timeout" },
+    { "id": "fallback-response", "from": "fallback", "to": "response", "label": "mặc định" }
+  ],
+  "steps": [
+    { "caption": "supplyAsync nộp hai lời gọi độc lập vào executor riêng. Chúng chạy song song, thread của request không bị chặn.", "show": ["user", "orders"] },
+    { "caption": "thenCombine chờ cả hai xong rồi gộp thành Profile. Một bên lỗi thì stage gộp cũng lỗi.", "show": ["combine", "user-combine", "orders-combine"], "highlight": ["user-combine", "orders-combine"] },
+    { "caption": "thenCompose dùng khi bước sau tự trả về CompletableFuture (gọi service gợi ý). Dùng thenApply sẽ ra future lồng future.", "show": ["reco", "combine-reco"], "highlight": ["combine-reco"] },
+    { "caption": "orTimeout(800ms) đặt hạn cho cả chuỗi. Mọi bước thành công thì kết quả đi thẳng tới response.", "show": ["response", "reco-response"], "highlight": ["reco-response"] },
+    { "caption": "Lỗi ở bất kỳ stage nào phía trên (bọc trong CompletionException) hoặc hết giờ đều rơi vào exceptionally.", "show": ["fallback", "reco-fallback"], "highlight": ["reco-fallback"] },
+    { "caption": "exceptionally trả hồ sơ không có phần gợi ý, nên trang vẫn hiển thị thay vì lỗi 500.", "show": ["fallback-response"], "highlight": ["fallback-response"] }
+  ]
+}

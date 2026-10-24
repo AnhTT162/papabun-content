@@ -7,7 +7,7 @@
   "title": "HashMap Internals",
   "summary": "Bên trong HashMap của Java 8+: hash spreading, chọn bucket bằng (n - 1) & hash, chuỗi collision, load factor và resize tách lo/hi, treeify, key null, và vì sao HashMap không thread-safe.",
   "level": "mid",
-  "order": 3,
+  "order": 4,
   "minutes": 15,
   "prerequisites": ["equals-hashcode"],
   "terms": ["bucket", "hash-code", "hash-collision", "hash-spreading", "separate-chaining", "load-factor", "rehash", "treeify", "red-black-tree", "fail-fast", "immutable"],

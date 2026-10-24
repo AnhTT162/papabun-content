@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "\"Gọi song song\" mà vẫn mất 2 giây",
+  "context": "Trang giỏ hàng cần giá của 10 sản phẩm. Mỗi lời gọi `priceClient.fetch(sku)` mất khoảng 200ms. Code đã chuyển sang `CompletableFuture` để chạy song song, mong đợi tổng thời gian khoảng 200ms.",
+  "buggyCode": "List<Price> loadPrices(List<String> skus) {\n    List<Price> prices = new ArrayList<>();\n    for (String sku : skus) {\n        Price price = CompletableFuture\n                .supplyAsync(() -> priceClient.fetch(sku))\n                .join();\n        prices.add(price);\n    }\n    return prices;\n}",
+  "symptom": {
+    "description": "Endpoint vẫn mất hơn 2 giây. Log của `priceClient` cho thấy mỗi lời gọi bắt đầu khi lời gọi trước vừa xong.",
+    "output": "10:00:00.003 [ForkJoinPool.commonPool-worker-1] fetch SKU-01\n10:00:00.207 [ForkJoinPool.commonPool-worker-1] fetch SKU-02\n10:00:00.409 [ForkJoinPool.commonPool-worker-1] fetch SKU-03\n...\n10:00:01.836 [ForkJoinPool.commonPool-worker-1] fetch SKU-10\nloadPrices: 2041 ms"
+  },
+  "diagnosis": {
+    "question": "Vì sao các lời gọi không chạy song song?",
+    "options": [
+      "Common pool chỉ có 1 thread trên máy này",
+      "`join()` nằm ngay trong vòng lặp: chờ lời gọi hiện tại xong rồi mới tạo lời gọi tiếp theo",
+      "`supplyAsync` luôn chạy tuần tự nếu không dùng `thenCombine`",
+      "`priceClient` dùng `synchronized` nên chỉ một thread gọi được"
+    ],
+    "answer": 1,
+    "explanation": "Mỗi vòng tạo một future rồi `join()` chặn thread gọi tới khi nó xong, nên tại mọi thời điểm chỉ có một lời gọi đang chạy. Cùng một worker (`worker-1`) lặp lại trong log là dấu hiệu: không có việc song song nên pool chỉ cần một thread. Lựa chọn \"common pool chỉ có 1 thread\" sai: pool này có khoảng số core − 1 thread, và dù có nhiều thread, code này vẫn tuần tự. Nếu common pool thật sự quá nhỏ (parallelism < 2), log sẽ hiện `Thread-N` (mỗi task một thread mới) chứ không phải `ForkJoinPool.commonPool-worker-1`."
+  },
+  "fix": {
+    "code": "private final ExecutorService priceExecutor = Executors.newFixedThreadPool(20);  // pool riêng cho IO\n\nList<Price> loadPrices(List<String> skus) {\n    List<CompletableFuture<Price>> futures = skus.stream()\n            .map(sku -> CompletableFuture\n                    .supplyAsync(() -> priceClient.fetch(sku), priceExecutor)\n                    .completeOnTimeout(Price.unknown(sku), 800, TimeUnit.MILLISECONDS)  // 2. hạn riêng từng sản phẩm\n                    .exceptionally(ex -> Price.unknown(sku)))                          //    lỗi thì dùng giá chờ cập nhật\n            .toList();                                     // 1. tạo hết future trước\n\n    return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))\n            .thenApply(done -> futures.stream()\n                    .map(CompletableFuture::join)           // 3. lúc này đã xong, join không chặn\n                    .toList())\n            .join();\n}",
+    "explanation": "Tạo hết các future trước (stream có `toList()` là thao tác kết thúc, nên mọi lời gọi đã được nộp), rồi mới chờ bằng `allOf`. Tổng thời gian bằng lời gọi chậm nhất, khoảng 200ms. Dùng executor riêng có giới hạn cho việc [[io-bound|IO-bound]] thay vì common pool. Mỗi future có hạn và fallback riêng: sản phẩm chậm hoặc lỗi chỉ hiện \"đang cập nhật giá\", phần còn lại của trang vẫn hiển thị. Đặt `orTimeout` cho cả nhóm thì sau 800ms `join()` sẽ ném lỗi và cả trang hỏng, chỉ là hỏng nhanh hơn. Production nên dùng pool có [[work-queue|queue]] giới hạn (xem bài ExecutorService) và timeout ở HTTP client, vì `completeOnTimeout` không dừng lời gọi đang chạy."
+  }
+}

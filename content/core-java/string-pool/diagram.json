@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Ba biến \"hi\" nằm ở đâu trong bộ nhớ",
+  "nodes": [
+    { "id": "a", "label": "a = \"hi\"", "kind": "client", "x": 0.15, "y": 0.1 },
+    { "id": "b", "label": "b = \"hi\"", "kind": "client", "x": 0.15, "y": 0.42 },
+    { "id": "c", "label": "c = new String(\"hi\")", "kind": "client", "x": 0.15, "y": 0.78 },
+    { "id": "pool", "label": "\"hi\" trong String Pool", "kind": "cache", "x": 0.68, "y": 0.1 },
+    { "id": "array", "label": "byte[] {h, i}", "kind": "database", "x": 0.68, "y": 0.44 },
+    { "id": "heap", "label": "String mới trên heap", "kind": "generic", "x": 0.68, "y": 0.78 }
+  ],
+  "edges": [
+    { "id": "a-pool", "from": "a", "to": "pool", "label": "literal" },
+    { "id": "b-pool", "from": "b", "to": "pool", "label": "dùng lại" },
+    { "id": "c-heap", "from": "c", "to": "heap", "label": "new" },
+    { "id": "pool-array", "from": "pool", "to": "array", "label": "value" },
+    { "id": "heap-array", "from": "heap", "to": "array", "label": "dùng chung value" },
+    { "id": "c-intern", "from": "c", "to": "pool", "label": "c.intern()" }
+  ],
+  "steps": [
+    { "caption": "String a = \"hi\": lần đầu chạy tới literal, JVM tra String Pool, chưa có thì tạo object và lưu lại.", "show": ["a", "pool", "a-pool"], "highlight": ["a-pool"] },
+    { "caption": "String b = \"hi\": pool đã có nên b trỏ tới đúng object đó. a == b là true.", "show": ["b", "b-pool"], "highlight": ["b-pool"] },
+    { "caption": "new String(\"hi\") luôn tạo object mới trên heap. c == a là false, còn c.equals(a) là true.", "show": ["c", "heap", "c-heap"], "highlight": ["c-heap"] },
+    { "caption": "Hai object String khác nhau nhưng dùng chung một mảng byte[]: constructor chỉ copy tham chiếu tới mảng, vì mảng không bao giờ bị sửa.", "show": ["array", "pool-array", "heap-array"], "highlight": ["heap-array"] },
+    { "caption": "c.intern() trả về object trong pool, nên c.intern() == a là true. Bản thân c vẫn trỏ tới object trên heap.", "show": ["c-intern"], "highlight": ["c-intern"] },
+    { "caption": "Từ Java 7, String Pool nằm trong heap: chuỗi trong pool không còn ai tham chiếu vẫn được GC dọn.", "show": [], "highlight": ["pool"] }
+  ]
+}

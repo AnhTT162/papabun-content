@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn collection cho service tính giá đơn hàng",
+  "prompt": "Service `pricing` (Java 21) nhận một đơn hàng và tính tổng tiền. Mỗi pod xử lý khoảng **2.000 đơn/giây** bằng nhiều thread. Hãy chọn collection (interface và cài đặt) cho từng nhu cầu sau và giải thích vì sao:\n\n1. **Các dòng hàng của một đơn** (5–50 dòng): giữ đúng thứ tự khách thêm, hiển thị lại theo index.\n2. **Mã giảm giá khách nhập**: không được áp cùng một mã hai lần, cần kiểm tra nhanh mã đã có chưa.\n3. **Bảng phí ship theo cân nặng**: các mốc 0kg, 1kg, 3kg, 5kg, 10kg... (khoảng 30 mốc). Đơn nặng 2,3kg phải lấy phí của mốc 1kg.\n4. **Cấu hình giá theo mã sản phẩm** (~200.000 sản phẩm): mọi thread đọc liên tục; mỗi 5 phút một job tải lại toàn bộ từ DB.\n5. **Hàng đợi tính lại giá** cho các đơn bị lỗi: nhiều thread đẩy vào, một nhóm worker lấy ra; đơn có hạn thanh toán sớm hơn phải được tính trước.",
+  "hints": [
+    "Với mỗi nhu cầu, hỏi lần lượt: có cần thứ tự không? Có cho trùng không? Truy cập theo index, theo key hay theo khoảng? Có nhiều thread cùng sửa không?",
+    "\"Mốc gần nhất nhỏ hơn hoặc bằng 2,3\" là một truy vấn theo khoảng. `HashMap` không làm được việc này nếu không duyệt hết; cấu trúc nào có sẵn thao tác `floor`?",
+    "Cấu hình đọc liên tục nhưng chỉ đổi mỗi 5 phút, và đổi toàn bộ một lần. Có cần sửa từng phần tử không, hay chỉ cần thay cả bảng?",
+    "Hàng đợi có ưu tiên và dùng chung giữa nhiều thread: `PriorityQueue` có thread-safe không? Worker nên chờ thế nào khi hàng đợi rỗng?"
+  ],
+  "solution": "**1. Dòng hàng: `List<OrderLine>` với `ArrayList`.** Cần thứ tự và truy cập theo index. 50 phần tử thì `ArrayList` nhanh hơn `LinkedList` ở mọi thao tác. Mỗi đơn chỉ một thread xử lý nên không cần thread-safe. Khi trả ra ngoài, dùng `List.copyOf(lines)` để bên gọi không sửa được.\n\n**2. Mã giảm giá: `Set<String>` với `LinkedHashSet`.** `add` trả `false` nếu mã đã có, nên phát hiện trùng là O(1). Dùng `LinkedHashSet` thay vì `HashSet` vì thứ tự áp mã có thể ảnh hưởng số tiền giảm, và hoá đơn nên hiển thị đúng thứ tự khách nhập. Chuẩn hoá mã trước khi thêm (`strip().toUpperCase(Locale.ROOT)`), nếu không `\"sale10\"` và `\"SALE10\"` sẽ thành hai mã.\n\n**3. Phí ship: `NavigableMap<BigDecimal, Money>` với `TreeMap`, bọc bất biến.**\n\n```java\nNavigableMap<BigDecimal, Money> feeByWeight = new TreeMap<>(Map.of(\n        new BigDecimal(\"0\"), Money.of(15_000),\n        new BigDecimal(\"1\"), Money.of(22_000),\n        new BigDecimal(\"3\"), Money.of(30_000)));\nNavigableMap<BigDecimal, Money> table = Collections.unmodifiableNavigableMap(feeByWeight);\n\nMoney fee = table.floorEntry(new BigDecimal(\"2.3\")).getValue();   // mốc 1kg\n```\n\n`floorEntry` là O(log n). Dùng `BigDecimal` cho cân nặng để tránh sai số của `double`. Bảng dựng xong không sửa nữa và được gán vào field `final` (hoặc `static final`), nên đọc từ nhiều thread là an toàn.\n\n**4. Cấu hình giá: `Map.copyOf` bất biến, thay cả bảng qua `volatile`.**\n\n```java\nprivate volatile Map<String, PriceRule> rules = Map.of();\n\nvoid reload() {                      // job 5 phút một lần\n    rules = Map.copyOf(loadAllRulesFromDb());\n}\n\nPriceRule ruleFor(String sku) {     // mọi thread đọc, không lock\n    return rules.get(sku);\n}\n```\n\nĐọc không cần lock và luôn thấy một bảng nhất quán: hoặc toàn bộ bản cũ, hoặc toàn bộ bản mới. `volatile` đảm bảo thread khác thấy tham chiếu mới. Nếu cấu hình được sửa từng phần tử liên tục thì mới cần `ConcurrentHashMap`.\n\n**5. Hàng đợi tính lại: `BlockingQueue<RetryJob>` với `PriorityBlockingQueue`.**\n\n```java\nBlockingQueue<RetryJob> retries = new PriorityBlockingQueue<>(1_000,\n        Comparator.comparing(RetryJob::paymentDeadline).thenComparing(RetryJob::orderId));\n\n// worker\nRetryJob job = retries.take();   // chờ tới khi có việc, không busy-wait\n```\n\n`PriorityQueue` không thread-safe. `PriorityBlockingQueue` thread-safe và có `take()` để worker chờ. `PriorityBlockingQueue` không bỏ phần tử khi comparator trả 0 (khác `TreeSet`), nhưng hai đơn cùng hạn sẽ ra theo thứ tự tuỳ ý. `thenComparing(orderId)` giúp thứ tự xác định và dễ tái hiện khi debug. Lưu ý `PriorityBlockingQueue` **không giới hạn** kích thước: nếu lỗi kéo dài, cần đếm số job và từ chối hoặc chuyển xuống DB khi vượt ngưỡng.",
+  "tradeoffs": [
+    {
+      "option": "Map bất biến + tham chiếu volatile (thay cả bảng)",
+      "pros": [
+        "Đọc không lock, nhanh nhất",
+        "Mọi lần đọc thấy một bảng nhất quán",
+        "Không thể bị sửa nhầm ở chỗ khác"
+      ],
+      "cons": [
+        "Mỗi lần tải lại tốn bộ nhớ cho hai bảng cùng lúc",
+        "Không hợp khi cần sửa từng key liên tục"
+      ]
+    },
+    {
+      "option": "ConcurrentHashMap, cập nhật từng key",
+      "pros": [
+        "Sửa từng phần tử nhanh, có compute/merge nguyên tử",
+        "Không cần nhân đôi bộ nhớ"
+      ],
+      "cons": [
+        "Trong lúc tải lại, thread đọc có thể thấy bảng nửa cũ nửa mới",
+        "Phải tự xử lý key bị xoá khỏi DB"
+      ]
+    },
+    {
+      "option": "Collections.synchronizedMap(new HashMap<>())",
+      "pros": [
+        "Đơn giản, có sẵn"
+      ],
+      "cons": [
+        "Mọi lần đọc đều lấy cùng một lock, nghẽn khi 2.000 đơn/giây",
+        "Duyệt map vẫn phải tự synchronized"
+      ]
+    }
+  ]
+}

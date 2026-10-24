@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "completable-future",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "CompletableFuture",
+  "summary": "Nối tiếp và gộp tác vụ bất đồng bộ bằng thenApply, thenCompose, thenCombine, allOf; xử lý lỗi và timeout; vì sao phải dùng executor riêng và các bẫy khiến code chạy tuần tự.",
+  "level": "senior",
+  "order": 6,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool"],
+  "terms": ["completion-stage", "common-pool", "completion-exception", "structured-concurrency", "virtual-thread", "io-bound", "work-queue"],
+  "references": [
+    { "title": "Javadoc CompletableFuture (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" },
+    { "title": "Javadoc CompletionStage (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletionStage.html" },
+    { "title": "JEP 453: Structured Concurrency (Preview)", "url": "https://openjdk.org/jeps/453" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gọi 3 service song song, mỗi cái có thể chậm hoặc lỗi, response phải trả trong 1 giây. Viết thế nào?\" Ba `supplyAsync` với executor riêng, mỗi future có `completeOnTimeout` hoặc `exceptionally` để fallback riêng, rồi `allOf` để gộp. Nhấn mạnh thêm: timeout thật phải đặt ở HTTP client, vì `orTimeout` không dừng lời gọi đang chạy." }
+  ]
+}

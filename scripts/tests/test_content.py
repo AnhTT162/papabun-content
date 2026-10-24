@@ -155,6 +155,19 @@ class RepoValidationTests(unittest.TestCase):
         self.assertIn("node 'a' và 'b' quá gần nhau", errors)
         self.assertNotIn("'a' và 'c'", errors)
 
+    def test_diagram_rows_match_app_layout(self):
+        # App coi chênh y < 0.35 là cùng hàng (thu nhỏ node); cùng cột thì chỉ lỗi khi chồng lên nhau.
+        self.fx.topic["blocks"].append({"type": "diagram", "file": "d.json"})
+        self.fx.write_topic()
+        self.fx.write("content/core-java/demo/d.json", {"title": "D",
+            "nodes": [{"id": "a", "label": "A", "x": 0.15, "y": 0.08}, {"id": "b", "label": "B", "x": 0.4, "y": 0.38},
+                      {"id": "c", "label": "C", "x": 0.15, "y": 0.4}, {"id": "d", "label": "D", "x": 0.15, "y": 0.6}],
+            "edges": [], "steps": [{"caption": "c", "show": ["a", "b", "c", "d"]}]})
+        errors = "\n".join(self.fx.errors())
+        self.assertIn("node 'a' và 'b' quá gần nhau", errors)
+        self.assertNotIn("'a' và 'c'", errors)
+        self.assertIn("node 'c' và 'd' quá gần nhau", errors)
+
     def _simulation(self, data):
         self.fx.topic["blocks"].append({"type": "simulation", "file": "sim.json"})
         self.fx.write_topic()

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "collections-overview",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Collections Overview",
+  "summary": "List, Set, Queue/Deque và Map: chọn cài đặt nào theo Big-O và tính chất cần có, collection bất biến và view, lựa chọn cho đa luồng, các bẫy hay gặp.",
+  "level": "junior",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": [],
+  "terms": ["collection-framework", "big-o", "amortized-complexity", "cache-locality", "unmodifiable-view", "copy-on-write", "fail-fast", "sequenced-collection", "red-black-tree", "load-factor"],
+  "references": [
+    { "title": "Collections Framework Overview (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/core/java-collections-framework.html" },
+    { "title": "Javadoc java.util (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/package-summary.html" },
+    { "title": "JEP 431: Sequenced Collections", "url": "https://openjdk.org/jeps/431" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "warning", "markdown": "`List.of`, `Set.of`, `Map.of` không nhận `null`, và `List.of(...).contains(null)` cũng ném `NullPointerException`. Đổi `Arrays.asList` sang `List.of` khi dữ liệu có `null` sẽ làm code đang chạy bị lỗi." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`HashMap`, `LinkedHashMap`, `TreeMap` khác nhau thế nào?\" Trả lời theo ba trục: thứ tự (không có / thứ tự thêm hoặc truy cập / sắp xếp theo key), độ phức tạp (O(1) / O(1) / O(log n)), và thao tác đặc biệt (LRU với `accessOrder` / truy vấn theo khoảng với `floorKey`, `subMap`)." }
+  ]
+}

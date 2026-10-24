@@ -1,0 +1,68 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "remove-in-foreach",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "List<Integer> ids = new ArrayList<>(List.of(1, 2, 3, 4));\nfor (Integer id : ids) {\n    if (id % 2 == 0) {\n        ids.remove(id);\n    }\n}\nSystem.out.println(ids);",
+      "options": [
+        "[1, 3]",
+        "[1, 3, 4]",
+        "Ném ConcurrentModificationException",
+        "Ném UnsupportedOperationException"
+      ],
+      "answer": 2,
+      "explanation": "Xoá số 2 làm `modCount` của list tăng. Lần gọi `next()` tiếp theo, iterator thấy `modCount` khác giá trị nó ghi nhớ và ném `ConcurrentModificationException` ([[fail-fast]]). `[1, 3]` là kết quả nếu dùng `ids.removeIf(id -> id % 2 == 0)`. `UnsupportedOperationException` chỉ xảy ra nếu list là `List.of(...)` trực tiếp."
+    },
+    {
+      "id": "arrays-aslist-add",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "List<String> names = Arrays.asList(\"An\", \"Bình\");\nnames.set(0, \"Chi\");\nSystem.out.println(names);\nnames.add(\"Dũng\");\nSystem.out.println(names);",
+      "options": [
+        "[Chi, Bình] rồi ném UnsupportedOperationException",
+        "[Chi, Bình] rồi [Chi, Bình, Dũng]",
+        "Ném UnsupportedOperationException ngay ở dòng set",
+        "[An, Bình] rồi [An, Bình, Dũng]"
+      ],
+      "answer": 0,
+      "explanation": "`Arrays.asList` trả list có kích thước cố định, ghi thẳng xuống mảng gốc: `set` được, `add` thì không. Đáp án thứ ba là hành vi của `List.of`, vốn không sửa được gì."
+    },
+    {
+      "id": "treeset-comparator",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "Set<String> codes = new TreeSet<>(Comparator.comparing(String::length));\ncodes.add(\"an\");\ncodes.add(\"bo\");\ncodes.add(\"chi\");\nSystem.out.println(codes);",
+      "options": ["[an, bo, chi]", "[an, chi]", "[bo, chi]", "[chi, an, bo]"],
+      "answer": 1,
+      "explanation": "`TreeSet` coi hai phần tử là trùng khi comparator trả 0. `\"bo\"` cùng độ dài với `\"an\"` nên bị coi là đã có và không được thêm. Sửa bằng `Comparator.comparing(String::length).thenComparing(Comparator.naturalOrder())`."
+    },
+    {
+      "id": "range-lookup",
+      "kind": "single",
+      "prompt": "Cần tìm mức thuế theo thu nhập: các mốc 0, 10 triệu, 30 triệu, 60 triệu... và thu nhập 42 triệu phải lấy mốc 30 triệu. Cấu trúc nào làm việc này gọn nhất?",
+      "options": [
+        "`HashMap` rồi duyệt hết các key",
+        "`TreeMap.floorEntry(42_000_000)`",
+        "`ArrayList` rồi `contains`",
+        "`PriorityQueue` rồi `poll` tới khi gặp mốc phù hợp"
+      ],
+      "answer": 1,
+      "explanation": "`TreeMap` giữ key sắp xếp và có `floorEntry`: lấy key lớn nhất nhỏ hơn hoặc bằng giá trị cần tìm, O(log n). `HashMap` không có thứ tự nên phải duyệt hết. `PriorityQueue` bị phá huỷ khi `poll`."
+    },
+    {
+      "id": "concurrent-read-mostly",
+      "kind": "single",
+      "prompt": "Danh sách listener được đọc (duyệt để gọi) hàng nghìn lần mỗi giây từ nhiều thread, nhưng chỉ thêm hoặc bớt vài lần mỗi ngày. Nên dùng gì?",
+      "options": [
+        "`ArrayList`",
+        "`Collections.synchronizedList(new ArrayList<>())`",
+        "`CopyOnWriteArrayList`",
+        "`LinkedList`"
+      ],
+      "answer": 2,
+      "explanation": "`CopyOnWriteArrayList` copy cả mảng mỗi lần ghi, nhưng đọc và duyệt không cần lock, và không bao giờ ném `ConcurrentModificationException`. Nó rất hợp khi đọc nhiều, ghi hiếm. `synchronizedList` bắt mọi lần đọc lấy lock, và vẫn phải tự `synchronized` khi duyệt."
+    }
+  ]
+}

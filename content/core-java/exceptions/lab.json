@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "DB chậm, API báo hàng loạt đơn \"không tồn tại\"",
+  "context": "Trong một đợt DB quá tải, API `GET /orders/{id}` trả 404 cho rất nhiều đơn mà khách vừa đặt thành công. `OrderController` map `OrderNotFoundException` sang HTTP 404.",
+  "buggyCode": "public class OrderNotFoundException extends RuntimeException {\n    public OrderNotFoundException(String message) {\n        super(message);\n    }\n}\n\npublic Order loadOrder(long id) {\n    try {\n        return orderDao.findById(id);   // ném SQLException khi DB lỗi hoặc timeout\n    } catch (SQLException e) {\n        throw new OrderNotFoundException(\"Không tìm thấy đơn \" + id);\n    }\n}",
+  "symptom": {
+    "description": "Log chỉ có dòng sau, lặp lại hàng nghìn lần. Không có dòng nào nhắc tới DB.",
+    "output": "ERROR OrderController - Lỗi khi tải đơn\ncom.example.order.OrderNotFoundException: Không tìm thấy đơn 1042\n    at com.example.order.OrderService.loadOrder(OrderService.java:21)\n    at com.example.order.OrderController.get(OrderController.java:15)\n    ..."
+  },
+  "diagnosis": {
+    "question": "Vì sao log không cho thấy nguyên nhân thật?",
+    "options": [
+      "Đơn 1042 thật sự không có trong DB",
+      "Logger cắt bớt stack trace nên phần `Caused by` bị ẩn",
+      "Mọi `SQLException`, kể cả timeout, bị đổi thành \"không tìm thấy\" và exception gốc không được truyền làm `cause`",
+      "`RuntimeException` không in được cause, phải dùng checked exception"
+    ],
+    "answer": 2,
+    "explanation": "`catch` đổi mọi lỗi DB thành một lỗi nghiệp vụ sai nghĩa (404 thay vì 503), và không truyền `e` vào constructor. Stack trace vì vậy dừng ở `OrderService` và không có `Caused by: java.sql.SQLTimeoutException`. Logger không cắt `Caused by`. `RuntimeException` vẫn có `cause` như mọi `Throwable` ([[exception-chaining]])."
+  },
+  "fix": {
+    "code": "public class OrderLoadException extends RuntimeException {\n    public OrderLoadException(String message, Throwable cause) {\n        super(message, cause);                          // giữ exception gốc\n    }\n}\n\npublic Order loadOrder(long id) {\n    Optional<Order> order;\n    try {\n        order = orderDao.findById(id);                  // trả Optional.empty() khi không có\n    } catch (SQLException e) {\n        throw new OrderLoadException(\"Không tải được đơn \" + id, e);   // map sang 503\n    }\n    return order.orElseThrow(() -> new OrderNotFoundException(\"Không tìm thấy đơn \" + id));\n}",
+    "explanation": "Tách hai trường hợp: \"không có dữ liệu\" là kết quả bình thường (`Optional.empty()` → 404), còn \"không đọc được\" là lỗi hạ tầng (→ 503, có thể retry). Khi đổi loại exception, luôn truyền exception gốc làm `cause`. Log lúc đó sẽ có `Caused by: java.sql.SQLTimeoutException` và chỉ thẳng tới DB."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "exception-wrapping",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "CompletableFuture<Integer> result = CompletableFuture\n        .<Integer>supplyAsync(() -> { throw new IllegalStateException(\"db down\"); })\n        .thenApply(x -> x * 2)\n        .exceptionally(ex -> {\n            System.out.println(ex.getClass().getSimpleName() + \": \" + ex.getCause().getMessage());\n            return -1;\n        });\nSystem.out.println(result.join());",
+      "options": [
+        "CompletionException: db down / -1",
+        "IllegalStateException: db down / -1",
+        "Ném CompletionException ở join()",
+        "-1"
+      ],
+      "answer": 0,
+      "explanation": "Lỗi ném trong `supplyAsync` được lưu dưới dạng `CompletionException` bọc lỗi gốc, và lan qua `thenApply` (bước này bị bỏ qua). `exceptionally` nhận `CompletionException`, nên lỗi gốc nằm ở `getCause()`. Sau đó chuỗi đã có giá trị thay thế nên `join()` trả -1, không ném lỗi."
+    },
+    {
+      "id": "compose-type",
+      "kind": "single",
+      "prompt": "`fetchUserAsync(id)` và `fetchOrdersAsync(user)` đều trả về `CompletableFuture`. Biểu thức `fetchUserAsync(id).thenApply(user -> fetchOrdersAsync(user))` có kiểu gì?",
+      "options": [
+        "`CompletableFuture<List<Order>>`",
+        "`CompletableFuture<CompletableFuture<List<Order>>>`",
+        "`List<Order>`",
+        "Không biên dịch được"
+      ],
+      "answer": 1,
+      "explanation": "`thenApply` bọc kết quả của hàm vào future mới, mà hàm đã trả về future, nên ra future lồng future. Dùng `thenCompose` để \"làm phẳng\" thành `CompletableFuture<List<Order>>`, giống `flatMap` của Stream và Optional."
+    },
+    {
+      "id": "common-pool-io",
+      "kind": "single",
+      "prompt": "Service chạy trên máy 4 core. Mọi lời gọi HTTP đều dùng `supplyAsync(() -> http.call())` không truyền executor. Khi API đối tác chậm 5 giây, các parallel stream ở chỗ khác trong ứng dụng cũng chậm theo. Vì sao?",
+      "options": [
+        "Parallel stream luôn chậm hơn stream thường",
+        "Cả hai dùng chung `ForkJoinPool.commonPool()` chỉ khoảng 3 thread, và các thread đó đang bị chặn chờ HTTP",
+        "HTTP client khoá toàn bộ JVM khi chờ",
+        "`supplyAsync` tạo quá nhiều thread làm CPU quá tải"
+      ],
+      "answer": 1,
+      "explanation": "Common pool có parallelism mặc định bằng số core − 1. Lời gọi HTTP blocking giữ các thread đó, nên mọi thứ dùng common pool (parallel stream, các `*Async` khác) phải chờ. Truyền executor riêng cho việc IO."
+    },
+    {
+      "id": "callback-thread",
+      "kind": "single",
+      "prompt": "`future` đã hoàn thành từ trước. Thread `main` gọi `future.thenApply(this::render)`. `render` chạy trên thread nào?",
+      "options": [
+        "Luôn trên `ForkJoinPool.commonPool()`",
+        "Trên thread `main`, ngay trong lời gọi `thenApply`",
+        "Trên thread đã hoàn thành `future` trước đó",
+        "Trên một thread mới tạo riêng cho callback"
+      ],
+      "answer": 1,
+      "explanation": "Callback không có `Async` chạy trên thread hoàn thành stage trước nếu stage đó chưa xong. Nếu đã xong rồi thì nó chạy ngay trên thread gọi `thenApply`. Đây là hành vi của OpenJDK, Javadoc không cam kết. Muốn chắc chắn chạy ở executor nào thì dùng `thenApplyAsync(fn, executor)`."
+    },
+    {
+      "id": "cancel-effect",
+      "kind": "single",
+      "prompt": "Một `CompletableFuture` tạo bằng `supplyAsync` đang gọi HTTP mất 10 giây. Gọi `future.cancel(true)` thì sao?",
+      "options": [
+        "Thread đang chạy bị interrupt và lời gọi HTTP dừng ngay",
+        "Future chuyển sang trạng thái huỷ, `join()` ném `CancellationException`, nhưng lời gọi HTTP vẫn chạy tiếp tới khi xong",
+        "Không có tác dụng gì vì task đã bắt đầu",
+        "Ném `UnsupportedOperationException`"
+      ],
+      "answer": 1,
+      "explanation": "Với `CompletableFuture`, tham số `mayInterruptIfRunning` không có tác dụng: future được hoàn thành với `CancellationException`, còn supplier vẫn chạy trên thread của nó. Muốn dừng thật phải dùng timeout của HTTP client. `ExecutorService.submit(...).cancel(true)` có gửi interrupt, nhưng chỉ dừng được nếu code bên trong phản hồi interrupt."
+    }
+  ]
+}

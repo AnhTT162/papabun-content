@@ -18,8 +18,10 @@ IMAGE_RE = re.compile(r"\]\((images/[^)\s]+)\)")
 IMAGE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.(png|jpg|jpeg|gif|svg|webp)$")
 LAYERED_SECTIONS = ["Quick", "Interview", "Deep"]
 # Khớp với DiagramLayout trong app (node cao 52pt, khung 300pt, node rộng tối thiểu 56pt, khe 28pt cho mũi tên).
-DIAGRAM_ROW = 0.25
+DIAGRAM_ROW = 0.35
 DIAGRAM_MIN_DX = 0.32
+# Hai node lệch dọc ít hơn mức này thì chồng lên nhau dù khác cột (node cao 52pt trong khung ~230pt).
+DIAGRAM_MIN_DY = 0.26
 DIAGRAM_MAX_LABEL = 20
 SIMULATION_SCHEMAS = {
     "threadTimeline": "simulations/threadTimeline.schema.json",
@@ -352,7 +354,9 @@ class Repo:
         # Trên điện thoại khung sơ đồ chỉ rộng ~340pt: hai node cùng hàng cần cách nhau đủ xa.
         for i, a in enumerate(nodes):
             for b in nodes[i + 1:]:
-                if abs(a["y"] - b["y"]) < DIAGRAM_ROW and abs(a["x"] - b["x"]) < DIAGRAM_MIN_DX:
+                dx, dy = abs(a["x"] - b["x"]), abs(a["y"] - b["y"])
+                # App thu nhỏ node theo cặp lệch dọc < DIAGRAM_ROW và khác cột; cùng cột thì chỉ cần không chồng nhau.
+                if dy < DIAGRAM_ROW and (0 < dx < DIAGRAM_MIN_DX or (dx == 0 and dy < DIAGRAM_MIN_DY)):
                     self.error(path, "node '%s' và '%s' quá gần nhau: cùng hàng (|y| chênh < %.2f) thì x phải chênh >= %.2f"
                                % (a["id"], b["id"], DIAGRAM_ROW, DIAGRAM_MIN_DX))
 

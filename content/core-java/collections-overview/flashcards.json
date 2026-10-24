@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "map-not-collection", "front": "`Map` có kế thừa `Collection` không?", "back": "Không. `Collection` có ba nhánh `List`, `Set`, `Queue`; `Map` là interface riêng, chỉ cung cấp view `keySet()`, `values()`, `entrySet()`." },
+    { "id": "arraylist-vs-linkedlist", "front": "Vì sao `ArrayList` thường nhanh hơn `LinkedList`, kể cả khi chèn giữa?", "back": "Phần tử nằm liền nhau nên tận dụng CPU cache, và dịch phần tử bằng `System.arraycopy` rất nhanh; `LinkedList` phải đi từng node để tới vị trí cần chèn." },
+    { "id": "treemap-when", "front": "Khi nào chọn `TreeMap` thay vì `HashMap`?", "back": "Khi cần key luôn sắp xếp hoặc cần truy vấn theo khoảng như `floorKey`, `ceilingEntry`, `subMap`; đổi lại mỗi thao tác là O(log n)." },
+    { "id": "lru-linkedhashmap", "front": "Cách nhanh nhất viết LRU cache trong Java?", "back": "`new LinkedHashMap<>(16, 0.75f, true)` (accessOrder) và override `removeEldestEntry` để xoá phần tử cũ nhất khi vượt kích thước." },
+    { "id": "arraydeque-default", "front": "Nên dùng gì cho stack hoặc queue một luồng?", "back": "`ArrayDeque`: nhanh hơn `Stack` (đồng bộ, kế thừa `Vector`) và `LinkedList`; lưu ý không nhận `null`." },
+    { "id": "list-of-vs-unmodifiable", "front": "`List.copyOf(list)` khác `Collections.unmodifiableList(list)` thế nào?", "back": "`copyOf` tạo bản sao bất biến; `unmodifiableList` chỉ là view chặn sửa, list gốc đổi thì view đổi theo." },
+    { "id": "arrays-aslist", "front": "`Arrays.asList(...)` cho phép những thao tác nào?", "back": "Đọc và `set` được (ghi xuống mảng gốc); `add`/`remove` ném `UnsupportedOperationException` vì kích thước cố định." },
+    { "id": "cme-remove", "front": "Xoá phần tử khi đang duyệt list thế nào cho đúng?", "back": "Dùng `list.removeIf(...)` hoặc `Iterator.remove()`; gọi `list.remove` trong for-each thường ném `ConcurrentModificationException` (fail-fast chỉ là best-effort)." },
+    { "id": "treeset-compare", "front": "`TreeSet` dựa vào gì để coi hai phần tử là trùng?", "back": "`compare`/`compareTo` trả 0, không dùng `equals`; comparator không nhất quán với `equals` sẽ làm mất phần tử." },
+    { "id": "sequenced-collection", "front": "Java 21 (Sequenced Collections) thêm gì cho `List`, `Deque` và `LinkedHashMap`?", "back": "`List`, `Deque` có `getFirst()`, `getLast()`, `reversed()`; map có thứ tự như `LinkedHashMap` có `firstEntry()`, `lastEntry()`, `putFirst()`, `putLast()`, `reversed()`." }
+  ]
+}

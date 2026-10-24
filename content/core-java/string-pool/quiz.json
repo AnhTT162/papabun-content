@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "identity-trace",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "String a = \"Java\";\nString b = \"Ja\" + \"va\";\nfinal String constPart = \"Ja\";\nString c = constPart + \"va\";\nString varPart = \"Ja\";\nString d = varPart + \"va\";\nSystem.out.println((a == b) + \" \" + (a == c) + \" \" + (a == d) + \" \" + (a == d.intern()));",
+      "options": [
+        "true true false true",
+        "true false false true",
+        "false false false true",
+        "true true true true"
+      ],
+      "answer": 0,
+      "explanation": "`\"Ja\" + \"va\"` là biểu thức hằng nên compiler gộp thành literal `\"Java\"` (true). `constPart` là biến `final` khởi tạo bằng hằng nên cũng được gộp (true). `varPart` không `final` nên phép ghép xảy ra lúc runtime và tạo object mới (false). `intern()` trả về object trong pool (true). Đáp án thứ hai là hiểu lầm rằng mọi phép ghép có biến đều chạy lúc runtime."
+    },
+    {
+      "id": "new-string-objects",
+      "kind": "single",
+      "prompt": "Dòng `String s = new String(\"hello\");` chạy lần đầu tạo ra bao nhiêu String object?",
+      "options": [
+        "Luôn đúng 1",
+        "Một String mới trên heap, cộng literal `\"hello\"` trong pool nếu pool chưa có; hai object dùng chung một mảng `byte[]`",
+        "Luôn đúng 2, mỗi object có mảng ký tự riêng",
+        "0, JVM tự tối ưu để dùng lại literal"
+      ],
+      "answer": 1,
+      "explanation": "Literal `\"hello\"` được intern vào pool khi chạy tới lần đầu (nếu chưa có). `new` luôn tạo thêm một object trên heap. Constructor `String(String)` chỉ copy tham chiếu tới mảng `value`, nên không có mảng thứ hai."
+    },
+    {
+      "id": "loop-concat-cost",
+      "kind": "single",
+      "prompt": "Ghép 100.000 dòng log bằng `result += line` trong vòng lặp chạy rất chậm trên Java 21. Vì sao?",
+      "options": [
+        "Java 21 compile `+` thành `invokedynamic` nên chậm hơn `StringBuilder`",
+        "Mỗi vòng tạo String mới và copy toàn bộ nội dung đã ghép, tổng chi phí O(n²)",
+        "Mỗi chuỗi mới bị intern vào String Pool làm pool đầy",
+        "String Pool bị lock mỗi lần ghép"
+      ],
+      "answer": 1,
+      "explanation": "`invokedynamic` (JEP 280) làm từng phép ghép nhanh hơn, nhưng không đổi được việc mỗi vòng tạo chuỗi mới dài hơn và copy lại từ đầu. Chuỗi ghép lúc runtime không được intern. Dùng một `StringBuilder` cho cả vòng lặp."
+    },
+    {
+      "id": "pool-memory",
+      "kind": "single",
+      "prompt": "Từ Java 8, String Pool nằm ở đâu?",
+      "options": ["PermGen", "Metaspace", "Heap", "Stack của từng thread"],
+      "answer": 2,
+      "explanation": "Pool chuyển từ PermGen vào heap ở Java 7. Java 8 bỏ PermGen và đưa metadata của class sang Metaspace, còn String Pool vẫn ở heap."
+    }
+  ]
+}

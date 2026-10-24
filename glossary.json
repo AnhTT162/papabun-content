@@ -6,9 +6,9 @@
       "id": "hash-code",
       "term": "Hash code",
       "meaning": "Số nguyên đại diện cho một object, dùng để phân phối object vào các ô (bucket) của bảng băm.",
-      "example": "\"hi\".hashCode() luôn trả về cùng một số trong mọi lần chạy.",
+      "example": "`\"hi\".hashCode()` luôn trả về cùng một số trong mọi lần chạy.",
       "related": ["bucket", "hash-collision"],
-      "topics": ["equals-hashcode", "hashmap-internals"]
+      "topics": ["equals-hashcode", "hashmap-internals", "string-pool"]
     },
     {
       "id": "bucket",
@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool"]
     },
     {
       "id": "dns",
@@ -246,7 +246,7 @@
       "meaning": "Hàng đợi chứa task đang chờ thread rảnh trong `ThreadPoolExecutor`. Có giới hạn hay không quyết định pool có tạo thread thêm và có reject hay không.",
       "example": "`new ArrayBlockingQueue<>(100)` chứa tối đa 100 task chờ.",
       "related": ["core-pool-size", "rejection-policy"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "completable-future"]
     },
     {
       "id": "rejection-policy",
@@ -278,7 +278,7 @@
       "meaning": "Công việc mà thời gian chủ yếu dành cho chờ IO (mạng, đĩa, database); nhiều thread hơn số core vẫn có lợi.",
       "example": "Gọi REST API bên ngoài mất 300ms nhưng chỉ tốn 2ms CPU.",
       "related": ["cpu-bound", "virtual-thread"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "completable-future"]
     },
     {
       "id": "littles-law",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future"]
     },
     {
       "id": "pinning",
@@ -334,7 +334,7 @@
       "meaning": "Tỉ lệ đầy tối đa của bảng băm trước khi resize. HashMap mặc định 0.75: resize khi `size > capacity × 0.75`.",
       "example": "Capacity 16, load factor 0.75 thì resize khi thêm entry thứ 13.",
       "related": ["rehash", "bucket"],
-      "topics": ["hashmap-internals"]
+      "topics": ["hashmap-internals", "collections-overview"]
     },
     {
       "id": "rehash",
@@ -358,14 +358,14 @@
       "meaning": "Cây nhị phân tìm kiếm tự cân bằng: mỗi node tô đỏ hoặc đen theo quy tắc giữ chiều cao cỡ O(log n), nên tìm, thêm, xoá đều O(log n).",
       "example": "`TreeMap` và các bucket đã treeify của `HashMap` dùng cây đỏ-đen.",
       "related": ["treeify"],
-      "topics": ["hashmap-internals"]
+      "topics": ["hashmap-internals", "collections-overview"]
     },
     {
       "id": "fail-fast",
       "term": "Fail-fast iterator",
       "meaning": "Iterator phát hiện collection bị sửa cấu trúc trong lúc duyệt (qua bộ đếm `modCount`) và ném `ConcurrentModificationException` ngay, thay vì chạy tiếp với dữ liệu sai. Chỉ là cố gắng phát hiện, không đảm bảo.",
       "example": "Gọi `map.remove(key)` bên trong vòng `for (var e : map.entrySet())` làm lần lặp sau ném `ConcurrentModificationException`.",
-      "topics": ["hashmap-internals"]
+      "topics": ["hashmap-internals", "collections-overview"]
     },
     {
       "id": "monitor",
@@ -389,7 +389,7 @@
       "meaning": "Cơ chế yêu cầu một thread dừng việc đang chờ: `thread.interrupt()` đặt cờ ngắt, các method chặn như `sleep`, `wait`, `join` ném `InterruptedException` và xoá cờ.",
       "example": "Bắt `InterruptedException` thì gọi lại `Thread.currentThread().interrupt()` để không làm mất tín hiệu.",
       "related": ["monitor"],
-      "topics": ["thread-lifecycle"]
+      "topics": ["thread-lifecycle", "exceptions"]
     },
     {
       "id": "jmm",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "exceptions"]
     },
     {
       "id": "memory-barrier",
@@ -534,6 +534,182 @@
       "example": "Trên x86, ghi một biến volatile thường sinh thêm một lệnh có tiền tố `lock`, còn đọc volatile gần như không tốn thêm.",
       "related": ["happens-before", "instruction-reordering"],
       "topics": ["synchronized-volatile"]
+    },
+    {
+      "id": "string-pool",
+      "term": "String Pool",
+      "meaning": "Bảng trong JVM giữ một bản duy nhất cho mỗi chuỗi literal, để các literal cùng nội dung dùng chung một object.",
+      "example": "Hai dòng `String a = \"hi\"; String b = \"hi\";` cho `a == b` là `true`.",
+      "related": ["string-interning", "immutable"],
+      "topics": ["string-pool"]
+    },
+    {
+      "id": "string-interning",
+      "term": "Interning",
+      "meaning": "Thao tác tra chuỗi trong String Pool: có rồi thì trả object đó, chưa có thì thêm vào. Literal được intern tự động; chuỗi runtime phải gọi `intern()`.",
+      "example": "`new String(\"hi\").intern() == \"hi\"` là `true`.",
+      "related": ["string-pool"],
+      "topics": ["string-pool"]
+    },
+    {
+      "id": "compact-strings",
+      "term": "Compact Strings",
+      "meaning": "Tối ưu của Java 9: String lưu dữ liệu trong `byte[]` kèm cờ `coder`; chuỗi chỉ có ký tự Latin-1 dùng 1 byte mỗi ký tự thay vì 2.",
+      "example": "Chuỗi `\"order-42\"` tốn 8 byte dữ liệu thay vì 16.",
+      "related": ["string-pool"],
+      "topics": ["string-pool"]
+    },
+    {
+      "id": "constant-folding",
+      "term": "Constant folding",
+      "meaning": "Compiler tính sẵn biểu thức chỉ gồm hằng số lúc compile, thay bằng kết quả.",
+      "example": "`\"Ja\" + \"va\"` được compile thành literal `\"Java\"`.",
+      "related": ["string-pool", "jit"],
+      "topics": ["string-pool"]
+    },
+    {
+      "id": "string-deduplication",
+      "term": "String deduplication",
+      "meaning": "Tính năng của GC (`-XX:+UseStringDeduplication`) tìm các String có nội dung trùng và cho chúng dùng chung một mảng dữ liệu để tiết kiệm heap.",
+      "example": "Một triệu String `\"VN\"` đọc từ DB chỉ còn một mảng `byte[]` dùng chung, dù vẫn là một triệu object.",
+      "related": ["string-pool", "compact-strings"],
+      "topics": ["string-pool"]
+    },
+    {
+      "id": "collection-framework",
+      "term": "Collections Framework",
+      "meaning": "Bộ interface và cài đặt chuẩn trong `java.util` để lưu nhóm phần tử: `List`, `Set`, `Queue`/`Deque` và `Map`.",
+      "example": "`List<String> names = new ArrayList<>();`",
+      "related": ["big-o"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "big-o",
+      "term": "Big-O",
+      "meaning": "Cách mô tả thời gian (hoặc bộ nhớ) tăng thế nào khi dữ liệu tăng, bỏ qua hằng số.",
+      "example": "`ArrayList.get(i)` là O(1); `LinkedList.get(i)` là O(n): list gấp đôi thì chậm gấp đôi.",
+      "related": ["amortized-complexity"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "amortized-complexity",
+      "term": "Amortized (khấu hao)",
+      "meaning": "Chi phí trung bình mỗi thao tác khi tính trên một chuỗi dài thao tác, dù thỉnh thoảng có một lần rất tốn.",
+      "example": "`ArrayList.add` thỉnh thoảng phải copy cả mảng khi đầy, nhưng tính trung bình vẫn là O(1).",
+      "related": ["big-o"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "cache-locality",
+      "term": "Cache locality",
+      "meaning": "Dữ liệu nằm liền nhau trong bộ nhớ được CPU nạp vào cache cùng lúc, nên duyệt tuần tự nhanh hơn nhiều so với nhảy lung tung.",
+      "example": "Duyệt `ArrayList` nhanh hơn `LinkedList` cùng kích thước vì phần tử nằm liền nhau.",
+      "related": ["big-o"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "unmodifiable-view",
+      "term": "Unmodifiable view",
+      "meaning": "Lớp bọc chặn mọi thao tác sửa nhưng vẫn đọc trực tiếp collection gốc; collection gốc đổi thì view đổi theo.",
+      "example": "`Collections.unmodifiableList(list)` thấy ngay phần tử mới được thêm vào `list`.",
+      "related": ["immutable"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "copy-on-write",
+      "term": "Copy-on-write",
+      "meaning": "Kỹ thuật mỗi lần ghi thì tạo bản sao mới rồi thay tham chiếu, nên người đọc không cần lock và không bao giờ thấy dữ liệu dở dang.",
+      "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn.",
+      "related": ["immutable", "fail-fast"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "sequenced-collection",
+      "term": "Sequenced Collections",
+      "meaning": "Nhóm interface của Java 21 (JEP 431) cho collection có thứ tự xác định, thêm `getFirst()`, `getLast()`, `reversed()`.",
+      "example": "`orders.getLast()` thay cho `orders.get(orders.size() - 1)`.",
+      "related": ["collection-framework"],
+      "topics": ["collections-overview"]
+    },
+    {
+      "id": "checked-exception",
+      "term": "Checked exception",
+      "meaning": "Exception mà compiler bắt buộc phải `catch` hoặc khai báo `throws`: mọi `Throwable` không thuộc nhánh `RuntimeException` hay `Error`.",
+      "example": "`Files.readString(path)` ném `IOException`, không xử lý thì không biên dịch được.",
+      "related": ["unchecked-exception"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "unchecked-exception",
+      "term": "Unchecked exception",
+      "meaning": "`RuntimeException`, `Error` và các lớp con: không bắt buộc khai báo hay `catch`, thường dùng cho lỗi lập trình.",
+      "example": "`NullPointerException`, `IllegalArgumentException`.",
+      "related": ["checked-exception"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "exception-chaining",
+      "term": "Exception chaining",
+      "meaning": "Bọc exception gốc vào exception mới qua tham số `cause`, để stack trace còn phần `Caused by:` chỉ ra lỗi thật.",
+      "example": "`throw new OrderLoadException(\"Không tải được đơn\", e);`",
+      "related": ["checked-exception"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "try-with-resources",
+      "term": "try-with-resources",
+      "meaning": "Cú pháp `try (var r = ...)` (Java 7) tự gọi `close()` cho resource khi rời khối, theo thứ tự ngược với lúc mở.",
+      "example": "`try (var in = Files.newInputStream(path)) { ... }` không cần `finally` để đóng file.",
+      "related": ["suppressed-exception"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "suppressed-exception",
+      "term": "Suppressed exception",
+      "meaning": "Exception phụ (thường từ `close()`) được gắn vào exception chính thay vì đè mất nó; xem bằng `getSuppressed()`.",
+      "example": "Stack trace có dòng `Suppressed: java.io.IOException: close failed`.",
+      "related": ["try-with-resources"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "fast-throw",
+      "term": "OmitStackTraceInFastThrow",
+      "meaning": "Tối ưu của HotSpot: exception ngầm định (NPE, `ArithmeticException`...) ném lặp lại nhiều lần ở một chỗ được thay bằng bản tạo sẵn không có stack trace.",
+      "example": "Log chỉ còn `java.lang.NullPointerException`; chạy với `-XX:-OmitStackTraceInFastThrow` để tắt.",
+      "related": ["jit"],
+      "topics": ["exceptions"]
+    },
+    {
+      "id": "completion-stage",
+      "term": "CompletionStage",
+      "meaning": "Interface mô tả một bước trong chuỗi xử lý bất đồng bộ: khi bước này xong thì chạy bước tiếp theo. `CompletableFuture` là cài đặt chính.",
+      "example": "`fetchUser().thenApply(User::name)` tạo một stage mới.",
+      "related": ["completion-exception"],
+      "topics": ["completable-future"]
+    },
+    {
+      "id": "common-pool",
+      "term": "Common pool",
+      "meaning": "`ForkJoinPool.commonPool()`: pool dùng chung cho cả JVM, khoảng số core − 1 thread, chạy parallel stream và `CompletableFuture.*Async` khi không truyền executor.",
+      "example": "Máy 8 core: common pool có 7 thread dùng chung cho mọi parallel stream.",
+      "related": ["thread-pool"],
+      "topics": ["completable-future"]
+    },
+    {
+      "id": "completion-exception",
+      "term": "CompletionException",
+      "meaning": "Exception unchecked mà `CompletableFuture` dùng để bọc lỗi gốc khi lỗi lan qua các stage, và `join()` ném ra.",
+      "example": "`ex.getCause()` trả `IllegalStateException` gốc.",
+      "related": ["completion-stage"],
+      "topics": ["completable-future"]
+    },
+    {
+      "id": "structured-concurrency",
+      "term": "Structured Concurrency",
+      "meaning": "Mô hình (`StructuredTaskScope`, preview từ Java 21, API còn thay đổi giữa các bản) coi các task con là một khối: chờ cùng nhau, một task lỗi thì huỷ các task còn lại.",
+      "example": "Gọi song song user và orders; orders lỗi thì user tự bị huỷ.",
+      "related": ["virtual-thread"],
+      "topics": ["completable-future"]
     }
   ]
 }

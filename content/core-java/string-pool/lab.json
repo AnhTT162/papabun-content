@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Unit test pass, production chặn admin",
+  "context": "`AccessChecker` kiểm tra role của user. Unit test truyền thẳng chuỗi `\"ADMIN\"` và pass. Ở production, role được lấy từ JWT nên là chuỗi tạo lúc runtime (ở đây giả lập bằng `StringBuilder`).",
+  "buggyCode": "public class AccessChecker {\n    public boolean isAdmin(String role) {\n        return role == \"ADMIN\";\n    }\n}\n\nvar checker = new AccessChecker();\nSystem.out.println(checker.isAdmin(\"ADMIN\"));   // như trong unit test\n\nString roleFromToken = new StringBuilder(\"NIMDA\").reverse().toString();\nSystem.out.println(roleFromToken);              // như sau khi parse JWT\nSystem.out.println(checker.isAdmin(roleFromToken));",
+  "symptom": {
+    "description": "Chuỗi in ra đúng là `ADMIN`, nhưng user admin thật vẫn bị trả 403.",
+    "output": "true\nADMIN\nfalse"
+  },
+  "diagnosis": {
+    "question": "Vì sao cùng nội dung `ADMIN` mà kết quả khác nhau?",
+    "options": [
+      "`StringBuilder.reverse()` để lại ký tự ẩn ở cuối chuỗi",
+      "`==` so sánh tham chiếu: literal trong test là object trong String Pool, còn chuỗi tạo lúc runtime là object khác trên heap",
+      "GC đã dọn `\"ADMIN\"` khỏi String Pool nên phải tạo lại",
+      "JIT bỏ qua phép so sánh vì cho rằng kết quả luôn là `false`"
+    ],
+    "answer": 1,
+    "explanation": "Hai literal `\"ADMIN\"` trong code dùng chung một object trong [[string-pool|String Pool]], nên `==` ra `true` trong test. `toString()` của `StringBuilder` (cũng như chuỗi parse từ JSON, header, DB) tạo một String object mới, nên cùng nội dung nhưng khác tham chiếu. Literal vẫn còn trong pool vì class còn tham chiếu tới nó, nên GC không liên quan."
+  },
+  "fix": {
+    "code": "public enum Role { ADMIN, USER }\n\npublic class AccessChecker {\n    public boolean isAdmin(String role) {\n        return \"ADMIN\".equals(role);           // so sánh nội dung, an toàn khi role là null\n    }\n\n    // Tốt hơn: parse một lần ở biên hệ thống rồi dùng enum\n    public boolean isAdmin(Role role) {\n        return role == Role.ADMIN;             // enum là singleton nên == là đúng\n    }\n}",
+    "explanation": "So sánh nội dung bằng `equals` và đặt literal phía trước. Tốt nhất là parse chuỗi sang `enum` ở biên hệ thống (lúc đọc token), vì mỗi giá trị enum chỉ có một instance nên dùng `==` là đúng. Viết thêm unit test với chuỗi tạo lúc runtime (`new String(\"ADMIN\")`) để bắt lỗi này."
+  }
+}

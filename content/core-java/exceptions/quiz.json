@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "finally-swallow",
+      "kind": "output",
+      "prompt": "Đoạn code in ra gì?",
+      "code": "static int compute() {\n    try {\n        throw new IllegalStateException(\"boom\");\n    } finally {\n        return 1;\n    }\n}\n\nSystem.out.println(compute());",
+      "options": [
+        "1",
+        "Ném IllegalStateException: boom",
+        "Không biên dịch được",
+        "In 1 rồi ném IllegalStateException"
+      ],
+      "answer": 0,
+      "explanation": "`return` trong `finally` kết thúc method bình thường và bỏ luôn exception đang bay. Code vẫn biên dịch được, compiler chỉ cảnh báo khi bật `-Xlint:finally`. Đây là lý do không bao giờ `return` trong `finally`."
+    },
+    {
+      "id": "twr-sequence",
+      "kind": "output",
+      "prompt": "Đoạn code in ra các dòng theo thứ tự nào?",
+      "code": "record Res(String name) implements AutoCloseable {\n    public void close() { System.out.println(\"close \" + name); }\n}\n\ntry (var a = new Res(\"A\"); var b = new Res(\"B\")) {\n    System.out.println(\"body\");\n    throw new RuntimeException(\"x\");\n} catch (RuntimeException e) {\n    System.out.println(\"catch \" + e.getMessage());\n} finally {\n    System.out.println(\"finally\");\n}",
+      "options": [
+        "body / close B / close A / catch x / finally",
+        "body / catch x / close A / close B / finally",
+        "body / close A / close B / catch x / finally",
+        "body / catch x / finally / close B / close A"
+      ],
+      "answer": 0,
+      "explanation": "Resource được đóng ngay khi thoát thân `try`, theo thứ tự ngược với lúc mở (B rồi A), sau đó mới tới `catch` và `finally`. Vì vậy trong `catch` resource đã đóng, không dùng được nữa."
+    },
+    {
+      "id": "transactional-checked",
+      "kind": "single",
+      "prompt": "Method `@Transactional` (cấu hình mặc định) lưu đơn hàng, rồi ném `IOException` khi ghi file hoá đơn. Đơn hàng có còn trong DB không?",
+      "options": [
+        "Không, mọi exception đều làm rollback",
+        "Có, vì mặc định Spring chỉ rollback với `RuntimeException` và `Error`",
+        "Không, vì `IOException` là `Error`",
+        "Tuỳ database"
+      ],
+      "answer": 1,
+      "explanation": "Theo mặc định, checked exception không làm rollback, nên transaction commit dù method ném lỗi. Muốn rollback thì khai báo `@Transactional(rollbackFor = Exception.class)` hoặc bọc lỗi thành unchecked exception."
+    },
+    {
+      "id": "interrupted-swallow",
+      "kind": "single",
+      "prompt": "Trong một `Runnable` (không ném được checked exception), cách xử lý `InterruptedException` nào đúng?",
+      "options": [
+        "`catch (InterruptedException e) {}` để task chạy tiếp",
+        "`catch (InterruptedException e) { e.printStackTrace(); }`",
+        "`catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }`",
+        "`catch (InterruptedException e) { throw new Error(e); }`"
+      ],
+      "answer": 2,
+      "explanation": "Khi ném `InterruptedException`, JVM đã xoá cờ interrupt. Nuốt lỗi làm mất yêu cầu dừng, ví dụ `shutdownNow()` sẽ không dừng được task. Khôi phục cờ rồi kết thúc gọn để code phía trên (executor) biết thread đã bị interrupt."
+    },
+    {
+      "id": "npe-no-trace",
+      "kind": "single",
+      "prompt": "Service chạy vài giờ thì log chỉ còn in `java.lang.NullPointerException`, không có message, không có stack trace. Lý do thường gặp nhất?",
+      "options": [
+        "Logback bị cấu hình sai pattern",
+        "JIT bật OmitStackTraceInFastThrow, thay exception ném lặp lại bằng bản tạo sẵn không có stack trace",
+        "Hết heap nên JVM không ghi được stack trace",
+        "NullPointerException không bao giờ có stack trace"
+      ],
+      "answer": 1,
+      "explanation": "Đây là tối ưu mặc định của HotSpot cho một số exception ngầm định (NPE, `ArithmeticException`, `ArrayIndexOutOfBoundsException`...). Stack trace đầy đủ có ở những lần đầu, nên tìm log cũ hơn. Có thể tắt bằng `-XX:-OmitStackTraceInFastThrow`."
+    }
+  ]
+}
