@@ -1,0 +1,144 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Trang lịch sử đơn chậm sau khi thêm tên sản phẩm",
+  "symptom": "Bản release mới thêm tên sản phẩm vào trang \"Lịch sử đơn hàng\" của app. Từ đó p95 của `GET /customers/{id}/orders` tăng từ 120ms lên 2,4 giây, và CPU của database tăng rõ dù lượng người dùng không đổi.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Service: order-api (4 pod), Spring Boot 3.3, Hibernate 6.5, PostgreSQL 16\nHikari: 20 connection mỗi pod = 80 connection tới DB\nRelease v3.8.0 lúc 14:00: thêm productName vào OrderLineDto\n\n                   p95     RPS     RPS      DB CPU   DB queries/s   slow queries\n                   orders  service orders                           (>200ms)\n13:30              120ms   300     40       22%      3.6k           0\n14:30              2.4s    305     40       71%      12.1k          0",
+      "evidenceFormat": "monospace",
+      "question": "Bạn bắt đầu điều tra từ đâu?",
+      "choices": [
+        {
+          "label": "Mở trace APM của một request chậm tới endpoint này",
+          "quality": "good",
+          "feedback": "Đúng hướng. Endpoint vẫn 40 request/giây nhưng database phải chạy thêm khoảng 8.500 query/giây: mỗi request đang chạy nhiều query hơn hẳn. Một trace [[apm|APM]] cho thấy chính xác các query đó.",
+          "next": "trace"
+        },
+        {
+          "label": "Xem slow query log để tìm query chậm",
+          "quality": "ok",
+          "feedback": "Thói quen tốt, nhưng bảng metric đã cho thấy 0 query chậm. Vấn đề không nằm ở một query chậm.",
+          "next": "slow-log"
+        },
+        {
+          "label": "Tăng số pod order-api từ 4 lên 8",
+          "quality": "poor",
+          "feedback": "Database mới là chỗ đang bận. Thêm pod không giảm số query mỗi request, chỉ thêm connection dồn vào database.",
+          "next": "scaled"
+        },
+        {
+          "label": "Thêm index cho bảng product",
+          "quality": "poor",
+          "feedback": "Đổi schema khi chưa biết query nào có vấn đề là đoán mò. Hãy xem dữ liệu trước.",
+          "next": "index"
+        }
+      ]
+    },
+    {
+      "id": "slow-log",
+      "evidence": "log_min_duration_statement = 200ms\n\n(slow log không có dòng nào của order-api trong 1 giờ qua)",
+      "evidenceFormat": "monospace",
+      "question": "Không có query chậm. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem trace APM của một request chậm",
+          "quality": "good",
+          "feedback": "Đúng. Khi tổng thời gian chậm mà không query nào chậm, hãy đếm số query trong một request.",
+          "next": "trace"
+        }
+      ]
+    },
+    {
+      "id": "scaled",
+      "evidence": "time   pods   p95     DB CPU   DB connections\n14:45  4      2.4s    71%      80\n14:55  8      2.6s    78%      160",
+      "evidenceFormat": "monospace",
+      "question": "Thêm pod làm database bận hơn. Giờ làm gì?",
+      "choices": [
+        {
+          "label": "Trả về 4 pod và mở trace APM của một request chậm",
+          "quality": "good",
+          "feedback": "Đúng. Cần biết mỗi request đang làm gì với database.",
+          "next": "trace"
+        }
+      ]
+    },
+    {
+      "id": "index",
+      "evidence": "EXPLAIN ANALYZE SELECT ... FROM product WHERE id = 8841;\n\nIndex Scan using product_pkey on product  (actual time=0.018..0.019 rows=1 loops=1)\nExecution Time: 0.041 ms",
+      "evidenceFormat": "monospace",
+      "question": "Query theo khoá chính đã dùng index và chỉ mất 0,04ms trong database. Giờ làm gì?",
+      "choices": [
+        {
+          "label": "Mở trace APM để xem request chạy những query nào",
+          "quality": "good",
+          "feedback": "Đúng. Từng query đều nhanh; cần xem số lượng.",
+          "next": "trace"
+        }
+      ]
+    },
+    {
+      "id": "trace",
+      "evidence": "Trace GET /customers/77/orders   total 2,30s\n\n  Chờ lấy connection từ Hikari                 620ms\n  SELECT orders WHERE customer_id=?          1 lần      5ms\n  SELECT order_item WHERE order_id=?        40 lần    220ms  (~5,5ms/lần)\n  SELECT product WHERE id=?                212 lần   1,45s  (~6,8ms/lần)\n  Tổng: 253 query",
+      "evidenceFormat": "monospace",
+      "question": "Trace cho thấy điều gì?",
+      "choices": [
+        {
+          "label": "N+1 lồng hai tầng: mỗi đơn một query lấy dòng hàng, mỗi dòng hàng một query lấy sản phẩm",
+          "quality": "good",
+          "feedback": "Chính xác, đây là [[n-plus-one|N+1]]. 40 đơn kéo 40 query `order_item`. Lỗi này đã có từ trước, nhưng lúc database rảnh mỗi query chỉ khoảng 1,5ms nên chưa ai để ý. 212 dòng hàng kéo 212 query `product`: đây là phần mới của release. Mỗi query mất khoảng 6ms vì database đang bận (CPU 71%) cộng thời gian đi về qua mạng, chứ không phải vì query chậm.",
+          "next": "code"
+        },
+        {
+          "label": "Bảng product bị lock nên mỗi query phải chờ",
+          "quality": "poor",
+          "feedback": "Không có dấu hiệu chờ lock (`pg_stat_activity` không có `wait_event_type = Lock`). Mỗi query chỉ vài mili giây vì database đang bận; vấn đề là số lần gọi.",
+          "next": "code"
+        },
+        {
+          "label": "Connection pool quá nhỏ, cần tăng lên",
+          "quality": "ok",
+          "feedback": "Pool đúng là đang cạn: theo [[littles-law|Little's law]], 40 request/giây × 2,3 giây ≈ 92 transaction đồng thời, vượt 80 connection, nên request phải chờ 620ms mới bắt đầu được. Nhưng đó là hệ quả của 253 query mỗi request. Tăng [[connection-pool|pool]] chỉ đẩy thêm tải xuống database đang bận.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "// OrderMapper (v3.8.0)\nOrderLineDto toDto(OrderItem line) {\n    return new OrderLineDto(line.getId(), line.getQuantity(),\n            line.getProduct().getName());   // dòng mới thêm\n}\n\n// OrderRepository\nList<Order> findByCustomerIdOrderByCreatedAtDesc(long customerId, Pageable page);\n\n// OrderService\n@Transactional(readOnly = true)\npublic List<OrderDto> history(long customerId) {\n    return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, PageRequest.of(0, 40))\n            .stream().map(mapper::toDto).toList();\n}",
+      "evidenceFormat": "monospace",
+      "question": "Chọn cách sửa phù hợp nhất cho endpoint đang phân trang này?",
+      "choices": [
+        {
+          "label": "Bật `hibernate.default_batch_fetch_size: 100` cho cả ứng dụng, và thêm test đếm số query cho endpoint",
+          "quality": "good",
+          "feedback": "[[batch-fetching|Batch fetching]] gom 40 query `order_item` thành 1 và 212 query `product` thành 3, không đụng tới phân trang. Test đếm query giữ cho lỗi này không quay lại. Về sau có thể viết [[dto-projection|DTO projection]] riêng để còn khoảng 2 query.",
+          "next": "root-cause"
+        },
+        {
+          "label": "`JOIN FETCH o.items i JOIN FETCH i.product` trong query đang phân trang",
+          "quality": "ok",
+          "feedback": "Gộp được thành một query, nhưng [[fetch-join|JOIN FETCH]] collection kèm phân trang làm Hibernate tải mọi đơn của khách rồi cắt trang trong bộ nhớ (cảnh báo HHH90003004). Khách có hàng nghìn đơn sẽ tốn bộ nhớ. Muốn dùng JOIN FETCH thì lấy trang id trước rồi fetch theo id.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đổi `OrderItem.product` sang `FetchType.EAGER`",
+          "quality": "poor",
+          "feedback": "Ở đây `items` được tải bằng collection loader, nên `product` [[eager-loading|EAGER]] sẽ được join vào từng query `order_item`: về lại 41 query, nhưng 40 query `order_item` vẫn còn. Tệ hơn, `product` bị tải ở mọi nơi load `OrderItem`, và chỗ nào query `OrderItem` bằng JPQL thì lại sinh N+1 (secondary select).",
+          "next": "root-cause"
+        },
+        {
+          "label": "Cache sản phẩm trong Redis để mỗi lần lấy nhanh hơn",
+          "quality": "ok",
+          "feedback": "Giảm tải database nhưng vẫn là 212 lượt gọi mạng mỗi request, chỉ chuyển sang Redis. Sửa số lần gọi trước, cache sau nếu còn cần.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: một getter mới trên quan hệ lazy trong mapper tạo N+1 lồng hai tầng.** `line.getProduct().getName()` đẩy số query mỗi request từ 41 lên 253. Database bận lên làm từng query chậm đi, request giữ connection lâu hơn, pool cạn và request phải xếp hàng. Không query nào chậm nên slow log và EXPLAIN đều không phát hiện.\n\n**Sửa ngay**: rollback v3.8.0, hoặc deploy bản chỉ bật `hibernate.default_batch_fetch_size: 100`.\n\n**Sửa đúng**: với batch fetching, trên PostgreSQL Hibernate 6 gom các lần tải lazy thành query `= any (?)` với một tham số mảng:\n\n```\nSELECT orders WHERE customer_id=?             1 lần\nSELECT order_item WHERE order_id = any (?)    1 lần\nSELECT product WHERE id = any (?)             3 lần\nTổng: 5 query, p95 = 95ms, DB CPU 21%\n```\n\nVề lâu dài, endpoint chỉ đọc này nên dùng [[dto-projection|DTO projection]].\n\n**Phòng ngừa**:\n- Đặt `default_batch_fetch_size` cho cả ứng dụng làm lưới an toàn.\n- Tắt `spring.jpa.open-in-view` ([[open-session-in-view|Open Session in View]]).\n- Viết test khẳng định số query cho các endpoint đọc danh sách.\n- Theo dõi metric \"số query mỗi request\" trên APM và cảnh báo khi nó tăng đột biến sau release.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

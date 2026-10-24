@@ -1,0 +1,61 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "count-with-cache",
+      "kind": "output",
+      "prompt": "Trong một transaction mới (persistence context ban đầu trống), 10 đơn hàng thuộc về 4 khách hàng khác nhau. `Order.customer` là `@ManyToOne(fetch = LAZY)`, không bật batch fetching. Đoạn code chạy tổng cộng bao nhiêu query?",
+      "code": "List<Order> orders = em.createQuery(\n        \"select o from Order o where o.createdAt >= :from\", Order.class)\n    .setParameter(\"from\", startOfDay)\n    .getResultList();                       // trả về 10 đơn\n\nfor (Order order : orders) {\n    System.out.println(order.getCustomer().getName());\n}",
+      "options": ["11", "5", "2", "1"],
+      "answer": 1,
+      "explanation": "1 query lấy 10 đơn, rồi mỗi khách hàng **khác nhau** cần một query: 4 query. Các đơn cùng khách dùng chung một proxy trong [[persistence-context|persistence context]], nên khách đã tải rồi thì không query lại. Vì vậy số query thật phụ thuộc dữ liệu: test với mỗi đơn một khách thì thấy 11, dữ liệu dồn về ít khách thì thấy ít hơn."
+    },
+    {
+      "id": "eager-jpql",
+      "kind": "single",
+      "prompt": "`Order.customer` là `@ManyToOne` với fetch mặc định ([[eager-loading|EAGER]]), không bật batch fetching. Chạy `select o from Order o` trả về 50 đơn của 50 khách khác nhau. Hibernate chạy bao nhiêu query?",
+      "options": [
+        "1, vì EAGER tự join customer vào query",
+        "51: 1 query cho đơn, rồi 1 query cho mỗi khách ngay sau đó",
+        "2: 1 query cho đơn, 1 query `IN (...)` cho mọi khách",
+        "50"
+      ],
+      "answer": 1,
+      "explanation": "JPQL được dịch đúng như viết, không tự thêm join. EAGER chỉ có nghĩa là Hibernate phải tải customer **ngay** sau khi tải đơn, nên nó chạy thêm một query cho mỗi khách: vẫn là N+1, chỉ xảy ra sớm hơn. `em.find()` mới dùng join cho quan hệ EAGER. Đáp án thứ ba là hành vi khi bật batch fetching."
+    },
+    {
+      "id": "fetch-collection-paging",
+      "kind": "single",
+      "prompt": "[[fetch-join|JOIN FETCH]] collection: `select o from Order o join fetch o.items order by o.createdAt desc` với `setMaxResults(20)`. Bảng có 2 triệu đơn. Hibernate 6 làm gì?",
+      "options": [
+        "Thêm `LIMIT 20` vào SQL, trả đúng 20 đơn kèm dòng hàng",
+        "Báo lỗi biên dịch query",
+        "Không thêm `LIMIT` vào SQL: tải mọi đơn kèm dòng hàng, rồi cắt 20 đơn trong bộ nhớ và log cảnh báo HHH90003004",
+        "Trả 20 dòng kết quả SQL, nên có thể ít hơn 20 đơn"
+      ],
+      "answer": 2,
+      "explanation": "Mỗi đơn có nhiều dòng hàng, nên `LIMIT 20` trên kết quả SQL sẽ cắt ngang danh sách dòng hàng của một đơn. Hibernate vì vậy phân trang trong bộ nhớ, ở đây là tải 2 triệu đơn: rất dễ hết heap. Lấy một trang id trước rồi `join fetch ... where o.id in :ids`, hoặc dùng batch fetching. Bật `hibernate.query.fail_on_pagination_over_collection_fetch` để biến cảnh báo này thành lỗi."
+    },
+    {
+      "id": "batch-size",
+      "kind": "single",
+      "prompt": "Query lấy 120 đơn của 120 khách khác nhau, `customer` là LAZY, `hibernate.default_batch_fetch_size = 50`. Duyệt hết và gọi `getCustomer().getName()`. Tổng số query?",
+      "options": ["121", "4", "2", "51"],
+      "answer": 1,
+      "explanation": "1 query lấy đơn. Khi chạm tới khách đầu tiên chưa tải, [[batch-fetching|batch fetching]] tải luôn tối đa 50 khách đang chờ trong một query. 120 khách cần 3 lô (50 + 50 + 20): tổng 1 + 3 = 4 query."
+    },
+    {
+      "id": "open-in-view",
+      "kind": "single",
+      "prompt": "Controller trả thẳng entity `Order` ra JSON. Service đã đóng transaction. Với `spring.jpa.open-in-view=true` (mặc định của Spring Boot), các quan hệ lazy được tải khi nào?",
+      "options": [
+        "Không bao giờ, JSON sẽ có giá trị null",
+        "Khi Jackson serialize response, mỗi quan hệ lazy chạm tới sinh thêm query, ngoài tầm nhìn của service",
+        "Ngay lúc service trả về, Spring tự tải mọi quan hệ",
+        "Luôn ném LazyInitializationException"
+      ],
+      "answer": 1,
+      "explanation": "[[open-session-in-view|Open Session in View]] giữ session mở tới khi response được ghi xong, nên Jackson gọi getter là Hibernate âm thầm chạy query: N+1 xảy ra ở tầng web. `LazyInitializationException` là điều xảy ra khi tắt open-in-view, và đó là điều tốt vì nó buộc service tải dữ liệu có chủ đích. Tốt nhất là trả DTO thay vì entity."
+    }
+  ]
+}

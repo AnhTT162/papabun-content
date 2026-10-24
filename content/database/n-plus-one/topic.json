@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "n-plus-one",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "N+1 Query",
+  "summary": "Vì sao lazy loading sinh ra N+1, vì sao EAGER không chữa được, cách sửa bằng DTO projection, JOIN FETCH, entity graph và batch fetching, bẫy phân trang khi fetch collection, và cách phát hiện bằng test đếm query.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": [],
+  "terms": ["orm", "n-plus-one", "lazy-loading", "eager-loading", "persistence-context", "fetch-join", "entity-graph", "batch-fetching", "dto-projection", "open-session-in-view", "cartesian-product", "connection-pool", "jpql", "apm", "littles-law"],
+  "references": [
+    { "title": "Hibernate ORM 6 User Guide: Fetching", "url": "https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#fetching" },
+    { "title": "Spring Data JPA: Query Methods and Projections", "url": "https://docs.spring.io/spring-data/jpa/reference/repositories/projections.html" },
+    { "title": "Spring Boot: Open EntityManager in View", "url": "https://docs.spring.io/spring-boot/how-to/data-access.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"JOIN FETCH và batch fetching khác nhau thế nào, khi nào dùng cái nào?\" JOIN FETCH tải mọi thứ trong một query, hợp với quan hệ `@ManyToOne` và khi không phân trang trên collection. Batch fetching vẫn lazy nhưng gom thành `IN (...)`, an toàn với phân trang và đặt được cho cả ứng dụng. Với API chỉ đọc, DTO projection thường gọn và nhanh nhất vì chỉ lấy đúng các cột cần." }
+  ]
+}

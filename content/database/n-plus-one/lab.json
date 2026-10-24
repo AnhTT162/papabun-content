@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Endpoint 50 đơn hàng chạy 101 query",
+  "context": "Spring Boot 3, Hibernate 6. `Order` có `@ManyToOne(fetch = LAZY) Customer customer` và `@OneToMany(mappedBy = \"order\") List<OrderItem> items`. Endpoint trả 50 đơn mới nhất kèm tên khách và số dòng hàng. Trên máy dev với 3 đơn thì nhanh; trên staging với dữ liệu thật thì mất gần 1 giây.",
+  "buggyCode": "public record OrderSummary(long id, String customerName, int itemCount) {}\n\n@GetMapping(\"/orders/recent\")\npublic List<OrderSummary> recent() {\n    return orderRepository.findTop50ByOrderByCreatedAtDesc().stream()\n            .map(order -> new OrderSummary(\n                    order.getId(),\n                    order.getCustomer().getName(),   // lazy: chạm vào là query\n                    order.getItems().size()))        // lazy collection: thêm query\n            .toList();\n}",
+  "symptom": {
+    "description": "Bật `logging.level.org.hibernate.SQL=debug` (in SQL) và `spring.jpa.properties.hibernate.generate_statistics=true` (in Session Metrics), rồi gọi endpoint một lần. Log SQL lặp lại hai mẫu query hàng chục lần.",
+    "output": "select o1_0.id,o1_0.created_at,o1_0.customer_id,... from orders o1_0 order by o1_0.created_at desc fetch first ? rows only\nselect c1_0.id,c1_0.name,... from customer c1_0 where c1_0.id=?\nselect i1_0.order_id,i1_0.id,... from order_item i1_0 where i1_0.order_id=?\nselect c1_0.id,c1_0.name,... from customer c1_0 where c1_0.id=?\nselect i1_0.order_id,i1_0.id,... from order_item i1_0 where i1_0.order_id=?\n... (lặp lại)\n\nSession Metrics {\n    ...\n    612400 nanoseconds spent preparing 101 JDBC statements;\n    845201300 nanoseconds spent executing 101 JDBC statements;\n    ...\n}"
+  },
+  "diagnosis": {
+    "question": "Vì sao một endpoint chạy 101 query?",
+    "options": [
+      "Bảng `orders` thiếu index trên `created_at` nên Hibernate phải chia nhỏ query",
+      "Mỗi lần mapper gọi `getCustomer().getName()` và `getItems().size()` trên quan hệ lazy, Hibernate chạy thêm một query cho đơn đó: 1 + 50 + 50",
+      "`generate_statistics` làm Hibernate chạy mỗi query hai lần",
+      "Spring Data tự chia `findTop50` thành 50 query lấy từng dòng"
+    ],
+    "answer": 1,
+    "explanation": "Query đầu lấy 50 đơn. Mỗi đơn có `customer` và `items` là proxy lazy, nên chạm vào là một query riêng: tối đa 50 query cho khách hàng (ít hơn nếu nhiều đơn cùng khách, nhờ [[persistence-context|persistence context]]) và 50 query cho dòng hàng. Đây là [[n-plus-one|N+1]]. Mỗi query chỉ vài mili giây nên không query nào chậm, nhưng 101 lượt đi về database cộng lại gần 1 giây."
+  },
+  "fix": {
+    "code": "// DTO projection: một query, chỉ lấy đúng thứ màn hình cần\npublic interface OrderRepository extends JpaRepository<Order, Long> {\n    @Query(\"\"\"\n        select new com.example.order.OrderSummary(o.id, c.name, size(o.items))\n        from Order o join o.customer c\n        order by o.createdAt desc\n        \"\"\")\n    List<OrderSummary> findRecentSummaries(Pageable page);\n}\n\n@GetMapping(\"/orders/recent\")\npublic List<OrderSummary> recent() {\n    return orderRepository.findRecentSummaries(PageRequest.of(0, 50));\n}\n\n// Lưới an toàn cho cả ứng dụng (application.yml):\n// spring.jpa.properties.hibernate.default_batch_fetch_size: 50\n// spring.jpa.open-in-view: false",
+    "explanation": "[[dto-projection|DTO projection]] join sẵn `customer`, và `size(o.items)` (trả `Integer`) thành một subquery đếm, nên cả endpoint chỉ còn một query. Thời gian giảm từ gần 1 giây xuống vài chục mili giây. Nếu cần entity đầy đủ để sửa, dùng `@EntityGraph(attributePaths = \"customer\")` cho quan hệ `@ManyToOne`; đừng `JOIN FETCH` collection `items` cùng phân trang. `default_batch_fetch_size` gom các lần tải lazy còn sót thành query theo lô ([[batch-fetching|batch fetching]]). Tắt open-in-view để N+1 lúc serialize JSON lộ ra thành lỗi thay vì âm thầm chạy. Thêm một test khẳng định endpoint này chạy đúng 1 query."
+  }
+}

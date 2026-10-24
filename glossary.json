@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one"]
     },
     {
       "id": "multiplexing",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "n-plus-one"]
     },
     {
       "id": "virtual-thread",
@@ -966,6 +966,110 @@
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
       "topics": ["transaction-isolation"]
+    },
+    {
+      "id": "orm",
+      "term": "ORM",
+      "meaning": "Object-Relational Mapping: thư viện ánh xạ bảng database sang object trong code và tự sinh SQL, ví dụ Hibernate (cài đặt của JPA).",
+      "example": "`orderRepository.findById(42)` sinh `SELECT ... FROM orders WHERE id = ?` và trả về object `Order`.",
+      "related": ["lazy-loading", "persistence-context"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "n-plus-one",
+      "term": "N+1 query",
+      "meaning": "Lỗi hiệu năng: một query lấy N bản ghi, rồi mỗi bản ghi kéo thêm một query lấy dữ liệu liên quan, tổng cộng 1 + N lượt gọi database.",
+      "example": "Lấy 50 đơn hàng rồi gọi `order.getCustomer().getName()` trong vòng lặp: 51 query.",
+      "related": ["lazy-loading", "batch-fetching"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "lazy-loading",
+      "term": "Lazy loading",
+      "meaning": "Dữ liệu liên quan chỉ được tải khi code truy cập lần đầu; trước đó ORM giữ một proxy thay thế.",
+      "example": "`order.getItems()` trả proxy; gọi `.size()` mới chạy `SELECT ... FROM order_item WHERE order_id = ?`.",
+      "related": ["eager-loading", "n-plus-one"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "eager-loading",
+      "term": "Eager loading",
+      "meaning": "Dữ liệu liên quan được tải ngay khi tải entity cha. Trong JPA đây là mặc định của `@ManyToOne` và `@OneToOne`; nó không đảm bảo dùng join.",
+      "example": "`@ManyToOne(fetch = FetchType.EAGER) Customer customer`.",
+      "related": ["lazy-loading", "fetch-join"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "persistence-context",
+      "term": "Persistence context",
+      "meaning": "Bộ nhớ của một session/EntityManager giữ các entity đã tải (cache cấp 1): trong cùng transaction, mỗi id chỉ được tải một lần và luôn là cùng một object.",
+      "example": "Gọi `em.find(Customer.class, 7)` hai lần chỉ chạy một query.",
+      "related": ["orm", "lazy-loading"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "fetch-join",
+      "term": "JOIN FETCH",
+      "meaning": "Cú pháp JPQL/HQL tải entity cha cùng quan hệ trong một query bằng join, thay vì tải quan hệ sau.",
+      "example": "`select o from Order o join fetch o.customer`.",
+      "related": ["entity-graph", "n-plus-one"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "entity-graph",
+      "term": "Entity graph",
+      "meaning": "Cách khai báo quan hệ nào cần tải cùng entity cho một query cụ thể, không phải sửa JPQL; trong Spring Data dùng `@EntityGraph`.",
+      "example": "`@EntityGraph(attributePaths = \"customer\") List<Order> findByStatus(Status status);`",
+      "related": ["fetch-join"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "batch-fetching",
+      "term": "Batch fetching",
+      "meaning": "Hibernate tải các quan hệ lazy đang chờ theo lô trong một query (`in (...)`, hoặc `= any (?)` trên PostgreSQL) thay vì từng cái một; cấu hình bằng `hibernate.default_batch_fetch_size` hoặc `@BatchSize`.",
+      "example": "120 khách lazy với batch size 50: 3 query thay vì 120.",
+      "related": ["n-plus-one", "lazy-loading"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "dto-projection",
+      "term": "DTO projection",
+      "meaning": "Query trả thẳng về object chỉ chứa các cột cần dùng (DTO hoặc record), không tải entity đầy đủ.",
+      "example": "`select new com.example.OrderSummary(o.id, c.name) from Order o join o.customer c`.",
+      "related": ["fetch-join"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "open-session-in-view",
+      "term": "Open Session in View",
+      "meaning": "Cơ chế giữ session của ORM mở tới khi response được render, để quan hệ lazy vẫn tải được ở tầng web. Spring Boot bật mặc định (`spring.jpa.open-in-view`).",
+      "example": "Jackson serialize entity `Order` và âm thầm chạy query lấy `customer` sau khi service đã xong.",
+      "related": ["lazy-loading", "n-plus-one"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "cartesian-product",
+      "term": "Cartesian product",
+      "meaning": "Kết quả join nhân số dòng: mỗi dòng bên này ghép với mọi dòng bên kia. Fetch hai collection cùng lúc sinh ra số dòng bằng tích hai collection.",
+      "example": "1 đơn có 10 dòng hàng và 5 khoản thanh toán, fetch cả hai: 50 dòng kết quả cho 1 đơn.",
+      "related": ["fetch-join"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "jpql",
+      "term": "JPQL",
+      "meaning": "Java Persistence Query Language: ngôn ngữ query của JPA viết theo tên entity và field thay vì tên bảng và cột; Hibernate dịch sang SQL (HQL là bản mở rộng của Hibernate).",
+      "example": "`select o from Order o where o.customer.id = :id`",
+      "related": ["orm", "fetch-join"],
+      "topics": ["n-plus-one"]
+    },
+    {
+      "id": "apm",
+      "term": "APM",
+      "meaning": "Application Performance Monitoring: công cụ theo dõi hiệu năng ứng dụng, ghi lại trace của từng request gồm các span (lời gọi DB, HTTP, cache) kèm thời gian.",
+      "example": "Trace của một request cho thấy 253 span `SELECT` tới database.",
+      "related": ["n-plus-one"],
+      "topics": ["n-plus-one"]
     }
   ]
 }

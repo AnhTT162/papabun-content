@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "N+1 query là gì?", "back": "Một query lấy N bản ghi, rồi mỗi bản ghi kéo thêm một query lấy dữ liệu liên quan: tổng 1 + N lượt gọi database." },
+    { "id": "why-hidden", "front": "Vì sao slow query log không bắt được N+1?", "back": "Từng query đều nhanh; cái chậm là số lượng query cộng dồn trong một request." },
+    { "id": "default-fetch", "front": "Fetch type mặc định của các quan hệ JPA?", "back": "`@OneToMany`, `@ManyToMany`: LAZY. `@ManyToOne`, `@OneToOne`: EAGER." },
+    { "id": "eager-not-fix", "front": "Đổi quan hệ sang EAGER có chữa được N+1 không?", "back": "Không. Với JPQL, Hibernate vẫn chạy một query cho mỗi bản ghi liên quan chưa có trong persistence context, và còn tải cả ở chỗ không cần." },
+    { "id": "three-fixes", "front": "Ba cách chính để sửa N+1 trong Hibernate?", "back": "DTO projection hoặc JOIN FETCH/`@EntityGraph` (một query), và batch fetching (`default_batch_fetch_size`) để tải lazy theo lô." },
+    { "id": "batch-math", "front": "120 khách hàng lazy, `default_batch_fetch_size = 50`. Cần bao nhiêu query để tải hết khách?", "back": "3 query `IN (...)` (50 + 50 + 20), thay vì 120." },
+    { "id": "fetch-pagination", "front": "JOIN FETCH một collection kèm phân trang gây ra gì?", "back": "Hibernate tải hết dữ liệu rồi cắt trang trong bộ nhớ (cảnh báo HHH90003004); nên lấy trang id trước rồi fetch theo id." },
+    { "id": "open-in-view", "front": "Vì sao nên tắt `spring.jpa.open-in-view`?", "back": "Khi bật, quan hệ lazy được tải lúc Jackson serialize ngoài service, tạo N+1 khó thấy; tắt đi thì lỗi lộ ra thành `LazyInitializationException`." },
+    { "id": "detect", "front": "Phát hiện N+1 trước khi lên production bằng cách nào?", "back": "Bật log SQL hoặc `generate_statistics` khi chạy local, và viết test khẳng định số query của endpoint." }
+  ]
+}
