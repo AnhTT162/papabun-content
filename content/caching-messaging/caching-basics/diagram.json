@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần đọc đi qua các tầng cache",
+  "nodes": [
+    {"id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "cdn", "label": "CDN", "kind": "cache", "x": 0.85, "y": 0.05},
+    {"id": "redis", "label": "Redis", "kind": "cache", "x": 0.1, "y": 0.5},
+    {"id": "app", "label": "App + Caffeine", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "db", "label": "Database (buffer pool)", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "browser-cdn", "from": "browser", "to": "cdn", "label": "hết hạn: hỏi CDN"},
+    {"id": "cdn-app", "from": "cdn", "to": "app", "label": "miss: gọi origin"},
+    {"id": "app-redis", "from": "app", "to": "redis", "label": "local miss"},
+    {"id": "app-db", "from": "app", "to": "db", "label": "Redis miss"}
+  ],
+  "steps": [
+    {"caption": "Trình duyệt giữ response theo Cache-Control. Còn hạn thì không gửi request nào cả: nhanh nhất có thể.", "show": ["browser"]},
+    {"caption": "Hết hạn thì hỏi CDN ở gần người dùng. CDN giữ response public dùng chung cho mọi người, theo cache key thường chỉ gồm URL; cookie không nằm trong key.", "show": ["cdn", "browser-cdn"], "highlight": ["browser-cdn"]},
+    {"caption": "CDN miss thì gọi về ứng dụng. Ứng dụng xem local cache (Caffeine) trong chính JVM: khoảng micro giây, nhưng mỗi pod một bản riêng.", "show": ["app", "cdn-app"], "highlight": ["cdn-app"]},
+    {"caption": "Local miss thì hỏi Redis, cache dùng chung cho mọi pod: khoảng một mili giây qua mạng.", "show": ["redis", "app-redis"], "highlight": ["app-redis"]},
+    {"caption": "Redis cũng miss thì mới tới database. Ngay cả ở đây, page hay dùng vẫn nằm trong buffer pool trên RAM. Mỗi tầng phía trên chặn bớt tải cho tầng dưới.", "show": ["db", "app-db"], "highlight": ["app-db"]}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cache-tradeoff", "front": "Cache đánh đổi cái gì lấy cái gì?", "back": "Đánh đổi độ mới của dữ liệu (và độ phức tạp) lấy tốc độ đọc và giảm tải cho nguồn." },
+    { "id": "miss-ratio", "front": "Vì sao hit ratio từ 95% lên 99% quan trọng hơn con số cho thấy?", "back": "Miss ratio giảm từ 5% xuống 1%, tức tải xuống database giảm 5 lần." },
+    { "id": "avg-latency", "front": "Latency trung bình khi có cache tính thế nào?", "back": "Xấp xỉ `hit × t_cache + miss × t_nguồn`; phần miss thường chiếm gần hết." },
+    { "id": "lru-lfu", "front": "LRU và LFU khác nhau thế nào?", "back": "LRU bỏ mục lâu nhất chưa được dùng; LFU bỏ mục ít được dùng nhất. Caffeine kết hợp cả hai (W-TinyLFU)." },
+    { "id": "no-cache-no-store", "front": "`Cache-Control: no-cache` và `no-store` khác nhau thế nào?", "back": "`no-cache` vẫn lưu nhưng phải hỏi lại server trước khi dùng; `no-store` thì không được lưu." },
+    { "id": "private", "front": "Response chứa dữ liệu riêng của người dùng cần header gì?", "back": "`Cache-Control: private` (hoặc `no-store`) để CDN và proxy dùng chung không lưu và trả nó cho người khác." },
+    { "id": "etag-304", "front": "`ETag` và `304 Not Modified` giúp gì?", "back": "Client gửi `If-None-Match` với ETag cũ; không đổi thì server trả 304 không kèm body, đỡ băng thông." },
+    { "id": "redis-noeviction", "front": "Redis đầy bộ nhớ với cấu hình mặc định thì sao?", "back": "`maxmemory-policy` mặc định `noeviction`: lệnh ghi báo lỗi OOM. Dùng làm cache thì đặt `allkeys-lru` hoặc `allkeys-lfu`." },
+    { "id": "negative-cache", "front": "Negative caching là gì?", "back": "Cache cả kết quả \"không tồn tại\" với TTL ngắn, để id sai không lần nào cũng đi xuống database." },
+    { "id": "local-vs-distributed", "front": "Local cache và distributed cache khác nhau thế nào?", "back": "Local (Caffeine) nằm trong JVM, nhanh nhất nhưng mỗi instance một bản; distributed (Redis) dùng chung nhưng tốn một vòng mạng." }
+  ]
+}

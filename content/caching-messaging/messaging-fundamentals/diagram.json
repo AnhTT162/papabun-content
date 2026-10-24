@@ -1,0 +1,134 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một sự kiện đặt hàng qua SNS và SQS",
+  "nodes": [
+    {
+      "id": "order",
+      "label": "Order service",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "topic",
+      "label": "SNS topic",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "q-email",
+      "label": "SQS email",
+      "kind": "queue",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "q-stock",
+      "label": "SQS kho",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "dlq",
+      "label": "DLQ kho",
+      "kind": "queue",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "worker",
+      "label": "Worker kho (3 pod)",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "order-topic",
+      "from": "order",
+      "to": "topic",
+      "label": "publish OrderPlaced"
+    },
+    {
+      "id": "topic-email",
+      "from": "topic",
+      "to": "q-email",
+      "label": "bản sao 1"
+    },
+    {
+      "id": "topic-stock",
+      "from": "topic",
+      "to": "q-stock",
+      "label": "bản sao 2"
+    },
+    {
+      "id": "stock-worker",
+      "from": "q-stock",
+      "to": "worker",
+      "label": "nhận, xử lý, xoá"
+    },
+    {
+      "id": "stock-dlq",
+      "from": "q-stock",
+      "to": "dlq",
+      "label": "nhận quá 5 lần"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Order service publish sự kiện OrderPlaced một lần rồi trả lời người dùng ngay, không chờ ai xử lý.",
+      "show": [
+        "order",
+        "topic",
+        "order-topic"
+      ],
+      "highlight": [
+        "order-topic"
+      ]
+    },
+    {
+      "caption": "Pub/sub: mỗi queue subscribe vào topic nhận một bản riêng. Service email chậm hay lỗi không ảnh hưởng service kho.",
+      "show": [
+        "q-email",
+        "q-stock",
+        "topic-email",
+        "topic-stock"
+      ],
+      "highlight": [
+        "topic-email",
+        "topic-stock"
+      ]
+    },
+    {
+      "caption": "Queue: ba pod worker cùng đọc SQS kho, mỗi message chỉ tới một pod. Message đang xử lý bị ẩn trong visibility timeout; xử lý xong mới xoá (ack).",
+      "show": [
+        "worker",
+        "stock-worker"
+      ],
+      "highlight": [
+        "stock-worker"
+      ]
+    },
+    {
+      "caption": "Pod chết trước khi xoá thì message hiện lại và pod khác xử lý lần nữa: at-least-once, nên worker phải idempotent.",
+      "show": [],
+      "highlight": [
+        "q-stock",
+        "worker"
+      ]
+    },
+    {
+      "caption": "Message bị nhận quá maxReceiveCount lần (ở đây 5) mà chưa được xoá thì chính SQS chuyển nó sang DLQ theo redrive policy, để không chặn các message khác. DLQ có cảnh báo và có cách đẩy lại sau khi sửa lỗi.",
+      "show": [
+        "dlq",
+        "stock-dlq"
+      ],
+      "highlight": [
+        "stock-dlq"
+      ]
+    }
+  ]
+}

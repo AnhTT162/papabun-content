@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "ack-before-process",
+      "kind": "output",
+      "prompt": "Worker đọc SQS như dưới đây. Pod bị OOMKilled ngay sau dòng xoá message. Chuyện gì xảy ra với đơn hàng đó?",
+      "code": "for (Message m : sqs.receiveMessage(request).messages()) {\n    sqs.deleteMessage(b -> b.queueUrl(url).receiptHandle(m.receiptHandle()));\n    // <-- pod bị kill ở đây\n    stockService.reserve(parse(m.body()));\n}",
+      "options": [
+        "Message hiện lại sau visibility timeout và pod khác xử lý",
+        "Message bị mất: đã xoá khỏi queue mà chưa giữ hàng",
+        "Message được SQS chuyển vào DLQ vì xử lý thất bại",
+        "Message vẫn còn vì lệnh xoá chỉ có hiệu lực khi hết visibility timeout"
+      ],
+      "answer": 1,
+      "explanation": "Xoá trước khi xử lý là at-most-once: một khi `DeleteMessage` thành công, SQS không còn message để giao lại, cũng không có gì để chuyển vào DLQ. Đơn hàng không bao giờ được giữ hàng. Đảo thứ tự (xử lý xong mới xoá) thành at-least-once, đổi lại phải chịu được việc xử lý lại khi pod chết sau bước giữ hàng."
+    },
+    {
+      "id": "visibility-shorter",
+      "kind": "single",
+      "prompt": "Queue có visibility timeout 30 giây. Mỗi message cần gọi API in hoá đơn mất 20–90 giây. Hệ thống có 4 pod worker. Hiện tượng nào dễ xảy ra nhất?",
+      "options": [
+        "Message xử lý quá 30 giây bị SQS huỷ và chuyển thẳng vào DLQ",
+        "Một hoá đơn bị in hai lần do pod khác nhận lại message giữa chừng",
+        "Worker nhận lỗi khi xoá message vì receipt handle đã hết hạn sử dụng",
+        "SQS tự gia hạn timeout vì thấy consumer vẫn còn đang kết nối"
+      ],
+      "answer": 1,
+      "explanation": "Hết 30 giây mà message chưa bị xoá thì SQS cho nó hiện lại, và một pod khác nhận rồi xử lý song song với pod đầu: hoá đơn in hai lần. SQS không tự gia hạn và không chuyển vào DLQ chỉ vì chậm; DLQ dựa trên số lần nhận. Lệnh xoá với receipt handle cũ vẫn có thể thành công, nên lỗi không lộ ra. Sửa: đặt visibility timeout lớn hơn thời gian tệ nhất (hoặc gia hạn bằng `ChangeMessageVisibility`) và gửi idempotency key cho API in. Mỗi lần hiện lại còn làm `ApproximateReceiveCount` tăng, nên message chậm mà vẫn thành công cũng có thể bị đẩy vào DLQ."
+    },
+    {
+      "id": "fan-out-choice",
+      "kind": "single",
+      "prompt": "Khi có đơn hàng mới, ba service (email, kho, phân tích) đều cần biết. Đội đề xuất cho cả ba cùng đọc một SQS queue. Vấn đề là gì?",
+      "options": [
+        "Không vấn đề gì, SQS giao mỗi message cho mọi consumer đang đọc queue",
+        "Mỗi message chỉ tới một trong ba service, hai service còn lại bỏ lỡ nó",
+        "SQS chỉ cho phép một consumer đọc một queue tại một thời điểm",
+        "Ba service phải dùng chung một DLQ nên lỗi của một bên chặn các bên khác"
+      ],
+      "answer": 1,
+      "explanation": "Một queue là competing consumers: mỗi message chỉ tới một consumer, nên mỗi đơn hàng chỉ được một trong ba service thấy. Muốn mỗi service nhận đủ thì dùng pub/sub: một SNS topic, mỗi service một SQS queue subscribe vào (mỗi queue có DLQ riêng). SQS cho nhiều consumer cùng đọc, đó chính là cách tăng tốc trong một service."
+    },
+    {
+      "id": "fifo-group",
+      "kind": "single",
+      "prompt": "Dùng SQS FIFO với `MessageGroupId` cố định là `\"orders\"` cho mọi message để giữ thứ tự. Thêm từ 2 lên 10 consumer nhưng tốc độ xử lý không tăng. Vì sao?",
+      "options": [
+        "FIFO queue chỉ cho phép đúng một consumer kết nối vào queue",
+        "Trong một message group, message được giao tuần tự từng cái một",
+        "Consumer mới phải chờ visibility timeout trước khi được nhận message",
+        "Thứ tự FIFO chỉ đảm bảo khi throughput thấp nên SQS tự giới hạn"
+      ],
+      "answer": 1,
+      "explanation": "FIFO giữ thứ tự trong mỗi message group bằng cách không giao message tiếp theo của group khi message trước còn đang được xử lý. Một group duy nhất cho mọi thứ nghĩa là cả hệ thống xử lý tuần tự, thêm consumer vô ích. Dùng `order_id` làm group: thứ tự trong từng đơn, song song giữa các đơn."
+    },
+    {
+      "id": "spring-kafka-default-skip",
+      "kind": "single",
+      "prompt": "Service dùng `@KafkaListener` với cấu hình Spring Kafka mặc định, không khai báo error handler. Một message làm listener ném `IllegalStateException` mỗi lần xử lý. Chuyện gì xảy ra?",
+      "options": [
+        "Message được giao lại mãi, partition đó bị kẹt cho tới khi sửa code",
+        "Thử 10 lần liên tiếp, rồi log lỗi, commit offset và bỏ qua message",
+        "Message tự được gửi sang topic `<tên-topic>.DLT` sau 3 lần thử",
+        "Consumer dừng hẳn và rời consumer group để tránh mất dữ liệu"
+      ],
+      "answer": 1,
+      "explanation": "`DefaultErrorHandler` mặc định dùng backoff 0ms với 9 lần thử lại (tổng 10 lần), sau đó recoverer mặc định chỉ log và commit offset, nên message bị bỏ qua mà không vào đâu cả. Topic DLT chỉ có khi cấu hình `DeadLetterPublishingRecoverer`. Hành vi \"giao lại mãi\" là của Spring AMQP với classic queue. Luôn cấu hình recoverer và backoff, và kiểm thử đường đi của message lỗi."
+    }
+  ]
+}

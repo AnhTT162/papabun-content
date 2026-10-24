@@ -258,8 +258,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `caching-basics` | ✚ Cache là gì & cache ở đâu | foundation | Hit ratio, TTL, eviction (LRU, LFU), các tầng cache: browser, CDN, gateway, app, DB | A L D | ⬜ |
-| 2 | `messaging-fundamentals` | Messaging cơ bản | foundation | Đồng bộ và bất đồng bộ, queue và pub/sub, at-most/at-least/exactly-once, DLQ; SQS/SNS | A L D | ⬜ |
+| 1 | `caching-basics` | ✚ Cache là gì & cache ở đâu | foundation | Hit ratio, TTL, eviction (LRU, LFU), các tầng cache: browser, CDN, gateway, app, DB | A L D | ✅ |
+| 2 | `messaging-fundamentals` | Messaging cơ bản | foundation | Đồng bộ và bất đồng bộ, queue và pub/sub, at-most/at-least/exactly-once, DLQ; SQS/SNS | A L D | ✅ |
 | 3 | `cache-patterns` | Cache patterns | mid | Cache-aside, read/write-through, write-behind, invalidation, consistency | A L D | ⬜ |
 | 4 | `local-cache` | Local & multi-level cache | mid | Caffeine, near cache, invalidation giữa các node | L Sc | ⬜ |
 | 5 | `redis-internals` | Redis bên trong | mid | Kiểu dữ liệu, single thread và I/O thread, RDB/AOF, eviction, bộ nhớ | L D T | ⬜ |

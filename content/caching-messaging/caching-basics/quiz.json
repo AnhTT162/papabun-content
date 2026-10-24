@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hit-ratio-latency",
+      "kind": "single",
+      "prompt": "Redis trả lời trong 1ms, database trong 40ms. Hit ratio tăng từ 80% lên 95%. Latency trung bình thay đổi thế nào?",
+      "options": [
+        "Từ khoảng 8,8ms xuống khoảng 2,9ms",
+        "Tăng nhẹ, từ khoảng 0,8ms lên khoảng 0,95ms",
+        "Giảm đúng 15%, theo mức tăng của hit ratio",
+        "Gần như không đổi vì Redis đã nhanh sẵn"
+      ],
+      "answer": 0,
+      "explanation": "80%: 0,8 × 1 + 0,2 × 40 = 8,8ms. 95%: 0,95 × 1 + 0,05 × 40 = 2,95ms. Phần miss chiếm gần hết latency, nên giảm miss từ 20% xuống 5% làm latency giảm khoảng 3 lần và tải xuống database giảm 4 lần, chứ không chỉ 15%. Tính ra 0,8ms và 0,95ms là quên mất phần miss."
+    },
+    {
+      "id": "cdn-private-leak",
+      "kind": "output",
+      "prompt": "API sau nằm sau CDN, CDN được cấu hình cache mọi response có `max-age`. Người dùng A gọi trước, người dùng B gọi 10 giây sau. B nhận được gì?",
+      "code": "GET /api/me/profile\nCookie: session=...\n\nHTTP/1.1 200 OK\nCache-Control: max-age=60\nContent-Type: application/json\n\n{\"name\": \"Nguyễn Văn A\", \"phone\": \"09xx...\"}",
+      "options": [
+        "Hồ sơ của B, vì cookie khác nhau thì CDN tự tách cache",
+        "Hồ sơ của A, vì CDN lưu response theo URL và trả lại cho B",
+        "Lỗi 401, vì CDN không chuyển cookie của B về server",
+        "Hồ sơ của B, vì `/api` luôn được CDN bỏ qua cache"
+      ],
+      "answer": 1,
+      "explanation": "Không có `private` thì `max-age` cho phép cả cache dùng chung lưu response. Cache key của CDN thường chỉ gồm URL (host, đường dẫn, có thể cả query), không gồm cookie, nên B nhận đúng response của A. Request này có cookie chứ không có `Authorization`, nên quy tắc bảo vệ của RFC 9111 dành cho `Authorization` cũng không áp dụng. Sửa: `Cache-Control: private, max-age=60` hoặc `no-store` cho mọi API trả dữ liệu cá nhân."
+    },
+    {
+      "id": "no-cache-meaning",
+      "kind": "single",
+      "prompt": "Trang báo giá cần luôn hiển thị giá mới nhất nhưng muốn đỡ băng thông khi giá chưa đổi. Header nào phù hợp?",
+      "options": [
+        "`Cache-Control: no-store`",
+        "`Cache-Control: no-cache` kèm `ETag`",
+        "`Cache-Control: max-age=3600`",
+        "`Cache-Control: private, max-age=60`"
+      ],
+      "answer": 1,
+      "explanation": "`no-cache` cho phép lưu nhưng bắt buộc hỏi lại server mỗi lần dùng. Kèm `ETag`, trình duyệt gửi `If-None-Match`; giá chưa đổi thì server trả `304` không có body. `no-store` không lưu gì nên lần nào cũng tải lại cả trang. `max-age=3600` có thể hiển thị giá cũ tới một giờ; `private` chỉ cấm cache dùng chung, trình duyệt vẫn dùng lại bản đã lưu trong 60 giây mà không hỏi server."
+    },
+    {
+      "id": "eviction-scan",
+      "kind": "single",
+      "prompt": "Local cache LRU giữ 10.000 sản phẩm nóng. Mỗi đêm một job đọc lần lượt 2 triệu sản phẩm qua cùng service. Sáng hôm sau API chậm hẳn trong khoảng 15 phút. Vì sao, và cách sửa nào hợp lý?",
+      "options": [
+        "Job làm Redis đầy bộ nhớ; tăng `maxmemory` của Redis lên gấp đôi",
+        "TTL đã hết trong đêm; tăng TTL của local cache lên 24 giờ",
+        "Đợt quét đẩy mục nóng khỏi LRU; cho job bỏ qua cache hoặc dùng W-TinyLFU",
+        "JIT bị deopt sau job chạy đêm; khởi động lại pod vào mỗi sáng"
+      ],
+      "answer": 2,
+      "explanation": "Với LRU thuần, mỗi sản phẩm job đọc trở thành mục \"mới dùng nhất\", nên 2 triệu lần đọc một lần đẩy sạch 10.000 mục nóng; sáng ra cache gần như rỗng và mọi request phải đi xuống nguồn cho tới khi nóng lại. Cho job đọc thẳng nguồn, hoặc dùng chính sách có tính tần suất như W-TinyLFU của Caffeine (mục chỉ được đọc một lần không thắng được mục nóng). TTL dài hơn không giúp vì các mục bị eviction, không phải hết hạn."
+    }
+  ]
+}

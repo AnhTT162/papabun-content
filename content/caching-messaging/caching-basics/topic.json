@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "caching-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Cache là gì & cache ở đâu",
+  "summary": "Cache đánh đổi độ mới của dữ liệu lấy tốc độ; hit ratio và vì sao từ 90% lên 99% thay đổi cả hệ thống; TTL; eviction LRU, LFU và W-TinyLFU; các tầng cache từ trình duyệt, CDN, gateway, ứng dụng, Redis tới buffer pool của database; HTTP caching; thiết kế cache key; và khi nào không nên cache.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": ["http-request-lifecycle"],
+  "terms": ["cache", "cache-hit-ratio", "ttl", "cache-eviction", "lru", "lfu", "cache-key", "http-caching", "cdn", "local-cache", "distributed-cache", "negative-caching", "etag", "buffer-pool", "self-invocation"],
+  "references": [
+    { "title": "MDN: HTTP caching", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching" },
+    { "title": "RFC 9111: HTTP Caching", "url": "https://www.rfc-editor.org/rfc/rfc9111" },
+    { "title": "Caffeine Wiki: Efficiency", "url": "https://github.com/ben-manes/caffeine/wiki/Efficiency" },
+    { "title": "RFC 5861: HTTP Cache-Control Extensions for Stale Content", "url": "https://www.rfc-editor.org/rfc/rfc5861" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hit ratio 95% là tốt hay xấu?\" Tuỳ, và phải nói được vì sao. Con số cần nhìn là **miss ratio**, vì đó là phần tải đi xuống database: từ 95% lên 99% thì tải xuống database giảm 5 lần (5% còn 1%), dù hit ratio chỉ tăng 4 điểm. Ngược lại, khi cache khởi động lại hoặc bị xoá, miss ratio nhảy lên 100% và database phải gánh gấp 20 lần bình thường trong lúc cache nóng lại; nếu database không chịu nổi mức đó thì cache không còn là tối ưu mà đã thành thành phần bắt buộc, phải được giám sát và có HA như database (bài Stampede, penetration, avalanche, hot key)." },
+    { "type": "callout", "style": "warning", "markdown": "Cache key thiếu một chiều của dữ liệu là lỗi rò rỉ dữ liệu, không chỉ là lỗi hiển thị. Ví dụ hay gặp: cache `GET /me/profile` ở CDN mà không có `Cache-Control: private` (người sau thấy hồ sơ của người trước); key `product:42` cho dữ liệu khác nhau theo ngôn ngữ hay theo tenant; `@Cacheable` trên method mà tham số không đủ phân biệt người gọi. Key phải chứa mọi thứ làm kết quả khác đi: tenant, user (nếu cá nhân hoá), ngôn ngữ, phiên bản schema." }
+  ]
+}

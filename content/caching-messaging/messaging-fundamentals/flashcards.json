@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-async", "front": "Khi nào nên gửi message bất đồng bộ thay vì gọi trực tiếp?", "back": "Khi không cần kết quả ngay, cần hấp thụ đợt tăng tải, hoặc một sự kiện có nhiều bên quan tâm." },
+    { "id": "queue-vs-pubsub", "front": "Queue và pub/sub khác nhau thế nào?", "back": "Queue: mỗi message chỉ một consumer xử lý. Pub/sub: mỗi subscriber nhận một bản riêng." },
+    { "id": "at-most-at-least", "front": "At-most-once và at-least-once khác nhau ở thời điểm ack nào?", "back": "At-most-once ack trước khi xử lý (có thể mất); at-least-once ack sau khi xử lý (có thể trùng)." },
+    { "id": "exactly-once", "front": "\"Exactly-once\" đạt được thật sự bằng cách nào khi có database hay API bên ngoài?", "back": "Giao at-least-once cộng consumer idempotent: lưu id message đã xử lý trong cùng transaction, hoặc dùng idempotency key." },
+    { "id": "visibility-timeout", "front": "Visibility timeout của SQS là gì, bẫy hay gặp?", "back": "Thời gian message bị ẩn khi đang xử lý (mặc định 30 giây). Xử lý lâu hơn thì consumer khác nhận và xử lý song song." },
+    { "id": "dlq", "front": "DLQ dùng để làm gì?", "back": "Giữ message lỗi quá số lần cho phép để chúng không chặn message khác; cần cảnh báo và cách đẩy lại sau khi sửa." },
+    { "id": "transient-permanent", "front": "Vì sao phải phân biệt lỗi tạm thời và lỗi vĩnh viễn khi retry?", "back": "Lỗi vĩnh viễn (dữ liệu sai) retry bao nhiêu cũng hỏng; đưa thẳng vào DLQ. Chỉ retry lỗi tạm thời, có backoff và jitter." },
+    { "id": "ordering", "front": "Cần thứ tự message theo từng đơn hàng mà vẫn xử lý song song thì làm gì?", "back": "Nhóm theo `order_id` (SQS FIFO message group, partition key của Kafka): thứ tự trong mỗi nhóm, song song giữa các nhóm." },
+    { "id": "oldest-age", "front": "Metric nào cho thấy consumer không theo kịp?", "back": "Tuổi của message cũ nhất (SQS `ApproximateAgeOfOldestMessage`, Kafka consumer lag) tăng đều." },
+    { "id": "producer-dual-write", "front": "Ghi database rồi gửi message có vấn đề gì?", "back": "Dual write: một bước thành công, bước kia lỗi thì mất hoặc thừa sự kiện. Dùng transactional outbox." }
+  ]
+}

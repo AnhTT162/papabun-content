@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals"]
     },
     {
       "id": "cpu-bound",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals"]
     },
     {
       "id": "idempotency-key",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals"]
     },
     {
       "id": "orm",
@@ -1349,7 +1349,7 @@
       "meaning": "Một method gọi method khác trong cùng class bằng `this`, nên không đi qua proxy của Spring; các annotation như `@Transactional`, `@Async`, `@Cacheable` trên method được gọi không có tác dụng.",
       "example": "`this.transferInTx()` trong cùng bean: `@Transactional` của `transferInTx` bị bỏ qua.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "caching-basics"]
     },
     {
       "id": "dirty-checking",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals"]
     },
     {
       "id": "datasource",
@@ -1378,10 +1378,10 @@
     {
       "id": "etag",
       "term": "ETag / If-Match",
-      "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại giá trị đó trong `If-Match` khi sửa; server chỉ ghi nếu phiên bản còn khớp, không thì trả `412 Precondition Failed`.",
+      "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại nó trong `If-None-Match` để hỏi có đổi không (không đổi thì server trả `304`), hoặc trong `If-Match` khi sửa để server chỉ ghi nếu phiên bản còn khớp (không thì `412 Precondition Failed`).",
       "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
       "related": ["optimistic-locking", "lost-update"],
-      "topics": ["optimistic-pessimistic-locking"]
+      "topics": ["optimistic-pessimistic-locking", "caching-basics"]
     },
     {
       "id": "skip-locked",
@@ -1573,7 +1573,7 @@
       "meaning": "Vùng RAM database dùng để giữ các page đang làm việc. Sửa dữ liệu là sửa page ở đây; page bị sửa (dirty) được ghi ra đĩa sau.",
       "example": "InnoDB `innodb_buffer_pool_size`; PostgreSQL `shared_buffers`.",
       "related": ["page", "checkpoint"],
-      "topics": ["storage-engine"]
+      "topics": ["storage-engine", "caching-basics"]
     },
     {
       "id": "fsync",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals"]
     },
     {
       "id": "replication-slot",
@@ -2350,6 +2350,182 @@
       "example": "MySQL `utf8mb4_0900_ai_ci` coi `Nam`, `nam` và `Năm` là bằng nhau khi so sánh; PostgreSQL mặc định phân biệt.",
       "related": ["expression-index"],
       "topics": ["postgres-vs-mysql"]
+    },
+    {
+      "id": "cache",
+      "term": "Cache",
+      "meaning": "Bản sao dữ liệu đặt ở chỗ đọc nhanh hơn nguồn gốc (RAM, cùng process, gần người dùng), đánh đổi độ mới lấy tốc độ và giảm tải cho nguồn.",
+      "example": "Thông tin sản phẩm đọc từ Redis trong 1ms thay vì query database 40ms.",
+      "related": ["cache-hit-ratio", "ttl"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "cache-hit-ratio",
+      "term": "Hit ratio",
+      "meaning": "Tỉ lệ lần đọc tìm thấy dữ liệu trong cache. Phần còn lại (miss ratio) là tải đi xuống nguồn.",
+      "example": "Hit ratio 99% nghĩa là cứ 100 lần đọc chỉ 1 lần xuống database.",
+      "related": ["cache", "cache-eviction"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "ttl",
+      "term": "TTL",
+      "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
+      "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
+      "related": ["cache", "cache-eviction"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "cache-eviction",
+      "term": "Eviction",
+      "meaning": "Việc cache tự bỏ bớt mục khi đầy, theo một chính sách như LRU hay LFU. Khác với hết hạn theo TTL.",
+      "example": "Caffeine `maximumSize(10_000)`: thêm mục thứ 10.001 thì một mục cũ bị bỏ.",
+      "related": ["lru", "lfu", "ttl"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "lru",
+      "term": "LRU",
+      "meaning": "Least Recently Used: chính sách eviction bỏ mục lâu nhất chưa được dùng.",
+      "example": "Đọc lần lượt 2 triệu sản phẩm một lần đẩy hết các mục nóng ra khỏi cache LRU.",
+      "related": ["lfu", "cache-eviction"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "lfu",
+      "term": "LFU",
+      "meaning": "Least Frequently Used: chính sách eviction bỏ mục ít được dùng nhất, nên mục nóng không bị một đợt quét đẩy ra.",
+      "example": "Redis `maxmemory-policy allkeys-lfu`.",
+      "related": ["lru", "cache-eviction"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "cache-key",
+      "term": "Cache key",
+      "meaning": "Khoá dùng để tìm một mục trong cache. Phải chứa mọi thứ làm kết quả khác đi (tenant, ngôn ngữ, người dùng nếu cá nhân hoá), nếu không sẽ trả nhầm dữ liệu.",
+      "example": "`v3:product:{tenant}:{id}:{locale}`",
+      "related": ["cache", "http-caching"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "http-caching",
+      "term": "HTTP caching",
+      "meaning": "Cơ chế cache của HTTP (RFC 9111, cộng các mở rộng như `stale-while-revalidate` ở RFC 5861) điều khiển bằng header như `Cache-Control`, `ETag`, `Vary`, áp cho trình duyệt, proxy và CDN.",
+      "example": "`Cache-Control: private, max-age=60` cho dữ liệu riêng của người dùng.",
+      "related": ["cdn", "etag"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "cdn",
+      "term": "CDN",
+      "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
+      "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
+      "related": ["http-caching", "cache"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "local-cache",
+      "term": "Local cache",
+      "meaning": "Cache nằm ngay trong bộ nhớ của process ứng dụng (ví dụ Caffeine trong JVM): nhanh nhất, nhưng mỗi instance một bản riêng và có thể lệch nhau.",
+      "example": "`Caffeine.newBuilder().maximumSize(10_000).expireAfterWrite(Duration.ofMinutes(5)).build()`",
+      "related": ["distributed-cache", "cache"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "distributed-cache",
+      "term": "Distributed cache",
+      "meaning": "Cache chạy thành dịch vụ riêng (Redis, Memcached) mà mọi instance ứng dụng dùng chung; tốn một vòng mạng nhưng chỉ có một bản dữ liệu.",
+      "example": "20 pod cùng đọc `product:42` từ một cụm Redis.",
+      "related": ["local-cache", "cache"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "negative-caching",
+      "term": "Negative caching",
+      "meaning": "Cache cả kết quả \"không tồn tại\" (thường với TTL ngắn), để những lần tra id không có thật không đi xuống database mỗi lần.",
+      "example": "Lưu `product:999999 = NONE` trong 60 giây.",
+      "related": ["cache", "ttl"],
+      "topics": ["caching-basics"]
+    },
+    {
+      "id": "message-queue",
+      "term": "Message queue",
+      "meaning": "Hàng đợi trong broker giữ message tới khi một consumer nhận và xác nhận xử lý xong; mỗi message chỉ được một consumer xử lý.",
+      "example": "Amazon SQS, queue của RabbitMQ.",
+      "related": ["pub-sub", "competing-consumers"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "pub-sub",
+      "term": "Pub/sub",
+      "meaning": "Publish/subscribe: bên gửi publish lên một topic, mỗi subscriber nhận một bản riêng của message.",
+      "example": "SNS topic `order-placed` đẩy cùng một sự kiện sang queue của email, kho và phân tích.",
+      "related": ["message-queue", "fan-out"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "competing-consumers",
+      "term": "Competing consumers",
+      "meaning": "Nhiều consumer cùng đọc một queue, mỗi message chỉ tới một trong số đó; thêm consumer để tăng tốc độ xử lý.",
+      "example": "3 pod worker cùng đọc `SQS kho`, mỗi pod xử lý khoảng một phần ba số message.",
+      "related": ["message-queue"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "message-ack",
+      "term": "Ack",
+      "meaning": "Acknowledge: consumer báo broker đã xử lý xong message để broker xoá nó; chưa ack thì message có thể được giao lại.",
+      "example": "SQS `DeleteMessage`; RabbitMQ `basicAck`; Kafka commit offset.",
+      "related": ["delivery-semantics", "visibility-timeout"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "visibility-timeout",
+      "term": "Visibility timeout",
+      "meaning": "Khoảng thời gian SQS ẩn một message khỏi các consumer khác sau khi nó được nhận; hết thời gian mà chưa bị xoá thì message hiện lại.",
+      "example": "Mặc định 30 giây, tối đa 12 giờ; gia hạn bằng `ChangeMessageVisibility`.",
+      "related": ["message-ack", "message-queue"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "delivery-semantics",
+      "term": "Delivery semantics",
+      "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
+      "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
+      "related": ["message-ack", "idempotent-consumer"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "idempotent-consumer",
+      "term": "Idempotent consumer",
+      "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
+      "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
+      "related": ["delivery-semantics", "idempotency-key"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "dead-letter-queue",
+      "term": "DLQ",
+      "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
+      "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
+      "related": ["poison-message", "retry-backoff"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "poison-message",
+      "term": "Poison message",
+      "meaning": "Message không bao giờ xử lý thành công được (dữ liệu sai, phiên bản lạ), làm consumer lỗi lặp đi lặp lại nếu không được tách ra.",
+      "example": "Một JSON thiếu trường bắt buộc làm consumer ném exception mỗi lần nhận.",
+      "related": ["dead-letter-queue"],
+      "topics": ["messaging-fundamentals"]
+    },
+    {
+      "id": "fan-out",
+      "term": "Fan-out",
+      "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
+      "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
+      "related": ["pub-sub"],
+      "topics": ["messaging-fundamentals"]
     }
   ]
 }

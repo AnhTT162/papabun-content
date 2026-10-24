@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "messaging-fundamentals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "caching-messaging",
+  "title": "Messaging cơ bản",
+  "summary": "Gọi đồng bộ và gửi message bất đồng bộ, queue và pub/sub, competing consumers, ack và visibility timeout, at-most-once, at-least-once và \"exactly-once\" thật ra là gì, consumer idempotent, retry, DLQ và poison message, thứ tự message, và SQS/SNS làm ví dụ cụ thể.",
+  "level": "foundation",
+  "order": 2,
+  "minutes": 13,
+  "prerequisites": ["http-request-lifecycle"],
+  "terms": ["message-queue", "pub-sub", "competing-consumers", "message-ack", "visibility-timeout", "delivery-semantics", "idempotent-consumer", "dead-letter-queue", "poison-message", "fan-out", "retry-backoff", "backpressure", "dual-write", "outbox", "idempotency-key"],
+  "references": [
+    { "title": "Amazon SQS Developer Guide: Visibility timeout", "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html" },
+    { "title": "Amazon SQS Developer Guide: Dead-letter queues", "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html" },
+    { "title": "Enterprise Integration Patterns: Messaging", "url": "https://www.enterpriseintegrationpatterns.com/patterns/messaging/" },
+    { "title": "Spring for Apache Kafka: Handling Exceptions", "url": "https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html" },
+    { "title": "RabbitMQ: Consumer Acknowledgements and Publisher Confirms", "url": "https://www.rabbitmq.com/docs/confirms" },
+    { "title": "Amazon SQS Developer Guide: FIFO queues", "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-fifo-queues.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kafka có exactly-once rồi, sao consumer vẫn phải idempotent?\" Exactly-once của Kafka chỉ đúng **bên trong Kafka**: đọc từ topic, xử lý, ghi ra topic khác và commit offset trong cùng một transaction. Khi consumer ghi vào database, gọi API thanh toán hay gửi email, Kafka không thể rollback những việc đó: consumer có thể làm xong việc rồi chết trước khi commit offset, và message được giao lại. Vì vậy hiệu ứng ra bên ngoài vẫn là at-least-once, và cách duy nhất để \"đúng một lần\" là consumer idempotent: lưu id message đã xử lý trong cùng transaction với thay đổi dữ liệu, hoặc gửi idempotency key cho hệ thống bên ngoài. Consumer đọc kết quả của Kafka transaction còn phải đặt `isolation.level=read_committed`, vì mặc định là `read_uncommitted`." }
+  ]
+}
