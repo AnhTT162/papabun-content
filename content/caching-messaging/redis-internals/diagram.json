@@ -17,7 +17,7 @@
     {"id": "mem-fork", "from": "mem", "to": "fork", "label": "fork, copy-on-write"}
   ],
   "steps": [
-    {"caption": "Nhiều client gửi lệnh qua mạng. Từ Redis 6, I/O thread có thể lo phần đọc request và ghi response.", "show": ["clients", "io", "clients-io"], "highlight": ["clients-io"]},
+    {"caption": "Nhiều client gửi lệnh qua mạng. Từ Redis 6, nếu bật io-threads (mặc định tắt), I/O thread lo phần đọc ghi mạng.", "show": ["clients", "io", "clients-io"], "highlight": ["clients-io"]},
     {"caption": "Mọi lệnh được đưa vào một luồng chính duy nhất, xếp hàng và thực thi từng lệnh một.", "show": ["main", "io-main"], "highlight": ["io-main"]},
     {"caption": "Luồng chính đọc ghi cấu trúc dữ liệu trong RAM. Mỗi lệnh nguyên tử, không cần khoá; nhưng một lệnh O(N) trên key lớn bắt cả hàng đợi chờ.", "show": ["mem", "main-mem"], "highlight": ["main-mem"]},
     {"caption": "Lệnh ghi được nối vào AOF; với appendfsync everysec, luồng nền fsync mỗi giây, nên khi sập có thể mất khoảng 1–2 giây.", "show": ["aof", "main-aof"], "highlight": ["main-aof"]},
