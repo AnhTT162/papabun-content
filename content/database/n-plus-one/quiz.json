@@ -21,7 +21,7 @@
         "50"
       ],
       "answer": 1,
-      "explanation": "JPQL được dịch đúng như viết, không tự thêm join. EAGER chỉ có nghĩa là Hibernate phải tải customer **ngay** sau khi tải đơn, nên nó chạy thêm một query cho mỗi khách: vẫn là N+1, chỉ xảy ra sớm hơn. `em.find()` mới dùng join cho quan hệ EAGER. Đáp án thứ ba là hành vi khi bật batch fetching."
+      "explanation": "JPQL được dịch đúng như viết, không tự thêm join. EAGER chỉ có nghĩa là Hibernate phải tải customer **ngay** sau khi tải đơn, nên nó chạy thêm một query cho mỗi khách: vẫn là N+1, chỉ xảy ra sớm hơn. `em.find()` mới dùng join cho quan hệ EAGER. Kết quả 2 query (một `IN (...)` cho mọi khách) là hành vi khi bật batch fetching."
     },
     {
       "id": "fetch-collection-paging",

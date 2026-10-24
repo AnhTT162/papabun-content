@@ -25,7 +25,7 @@
         "`customer_id` của các đơn thành `NULL`"
       ],
       "answer": 1,
-      "explanation": "`RESTRICT` chặn xoá dòng cha khi còn dòng con tham chiếu. Lựa chọn thứ ba là `CASCADE`, thứ tư là `SET NULL`. Lựa chọn đầu tiên là thứ foreign key sinh ra để ngăn: dòng con trỏ tới dòng cha không còn tồn tại."
+      "explanation": "`RESTRICT` chặn xoá dòng cha khi còn dòng con tham chiếu. \"Xoá cả khách và đơn\" là `CASCADE`, \"`customer_id` thành `NULL`\" là `SET NULL`. \"Đơn giữ nguyên `customer_id` cũ\" là thứ foreign key sinh ra để ngăn: dòng con trỏ tới dòng cha không còn tồn tại."
     },
     {
       "id": "mysql-check-legacy",

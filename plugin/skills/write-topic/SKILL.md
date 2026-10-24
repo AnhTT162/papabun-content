@@ -60,7 +60,7 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
 - **glossary.json**: `term` là tên ngắn (ví dụ `DNS`, `Keep-alive`); phần viết đầy đủ hoặc giải thích đưa vào `meaning`.
 - **callout** (inline trong topic.json): `interview` cho câu hỏi nối tiếp hay gặp, `warning` cho bẫy, `tip` cho mẹo.
 - **flashcards.json**: 5–10 thẻ, mặt trước là câu hỏi ngắn, mặt sau trả lời trong 1–2 câu. Mỗi thẻ chỉ một ý.
-- **quiz.json**: 3–5 câu; có ít nhất 1 câu `output` nếu topic có code. Đáp án sai phải là hiểu lầm phổ biến, không phải đáp án vô lý. Giải thích vì sao đúng.
+- **quiz.json**: 3–5 câu; có ít nhất 1 câu `output` nếu topic có code. Đáp án sai phải là hiểu lầm phổ biến, không phải đáp án vô lý. Giải thích vì sao đúng. App xáo thứ tự lựa chọn mỗi lần hiển thị (cả quiz lẫn chẩn đoán của lab), nên lời giải gọi lựa chọn theo nội dung, không theo vị trí ("đáp án thứ hai", "lựa chọn cuối"; `scripts/validate` báo lỗi), và độ dài các lựa chọn nên tương đương để đáp án đúng không lộ vì dài nhất.
 
 ### Văn phong
 - Tiếng Việt, câu ngắn, giọng thẳng. Thuật ngữ giữ tiếng Anh.

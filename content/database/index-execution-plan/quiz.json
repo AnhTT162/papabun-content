@@ -12,7 +12,7 @@
         "`WHERE customer_id = 42 ORDER BY created_at DESC LIMIT 10`"
       ],
       "answer": 2,
-      "explanation": "Index được sắp theo `customer_id` trước, rồi mới tới `created_at` bên trong mỗi khách. Điều kiện chỉ trên `created_at` không có điểm bắt đầu trong cây, nên phải quét toàn bộ index hoặc cả bảng. Lựa chọn cuối lại rất hợp: tìm thẳng tới khách 42 rồi đọc ngược 10 dòng mới nhất, không cần sort."
+      "explanation": "Index được sắp theo `customer_id` trước, rồi mới tới `created_at` bên trong mỗi khách. Điều kiện chỉ trên `created_at` không có điểm bắt đầu trong cây, nên phải quét toàn bộ index hoặc cả bảng. Query `customer_id = 42 ORDER BY created_at DESC LIMIT 10` lại rất hợp: tìm thẳng tới khách 42 rồi đọc ngược 10 dòng mới nhất, không cần sort."
     },
     {
       "id": "index-only-backward",

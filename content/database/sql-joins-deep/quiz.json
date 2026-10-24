@@ -53,7 +53,7 @@
         "Chỉ khi chạy `ANALYZE` trước"
       ],
       "answer": 1,
-      "explanation": "Trước PostgreSQL 12, CTE là rào chắn tối ưu nên câu trả lời đầu tiên từng đúng, và nhiều bài viết cũ vẫn khuyên tránh CTE vì vậy. Từ 12, CTE kiểu này được inline. `AS MATERIALIZED` làm điều ngược lại: ép tính riêng, hữu ích khi muốn tính một lần cho nhiều chỗ dùng hoặc muốn chặn planner chọn plan tệ."
+      "explanation": "Trước PostgreSQL 12, CTE là rào chắn tối ưu nên câu \"CTE luôn được tính riêng\" từng đúng, và nhiều bài viết cũ vẫn khuyên tránh CTE vì vậy. Từ 12, CTE kiểu này được inline. `AS MATERIALIZED` làm điều ngược lại: ép tính riêng, hữu ích khi muốn tính một lần cho nhiều chỗ dùng hoặc muốn chặn planner chọn plan tệ."
     }
   ]
 }

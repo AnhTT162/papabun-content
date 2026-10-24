@@ -26,7 +26,7 @@
         "`WHERE extract(month FROM created_at) = 10`"
       ],
       "answer": 1,
-      "explanation": "Pruning cần so sánh trực tiếp trên partition key, giống điều kiện sargable cho index. Bọc cột trong hàm thì planner không suy ra được khoảng giá trị, nên phải quét mọi partition. Lựa chọn cuối còn sai về nghĩa: nó lấy tháng 10 của mọi năm."
+      "explanation": "Pruning cần so sánh trực tiếp trên partition key, giống điều kiện sargable cho index. Bọc cột trong hàm thì planner không suy ra được khoảng giá trị, nên phải quét mọi partition. Điều kiện `extract(month FROM created_at) = 10` còn sai về nghĩa: nó lấy tháng 10 của mọi năm."
     },
     {
       "id": "local-index-lookup-cost",

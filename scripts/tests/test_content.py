@@ -122,6 +122,12 @@ class RepoValidationTests(unittest.TestCase):
             "id": "q", "kind": "single", "prompt": "p", "options": ["a", "b"], "answer": 2, "explanation": "e"}]})
         self.assertTrue(any("answer vượt quá" in e for e in self.fx.errors()))
 
+    def test_explanation_must_not_refer_to_option_position(self):
+        self.fx.write("content/core-java/demo/quiz.json", {"questions": [{
+            "id": "q1", "kind": "single", "prompt": "P", "options": ["a", "b"], "answer": 0,
+            "explanation": "Đáp án thứ hai sai vì b."}]})
+        self.assertIn("nhắc vị trí lựa chọn", "\n".join(self.fx.errors()))
+
     def test_troubleshoot_graph_checks(self):
         self.fx.topic["blocks"].append({"type": "troubleshoot", "file": "t.json"})
         self.fx.write_topic()

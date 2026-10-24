@@ -13,7 +13,7 @@
         "5: threads=4, queue=1 / 6: threads=4, queue=2 / 7: rejected"
       ],
       "answer": 0,
-      "explanation": "Task 1, 2 tạo 2 core thread. Task 3, 4 vào queue (queue=2, đầy). Task 5, 6: queue đầy, số thread < 4 nên tạo thread thêm chạy ngay chính task đó (threads=3 rồi 4, queue vẫn 2). Task 7: queue đầy và đã đủ 4 thread nên `AbortPolicy` ném `RejectedExecutionException`. Đáp án thứ hai là hành vi khi queue không giới hạn; đáp án cuối là hiểu lầm rằng pool tăng lên max trước rồi mới dùng queue."
+      "explanation": "Task 1, 2 tạo 2 core thread. Task 3, 4 vào queue (queue=2, đầy). Task 5, 6: queue đầy, số thread < 4 nên tạo thread thêm chạy ngay chính task đó (threads=3 rồi 4, queue vẫn 2). Task 7: queue đầy và đã đủ 4 thread nên `AbortPolicy` ném `RejectedExecutionException`. \"threads=2, queue tăng mãi\" là hành vi khi queue không giới hạn; \"threads=4 ngay từ task 5\" là hiểu lầm rằng pool tăng lên max trước rồi mới dùng queue."
     },
     {
       "id": "fixed-pool-max",

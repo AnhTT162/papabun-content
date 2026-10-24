@@ -16,7 +16,7 @@
       "Hai thread tranh CPU quá nhiều nên scheduler không cho thread nào chạy"
     ],
     "answer": 1,
-    "explanation": "`transfer(alice, bob)` khoá `alice` rồi `bob`, còn `transfer(bob, alice)` khoá `bob` rồi `alice`. Khi mỗi thread vừa lấy xong lock đầu, cả bốn [[coffman-conditions|điều kiện Coffman]] đều thoả và vòng chờ khép lại; thread dump chỉ ra đúng vòng đó. Lựa chọn 1 nhầm visibility với deadlock: thread ở BLOCKED, không phải đang quay đọc biến. Lồng `synchronized` hoàn toàn hợp lệ, chỉ nguy hiểm khi thứ tự không thống nhất. CPU 0% loại trừ lựa chọn cuối."
+    "explanation": "`transfer(alice, bob)` khoá `alice` rồi `bob`, còn `transfer(bob, alice)` khoá `bob` rồi `alice`. Khi mỗi thread vừa lấy xong lock đầu, cả bốn [[coffman-conditions|điều kiện Coffman]] đều thoả và vòng chờ khép lại; thread dump chỉ ra đúng vòng đó. Lựa chọn 1 nhầm visibility với deadlock: thread ở BLOCKED, không phải đang quay đọc biến. Lồng `synchronized` hoàn toàn hợp lệ, chỉ nguy hiểm khi thứ tự không thống nhất. CPU 0% loại trừ giả thuyết hai thread tranh CPU."
   },
   "fix": {
     "code": "static void transfer(Account from, Account to, long amount) {\n    // Luôn khoá tài khoản id nhỏ hơn trước, bất kể chiều chuyển\n    Account first = from.id < to.id ? from : to;\n    Account second = from.id < to.id ? to : from;\n    synchronized (first) {\n        synchronized (second) {\n            from.balance -= amount;\n            to.balance += amount;\n        }\n    }\n}",

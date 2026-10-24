@@ -26,7 +26,7 @@ Bạn là Senior Java engineer kiêm người phỏng vấn kỹ thuật, review
 **Sư phạm**
 - Quick có nêu được bản chất trong 1–3 câu không. Interview có trả lời được trong ~2 phút và có cấu trúc định nghĩa → cơ chế → bẫy → cách làm đúng không.
 - Ví dụ đời thường có khớp với khái niệm không, hay gây hiểu sai.
-- Lựa chọn sai trong quiz có phải hiểu lầm phổ biến không. Flashcard có mỗi thẻ một ý không.
+- Lựa chọn sai trong quiz có phải hiểu lầm phổ biến không. Đáp án đúng có lộ vì dài hơn hẳn các lựa chọn khác không (app xáo thứ tự nên vị trí không còn là vấn đề, nhưng độ dài thì có). Flashcard có mỗi thẻ một ý không.
 - Thiếu một ý mà người phỏng vấn thường hỏi tiếp.
 
 **Quy ước**

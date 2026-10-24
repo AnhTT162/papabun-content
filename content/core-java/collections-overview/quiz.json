@@ -27,7 +27,7 @@
         "[An, Bình] rồi [An, Bình, Dũng]"
       ],
       "answer": 0,
-      "explanation": "`Arrays.asList` trả list có kích thước cố định, ghi thẳng xuống mảng gốc: `set` được, `add` thì không. Đáp án thứ ba là hành vi của `List.of`, vốn không sửa được gì."
+      "explanation": "`Arrays.asList` trả list có kích thước cố định, ghi thẳng xuống mảng gốc: `set` được, `add` thì không. \"Ném ngay ở dòng `set`\" là hành vi của `List.of`, vốn không sửa được gì."
     },
     {
       "id": "treeset-comparator",

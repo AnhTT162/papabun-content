@@ -25,6 +25,10 @@ DIAGRAM_MIN_DY = 0.26
 DIAGRAM_MAX_LABEL = 20
 CURRICULUM = "docs/CURRICULUM.md"
 CURRICULUM_TRACK_RE = re.compile(r"^### \d+\. .*\(`([a-z0-9-]+)`\)\s*$")
+# App xáo thứ tự lựa chọn mỗi lần hiển thị, nên lời giải không được nói theo vị trí ("đáp án thứ hai").
+OPTION_POSITION_RE = re.compile(
+    r"(đáp án|lựa chọn|câu trả lời|phương án)\s+(thứ\s+(nhất|hai|ba|tư|năm)|đầu tiên|đầu|cuối cùng|cuối|[A-D]\b)",
+    re.IGNORECASE)
 CURRICULUM_ROW_RE = re.compile(r"^\| \d+ \| `([a-z0-9-]+)` \|.*\| (✅|⬜) \|\s*$")
 SIMULATION_SCHEMAS = {
     "threadTimeline": "simulations/threadTimeline.schema.json",
@@ -221,6 +225,7 @@ class Repo:
             for q in quiz["questions"]:
                 if q["answer"] >= len(q["options"]):
                     self.error(folder / "quiz.json", "%s: answer vượt quá số lựa chọn" % q["id"])
+                self._check_no_option_position(q["explanation"], folder / "quiz.json", q["id"])
             for value in _strings(quiz):
                 self._check_text(value, folder / "quiz.json", term_ids, folder)
 
@@ -281,6 +286,12 @@ class Repo:
         diagnosis = data["diagnosis"]
         if diagnosis["answer"] >= len(diagnosis["options"]):
             self.error(path, "diagnosis.answer vượt quá số lựa chọn")
+        self._check_no_option_position(diagnosis["explanation"], path, "diagnosis")
+
+    def _check_no_option_position(self, text, path, label):
+        match = OPTION_POSITION_RE.search(text)
+        if match:
+            self.error(path, "%s: lời giải nhắc vị trí lựa chọn (\"%s\"), nhưng app xáo thứ tự lựa chọn; hãy gọi theo nội dung" % (label, match.group(0)))
 
     def _check_troubleshoot(self, path, data):
         steps = {s["id"]: s for s in data["steps"]}

@@ -13,7 +13,7 @@
         "true true true true"
       ],
       "answer": 0,
-      "explanation": "`\"Ja\" + \"va\"` là biểu thức hằng nên compiler gộp thành literal `\"Java\"` (true). `constPart` là biến `final` khởi tạo bằng hằng nên cũng được gộp (true). `varPart` không `final` nên phép ghép xảy ra lúc runtime và tạo object mới (false). `intern()` trả về object trong pool (true). Đáp án thứ hai là hiểu lầm rằng mọi phép ghép có biến đều chạy lúc runtime."
+      "explanation": "`\"Ja\" + \"va\"` là biểu thức hằng nên compiler gộp thành literal `\"Java\"` (true). `constPart` là biến `final` khởi tạo bằng hằng nên cũng được gộp (true). `varPart` không `final` nên phép ghép xảy ra lúc runtime và tạo object mới (false). `intern()` trả về object trong pool (true). Đáp án `true false false true` là hiểu lầm rằng mọi phép ghép có biến đều chạy lúc runtime."
     },
     {
       "id": "new-string-objects",
