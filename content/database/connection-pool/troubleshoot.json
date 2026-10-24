@@ -1,0 +1,140 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Autoscale lúc khuyến mãi, pod mới không khởi động được",
+  "symptom": "20:00 bắt đầu flash sale. HPA tăng `order-api` từ 6 lên 18 pod. Từ 20:03, 7 pod mới liên tục `CrashLoopBackOff`; 11 pod còn lại chạy được nhưng p95 tăng từ 150ms lên 1,8 giây vì phải gánh toàn bộ tải.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Xem log khởi động của một pod đang CrashLoopBackOff",
+          "quality": "good",
+          "feedback": "Pod chết lúc khởi động thì log khởi động nói lý do trực tiếp nhất.",
+          "next": "logs"
+        },
+        {
+          "label": "Tăng `maximumPoolSize` của Hikari lên 40 để 11 pod còn sống chịu tải tốt hơn",
+          "quality": "poor",
+          "feedback": "Chưa biết vì sao pod chết đã đổi cấu hình pool. Và nếu nguyên nhân liên quan tới số connection, việc này làm tình hình tệ hơn.",
+          "next": "bigger-pool"
+        },
+        {
+          "label": "Restart database để giải phóng tài nguyên",
+          "quality": "poor",
+          "feedback": "Restart database giữa flash sale làm mọi pod mất connection cùng lúc, ngắt mọi đơn đang xử lý, và không sửa nguyên nhân.",
+          "next": "logs"
+        }
+      ]
+    },
+    {
+      "id": "bigger-pool",
+      "evidence": "20:09 deploy cấu hình maximumPoolSize=40\nrolling update: pod mới không lên được, pod cũ vẫn chạy\nlog pod mới: FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute",
+      "evidenceFormat": "monospace",
+      "question": "Cả pod mới của bản deploy cũng không lên được. Giờ làm gì?",
+      "choices": [
+        {
+          "label": "Rollback cấu hình, rồi đọc kỹ log khởi động",
+          "quality": "good",
+          "feedback": "Lỗi giờ đã rõ ở log: database từ chối connection mới.",
+          "next": "logs"
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "evidence": "HikariPool-1 - Starting...\nHikariPool-1 - Exception during pool initialization.\norg.postgresql.util.PSQLException: FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute\n...\nAPPLICATION FAILED TO START\n\nhikari config (mọi pod): maximumPoolSize=25, minimumIdle=(mặc định = 25)\nHPA order-api: minReplicas=6, maxReplicas=24\nPostgreSQL 16: max_connections=300, superuser_reserved_connections=3",
+      "evidenceFormat": "monospace",
+      "question": "Database từ chối connection mới. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem ai đang giữ connection: đếm `pg_stat_activity` theo `application_name` và `state`",
+          "quality": "good",
+          "feedback": "Biết connection đang thuộc về ai và đang làm gì thì mới biết thiếu thật hay bị chiếm phí.",
+          "next": "activity"
+        },
+        {
+          "label": "Tăng `max_connections` lên 1.000",
+          "quality": "poor",
+          "feedback": "Với PostgreSQL, đổi `max_connections` cần restart database. Mỗi connection là một process tốn bộ nhớ, và 1.000 query chạy cùng lúc trên database này chỉ tranh CPU với nhau.",
+          "next": "max-conn"
+        },
+        {
+          "label": "Đặt `initializationFailTimeout=-1` để pod khởi động được dù chưa có connection",
+          "quality": "poor",
+          "feedback": "Pod sẽ Ready nhưng mọi request nó nhận đều lỗi khi lấy connection. Lỗi khởi động là tín hiệu đúng, đừng giấu nó.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "max-conn",
+      "evidence": "ALTER SYSTEM SET max_connections = 1000;\nSELECT pg_reload_conf();\nSELECT pending_restart FROM pg_settings WHERE name = 'max_connections';\n pending_restart\n-----------------\n t\n\nshared_buffers = 8GB, RAM = 32GB; 300 backend hiện tại dùng khoảng 4,5GB",
+      "evidenceFormat": "monospace",
+      "question": "Thay đổi chỉ có hiệu lực sau khi restart, giữa flash sale. Giờ làm gì?",
+      "choices": [
+        {
+          "label": "Huỷ thay đổi (`ALTER SYSTEM RESET max_connections`) và xem ai đang giữ connection",
+          "quality": "good",
+          "feedback": "Phải hiểu connection đang được dùng thế nào trước khi mua thêm.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "evidence": "SELECT application_name, state, count(*)\nFROM pg_stat_activity WHERE backend_type = 'client backend'\nGROUP BY 1, 2 ORDER BY 3 DESC;\n\n application_name | state  | count\n------------------+--------+-------\n order-api        | idle   |   256\n order-api        | active |    19\n report-worker    | idle   |    18\n report-worker    | active |     2\n monitoring       | active |     2\n psql (bạn)       | active |     1   -- slot dành cho superuser\n                                  ----\n                                   298 / 300 (297 cho user thường + 3 dành cho superuser)\n\nHikari metrics (11 pod order-api, 20:05–20:10):\n  hikaricp_connections_active   trung bình 1,7 / pod, max 6\n  hikaricp_connections_pending  0\nDB CPU: 38%",
+      "evidenceFormat": "monospace",
+      "question": "Số liệu này nói lên điều gì?",
+      "choices": [
+        {
+          "label": "11 pod × 25 = 275 connection, nhưng chỉ khoảng 19 đang chạy query. Pool cố định 25 mỗi pod giữ chỗ quá mức cần, nên 11 pod lấy hết 275 slot còn lại và pod thứ 12 bị từ chối",
+          "quality": "good",
+          "feedback": "Đúng. Database không quá tải (CPU 38%) và ứng dụng không thiếu connection (pending 0). Vấn đề là ngân sách: mỗi pod giữ chặt 25 connection dù chỉ dùng vài cái.",
+          "next": "fix"
+        },
+        {
+          "label": "Có connection leak: 256 connection idle không được trả về",
+          "quality": "ok",
+          "feedback": "`idle` trong `pg_stat_activity` nghĩa là connection không chạy query, ở đây là đang nằm rảnh trong pool. Rò connection thì ứng dụng mới thấy cạn: `active` của Hikari chạm max và `pending` > 0. Ở đây `pending` = 0.",
+          "next": "fix"
+        },
+        {
+          "label": "Database quá chậm nên connection bị giữ lâu",
+          "quality": "poor",
+          "feedback": "Chỉ 19 connection active và CPU 38%: database còn dư sức. Request chậm vì 11 pod gánh tải của 18.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Chọn cách sửa phù hợp nhất?",
+      "choices": [
+        {
+          "label": "Giảm `maximumPoolSize` xuống 8 mỗi pod, tính ngân sách theo `maxReplicas` của HPA cộng surge khi deploy",
+          "quality": "good",
+          "feedback": "Active tối đa 6 mỗi pod, nên 8 vẫn dư. HPA tối đa 24 pod + surge 25% = 30 pod × 8 = 240 connection, cộng report-worker và monitoring vẫn dưới 297. `report-worker` cũng đang giữ 20 connection mà chỉ dùng 2; hạ pool của nó xuống 4 cùng lúc.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Giữ `maximumPoolSize` 25 nhưng đặt `minimumIdle=2`",
+          "quality": "ok",
+          "feedback": "Lúc yên tĩnh thì đỡ, nhưng khi tải dồn dập mỗi pod vẫn được phép mở tới 25, đúng lúc autoscale thêm pod. Sự cố quay lại vào cao điểm. Pool co giãn còn làm mỗi đợt tải tăng kèm một đợt mở connection mới.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đặt PgBouncer chế độ transaction trước database",
+          "quality": "ok",
+          "feedback": "Hướng đúng khi số pod lên hàng trăm, nhưng không làm được giữa sự cố, và phải kiểm tra code không dùng tính năng gắn với session. Với chừng này pod, sửa kích thước pool là đủ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: kích thước pool được chọn theo thói quen (25), không theo nhu cầu và ngân sách.** Mỗi pod giữ cố định 25 connection, trong khi lúc cao điểm chỉ dùng tối đa 6. Khi HPA nhân số pod lên 3 lần, 11 pod lấy hết 275 slot còn lại và pod thứ 12 bị từ chối, và pod mới không khởi động được đúng lúc cần nó nhất.\n\n**Sửa ngay**: ngân sách đang hết sạch, nên rolling deploy thông thường sẽ kẹt: pod mới không có slot để khởi động, còn controller không dừng pod cũ đang khoẻ. Phải giải phóng slot trước:\n1. Tạm hạ `maxReplicas` của HPA về 11 để không sinh thêm pod CrashLoop giành slot, và tạm hạ pool của `report-worker`.\n2. Deploy `maximumPoolSize=8` với `maxSurge: 0` và `maxUnavailable` đủ lớn (ví dụ 30%), chấp nhận thiếu vài pod trong vài phút. Mỗi pod cũ dừng trả lại 25 slot, pod mới chỉ lấy 8.\n3. Trả HPA về `maxReplicas: 24` sau khi rollout xong.\n\nNếu đã bật JMX (`registerMbeans=true`), có thể hạ `maximumPoolSize` ngay trên các pod đang chạy qua `HikariConfigMXBean` rồi gọi `softEvictConnections()`, trả connection mà không cần deploy; đổi lại cần quyền vận hành trực tiếp vào pod.\n\n**Sửa đúng**:\n- Tính pool bằng [[littles-law|Little's law]] từ throughput và thời gian giữ connection mỗi pod, cộng hệ số cho lúc dồn dập.\n- Ghi ngân sách vào tài liệu vận hành: `(maxReplicas + surge) × pool` của mọi service + job + quản trị < `max_connections` − connection dành riêng.\n- Đặt `connectionTimeout` 2 giây cho API để quá tải thì fail fast thay vì giữ thread 30 giây.\n\n**Phòng ngừa**:\n- Cảnh báo khi tổng connection trong `pg_stat_activity` vượt 70% `max_connections`.\n- Load test có cả bước autoscale lên `maxReplicas` và một lần rolling deploy.\n- Khi số service hoặc số pod tiếp tục tăng, đưa PgBouncer (chế độ transaction) hoặc RDS Proxy vào để connection thật tới database không tăng theo số pod.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

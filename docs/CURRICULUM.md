@@ -235,9 +235,9 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `jdbc-basics` | ✚ JDBC & cách ứng dụng nói chuyện với DB | junior | Connection, `PreparedStatement` và SQL injection, batch, fetch size, auto-commit; ORM đứng ở đâu | L D B | ✅ |
 | 5 | `index-execution-plan` | Index & Execution Plan | mid | B-tree, composite, covering, EXPLAIN, các loại index | A L D B | ✅ |
 | 6 | `transaction-isolation` | Transaction & Isolation Level | mid | Hiện tượng, PostgreSQL và MySQL, lost update | A L S B | ✅ |
-| 7 | `optimistic-pessimistic-locking` | ✚ Optimistic & pessimistic locking | mid | `@Version`, `SELECT ... FOR UPDATE`, `NOWAIT`/`SKIP LOCKED`, retry khi xung đột, chọn cách nào | L S B | ⬜ |
+| 7 | `optimistic-pessimistic-locking` | ✚ Optimistic & pessimistic locking | mid | `@Version`, `SELECT ... FOR UPDATE`, `NOWAIT`/`SKIP LOCKED`, retry khi xung đột, chọn cách nào | L S B | ✅ |
 | 8 | `n-plus-one` | N+1 Query | mid | Lazy loading, fetch join, batch fetching (nền: `jpa-hibernate-basics`) | A L B T | ✅ |
-| 9 | `connection-pool` | Connection pool | mid | Sizing HikariCP, timeout, leak, `max_connections`, PgBouncer | A L Sc T | ⬜ |
+| 9 | `connection-pool` | Connection pool | mid | Sizing HikariCP, timeout, leak, `max_connections`, PgBouncer | A L Sc T | ✅ |
 | 10 | `sql-joins-deep` | JOIN & tối ưu query | mid | Nested loop, hash, merge join; thứ tự join; subquery, CTE, window function | L D B | ⬜ |
 | 11 | `query-patterns` | Các mẫu query hiệu năng | mid | Keyset pagination, `count(*)`, batch insert/upsert, `OR` và `UNION` | L B | ⬜ |
 | 12 | `storage-engine` | Storage engine: B+tree, LSM, WAL | mid | Buffer pool, WAL, checkpoint, fsync, write amplification | L D | ⬜ |
@@ -437,7 +437,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | JVM | 2 | 2 | 7 | 0 | 11 |
 | Spring | 2 | 9 | 6 | 0 | 17 |
 | Testing | 2 | 6 | 1 | 0 | 9 |
-| Database | 4 | 12 | 8 | 8 | 24 |
+| Database | 4 | 12 | 8 | 10 | 24 |
 | Caching & Messaging | 2 | 5 | 6 | 0 | 13 |
 | Security | 3 | 5 | 4 | 0 | 12 |
 | Performance & Troubleshooting | 2 | 4 | 9 | 1 | 15 |
@@ -446,4 +446,4 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
 | System Design | 3 | 3 | 14 | 0 | 20 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **94** | **107** | **20** | **252** |
+| **Tổng** | **51** | **94** | **107** | **22** | **252** |

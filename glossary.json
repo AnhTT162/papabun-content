@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool"]
     },
     {
       "id": "multiplexing",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool"]
     },
     {
       "id": "virtual-thread",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool"]
     },
     {
       "id": "pinning",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "connection-pool"]
     },
     {
       "id": "hash-spreading",
@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "race-condition",
@@ -485,7 +485,7 @@
       "meaning": "Nhóm thread chờ nhau theo vòng tròn, mỗi thread giữ một tài nguyên mà thread kế tiếp cần, nên không thread nào chạy tiếp được.",
       "example": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`.",
       "related": ["coffman-conditions", "lock-ordering", "livelock"],
-      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics"]
+      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics", "optimistic-pessimistic-locking"]
     },
     {
       "id": "coffman-conditions",
@@ -501,7 +501,7 @@
       "meaning": "Quy ước mọi thread lấy nhiều lock theo cùng một thứ tự toàn cục (ví dụ theo id), để không thể có vòng chờ.",
       "example": "Chuyển tiền luôn khoá tài khoản có id nhỏ hơn trước, bất kể chiều chuyển.",
       "related": ["deadlock", "coffman-conditions"],
-      "topics": ["deadlock", "transaction-isolation"]
+      "topics": ["deadlock", "transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "livelock",
@@ -909,7 +909,7 @@
       "meaning": "Khoá dữ liệu trước khi đọc để sửa, giả định xung đột sẽ xảy ra; transaction khác muốn sửa phải chờ.",
       "example": "`SELECT ... FOR UPDATE`, hoặc `@Lock(LockModeType.PESSIMISTIC_WRITE)` trong JPA.",
       "related": ["optimistic-locking"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "optimistic-locking",
@@ -917,7 +917,7 @@
       "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
       "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
       "related": ["pessimistic-locking", "lost-update"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "serialization-failure",
@@ -925,7 +925,7 @@
       "meaning": "Lỗi database ném ra (SQLSTATE `40001`) khi không thể đảm bảo kết quả như chạy lần lượt; transaction bị huỷ và ứng dụng cần chạy lại cả transaction.",
       "example": "PostgreSQL: `ERROR: could not serialize access due to concurrent update`.",
       "related": ["write-skew", "snapshot-isolation"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "ssi",
@@ -941,7 +941,7 @@
       "meaning": "Khoá của InnoDB trên một bản ghi index cộng với khoảng trống ngay trước nó (gap lock), chặn transaction khác chèn dòng vào khoảng đó; dùng để chống phantom khi quét theo khoảng.",
       "example": "`SELECT ... WHERE amount BETWEEN 100 AND 200 FOR UPDATE` chặn `INSERT` một đơn có amount = 150.",
       "related": ["phantom-read", "consistent-read"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "consistent-read",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
     },
     {
       "id": "idempotency-key",
@@ -1045,7 +1045,7 @@
       "meaning": "Cơ chế giữ session của ORM mở tới khi response được render, để quan hệ lazy vẫn tải được ở tầng web. Spring Boot bật mặc định (`spring.jpa.open-in-view`).",
       "example": "Jackson serialize entity `Order` và âm thầm chạy query lấy `customer` sau khi service đã xong.",
       "related": ["lazy-loading", "n-plus-one"],
-      "topics": ["n-plus-one"]
+      "topics": ["n-plus-one", "connection-pool"]
     },
     {
       "id": "cartesian-product",
@@ -1229,7 +1229,7 @@
       "meaning": "Cột tham chiếu tới primary/unique key của bảng khác; database chặn giá trị không tồn tại và quy định hành vi khi dòng cha bị xoá.",
       "example": "`orders.customer_id REFERENCES customers(id) ON DELETE RESTRICT`.",
       "related": ["primary-key", "constraint"],
-      "topics": ["relational-keys-normalization"]
+      "topics": ["relational-keys-normalization", "optimistic-pessimistic-locking"]
     },
     {
       "id": "constraint",
@@ -1325,7 +1325,7 @@
       "meaning": "Code mượn connection từ pool mà không trả (quên `close()`), làm pool cạn dần tới khi mọi request phải chờ rồi lỗi.",
       "example": "HikariCP: `Connection is not available, request timed out after 30000ms`.",
       "related": ["connection-pool", "jdbc"],
-      "topics": ["jdbc-basics"]
+      "topics": ["jdbc-basics", "connection-pool"]
     },
     {
       "id": "undo-log",
@@ -1357,7 +1357,7 @@
       "meaning": "Hibernate so sánh trạng thái entity lúc flush với bản chụp lúc tải; field nào đổi thì tự sinh `UPDATE`, không cần gọi `save`.",
       "example": "Trong `@Transactional`, `order.setStatus(PAID)` tự được ghi khi commit.",
       "related": ["persistence-context"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking"]
     },
     {
       "id": "dual-write",
@@ -1373,7 +1373,87 @@
       "meaning": "Interface của JDBC để lấy `Connection`, thường do connection pool cài đặt (HikariCP); thay cho `DriverManager` mở kết nối mới mỗi lần.",
       "example": "Spring Boot tự tạo `HikariDataSource` từ `spring.datasource.*`.",
       "related": ["connection-pool", "jdbc"],
-      "topics": ["jdbc-basics"]
+      "topics": ["jdbc-basics", "connection-pool"]
+    },
+    {
+      "id": "etag",
+      "term": "ETag / If-Match",
+      "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại giá trị đó trong `If-Match` khi sửa; server chỉ ghi nếu phiên bản còn khớp, không thì trả `412 Precondition Failed`.",
+      "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
+      "related": ["optimistic-locking", "lost-update"],
+      "topics": ["optimistic-pessimistic-locking"]
+    },
+    {
+      "id": "skip-locked",
+      "term": "SKIP LOCKED",
+      "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
+      "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
+      "related": ["pessimistic-locking", "lock-timeout"],
+      "topics": ["optimistic-pessimistic-locking"]
+    },
+    {
+      "id": "lock-timeout",
+      "term": "Lock timeout",
+      "meaning": "Thời gian tối đa một câu lệnh chờ lấy khoá trước khi báo lỗi. `NOWAIT` báo lỗi ngay thay vì chờ.",
+      "example": "PostgreSQL `SET LOCAL lock_timeout = '2s'` (giá trị `0` nghĩa là chờ vô hạn); MySQL `innodb_lock_wait_timeout` mặc định 50 giây.",
+      "related": ["pessimistic-locking", "skip-locked", "deadlock"],
+      "topics": ["optimistic-pessimistic-locking"]
+    },
+    {
+      "id": "aggregate-root",
+      "term": "Aggregate root",
+      "meaning": "Khái niệm của Domain-Driven Design: một cụm entity luôn được thay đổi cùng nhau như một đơn vị nhất quán, và mọi thay đổi đi qua entity gốc (root).",
+      "example": "`Order` là root của các `OrderLine`; sửa một dòng hàng cũng tính là sửa đơn hàng.",
+      "related": ["optimistic-locking"],
+      "topics": ["optimistic-pessimistic-locking"]
+    },
+    {
+      "id": "advisory-lock",
+      "term": "Advisory lock",
+      "meaning": "Khoá do ứng dụng đặt tên (một số hoặc chuỗi) và database quản lý, không gắn với dòng hay bảng nào. Database không tự dùng nó; ứng dụng tự quy ước.",
+      "example": "PostgreSQL `SELECT pg_advisory_xact_lock(42)`: chỉ một transaction giữ được khoá 42, tự nhả khi commit.",
+      "related": ["pessimistic-locking"],
+      "topics": ["optimistic-pessimistic-locking", "connection-pool"]
+    },
+    {
+      "id": "max-connections",
+      "term": "max_connections",
+      "meaning": "Số connection tối đa database chấp nhận cùng lúc. Vượt quá thì connection mới bị từ chối. PostgreSQL mặc định 100 (đổi phải restart), MySQL mặc định 151.",
+      "example": "PostgreSQL 16 từ chối với `FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute` khi chỉ còn các slot dành cho superuser.",
+      "related": ["connection-pool", "pgbouncer"],
+      "topics": ["connection-pool"]
+    },
+    {
+      "id": "pgbouncer",
+      "term": "PgBouncer",
+      "meaning": "Connection pooler nhẹ đứng giữa ứng dụng và PostgreSQL. Ở chế độ transaction, nhiều connection phía client dùng chung một số ít connection thật tới database.",
+      "example": "500 pod mỗi pod mở 5 connection tới PgBouncer (2.500), PgBouncer chỉ giữ 60 connection thật tới PostgreSQL.",
+      "related": ["connection-pool", "max-connections"],
+      "topics": ["connection-pool"]
+    },
+    {
+      "id": "max-lifetime",
+      "term": "maxLifetime",
+      "meaning": "Tuổi tối đa của một connection trong HikariCP (mặc định 30 phút, tối thiểu 30 giây). Hết tuổi thì connection được đóng và thay bằng connection mới khi không còn được dùng.",
+      "example": "Load balancer cắt kết nối sau 10 phút thì đặt `maxLifetime` khoảng 9 phút.",
+      "related": ["connection-pool", "hikaricp"],
+      "topics": ["connection-pool"]
+    },
+    {
+      "id": "pool-deadlock",
+      "term": "Pool deadlock",
+      "meaning": "Các luồng cùng giữ connection của pool và chờ thêm connection từ chính pool đó, nên không ai trả connection. Database không thấy gì vì vòng chờ nằm ở ứng dụng.",
+      "example": "Pool 10, 10 request đang trong `@Transactional` cùng gọi một method `REQUIRES_NEW`: cả 10 chờ tới `connectionTimeout`.",
+      "related": ["connection-pool", "deadlock"],
+      "topics": ["connection-pool"]
+    },
+    {
+      "id": "hikaricp",
+      "term": "HikariCP",
+      "meaning": "Thư viện connection pool JDBC nhanh và gọn, là pool mặc định của Spring Boot từ bản 2.0.",
+      "example": "`spring.datasource.hikari.maximum-pool-size=10` cấu hình kích thước pool trong Spring Boot.",
+      "related": ["connection-pool", "datasource"],
+      "topics": ["connection-pool"]
     }
   ]
 }

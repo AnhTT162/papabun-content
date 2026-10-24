@@ -7,7 +7,7 @@
   "title": "N+1 Query",
   "summary": "Vì sao lazy loading sinh ra N+1, vì sao EAGER không chữa được, cách sửa bằng DTO projection, JOIN FETCH, entity graph và batch fetching, bẫy phân trang khi fetch collection, và cách phát hiện bằng test đếm query.",
   "level": "mid",
-  "order": 7,
+  "order": 8,
   "minutes": 15,
   "prerequisites": ["jdbc-basics"],
   "terms": ["orm", "n-plus-one", "lazy-loading", "eager-loading", "persistence-context", "fetch-join", "entity-graph", "batch-fetching", "dto-projection", "open-session-in-view", "cartesian-product", "connection-pool", "jpql", "apm", "littles-law"],

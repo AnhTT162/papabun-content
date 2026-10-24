@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pool-size-from-littles-law",
+      "kind": "single",
+      "prompt": "Một service nhận 800 request/giây, mỗi request chạy một transaction giữ connection 5ms. Service chạy 4 pod chia đều tải. Pool mỗi pod nên ở khoảng nào?",
+      "options": [
+        "100, vì mỗi request cần một connection và nên dư nhiều",
+        "Khoảng 3–5: mỗi pod 200 request/giây × 5ms = 1 connection trung bình, nhân hệ số cho lúc dồn dập",
+        "200, bằng số request mỗi pod nhận mỗi giây",
+        "1, vì trung bình chỉ cần 1"
+      ],
+      "answer": 1,
+      "explanation": "Little's law: 200 × 0,005 = 1 connection đang dùng trung bình mỗi pod. Tải thực tế đến không đều và có transaction chậm hơn trung bình, nên cần dư vài lần, khoảng 3–5. Đúng bằng trung bình (1) thì mọi đợt dồn dập đều phải chờ. 100 hay 200 mỗi pod chỉ chiếm ngân sách `max_connections` và đẩy hàng đợi vào database."
+    },
+    {
+      "id": "pool-deadlock-requires-new",
+      "kind": "output",
+      "prompt": "`maximumPoolSize = 10`, `connectionTimeout = 30s`. 10 request tới cùng lúc và gọi `placeOrder`. Chuyện gì xảy ra?",
+      "code": "@Transactional\npublic void placeOrder(OrderRequest request) {\n    orderRepository.save(Order.from(request));   // giữ connection thứ nhất\n    auditService.record(request);                  // @Transactional(propagation = REQUIRES_NEW)\n}",
+      "options": [
+        "Mọi request chạy bình thường vì `REQUIRES_NEW` dùng lại connection của transaction ngoài",
+        "10 request giữ hết 10 connection rồi cùng chờ connection thứ hai cho `REQUIRES_NEW`. Không ai trả connection, cả 10 đứng 30 giây rồi lỗi `Connection is not available`",
+        "Database phát hiện deadlock và huỷ một transaction sau 1 giây",
+        "Spring tự chuyển `REQUIRES_NEW` sang `REQUIRED` khi pool đầy"
+      ],
+      "answer": 1,
+      "explanation": "`REQUIRES_NEW` tạm dừng transaction ngoài (vẫn giữ connection của nó) và mở transaction mới trên một connection khác. Mỗi request cần 2 connection cùng lúc, nên 10 request đồng thời giữ hết pool rồi chờ nhau. Đây là deadlock ở pool, không phải ở database, nên database không phát hiện được gì. Sửa: bỏ nhu cầu giữ hai connection (ghi audit trong cùng transaction, hoặc sau khi commit), hoặc dùng pool đủ lớn theo công thức `số thread × (số connection mỗi thread − 1) + 1`."
+    },
+    {
+      "id": "stale-connection-max-lifetime",
+      "kind": "single",
+      "prompt": "Spring Boot 3.2 (HikariCP 5.0, cấu hình mặc định). Mỗi sáng, vài request đầu tiên chậm vài giây, log có `Failed to validate connection` và đôi khi `Communications link failure`, rồi mọi thứ bình thường. Giữa app và MySQL có firewall đóng kết nối TCP idle sau 15 phút; `wait_timeout` của MySQL là 8 giờ. Sửa thế nào?",
+      "options": [
+        "Tăng `wait_timeout` của MySQL lên 24 giờ",
+        "Thêm `connectionTestQuery = SELECT 1`",
+        "Đặt `maxLifetime` ngắn hơn 15 phút (ví dụ 14 phút) để pool thay connection trước khi firewall cắt, và bật `keepaliveTime` (ví dụ 5 phút) để connection rảnh không bị coi là idle",
+        "Tăng `connectionTimeout` lên 60 giây"
+      ],
+      "answer": 2,
+      "explanation": "Firewall cắt kết nối idle sau 15 phút mà không báo cho hai đầu. HikariCP 5.0 mặc định `maxLifetime` 30 phút và tắt `keepaliveTime`, nên qua đêm pool giữ toàn connection đã chết. Lúc mượn một connection đã rảnh lâu, Hikari kiểm tra bằng `isValid()`, phải chờ tới `validationTimeout` mới biết nó chết rồi bỏ đi, nên request đầu chậm hoặc lỗi. `maxLifetime` phải ngắn hơn giới hạn nhỏ nhất trên đường đi. `wait_timeout` của MySQL không phải giới hạn nhỏ nhất ở đây. `connectionTestQuery` không cần với driver JDBC4, vì Hikari đã dùng `isValid()`. Từ HikariCP 6.2.1 (Spring Boot 3.5+), `keepaliveTime` mặc định 2 phút nên tình huống này ít gặp hơn."
+    },
+    {
+      "id": "pgbouncer-session-set",
+      "kind": "single",
+      "prompt": "Database đặt `ALTER ROLE app SET statement_timeout = '30s'`. Sau khi đưa PgBouncer chế độ transaction vào, đôi lúc query báo cáo bị huỷ sau 30 giây dù code đã chạy `SET statement_timeout = '5min'` ngay sau khi lấy connection. Vì sao?",
+      "options": [
+        "PgBouncer có timeout riêng 30 giây cho mọi query",
+        "Ở chế độ transaction, `SET` chạy ngoài transaction trên một connection thật, còn query sau đó có thể chạy trên connection thật khác vẫn mang timeout 30 giây của role",
+        "`SET` không có tác dụng với `statement_timeout`",
+        "pgjdbc bỏ qua lệnh `SET` khi đi qua proxy"
+      ],
+      "answer": 1,
+      "explanation": "PgBouncer chế độ transaction chỉ gắn một connection thật với client trong thời gian một transaction. Ở autocommit, `SET` là một transaction riêng; query tiếp theo có thể được chuyển sang connection thật khác. Tệ hơn, connection đã nhận `SET` giờ mang timeout 5 phút cho client khác. Dùng `SET LOCAL` bên trong cùng transaction với query, hoặc đặt timeout cho cả user bằng `ALTER ROLE ... SET statement_timeout`."
+    }
+  ]
+}

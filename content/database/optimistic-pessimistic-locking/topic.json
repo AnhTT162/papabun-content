@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "optimistic-pessimistic-locking",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Optimistic & pessimistic locking",
+  "summary": "JPA @Version chạy thế nào và không bảo vệ được gì, version qua REST với ETag/If-Match, SELECT ... FOR UPDATE và các chế độ khoá của PostgreSQL/MySQL, NOWAIT, SKIP LOCKED, lock timeout, deadlock, retry và chọn cách nào.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 18,
+  "prerequisites": ["transaction-isolation"],
+  "terms": ["optimistic-locking", "pessimistic-locking", "lost-update", "lock-ordering", "deadlock", "retry-backoff", "etag", "skip-locked", "lock-timeout", "aggregate-root", "advisory-lock", "next-key-lock", "serialization-failure", "dirty-checking", "foreign-key"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Explicit Locking (row-level locks)", "url": "https://www.postgresql.org/docs/current/explicit-locking.html" },
+    { "title": "RFC 9110: If-Match", "url": "https://www.rfc-editor.org/rfc/rfc9110#name-if-match" },
+    { "title": "MySQL 8.0: Locking Reads", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html" },
+    { "title": "Hibernate ORM User Guide: Locking", "url": "https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#locking" },
+    { "title": "Spring Framework: Resilience Features (@Retryable)", "url": "https://docs.spring.io/spring-framework/reference/core/resilience.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "callout", "style": "warning", "markdown": "Không bao giờ giữ khoá database trong lúc chờ người dùng. Màn hình \"đang sửa\" có thể mở hàng giờ; `FOR UPDATE` giữ lâu như vậy sẽ chặn mọi người khác và giữ một connection trong pool. Khoảng thời gian người dùng suy nghĩ chỉ bảo vệ được bằng optimistic locking: version đi theo form và được kiểm tra khi lưu." },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Có hai instance service, vậy có cần distributed lock (Redis) để chống ghi đè không?\" Nếu dữ liệu nằm trong một database thì không: database đã là điểm phối hợp chung, và `@Version`, `FOR UPDATE` hay `UPDATE` có điều kiện đều có tác dụng với mọi instance. Distributed lock chỉ cần khi tài nguyên cần bảo vệ nằm ngoài database (gọi API bên ngoài, ghi file), và ngay cả khi đó vẫn nên có fencing token (số tăng dần đi kèm mỗi lần cấp lock, nơi ghi từ chối token cũ) hoặc ràng buộc ở nơi ghi, vì lock có thể hết hạn trong lúc đang làm." }
+  ]
+}

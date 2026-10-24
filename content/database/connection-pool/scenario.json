@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chia ngân sách connection cho service checkout",
+  "prompt": "Service `checkout-api` chạy trên Kubernetes, autoscale từ **4 tới 16 pod**, rolling deploy với `maxSurge: 25%`. Database là PostgreSQL 16 trên máy **8 vCPU**, `max_connections = 200`.\n\n- Cao điểm: **1.200 request/giây** trên toàn service, mỗi request chạy một transaction giữ connection trung bình **8ms**, p99 là **40ms**.\n- Service `report-worker` (2 pod) chạy báo cáo nặng, mỗi query vài giây.\n- Đội vận hành cần connection cho migration, monitoring và công cụ quản trị.\n- Cấu hình hiện tại: mỗi pod `maximumPoolSize = 20`, `connectionTimeout` mặc định.\n\nHãy chọn kích thước pool cho từng service, `connectionTimeout`, và cho biết có cần PgBouncer không.",
+  "hints": [
+    "Cấu hình hiện tại ở 16 pod mở bao nhiêu connection? Lúc deploy với `maxSurge: 25%` thì sao?",
+    "Theo Little's law, toàn service cần trung bình bao nhiêu connection cùng lúc? Còn lúc request dồn dập và các transaction p99?",
+    "Database 8 vCPU chạy song song hiệu quả được khoảng bao nhiêu query? Connection vượt mức đó làm gì?",
+    "Báo cáo nặng chạy vài giây dùng chung pool với checkout thì chuyện gì xảy ra khi có 10 báo cáo cùng lúc?"
+  ],
+  "solution": "**1. Cấu hình hiện tại vượt ngân sách.** 16 pod × 20 = 320 connection, deploy với surge lên 20 pod × 20 = 400, trong khi `max_connections` chỉ 200. Lỗi `remaining connection slots are reserved for roles with the SUPERUSER attribute` sẽ xuất hiện đúng lúc tải cao nhất, khi autoscale thêm pod.\n\n**2. Nhu cầu thật nhỏ hơn nhiều.** Little's law: 1.200 × 0,008 giây ≈ **10 connection** đang dùng trung bình trên toàn service. Request đến dồn dập và transaction p99 (40ms) làm đỉnh cao hơn vài lần, cỡ 30–40. Phía database, gợi ý của HikariCP `8 × 2 + 1 ≈ 17` query chạy song song hiệu quả. Hơn số đó, query chỉ tranh CPU với nhau. Công thức này tính theo core vật lý (vCPU thường là hyperthread) và hệ số đĩa gần như mất ý nghĩa với SSD, nên nó chỉ là điểm bắt đầu: phải đo lại bằng load test.\n\n**3. Chia ngân sách** (tính theo lúc nhiều pod nhất: 16 pod + surge 4 = 20 pod):\n\n| Thành phần | Connection |\n|---|---|\n| `checkout-api`: 20 pod × **4** | 80 |\n| `report-worker`: 2 pod × 3 | 6 |\n| Migration, monitoring, quản trị | 15 |\n| `superuser_reserved_connections` | 3 |\n| **Tổng** | **104 / 200** |\n\nTổng 80 là **trần** của ngân sách, không phải số query mong đợi chạy cùng lúc (khoảng 10–40). Pool 4 mỗi pod nghe nhỏ, nhưng ở 16 pod mỗi pod chỉ nhận 75 request/giây, tức trung bình 0,6 connection đang dùng. Ở 4 pod, mỗi pod 300 request/giây cần trung bình 2,4: pool 4 hơi sát, nên đặt `minReplicas` 6 hoặc tăng pool lên 5–6 (tổng vẫn dưới 150). Giữ pool cố định (`minimumIdle` = `maximumPoolSize`).\n\n**4. `connectionTimeout` = 2 giây** cho checkout, trả `503` để client retry thay vì giữ thread Tomcat 30 giây. `report-worker` dùng pool riêng làm [[bulkhead]] và có thể chờ lâu hơn; giới hạn số báo cáo chạy cùng lúc bằng chính kích thước pool đó. Đặt `statement_timeout` riêng cho user của báo cáo, và tốt nhất cho báo cáo chạy trên read replica.\n\n**5. Chưa cần PgBouncer.** Với khoảng 100 connection, pool ở ứng dụng là đủ. Nên dùng PgBouncer ở chế độ transaction khi số pod lên hàng trăm, khi có serverless function, hoặc khi nhiều service nhỏ mỗi cái giữ vài connection rảnh. Lúc đó phải kiểm tra code không dùng `SET` cấp session, advisory lock cấp session hay `LISTEN`.\n\n**6. Theo dõi**: cảnh báo khi `hikaricp_connections_pending` > 0 quá 1 phút, khi `hikaricp_connections_timeout_total` tăng, và khi `count(*)` trong `pg_stat_activity` vượt 70% `max_connections`.",
+  "tradeoffs": [
+    {
+      "option": "Pool lớn mỗi pod (20+)",
+      "pros": [
+        "Không cần tính toán",
+        "Đỡ được tải dồn dập khi ít pod"
+      ],
+      "cons": [
+        "Vượt `max_connections` khi autoscale hoặc deploy",
+        "Tải cao thì đẩy hàng đợi vào database, mọi query cùng chậm",
+        "Hàng trăm connection rảnh tốn bộ nhớ của PostgreSQL"
+      ]
+    },
+    {
+      "option": "Pool nhỏ cố định, tính theo Little's law và `maxReplicas`",
+      "pros": [
+        "Ngân sách rõ ràng, không bất ngờ khi scale",
+        "Hàng đợi nằm ở ứng dụng, rẻ và đo được qua `pending`"
+      ],
+      "cons": [
+        "Phải tính lại khi đổi `maxReplicas` hoặc thời gian transaction tăng",
+        "Ít pod thì mỗi pod có ít khoảng dư"
+      ]
+    },
+    {
+      "option": "PgBouncer chế độ transaction",
+      "pros": [
+        "Hàng nghìn connection phía client dùng chung vài chục connection thật",
+        "Pod khởi động không tạo đợt bắt tay vào database"
+      ],
+      "cons": [
+        "Thêm một thành phần phải chạy HA và giám sát",
+        "Hỏng tính năng gắn với session (`SET`, temp table, advisory lock, `LISTEN`)",
+        "Không làm database chạy được nhiều query hơn"
+      ]
+    }
+  ]
+}

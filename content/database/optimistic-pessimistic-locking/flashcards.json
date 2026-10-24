@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "optimistic-vs-pessimistic", "front": "Khác biệt cốt lõi giữa optimistic và pessimistic locking?", "back": "Optimistic không khoá, chỉ phát hiện xung đột lúc ghi (cột version) rồi retry hoặc báo lỗi. Pessimistic khoá dòng khi đọc (`FOR UPDATE`), người khác phải chờ." },
+    { "id": "version-sql", "front": "Hibernate dùng cột `@Version` trong câu SQL nào?", "back": "`UPDATE ... SET ..., version = v + 1 WHERE id = ? AND version = v`; sửa 0 dòng thì ném `OptimisticLockException`." },
+    { "id": "version-when-thrown", "front": "Lỗi optimistic lock được ném ở dòng nào trong code?", "back": "Lúc flush, thường là khi commit, không phải ở dòng gọi setter. Vì vậy retry phải bọc cả method `@Transactional` từ bên ngoài." },
+    { "id": "version-rest", "front": "Vì sao `@Version` không chặn được hai người cùng sửa một form?", "back": "Nếu API load entity mới rồi copy field, Hibernate so với version mới nhất. Version người dùng đã thấy phải được gửi lên (DTO hoặc `If-Match`) và so sánh tường minh." },
+    { "id": "force-increment", "front": "Khi nào dùng `OPTIMISTIC_FORCE_INCREMENT`?", "back": "Khi sửa entity con (dòng của đơn hàng) mà muốn coi cả aggregate là một đơn vị: version của root tăng dù root không đổi." },
+    { "id": "skip-locked", "front": "`FOR UPDATE SKIP LOCKED` dùng để làm gì?", "back": "Nhiều worker lấy việc từ một bảng hàng đợi mà không chờ nhau: dòng đang bị worker khác khoá thì bỏ qua." },
+    { "id": "lock-wait-default", "front": "Mặc định PostgreSQL và MySQL chờ row lock bao lâu?", "back": "PostgreSQL chờ vô hạn (`lock_timeout = 0`); MySQL chờ `innodb_lock_wait_timeout` = 50 giây. `NOWAIT` báo lỗi ngay." },
+    { "id": "pg-for-update-fk", "front": "Trong PostgreSQL, `FOR UPDATE` trên dòng cha gây ảnh hưởng gì tới bảng con?", "back": "Chặn mọi insert dòng con trỏ tới nó, vì kiểm tra foreign key lấy `FOR KEY SHARE`. `FOR NO KEY UPDATE` thì không chặn." },
+    { "id": "transfer-deadlock", "front": "Hai lệnh chuyển tiền ngược chiều cùng dùng `FOR UPDATE` thì sao, sửa thế nào?", "back": "Mỗi bên giữ một ví và chờ ví kia, thành deadlock. Luôn khoá theo thứ tự id, ví dụ `WHERE id IN (...) ORDER BY id FOR UPDATE`." },
+    { "id": "distributed-lock-needed", "front": "Nhiều instance service cùng ghi một database có cần distributed lock không?", "back": "Không: version, `FOR UPDATE` hoặc `UPDATE` có điều kiện đã phối hợp qua database. Distributed lock chỉ cần cho tài nguyên nằm ngoài database." }
+  ]
+}

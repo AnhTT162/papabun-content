@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Hai lệnh chuyển tiền khoá ví ngược thứ tự",
+  "instructions": "T1 chuyển từ ví 1 sang ví 2, T2 chuyển chiều ngược lại; mỗi bên dùng `FOR UPDATE` khoá ví nguồn trước. Chạy lịch \"Lần lượt\", rồi chạy \"Xen kẽ\" và xem cả hai cùng chờ nhau.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "wallet-1", "kind": "lock", "label": "Row lock ví 1" },
+      { "id": "wallet-2", "kind": "lock", "label": "Row lock ví 2" }
+    ],
+    "threads": [
+      { "id": "t1", "name": "T1: ví 1 → ví 2", "steps": [
+        { "op": "lock", "target": "wallet-1", "code": "SELECT * FROM wallet WHERE id = 1 FOR UPDATE;" },
+        { "op": "lock", "target": "wallet-2", "code": "SELECT * FROM wallet WHERE id = 2 FOR UPDATE;" },
+        { "op": "work", "code": "UPDATE wallet ... -- trừ ví 1, cộng ví 2" },
+        { "op": "unlock", "target": "wallet-2", "code": "COMMIT; -- nhả mọi row lock cùng lúc" },
+        { "op": "unlock", "target": "wallet-1", "code": "-- (cùng lần COMMIT)" }
+      ] },
+      { "id": "t2", "name": "T2: ví 2 → ví 1", "steps": [
+        { "op": "lock", "target": "wallet-2", "code": "SELECT * FROM wallet WHERE id = 2 FOR UPDATE;" },
+        { "op": "lock", "target": "wallet-1", "code": "SELECT * FROM wallet WHERE id = 1 FOR UPDATE;" },
+        { "op": "work", "code": "UPDATE wallet ... -- trừ ví 2, cộng ví 1" },
+        { "op": "unlock", "target": "wallet-1", "code": "COMMIT; -- nhả mọi row lock cùng lúc" },
+        { "op": "unlock", "target": "wallet-2", "code": "-- (cùng lần COMMIT)" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "sequential", "title": "Lần lượt", "order": ["t1", "t1", "t1", "t1", "t1", "t2", "t2", "t2", "t2", "t2"] },
+      { "id": "interleaved", "title": "Xen kẽ", "order": ["t1", "t2", "t1", "t2"] }
+    ],
+    "outcomes": {
+      "deadlock": "T1 giữ ví 1 chờ ví 2, T2 giữ ví 2 chờ ví 1. Database phát hiện vòng chờ và huỷ một transaction: PostgreSQL kiểm tra sau `deadlock_timeout` (mặc định 1 giây) rồi báo `deadlock detected` (`40P01`); InnoDB phát hiện ngay (khi `innodb_deadlock_detect` bật, mặc định) và rollback transaction nhỏ hơn (lỗi `1213`); nếu tắt, nó chỉ dựa vào `innodb_lock_wait_timeout` và báo `1205`. Bên bị huỷ phải retry cả transaction. Cách phòng: khoá theo **cùng một thứ tự**, ví dụ id nhỏ trước, bất kể chiều chuyển ([[lock-ordering|lock ordering]]); hoặc khoá cả hai trong một câu `SELECT ... WHERE id IN (1, 2) ORDER BY id FOR UPDATE`.",
+      "success": "Không deadlock vì T2 chỉ bắt đầu sau khi T1 commit. Nhưng production không chọn được thứ tự chạy: chỉ cần hai lệnh chuyển ngược chiều tới cùng lúc là thành lịch \"Xen kẽ\"."
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "connection-pool",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Connection pool",
+  "summary": "HikariCP chạy thế nào, tính kích thước pool bằng Little's law và giới hạn của database, ngân sách max_connections khi autoscale, maxLifetime và timeout của hạ tầng, giữ connection quá lâu, pool deadlock, PgBouncer và các chế độ của nó.",
+  "level": "mid",
+  "order": 9,
+  "minutes": 18,
+  "prerequisites": ["jdbc-basics"],
+  "terms": ["connection-pool", "datasource", "littles-law", "connection-leak", "max-connections", "pgbouncer", "max-lifetime", "pool-deadlock", "bulkhead", "open-session-in-view", "virtual-thread", "advisory-lock", "hikaricp"],
+  "references": [
+    { "title": "HikariCP: configuration (README)", "url": "https://github.com/brettwooldridge/HikariCP" },
+    { "title": "HikariCP Wiki: About Pool Sizing", "url": "https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing" },
+    { "title": "PgBouncer: Features and pooling modes", "url": "https://www.pgbouncer.org/features.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Java 21 có virtual thread rồi, vậy tăng pool lên 1.000 cho tương xứng?\" Không. Virtual thread bỏ giới hạn số request chờ I/O ở phía ứng dụng, nhưng database vẫn chỉ chạy song song được chừng ấy query theo số CPU và đĩa của nó. Pool lúc này càng quan trọng: nó là chỗ giới hạn số việc đồng thời vào database ([[bulkhead]]). Tăng pool chỉ chuyển hàng đợi từ ứng dụng sang database, nơi chờ đắt hơn." }
+  ]
+}

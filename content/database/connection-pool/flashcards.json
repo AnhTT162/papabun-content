@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-pool", "front": "Vì sao phải dùng connection pool?", "back": "Mở connection tốn bắt tay TCP, TLS, xác thực và (với PostgreSQL) tạo một process, lâu hơn nhiều so với một query. Pool còn giới hạn số việc đồng thời vào database." },
+    { "id": "hikari-borrow", "front": "HikariCP làm gì khi pool đã đầy mà có request gọi `getConnection()`?", "back": "Chờ tối đa `connectionTimeout` (mặc định 30 giây) để có connection được trả, rồi ném `SQLTransientConnectionException`." },
+    { "id": "pool-sizing-littles-law", "front": "Tính số connection cần dùng bằng Little's law thế nào?", "back": "Throughput × thời gian giữ connection. 500 transaction/giây × 10ms = trung bình 5 connection, cộng thêm hệ số cho lúc dồn dập." },
+    { "id": "bigger-not-faster", "front": "Vì sao pool to hơn thường không làm hệ thống nhanh hơn?", "back": "Database chỉ chạy song song hiệu quả theo số core và đĩa; thêm connection chỉ làm query tranh CPU, lock và cache, nên mọi query cùng chậm." },
+    { "id": "connection-budget", "front": "Ngân sách connection khi autoscale tính thế nào?", "back": "(maxReplicas + surge khi deploy) × pool mỗi pod, cộng service khác, job và công cụ quản trị, phải nhỏ hơn `max_connections` trừ phần dành riêng." },
+    { "id": "max-lifetime", "front": "`maxLifetime` nên đặt thế nào?", "back": "Ngắn hơn vài giây so với mọi giới hạn của database và hạ tầng (`wait_timeout`, idle timeout của firewall, NAT, load balancer), để pool không trao connection đã bị đóng." },
+    { "id": "pool-deadlock", "front": "Pool deadlock xảy ra khi nào?", "back": "Mỗi luồng cần hai connection cùng lúc (ví dụ `REQUIRES_NEW` bên trong transaction): khi mọi connection đều bị giữ bởi luồng đang chờ connection thứ hai, không ai trả." },
+    { "id": "pgbouncer-transaction", "front": "PgBouncer chế độ transaction làm hỏng những gì?", "back": "Mọi thứ gắn với session: `SET` không có `LOCAL`, temp table, `LISTEN`, advisory lock cấp session; prepared statement cần `max_prepared_statements` khác 0 (có từ 1.21, mặc định 200 từ 1.24)." },
+    { "id": "osiv-holds-connection", "front": "Open Session in View ảnh hưởng tới pool thế nào?", "back": "Connection đã lấy bị giữ tới cuối request, kể cả lúc request gọi API ngoài sau khi transaction xong, nên thời gian giữ connection tăng." }
+  ]
+}

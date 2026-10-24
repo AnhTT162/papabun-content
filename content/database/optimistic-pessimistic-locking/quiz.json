@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "optimistic-exception-site",
+      "kind": "output",
+      "prompt": "Entity `Stock` có `@Version`. Trong lúc method chạy, một request khác đã cập nhật cùng dòng và commit. Kết quả là gì?",
+      "code": "@Transactional\npublic void reserve(long stockId, int quantity) {\n    Stock stock = stockRepository.findById(stockId).orElseThrow();\n    try {\n        stock.setAvailable(stock.getAvailable() - quantity);\n    } catch (OptimisticLockException e) {\n        log.warn(\"conflict, retry\");\n        reserve(stockId, quantity);\n    }\n}",
+      "options": [
+        "Khối `catch` bắt lỗi và gọi lại `reserve`, lần hai thành công",
+        "Không có lỗi nào: Hibernate tự đọc lại version mới rồi ghi",
+        "`setAvailable` không ném gì. Lỗi xảy ra khi flush lúc commit, sau khi method đã trả về, nên `catch` không bao giờ chạy và caller nhận `ObjectOptimisticLockingFailureException`",
+        "Request bị chặn cho tới khi request kia commit, rồi ghi tiếp bình thường"
+      ],
+      "answer": 2,
+      "explanation": "Setter chỉ thay đổi object trong bộ nhớ. Câu `UPDATE ... WHERE version = ?` chỉ được gửi khi flush, thường là lúc commit do proxy `@Transactional` thực hiện sau khi method trả về. Ngay cả khi lỗi được ném sớm hơn, gọi lại `reserve` từ bên trong là self-invocation, vẫn nằm trong transaction cũ đã hỏng với entity cũ. Retry phải bọc cả transaction từ một bean bên ngoài. Optimistic locking cũng không bao giờ chặn chờ: đó là cách của pessimistic locking."
+    },
+    {
+      "id": "choose-locking-strategy",
+      "kind": "single",
+      "prompt": "Tình huống nào hợp nhất với optimistic locking?",
+      "options": [
+        "Trừ tồn kho của một sản phẩm đang flash sale, hàng nghìn request mỗi giây vào cùng một dòng",
+        "Nhân viên mở hồ sơ khách hàng, sửa trong vài phút rồi lưu; hai người cùng sửa một hồ sơ rất hiếm",
+        "Nhiều worker lấy job chưa xử lý từ bảng `jobs`",
+        "Chuyển tiền giữa hai ví, cần khoá cả hai ví trong lúc xử lý"
+      ],
+      "answer": 1,
+      "explanation": "Người dùng sửa lâu thì không thể giữ khoá database suốt lúc đó, và xung đột hiếm nên retry hoặc báo người dùng tải lại là rẻ. Dòng tồn kho nóng sẽ xung đột liên tục, retry dồn tải còn tệ hơn chờ: dùng `UPDATE ... SET available = available - ? WHERE available >= ?` hoặc khoá bi quan. Hàng đợi job hợp với `FOR UPDATE SKIP LOCKED`. Chuyển tiền giữa hai ví là đoạn ngắn có tranh chấp, hợp với pessimistic locking theo thứ tự id."
+    },
+    {
+      "id": "pg-for-update-blocks-fk-insert",
+      "kind": "output",
+      "prompt": "PostgreSQL 16, `payment.account_id` là foreign key tới `account.id`. Hai session chạy theo thứ tự dưới đây, session A chưa commit. Lệnh của session B thế nào?",
+      "code": "-- Session A\nBEGIN;\nSELECT * FROM account WHERE id = 1 FOR UPDATE;\n\n-- Session B\nINSERT INTO payment (account_id, amount) VALUES (1, 50000);",
+      "options": [
+        "Chạy ngay, vì B không sửa dòng account",
+        "Chờ tới khi A commit hoặc rollback, vì kiểm tra foreign key lấy `FOR KEY SHARE` trên dòng account 1 và nó xung đột với `FOR UPDATE`",
+        "Báo lỗi `could not obtain lock` ngay lập tức",
+        "Chạy ngay nhưng sẽ bị rollback khi A commit"
+      ],
+      "answer": 1,
+      "explanation": "Khi insert dòng con, PostgreSQL khoá dòng cha bằng `FOR KEY SHARE` để dòng cha không bị xoá hay đổi khoá trong lúc đó. `FOR KEY SHARE` chỉ xung đột với `FOR UPDATE`. Nếu A dùng `FOR NO KEY UPDATE` (đủ khi chỉ định sửa các cột không phải khoá), B chạy ngay. Lỗi ngay lập tức chỉ xảy ra khi B dùng `NOWAIT` hoặc `lock_timeout` hết hạn."
+    },
+    {
+      "id": "skip-locked-queue",
+      "kind": "single",
+      "prompt": "Bảng `jobs` có 5 job `NEW` với id 1–5. Worker A đang giữ khoá id 1 và 2 bằng `FOR UPDATE SKIP LOCKED` (chưa commit). Worker B chạy `SELECT id FROM jobs WHERE status = 'NEW' ORDER BY id LIMIT 2 FOR UPDATE SKIP LOCKED`. B nhận được gì?",
+      "options": [
+        "id 1 và 2, sau khi chờ A commit",
+        "Lỗi vì dòng đang bị khoá",
+        "id 3 và 4, ngay lập tức",
+        "Rỗng, vì `LIMIT 2` chỉ xét hai dòng đầu và cả hai đang bị khoá"
+      ],
+      "answer": 2,
+      "explanation": "`SKIP LOCKED` bỏ qua các dòng không lấy được khoá ngay và tiếp tục quét, nên `LIMIT` áp dụng cho các dòng khoá được. Nhờ vậy nhiều worker chia việc mà không chờ nhau. Đổi lại kết quả cố ý không nhất quán: đừng dùng nó cho query đếm hay báo cáo."
+    }
+  ]
+}
