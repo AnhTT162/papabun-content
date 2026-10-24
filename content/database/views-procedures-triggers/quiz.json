@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "view-select-star",
+      "kind": "output",
+      "prompt": "PostgreSQL 16. Sau đoạn lệnh, `SELECT * FROM active_customers` trả về những cột nào?",
+      "code": "CREATE TABLE customers (id bigint, name text, status text);\nCREATE VIEW active_customers AS\n  SELECT * FROM customers WHERE status = 'ACTIVE';\nALTER TABLE customers ADD COLUMN email text;",
+      "options": [
+        "`id, name, status, email`",
+        "`id, name, status`",
+        "Lỗi, vì bảng đã đổi cấu trúc sau khi tạo view",
+        "Chỉ `email`"
+      ],
+      "answer": 1,
+      "explanation": "`SELECT *` trong view được mở thành danh sách cột ngay lúc `CREATE VIEW`. Cột `email` thêm sau không tự xuất hiện; phải `CREATE OR REPLACE VIEW` (thêm cột vào cuối được) để có nó. MySQL cũng mở `*` lúc tạo view. Đây là lý do nên liệt kê cột tường minh trong view."
+    },
+    {
+      "id": "mv-refresh-blocks",
+      "kind": "single",
+      "prompt": "Dashboard đọc từ materialized view `sales_summary`, refresh mỗi 10 phút bằng `REFRESH MATERIALIZED VIEW sales_summary;` mất 40 giây. Người dùng phàn nàn dashboard thỉnh thoảng treo khoảng 40 giây. Vì sao, và sửa thế nào?",
+      "options": [
+        "Refresh làm đầy CPU; tăng số core",
+        "Refresh thường giữ khoá `ACCESS EXCLUSIVE` trên view, chặn mọi `SELECT` tới khi xong. Tạo unique index trên view rồi dùng `REFRESH MATERIALIZED VIEW CONCURRENTLY`",
+        "Materialized view không có index; thêm index là hết",
+        "Dashboard đọc dữ liệu cũ; chuyển sang view thường"
+      ],
+      "answer": 1,
+      "explanation": "Refresh thường thay toàn bộ dữ liệu của view và giữ khoá mạnh nhất, nên mọi lệnh đọc phải chờ. `CONCURRENTLY` tính kết quả mới, so với dữ liệu cũ và chỉ áp phần khác biệt, cho phép đọc tiếp trong lúc đó, nhưng cần một unique index và thường chậm hơn. Chuyển sang view thường thì mỗi lần mở dashboard lại chạy query gốc đắt."
+    },
+    {
+      "id": "trigger-or-app",
+      "kind": "single",
+      "prompt": "Cần ghi lại mọi thay đổi trên bảng `salary`, kể cả thay đổi do DBA sửa tay bằng SQL hoặc do script migration. Cách nào phù hợp nhất?",
+      "options": [
+        "Ghi audit trong service Java mỗi khi gọi `save`",
+        "Trigger `AFTER INSERT OR UPDATE OR DELETE` trong database (hoặc CDC đọc WAL/binlog)",
+        "Bật log SQL của Hibernate",
+        "Chạy job so sánh bảng mỗi đêm"
+      ],
+      "answer": 1,
+      "explanation": "Yêu cầu là \"mọi thay đổi bất kể ai ghi\": đó đúng là chỗ trigger (hoặc CDC) phát huy. Audit ở ứng dụng bỏ sót SQL sửa tay và migration; log Hibernate cũng vậy và không đáng tin làm audit; so sánh hằng đêm không biết ai sửa và bỏ sót thay đổi trung gian. Với MySQL, nhớ rằng trigger không chạy cho xoá do foreign key cascade. Audit cấp database vẫn cần kiểm soát quyền: superuser có thể tắt trigger (`ALTER TABLE ... DISABLE TRIGGER`, `SET session_replication_role = replica`)."
+    },
+    {
+      "id": "immutable-wrong",
+      "kind": "single",
+      "prompt": "Một function PostgreSQL `to_local_date(ts timestamptz)` đổi thời điểm sang ngày theo múi giờ của session, được khai báo `IMMUTABLE` để dùng trong expression index. Rủi ro là gì?",
+      "options": [
+        "Không có rủi ro, `IMMUTABLE` chỉ là gợi ý hiệu năng",
+        "Kết quả phụ thuộc cài đặt `TimeZone` nên không thật sự bất biến; index lưu giá trị tính theo múi giờ lúc ghi, query từ session khác múi giờ có thể nhận kết quả sai",
+        "PostgreSQL sẽ báo lỗi khi tạo function",
+        "Index sẽ bị bỏ qua và query chậm"
+      ],
+      "answer": 1,
+      "explanation": "PostgreSQL tin lời khai báo: `IMMUTABLE` nghĩa là cùng đầu vào luôn ra cùng kết quả, nên giá trị được lưu thẳng vào index. Function phụ thuộc `TimeZone` (hoặc đọc bảng) là `STABLE`, không dùng được trong index. Muốn index theo ngày, cố định múi giờ trong biểu thức, ví dụ `(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date`. Biểu thức này chỉ đúng khi `created_at` là `timestamptz`; khi tạo index cần hai lớp ngoặc `CREATE INDEX ON orders (((created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date))`, và query phải viết đúng y biểu thức đó."
+    }
+  ]
+}

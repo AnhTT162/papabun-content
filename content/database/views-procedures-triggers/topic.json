@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "views-procedures-triggers",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "View, stored procedure & trigger",
+  "summary": "View chạy thế nào và chặn migration ra sao, materialized view và cách refresh, function và procedure trong PostgreSQL/MySQL, trigger và các tác dụng phụ ẩn (replication, cascade, ORM), khi nào đặt logic trong database và khi nào trong ứng dụng.",
+  "level": "mid",
+  "order": 13,
+  "minutes": 15,
+  "prerequisites": ["sql-fundamentals", "acid-transactions-basics", "index-execution-plan"],
+  "terms": ["view", "materialized-view", "stored-procedure", "trigger", "generated-column", "cdc", "security-definer", "upsert", "dual-write", "expression-index", "wal", "outbox", "replication-slot", "hot-row"],
+  "references": [
+    { "title": "PostgreSQL Documentation: CREATE VIEW", "url": "https://www.postgresql.org/docs/current/sql-createview.html" },
+    { "title": "PostgreSQL Documentation: REFRESH MATERIALIZED VIEW", "url": "https://www.postgresql.org/docs/current/sql-refreshmaterializedview.html" },
+    { "title": "MySQL 8.0: Using Triggers", "url": "https://dev.mysql.com/doc/refman/8.0/en/triggers.html" },
+    { "title": "PostgreSQL Documentation: CREATE FUNCTION (Writing SECURITY DEFINER Functions Safely)", "url": "https://www.postgresql.org/docs/current/sql-createfunction.html" },
+    { "title": "PostgreSQL Documentation: Procedures and transaction control", "url": "https://www.postgresql.org/docs/current/xproc.html" },
+    { "title": "MySQL 8.0: View Processing Algorithms", "url": "https://dev.mysql.com/doc/refman/8.0/en/view-algorithms.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vậy có nên viết logic nghiệp vụ trong stored procedure không?\" Câu trả lời cân bằng: đặt trong database những gì là **ràng buộc của dữ liệu** (constraint, unique, foreign key) và những xử lý dựa trên tập dữ liệu lớn mà kéo về ứng dụng thì quá đắt (gộp, đối soát hàng loạt). Logic nghiệp vụ thay đổi thường xuyên, cần test, review và deploy như code thì để ở ứng dụng. Database là thành phần khó scale nhất; mỗi phút CPU dùng cho logic ở đó là phút CPU không dùng cho query." }
+  ]
+}

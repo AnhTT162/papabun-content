@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "page-size", "front": "Kích thước page mặc định của PostgreSQL và InnoDB?", "back": "PostgreSQL 8KB, InnoDB 16KB. Database đọc và ghi đĩa theo đơn vị page, không theo dòng." },
+    { "id": "commit-durable", "front": "Commit thành công nghĩa là gì ở tầng lưu trữ?", "back": "WAL (redo log) chứa thay đổi đã được fsync xuống đĩa. Page dữ liệu có thể vẫn chỉ nằm trong RAM." },
+    { "id": "why-wal", "front": "Vì sao cần WAL thay vì ghi thẳng page ra file lúc commit?", "back": "Ghi nối tiếp vào log nhanh hơn nhiều lần ghi ngẫu nhiên vào page; page được ghi sau, và sập máy thì phát lại WAL." },
+    { "id": "autocommit-fsync", "front": "Vì sao 10.000 `INSERT` tự commit chậm hơn nhiều so với 1 transaction 10.000 dòng?", "back": "Mỗi commit phải chờ một lần fsync WAL; trên ổ mạng cloud mỗi lần khoảng 1–3ms." },
+    { "id": "sync-commit-off", "front": "`synchronous_commit = off` đánh đổi gì?", "back": "Commit báo thành công trước khi fsync: sập máy có thể mất các commit trong khoảng tới 600ms, nhưng dữ liệu không bị hỏng." },
+    { "id": "full-page-writes", "front": "Vì sao lượng WAL của PostgreSQL tăng vọt ngay sau checkpoint?", "back": "Lần đầu sửa mỗi page sau checkpoint, PostgreSQL ghi nguyên page vào WAL (full page write) để chống page bị ghi dở." },
+    { "id": "lsm-vs-btree", "front": "LSM-tree khác B+tree thế nào?", "back": "LSM chỉ ghi nối tiếp (memtable rồi SSTable, gộp dần bằng compaction) nên ghi nhanh, đọc có thể phải xem nhiều file. B+tree sửa page tại chỗ, đọc nhanh, ghi ngẫu nhiên." },
+    { "id": "bloom-filter-use", "front": "Bloom filter giúp LSM-tree thế nào?", "back": "Cho biết chắc chắn một SSTable không chứa key, nên đọc một key bỏ qua được hầu hết các file." },
+    { "id": "tombstone", "front": "Vì sao bảng Cassandra bị xoá nhiều lại đọc chậm dần?", "back": "Xoá là ghi tombstone; compaction chỉ được bỏ tombstone sau `gc_grace_seconds` (mặc định 10 ngày), trong thời gian đó mọi lần đọc phải duyệt qua chúng." }
+  ]
+}

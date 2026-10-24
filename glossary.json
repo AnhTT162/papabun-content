@@ -717,7 +717,7 @@
       "meaning": "Loại index phổ biến nhất: key được sắp xếp trong các page tạo thành cây thấp, tìm một giá trị chỉ cần đi qua vài page từ gốc xuống lá.",
       "example": "Bảng 12 triệu dòng có B-tree cao khoảng 3–4 tầng, tìm một `customer_id` đọc khoảng 4–5 page.",
       "related": ["composite-index", "execution-plan"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "storage-engine"]
     },
     {
       "id": "clustered-index",
@@ -725,7 +725,7 @@
       "meaning": "Index mà lá của nó chứa luôn toàn bộ dòng dữ liệu, nên bảng được lưu theo thứ tự của key. Trong MySQL InnoDB đó là primary key. Không có primary key thì InnoDB dùng index UNIQUE NOT NULL đầu tiên, hoặc một row ID ẩn. PostgreSQL không có clustered index.",
       "example": "InnoDB: index phụ trên `email` lưu kèm primary key, rồi tra tiếp clustered index để lấy dòng.",
       "related": ["b-tree", "covering-index"],
-      "topics": ["index-execution-plan", "relational-keys-normalization"]
+      "topics": ["index-execution-plan", "relational-keys-normalization", "storage-engine"]
     },
     {
       "id": "composite-index",
@@ -789,7 +789,7 @@
       "meaning": "Index trên kết quả của một biểu thức thay vì giá trị cột gốc (MySQL gọi là functional index). Query phải dùng đúng biểu thức đó.",
       "example": "`CREATE INDEX ON users (lower(email))` giúp `WHERE lower(email) = 'an@example.com'`.",
       "related": ["sargable"],
-      "topics": ["index-execution-plan", "relational-keys-normalization"]
+      "topics": ["index-execution-plan", "relational-keys-normalization", "views-procedures-triggers"]
     },
     {
       "id": "index-only-scan",
@@ -893,7 +893,7 @@
       "meaning": "Multi-Version Concurrency Control: database giữ nhiều phiên bản của mỗi dòng, mỗi transaction đọc phiên bản phù hợp với snapshot của nó, nên đọc và ghi không chặn nhau.",
       "example": "Một báo cáo chạy 5 phút vẫn thấy số liệu nhất quán dù trong lúc đó có hàng nghìn UPDATE.",
       "related": ["snapshot-isolation"],
-      "topics": ["transaction-isolation"]
+      "topics": ["transaction-isolation", "storage-engine"]
     },
     {
       "id": "snapshot-isolation",
@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers"]
     },
     {
       "id": "savepoint",
@@ -1333,7 +1333,7 @@
       "meaning": "Bản ghi cách hoàn tác thay đổi của InnoDB: dùng để rollback và để transaction khác đọc phiên bản cũ của dòng (MVCC). PostgreSQL không có undo log.",
       "example": "Rollback một `UPDATE` 5 triệu dòng trong InnoDB phải áp ngược 5 triệu thay đổi từ undo log.",
       "related": ["wal", "acid"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "storage-engine"]
     },
     {
       "id": "implicit-commit",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers"]
     },
     {
       "id": "datasource",
@@ -1549,7 +1549,7 @@
       "meaning": "Insert nếu chưa có, update nếu đã có, trong một câu lệnh nguyên tử dựa trên unique index.",
       "example": "PostgreSQL `INSERT ... ON CONFLICT (sku) DO UPDATE SET ...`; MySQL `INSERT ... ON DUPLICATE KEY UPDATE ...`.",
       "related": ["constraint", "jdbc-batching"],
-      "topics": ["query-patterns"]
+      "topics": ["query-patterns", "views-procedures-triggers"]
     },
     {
       "id": "generic-plan",
@@ -1558,6 +1558,166 @@
       "example": "5 lần đầu đều lọc theo một trạng thái hiếm, sau đó generic plan được dùng cho cả trạng thái phổ biến và chọn sai cách quét.",
       "related": ["prepared-statement", "execution-plan"],
       "topics": ["query-patterns"]
+    },
+    {
+      "id": "page",
+      "term": "Page",
+      "meaning": "Đơn vị cố định mà database đọc, ghi và cache dữ liệu (PostgreSQL 8KB, InnoDB 16KB). Một page chứa nhiều dòng hoặc nhiều entry của index. InnoDB đổi được bằng `innodb_page_size` lúc khởi tạo; PostgreSQL cố định lúc build.",
+      "example": "Đọc một dòng 100 byte vẫn phải đọc cả page 8KB chứa nó.",
+      "related": ["buffer-pool"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "buffer-pool",
+      "term": "Buffer pool",
+      "meaning": "Vùng RAM database dùng để giữ các page đang làm việc. Sửa dữ liệu là sửa page ở đây; page bị sửa (dirty) được ghi ra đĩa sau.",
+      "example": "InnoDB `innodb_buffer_pool_size`; PostgreSQL `shared_buffers`.",
+      "related": ["page", "checkpoint"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "fsync",
+      "term": "fsync",
+      "meaning": "Lời gọi hệ thống buộc dữ liệu đã ghi thật sự xuống thiết bị lưu trữ, không chỉ nằm trong cache của OS. Database fsync WAL trước khi báo commit thành công. Trên Linux, PostgreSQL mặc định dùng biến thể `fdatasync` (`wal_sync_method`).",
+      "example": "Trên ổ mạng cloud, mỗi lần fsync thường mất 1–3ms, nên giới hạn số commit tuần tự mỗi giây.",
+      "related": ["wal", "group-commit"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "checkpoint",
+      "term": "Checkpoint",
+      "meaning": "Thời điểm database đảm bảo mọi page bị sửa trước đó đã được ghi ra file dữ liệu, để khi phục hồi chỉ cần phát lại WAL từ đây.",
+      "example": "PostgreSQL chạy checkpoint mỗi 5 phút hoặc khi WAL vượt `max_wal_size`.",
+      "related": ["wal", "full-page-write"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "lsm-tree",
+      "term": "LSM-tree",
+      "meaning": "Log-Structured Merge-tree: cấu trúc lưu trữ ghi vào bảng trong RAM rồi đổ ra các file đã sắp xếp không sửa được, gộp dần ở nền. Tối ưu cho ghi.",
+      "example": "RocksDB, Cassandra, ScyllaDB, LevelDB dùng LSM-tree.",
+      "related": ["compaction", "bloom-filter", "b-tree"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "compaction",
+      "term": "Compaction",
+      "meaning": "Quá trình gộp các file dữ liệu của LSM-tree, bỏ bản cũ và bản đã xoá, để giảm số file phải đọc và dung lượng.",
+      "example": "Compaction không theo kịp lượng ghi thì RocksDB chặn ghi (write stall).",
+      "related": ["lsm-tree", "write-amplification"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "write-amplification",
+      "term": "Write amplification",
+      "meaning": "Tỉ lệ giữa số byte thật sự ghi xuống đĩa và số byte dữ liệu ứng dụng ghi. WAL, full page write, index và compaction đều làm tăng nó.",
+      "example": "Sửa 100 byte nhưng ghi một full page write 8KB vào WAL rồi ghi lại page 8KB khi checkpoint.",
+      "related": ["compaction", "full-page-write"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "bloom-filter",
+      "term": "Bloom filter",
+      "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
+      "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
+      "related": ["lsm-tree"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "group-commit",
+      "term": "Group commit",
+      "meaning": "Database gom nhiều transaction commit gần cùng lúc vào một lần fsync, tăng số commit mỗi giây khi có nhiều client đồng thời.",
+      "example": "100 client cùng commit trong 1ms chỉ cần vài lần fsync thay vì 100.",
+      "related": ["fsync", "wal"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "full-page-write",
+      "term": "Full page write",
+      "meaning": "PostgreSQL ghi nguyên nội dung một page vào WAL ở lần sửa đầu tiên sau mỗi checkpoint, để phục hồi được cả khi page trên đĩa bị ghi dở lúc mất điện.",
+      "example": "Lượng WAL tăng vọt ngay sau checkpoint vì rất nhiều page được sửa lần đầu.",
+      "related": ["checkpoint", "wal"],
+      "topics": ["storage-engine"]
+    },
+    {
+      "id": "view",
+      "term": "View",
+      "meaning": "Câu query được đặt tên và lưu trong database, dùng như một bảng nhưng không lưu dữ liệu riêng; mỗi lần đọc, định nghĩa của nó được gộp vào query.",
+      "example": "`CREATE VIEW active_customers AS SELECT id, name FROM customers WHERE status = 'ACTIVE';`",
+      "related": ["materialized-view"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "materialized-view",
+      "term": "Materialized view",
+      "meaning": "View lưu sẵn kết quả như một bảng và có thể đánh index; dữ liệu chỉ mới khi được refresh. PostgreSQL và Oracle có, MySQL không có.",
+      "example": "`REFRESH MATERIALIZED VIEW CONCURRENTLY sales_summary;` mỗi 10 phút.",
+      "related": ["view"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "stored-procedure",
+      "term": "Stored procedure",
+      "meaning": "Đoạn logic viết bằng ngôn ngữ của database (PL/pgSQL, SQL/PSM của MySQL) lưu và chạy ngay trong database.",
+      "example": "`CALL archive_old_orders(date '2026-01-01');`",
+      "related": ["trigger"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "trigger",
+      "term": "Trigger",
+      "meaning": "Hàm database tự chạy trước hoặc sau `INSERT`/`UPDATE`/`DELETE`, trong cùng transaction với thay đổi. PostgreSQL có trigger theo từng dòng và theo câu lệnh; MySQL chỉ có theo từng dòng.",
+      "example": "Trigger `BEFORE UPDATE` đặt `updated_at = now()` cho mọi dòng bị sửa.",
+      "related": ["stored-procedure", "cdc"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "generated-column",
+      "term": "Generated column",
+      "meaning": "Cột có giá trị tự tính từ các cột khác của cùng dòng; `STORED` lưu xuống đĩa, `VIRTUAL` tính khi đọc.",
+      "example": "`total numeric GENERATED ALWAYS AS (price * quantity) STORED`.",
+      "related": ["trigger"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "cdc",
+      "term": "CDC",
+      "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
+      "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
+      "related": ["dual-write", "trigger"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "security-definer",
+      "term": "SECURITY DEFINER",
+      "meaning": "Thuộc tính của function PostgreSQL: chạy với quyền của chủ function thay vì người gọi. Phải cố định `search_path` chỉ gồm schema tin cậy và `pg_temp` ở cuối để tránh bị chiếm quyền.",
+      "example": "`CREATE FUNCTION billing.close_period() ... SECURITY DEFINER SET search_path = billing, pg_temp`, rồi `REVOKE EXECUTE ... FROM PUBLIC`.",
+      "related": ["stored-procedure"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "outbox",
+      "term": "Transactional outbox",
+      "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
+      "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
+      "related": ["cdc", "dual-write"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "replication-slot",
+      "term": "Replication slot",
+      "meaning": "Cơ chế PostgreSQL ghi nhớ một bên nhận (replica, Debezium) đã đọc WAL tới đâu và giữ lại WAL chưa được đọc. Bên nhận dừng lâu thì WAL tích tụ, có thể làm đầy đĩa.",
+      "example": "`SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) FROM pg_replication_slots;`",
+      "related": ["cdc", "wal"],
+      "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "hot-row",
+      "term": "Hot row",
+      "meaning": "Một dòng bị rất nhiều transaction cùng cập nhật, nên mọi transaction phải lần lượt chờ khoá của nó; throughput bị giới hạn bởi thời gian giữ khoá.",
+      "example": "Dòng tổng doanh thu của một merchant lớn được cộng trong mọi transaction đặt đơn.",
+      "related": ["pessimistic-locking", "trigger"],
+      "topics": ["views-procedures-triggers"]
     }
   ]
 }

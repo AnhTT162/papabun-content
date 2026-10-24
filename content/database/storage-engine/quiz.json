@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "crash-after-commit",
+      "kind": "single",
+      "prompt": "PostgreSQL với cấu hình mặc định. Một transaction vừa `COMMIT` thành công thì máy mất điện, trước khi checkpoint ghi page bị sửa ra file dữ liệu. Sau khi khởi động lại thì sao?",
+      "options": [
+        "Thay đổi mất, vì page chưa được ghi ra file",
+        "Thay đổi còn: lúc khởi động, PostgreSQL phát lại WAL từ checkpoint gần nhất, và WAL đã được fsync trước khi commit báo thành công",
+        "Database không khởi động được và phải restore từ backup",
+        "Còn hay mất tuỳ may rủi"
+      ],
+      "answer": 1,
+      "explanation": "Với `synchronous_commit = on` (mặc định), `COMMIT` chỉ trả về sau khi bản ghi WAL đã fsync. Phát lại WAL (redo) dựng lại page đúng trạng thái. Full page write đảm bảo cả page bị ghi dở lúc mất điện cũng khôi phục được. Thay đổi chỉ có thể mất nếu đã tắt `synchronous_commit` (mất vài trăm mili giây commit cuối) hoặc `fsync` (có thể hỏng dữ liệu)."
+    },
+    {
+      "id": "innodb-flush-setting",
+      "kind": "single",
+      "prompt": "MySQL đặt `innodb_flush_log_at_trx_commit = 2`. Trường hợp nào có thể mất các transaction đã commit?",
+      "options": [
+        "Chỉ khi tiến trình `mysqld` bị kill",
+        "Khi hệ điều hành hoặc máy sập: log đã được ghi ra OS mỗi commit nhưng chỉ fsync khoảng mỗi giây, nên có thể mất khoảng 1 giây commit",
+        "Không bao giờ, giá trị 2 an toàn như 1",
+        "Mỗi lần restart MySQL bình thường"
+      ],
+      "answer": 1,
+      "explanation": "Giá trị 2 ghi log vào page cache của OS ở mỗi commit, nên `mysqld` sập vẫn không mất (OS còn giữ dữ liệu). Nhưng OS hoặc máy sập thì phần chưa fsync mất. Giá trị 0 còn yếu hơn: mất cả khi `mysqld` sập. Chỉ giá trị 1 (mặc định) fsync ở mỗi commit."
+    },
+    {
+      "id": "lsm-write-heavy",
+      "kind": "single",
+      "prompt": "Hệ thống thu thập 500.000 sự kiện mỗi giây từ thiết bị IoT, hầu như chỉ ghi, đọc chủ yếu theo thiết bị và khoảng thời gian gần đây. Engine nào hợp nhất?",
+      "options": [
+        "B+tree vì đọc nhanh hơn",
+        "LSM-tree (ví dụ Cassandra, ScyllaDB hay RocksDB): ghi nối tiếp nên chịu được lượng ghi rất lớn; khoá theo (thiết bị, thời gian) phục vụ được truy vấn chính",
+        "Lưu theo cột cho mọi trường hợp",
+        "Engine nào cũng như nhau, chỉ phụ thuộc phần cứng"
+      ],
+      "answer": 1,
+      "explanation": "Với lượng ghi áp đảo, ghi tuần tự của LSM và việc không phải sửa page tại chỗ là lợi thế lớn. Đọc theo khoảng (thiết bị + thời gian gần đây) nhanh nhờ khoá phân vùng theo thiết bị, clustering key theo thời gian, và dữ liệu mới thường còn trong memtable hoặc các SSTable gần đây; compaction dành cho time-series (TWCS, hoặc UCS từ Cassandra 5) giữ dữ liệu cùng khoảng thời gian trong cùng file. Cái giá là compaction tốn I/O ở nền. Lưu theo cột hợp với báo cáo phân tích trên dữ liệu đã thu, thường là một hệ thứ hai, không phải nơi nhận ghi trực tiếp."
+    },
+    {
+      "id": "checkpoint-too-frequent",
+      "kind": "single",
+      "prompt": "Log PostgreSQL liên tục báo `checkpoints are occurring too frequently (25 seconds apart)` lúc nạp dữ liệu buổi đêm, và lượng WAL rất lớn. Nên làm gì trước?",
+      "options": [
+        "Đặt `fsync = off` trong lúc nạp",
+        "Tăng `max_wal_size` để checkpoint giãn ra, nhờ vậy ít full page write hơn và ít I/O dồn hơn",
+        "Giảm `checkpoint_timeout` xuống 30 giây",
+        "Tăng `shared_buffers` lên 90% RAM"
+      ],
+      "answer": 1,
+      "explanation": "Checkpoint bị kích hoạt vì WAL chạm `max_wal_size` (mặc định 1GB) chứ không phải hết `checkpoint_timeout`. Mỗi checkpoint làm lần sửa đầu tiên của mọi page sinh full page write, nên checkpoint càng dày WAL càng nhiều. Tăng `max_wal_size` (ví dụ 8–16GB, đổi lại phục hồi sau sự cố lâu hơn) là cách chuẩn. `fsync = off` có thể làm hỏng dữ liệu; `shared_buffers` 90% RAM làm OS và các connection thiếu bộ nhớ."
+    }
+  ]
+}

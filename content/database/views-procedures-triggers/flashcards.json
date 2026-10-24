@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "view-cost",
+      "front": "Query trên một view có chậm hơn query viết tay không?",
+      "back": "View đơn giản thì không: planner gộp nó vào query. View có `GROUP BY`, `DISTINCT`, `LIMIT` thì có thể chậm hơn (MySQL dựng bảng tạm, điều kiện ngoài không đẩy vào được)."
+    },
+    {
+      "id": "mv-refresh-lock",
+      "front": "`REFRESH MATERIALIZED VIEW` thường và `CONCURRENTLY` khác nhau thế nào?",
+      "back": "Bản thường tính lại và chặn mọi lệnh đọc trong lúc chạy. `CONCURRENTLY` cho đọc tiếp nhưng cần unique index và chậm hơn."
+    },
+    {
+      "id": "mysql-mv",
+      "front": "MySQL có materialized view không?",
+      "back": "Không. Phải tự làm bằng bảng thường cộng job hoặc event để tính lại."
+    },
+    {
+      "id": "pg-procedure-commit",
+      "front": "Trong PostgreSQL, function và procedure khác nhau ở điểm nào quan trọng?",
+      "back": "Procedure (từ bản 11, gọi bằng `CALL`) được `COMMIT` giữa chừng, nhưng chỉ khi `CALL` không nằm trong transaction đang mở (không trong `@Transactional`, autocommit bật). Function thì không bao giờ."
+    },
+    {
+      "id": "view-blocks-alter",
+      "front": "Vì sao `ALTER COLUMN ... TYPE` báo lỗi khi có view dùng cột đó?",
+      "back": "PostgreSQL không cho đổi kiểu cột mà view phụ thuộc; phải drop view, sửa bảng, rồi tạo lại view trong cùng migration."
+    },
+    {
+      "id": "trigger-hot-row",
+      "front": "Trigger cộng dồn vào một dòng tổng gây vấn đề gì khi tải cao?",
+      "back": "Dòng tổng bị khoá từ lúc trigger chạy tới lúc commit, nên throughput tối đa ≈ 1 ÷ thời gian giữ khoá: giữ 50ms thì chỉ khoảng 20 giao dịch/giây trên dòng đó."
+    },
+    {
+      "id": "mysql-trigger-cascade",
+      "front": "MySQL có chạy trigger cho dòng bị xoá do `ON DELETE CASCADE` không?",
+      "back": "Không. Audit bằng trigger sẽ thiếu các dòng bị xoá theo dây chuyền; PostgreSQL thì có chạy."
+    },
+    {
+      "id": "security-definer-search-path",
+      "front": "Vì sao function `SECURITY DEFINER` phải đặt `search_path`?",
+      "back": "Function chạy với quyền của chủ. Phải đặt `search_path` chỉ gồm schema tin cậy và `pg_temp` ở cuối (hoặc `''`), nếu không người gọi có thể tạo object hoặc bảng tạm trùng tên để chiếm quyền."
+    },
+    {
+      "id": "trigger-alternatives",
+      "front": "Hai cách thay trigger hay dùng là gì?",
+      "back": "Generated column cho giá trị tính từ cột khác; CDC (Debezium đọc WAL/binlog) cho audit và đồng bộ sang hệ khác."
+    }
+  ]
+}

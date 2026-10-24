@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "storage-engine",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Storage engine: B+tree, LSM, WAL",
+  "summary": "Page và buffer pool, đường đi của một lần ghi qua WAL và fsync, checkpoint và full page write, đánh đổi độ bền lấy tốc độ (synchronous_commit, innodb_flush_log_at_trx_commit), B+tree so với LSM-tree, compaction và các loại amplification.",
+  "level": "mid",
+  "order": 12,
+  "minutes": 16,
+  "prerequisites": ["acid-transactions-basics", "index-execution-plan"],
+  "terms": ["page", "buffer-pool", "wal", "fsync", "checkpoint", "b-tree", "lsm-tree", "compaction", "write-amplification", "bloom-filter", "group-commit", "full-page-write", "clustered-index", "mvcc", "undo-log"],
+  "references": [
+    { "title": "PostgreSQL Documentation: Reliability and the Write-Ahead Log", "url": "https://www.postgresql.org/docs/current/wal.html" },
+    { "title": "MySQL 8.0: InnoDB On-Disk Structures and Buffer Pool", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html" },
+    { "title": "RocksDB Wiki: Leveled Compaction", "url": "https://github.com/facebook/rocksdb/wiki/Leveled-Compaction" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Commit xong rồi mà dữ liệu chưa được ghi vào file bảng, vậy sập máy có mất không?\" Không mất, miễn là WAL đã được fsync. Khi khởi động lại, database đọc WAL từ checkpoint gần nhất và phát lại (redo) mọi thay đổi đã commit lên các page. Đó chính là lý do WAL tồn tại: biến nhiều lần ghi ngẫu nhiên vào file bảng thành một lần ghi tuần tự vào log lúc commit, còn việc ghi page để sau." }
+  ]
+}

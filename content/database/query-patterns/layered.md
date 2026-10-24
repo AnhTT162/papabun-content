@@ -17,7 +17,7 @@ Với index `(created_at, id)`, mỗi trang chỉ đọc 50 dòng, dù sâu tớ
 
 **Đếm**: `count(*)` trong PostgreSQL và InnoDB phải quét bảng hoặc một index, vì với MVCC mỗi transaction thấy một số dòng khác nhau. Trên bảng lớn, dùng `LIMIT n + 1` để biết "còn trang sau", ước lượng từ thống kê, hoặc đếm có giới hạn ("hơn 1.000").
 
-**Ghi hàng loạt**: gửi từng `INSERT` một tốn một vòng đi về mạng và (ở autocommit) một lần commit cho mỗi dòng. Dùng [[jdbc-batching|JDBC batch]] trong một transaction (driver chỉ gộp thật khi bật `rewriteBatchedStatements`/`reWriteBatchedInserts`, xem bài JDBC), `INSERT` nhiều dòng, hoặc `COPY` của PostgreSQL cho lượng rất lớn. Upsert:
+**Ghi hàng loạt**: gửi từng `INSERT` một tốn một vòng đi về mạng và (ở autocommit) một lần commit cho mỗi dòng. Dùng [[jdbc-batching|JDBC batch]] trong một transaction (MySQL Connector/J chỉ gộp thật khi bật `rewriteBatchedStatements`; pgjdbc vẫn gửi cả batch trong một lượt và `reWriteBatchedInserts` gộp thêm thành `INSERT` nhiều dòng, xem bài JDBC), `INSERT` nhiều dòng, hoặc `COPY` của PostgreSQL cho lượng rất lớn. Upsert:
 - PostgreSQL: `INSERT ... ON CONFLICT (sku) DO UPDATE SET price = EXCLUDED.price`, cần unique index trên `sku`.
 - MySQL: `INSERT ... ON DUPLICATE KEY UPDATE price = new.price` (alias `AS new` từ 8.0.19; `VALUES()` đã deprecated).
 

@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Dashboard doanh thu cho merchant",
+  "prompt": "Nền tảng bán hàng trên PostgreSQL 16. Bảng `orders` có **500 triệu dòng** (khoảng 3 tháng), nhận **150 đơn/giây** lúc cao điểm, khoảng 5 triệu đơn mỗi ngày, từ 5.000 merchant. Một merchant lớn nhận tới 30 đơn/giây.\n\nDashboard cho mỗi merchant hiển thị:\n1. Doanh thu **hôm nay**, trễ không quá **1 phút**.\n2. Doanh thu theo ngày của **90 ngày gần nhất**, trễ không quá vài giờ.\n\nQuery hiện tại gộp trực tiếp trên `orders` mất 6 giây. 300 merchant mở dashboard cùng lúc, trang tự tải lại mỗi 60 giây, đẩy CPU database lên 70%. Chỉ đơn `PAID` được tính doanh thu; đơn có thể bị hoàn tiền vài ngày sau. Ngày tính theo múi giờ Việt Nam cho mọi merchant.\n\nChọn cách tính sẵn số liệu: materialized view, trigger cập nhật bảng tổng, job gộp định kỳ, hay CDC?",
+  "hints": [
+    "Materialized view tính lại toàn bộ query mỗi lần refresh. 90 ngày là bao nhiêu dòng phải quét mỗi phút?",
+    "Trigger `AFTER INSERT` cộng tiền vào dòng `(merchant_id, day)` chạy trong transaction của đơn. Dòng tổng bị khoá từ lúc trigger chạy tới lúc commit. Nếu transaction đặt đơn giữ khoá đó 50ms, một merchant được tối đa bao nhiêu đơn mỗi giây?",
+    "Job gộp định kỳ theo `id > last_id`: id được cấp lúc insert, nhưng transaction có thể commit theo thứ tự khác. Đơn có id nhỏ commit muộn thì sao?",
+    "Hai yêu cầu có độ trễ rất khác nhau (1 phút và vài giờ). Có cần cùng một cơ chế cho cả hai không?"
+  ],
+  "solution": "**1. Tách theo độ tươi.** Lịch sử 90 ngày và hôm nay là hai bài toán khác nhau.\n\n**2. Lịch sử: bảng `daily_revenue(merchant_id, day)`**, tính lại hằng đêm cho các ngày bị ảnh hưởng: vài ngày gần nhất, cộng các ngày có đơn bị hoàn tiền (tìm qua `updated_at` của đơn hoặc bảng refund). Mỗi merchant chỉ có 90 dòng để đọc. Không dùng materialized view cho phần này: mỗi lần refresh quét lại 90 ngày dữ liệu, và refresh thường chặn đọc.\n\n**3. Hôm nay: bảng `revenue_by_minute(merchant_id, minute)`**. Job chạy mỗi phút **tính lại toàn bộ 10 phút gần nhất** và thay thế các bucket đó trong một transaction:\n\n```sql\nBEGIN;\nSELECT pg_try_advisory_xact_lock(42001);  -- job đọc kết quả: false (lần trước chưa xong) thì ROLLBACK và bỏ qua lần này\nDELETE FROM revenue_by_minute\nWHERE minute >= date_trunc('minute', now()) - interval '10 minutes';\nINSERT INTO revenue_by_minute (merchant_id, minute, revenue, order_count)\nSELECT merchant_id, date_trunc('minute', created_at), sum(total), count(*)\nFROM orders\nWHERE created_at >= date_trunc('minute', now()) - interval '10 minutes'\n  AND status = 'PAID'\nGROUP BY 1, 2;\nCOMMIT;\n```\n\nBa chi tiết quyết định tính đúng:\n- **Cận dưới căn theo phút** (`date_trunc('minute', now())`). Nếu dùng `now() - interval '10 minutes'`, job chạy lúc 12:10:30 sẽ chỉ thấy nửa sau của phút 12:00 và ghi đè bucket đó bằng con số thiếu, rồi không bao giờ quay lại sửa.\n- **Xoá rồi ghi lại cả cửa sổ** thay vì [[upsert]] từng nhóm: phút nào không còn đơn hợp lệ (đơn bị huỷ) cũng được đặt lại, và job **idempotent**, chạy lặp hay chạy trễ đều cho cùng kết quả.\n- **Advisory lock** ngăn hai lần chạy chồng nhau ghi cùng bucket.\n\nCửa sổ 10 phút bắt được đơn commit muộn hơn `created_at` của nó, miễn độ trễ đó dưới 10 phút. Vì vậy `created_at` nên lấy theo đồng hồ database (`DEFAULT now()` là lúc transaction bắt đầu, nên độ trễ bằng độ dài transaction), không theo đồng hồ của từng máy ứng dụng có thể lệch nhau. Đọc từ replica thì cộng thêm độ trễ replication. Cách gộp theo `id > last_id` sẽ bỏ sót đơn có id nhỏ nhưng commit muộn. Thêm một job tính lại cả ngày hôm nay mỗi giờ để bắt mọi trường hợp vượt cửa sổ, và cảnh báo khi kết quả lệch với bảng phút.\n\nMỗi lần job đọc khoảng 90.000 đơn; index `orders (created_at) INCLUDE (merchant_id, total, status)` cho phép index-only scan. Dashboard cộng tối đa 1.440 dòng phút của hôm nay cho mỗi merchant. Bảng phút tăng khoảng 7 triệu dòng mỗi ngày: partition theo ngày và drop các ngày đã được tổng hợp vào `daily_revenue`.\n\n**4. Không dùng trigger cập nhật dòng tổng.** Dòng `(merchant_id, day)` bị khoá từ lúc trigger chạy tới lúc commit, nên một merchant chỉ đặt được tối đa khoảng 1 ÷ thời gian giữ khoá đơn mỗi giây. Giữ khoá 5ms thì trần là 200 đơn/giây, vẫn đủ. Nhưng transaction đặt đơn còn làm việc khác sau khi insert (trừ tồn kho, ghi thanh toán), giữ khoá 50ms thì trần chỉ còn 20 đơn/giây, thấp hơn 30 đơn/giây của merchant lớn: đơn bắt đầu xếp hàng, độ trễ đặt đơn tăng. Trên PostgreSQL, mỗi lần cập nhật còn tạo một phiên bản dòng mới: 30 lần/giây là khoảng 2,6 triệu dòng chết mỗi ngày trên cùng một dòng. Một đơn cập nhật nhiều dòng tổng theo thứ tự khác nhau còn có thể deadlock. Nếu thật sự cần cộng dồn đồng bộ, chia bộ đếm thành N dòng con theo `random()` rồi cộng khi đọc, hoặc ghi vào bảng delta chỉ-insert rồi gộp định kỳ. Nhưng logic thống kê vẫn không nên nằm trên đường ghi của nghiệp vụ chính (xem bài Optimistic & pessimistic locking về dòng nóng).\n\n**5. Khi cần nhanh hơn**: nếu hoàn tiền phải phản ánh trong vài phút, chuyển sang CDC (Debezium) đẩy thay đổi của `orders` sang một bộ gộp theo luồng (stream processor), hoặc dùng một kho phân tích như ClickHouse khi số loại báo cáo còn tăng.\n\n**6. Vận hành**: hiển thị \"cập nhật lúc HH:mm\" trên dashboard; cảnh báo khi job phút chạy quá 30 giây hoặc bị bỏ qua 2 lần liên tiếp.",
+  "tradeoffs": [
+    {
+      "option": "Materialized view + REFRESH CONCURRENTLY",
+      "pros": [
+        "Viết nhanh, chỉ một câu SQL",
+        "Có index, đọc rẻ"
+      ],
+      "cons": [
+        "Mỗi lần refresh tính lại toàn bộ query, quét 90 ngày dữ liệu",
+        "Refresh thường chặn đọc; `CONCURRENTLY` chậm hơn và cần unique index",
+        "Không có refresh tăng dần sẵn"
+      ]
+    },
+    {
+      "option": "Trigger cập nhật bảng tổng trên mỗi đơn",
+      "pros": [
+        "Số liệu luôn tươi",
+        "Không cần job"
+      ],
+      "cons": [
+        "Dòng tổng của merchant lớn thành điểm tranh chấp khoá",
+        "Thêm độ trễ và rủi ro vào transaction đặt đơn",
+        "Logic ẩn, khó test, khó thay đổi"
+      ]
+    },
+    {
+      "option": "Job tính lại cửa sổ gần nhất mỗi phút (bảng phút + bảng ngày)",
+      "pros": [
+        "Idempotent, bắt được đơn commit muộn",
+        "Không chạm vào đường ghi của đơn hàng",
+        "Chi phí cố định, dễ đo"
+      ],
+      "cons": [
+        "Trễ tới khoảng 1 phút",
+        "Phải vận hành và giám sát một job",
+        "Hoàn tiền muộn cần cơ chế tính lại riêng"
+      ]
+    },
+    {
+      "option": "CDC (Debezium) + xử lý luồng hoặc kho phân tích",
+      "pros": [
+        "Gần thời gian thực, gồm cả hoàn tiền",
+        "Tách hẳn tải báo cáo khỏi database giao dịch"
+      ],
+      "cons": [
+        "Thêm Kafka, Debezium, stream processor hoặc ClickHouse phải vận hành",
+        "Quá nặng nếu chỉ có một dashboard"
+      ]
+    }
+  ]
+}

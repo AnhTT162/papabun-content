@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần ghi đi qua WAL, buffer pool và checkpoint",
+  "nodes": [
+    { "id": "app", "label": "UPDATE + COMMIT", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "buffer", "label": "Buffer pool (RAM)", "kind": "cache", "x": 0.85, "y": 0.05 },
+    { "id": "wal", "label": "WAL trên đĩa", "kind": "database", "x": 0.1, "y": 0.5 },
+    { "id": "checkpointer", "label": "Checkpoint", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "replica", "label": "Replica / PITR", "kind": "external", "x": 0.1, "y": 0.95 },
+    { "id": "datafiles", "label": "File dữ liệu", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "app-buffer", "from": "app", "to": "buffer", "label": "sửa page (bẩn)" },
+    { "id": "app-wal", "from": "app", "to": "wal", "label": "ghi WAL + fsync" },
+    { "id": "buffer-checkpointer", "from": "buffer", "to": "checkpointer", "label": "page bẩn" },
+    { "id": "checkpointer-datafiles", "from": "checkpointer", "to": "datafiles", "label": "ghi định kỳ" },
+    { "id": "wal-datafiles", "from": "wal", "to": "datafiles", "label": "redo khi khởi động" },
+    { "id": "wal-replica", "from": "wal", "to": "replica", "label": "gửi WAL" }
+  ],
+  "steps": [
+    { "caption": "Ứng dụng sửa một dòng rồi commit.", "show": ["app"] },
+    { "caption": "Page chứa dòng được sửa ngay trong buffer pool. File dữ liệu trên đĩa chưa đổi gì.", "show": ["buffer", "app-buffer"], "highlight": ["app-buffer"] },
+    { "caption": "Thay đổi được ghi nối tiếp vào WAL. COMMIT chỉ báo thành công sau khi WAL đã fsync xuống đĩa.", "show": ["wal", "app-wal"], "highlight": ["app-wal"] },
+    { "caption": "Background writer và checkpoint gom các page bẩn lại.", "show": ["checkpointer", "buffer-checkpointer"], "highlight": ["buffer-checkpointer"] },
+    { "caption": "Rồi ghi chúng ra file dữ liệu theo nhịp, tách khỏi lúc commit.", "show": ["datafiles", "checkpointer-datafiles"], "highlight": ["checkpointer-datafiles"] },
+    { "caption": "Sập máy trước checkpoint: lúc khởi động, database phát lại WAL từ checkpoint gần nhất lên các page.", "show": ["wal-datafiles"], "highlight": ["wal-datafiles"] },
+    { "caption": "Cùng dòng WAL đó được gửi sang replica và lưu trữ để khôi phục về một thời điểm (PITR).", "show": ["replica", "wal-replica"], "highlight": ["wal-replica"] }
+  ]
+}

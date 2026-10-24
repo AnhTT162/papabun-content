@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Import 200 nghìn dòng: 40 giây trên laptop, 9 phút trên production",
+  "context": "Job import danh mục sản phẩm từ file CSV (Spring Boot 3, Spring Data JPA, PostgreSQL 16). Trên laptop của dev, PostgreSQL chạy trên SSD NVMe. Trên production, PostgreSQL chạy trên máy ảo cloud với ổ đĩa mạng.",
+  "buggyCode": "public void importProducts(Path csv) throws IOException {\n    try (Stream<String> lines = Files.lines(csv)) {\n        lines.skip(1)\n             .map(ProductCsvParser::parse)\n             .forEach(productRepository::save);   // 200.000 dòng\n    }\n}",
+  "symptom": {
+    "description": "Laptop: 40 giây. Production: khoảng 9 phút, trong khi CPU của database chỉ 8% và không có query chậm nào. Số liệu lấy trong lúc job chạy trên production:",
+    "output": "SELECT wait_event_type, wait_event, count(*) FROM pg_stat_activity\nWHERE application_name = 'catalog-import' GROUP BY 1, 2;\n wait_event_type | wait_event | count\n-----------------+------------+-------\n IO              | WALSync    |     1\n\nSELECT wal_records, wal_sync, round(wal_sync_time) AS sync_ms FROM pg_stat_wal;   -- sau khi reset, track_wal_io_timing = on\n wal_records | wal_sync | sync_ms\n-------------+----------+--------\n      612418 |   200037 |  496302"
+  },
+  "diagnosis": {
+    "question": "Vì sao production chậm hơn laptop hơn 13 lần?",
+    "options": [
+      "Bảng `product` thiếu index nên mỗi lần `save` phải quét cả bảng",
+      "Mỗi `save` chạy trong transaction riêng (`SimpleJpaRepository.save` có `@Transactional`), nên có 200.000 lần commit. Mỗi commit chờ WAL fsync; ổ mạng mất khoảng 2,5ms mỗi lần fsync so với khoảng 0,2ms của NVMe",
+      "`shared_buffers` của production quá nhỏ nên page liên tục bị đẩy ra đĩa",
+      "Hibernate dirty checking chậm vì persistence context giữ 200.000 entity"
+    ],
+    "answer": 1,
+    "explanation": "`pg_stat_wal` cho thấy 200.037 lần fsync WAL, tổng cộng khoảng 496 giây, tức khoảng 2,5ms mỗi lần: gần như toàn bộ 9 phút là chờ đĩa xác nhận commit. Session đang chờ ở `WALSync`, không phải CPU hay đọc page. Trên NVMe của laptop, 200.000 × 0,2ms ≈ 40 giây, chiếm phần lớn thời gian chạy ở đó, nên vấn đề bị che đi. Không có `@Transactional` bao ngoài, mỗi lời gọi `save` mở và commit transaction riêng. Persistence context cũng không giữ 200.000 entity, vì nó bị đóng sau mỗi transaction ngắn đó (khi job không chạy trong một request có Open Session in View)."
+  },
+  "fix": {
+    "code": "@Service\npublic class CatalogImporter {\n\n    private static final int CHUNK = 1_000;\n    private final ChunkWriter chunkWriter;\n\n    CatalogImporter(ChunkWriter chunkWriter) {\n        this.chunkWriter = chunkWriter;\n    }\n\n    public void importProducts(Path csv) throws IOException {\n        try (Stream<String> lines = Files.lines(csv)) {\n            List<Product> chunk = new ArrayList<>(CHUNK);\n            for (Iterator<String> it = lines.skip(1).iterator(); it.hasNext(); ) {\n                chunk.add(ProductCsvParser.parse(it.next()));\n                if (chunk.size() == CHUNK || !it.hasNext()) {\n                    chunkWriter.write(chunk);    // bean khác, có @Transactional\n                    chunk.clear();\n                }\n            }\n        }\n    }\n}\n\n@Component\nclass ChunkWriter {\n    private final ProductRepository productRepository;\n\n    ChunkWriter(ProductRepository productRepository) {\n        this.productRepository = productRepository;\n    }\n\n    @Transactional\n    public void write(List<Product> products) {\n        productRepository.saveAll(products);\n        // application.yml: spring.jpa.properties.hibernate.jdbc.batch_size: 100\n        //                  spring.jpa.properties.hibernate.order_inserts: true\n    }\n}",
+    "explanation": "Mỗi lô 1.000 dòng là một transaction, nên chỉ còn 200 lần commit và 200 lần fsync (khoảng 0,5 giây chờ đĩa thay vì 496 giây). JDBC batch gom các `INSERT` lại để giảm thêm số vòng đi về mạng; batch của Hibernate chỉ chạy khi id không sinh bằng `IDENTITY` (dùng `SEQUENCE` với `allocationSize`). Bật thêm `reWriteBatchedInserts=true` trên URL JDBC để pgjdbc gộp thành `INSERT` nhiều dòng (xem bài JDBC). Nếu id của `Product` được gán sẵn từ CSV, `save` coi entity là không mới và gọi `merge`, sinh thêm một `SELECT` mỗi dòng: implement `Persistable.isNew()` hoặc thêm field `@Version` kiểu `Long`. Chia lô thay vì một transaction 200.000 dòng giữ cho persistence context nhỏ và lỗi ở một lô không làm mất cả job. `SET LOCAL synchronous_commit = off` (chạy bằng native query ở đầu `write`) cũng bỏ được thời gian chờ fsync, sập máy chỉ mất vài lô cuối và không hỏng dữ liệu. Sau khi đã chia lô thì nó gần như không còn lợi ích; nó hợp với workload nhiều transaction nhỏ không gom được, và chỉ khi dữ liệu nạp lại được. Không tắt `fsync` cho cả database để \"chạy cho nhanh\"."
+  }
+}
