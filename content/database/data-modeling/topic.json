@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "data-modeling",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "Mô hình hoá dữ liệu nâng cao",
+  "summary": "Phi chuẩn hoá có chủ đích và ai giữ nó đồng bộ, chọn kiểu id (bigint, UUID v4, UUID v7), xoá mềm và cái giá của nó, audit và lịch sử thay đổi, cột JSON khi nào đúng, kiểu dữ liệu cho tiền, thời gian và enum.",
+  "level": "mid",
+  "order": 14,
+  "minutes": 18,
+  "prerequisites": ["relational-keys-normalization", "index-execution-plan"],
+  "terms": ["surrogate-key", "uuid-v7", "soft-delete", "audit-trail", "temporal-table", "jsonb", "eav", "partial-index", "gin-index", "clustered-index", "exclusion-constraint", "cdc", "generated-column"],
+  "references": [
+    { "title": "RFC 9562: Universally Unique IDentifiers (UUID v7)", "url": "https://www.rfc-editor.org/rfc/rfc9562" },
+    { "title": "PostgreSQL Documentation: JSON Types", "url": "https://www.postgresql.org/docs/current/datatype-json.html" },
+    { "title": "Hibernate ORM User Guide: Soft delete", "url": "https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#soft-delete" },
+    { "title": "PostgreSQL Documentation: Exclusion Constraints", "url": "https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION" },
+    { "title": "MySQL 8.0: The JSON Data Type", "url": "https://dev.mysql.com/doc/refman/8.0/en/json.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Không lưu tiền bằng `float`/`double`: `0.1 + 0.2` không bằng `0.3`, và sai số cộng dồn qua hàng triệu giao dịch. Dùng `numeric`/`DECIMAL` với độ chính xác cố định, hoặc số nguyên theo đơn vị nhỏ nhất (đồng, cent) kèm cột mã tiền tệ. Trong Java dùng `BigDecimal` (so sánh bằng `compareTo`, vì `equals` phân biệt `2.0` và `2.00`) hoặc `long`." },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao không dùng EAV (bảng `entity, attribute, value`) cho thuộc tính linh hoạt?\" Vì mọi thứ database làm tốt đều mất: không có kiểu dữ liệu (mọi giá trị là text), không có ràng buộc hay foreign key theo từng thuộc tính, query lọc ba thuộc tính cần ba lần self-join, và thống kê của planner vô dụng. Với PostgreSQL, cột `jsonb` có GIN index làm được phần lớn việc EAV muốn làm mà nhanh và gọn hơn; thuộc tính quan trọng và được lọc nhiều thì đưa thành cột thật." }
+  ]
+}

@@ -242,8 +242,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 11 | `query-patterns` | Các mẫu query hiệu năng | mid | Keyset pagination, `count(*)`, batch insert/upsert, `OR` và `UNION` | L B | ✅ |
 | 12 | `storage-engine` | Storage engine: B+tree, LSM, WAL | mid | Buffer pool, WAL, checkpoint, fsync, write amplification | A L D B | ✅ |
 | 13 | `views-procedures-triggers` | ✚ View, stored procedure & trigger | mid | Khi nào dùng, materialized view, logic trong DB và trong app, rủi ro khi bảo trì | L Sc | ✅ |
-| 14 | `data-modeling` | Mô hình hoá dữ liệu nâng cao | mid | Phi chuẩn hoá có chủ đích, UUID v7, soft delete, audit, lịch sử thay đổi, JSON column | L Sc | ⬜ |
-| 15 | `nosql-overview` | NoSQL: chọn loại nào | mid | Document, key-value, wide-column, graph; mô hình theo access pattern | L Sc | ⬜ |
+| 14 | `data-modeling` | Mô hình hoá dữ liệu nâng cao | mid | Phi chuẩn hoá có chủ đích, UUID v7, soft delete, audit, lịch sử thay đổi, JSON column | L Sc | ✅ |
+| 15 | `nosql-overview` | NoSQL: chọn loại nào | mid | Document, key-value, wide-column, graph; mô hình theo access pattern | L Sc | ✅ |
 | 16 | `backup-restore` | Backup, restore & PITR | mid | Logical và physical backup, PITR dựa trên WAL/binlog, diễn tập restore (RPO/RTO: xem `high-availability-dr`) | L Sc | ⬜ |
 | 17 | `locking-deadlock-db` | Lock & deadlock trong database | senior | Row và table lock, gap lock, đọc deadlock log, lock timeout, advisory lock | L S T | ⬜ |
 | 18 | `mvcc-vacuum` | MVCC, VACUUM & undo log | senior | Phiên bản dòng PostgreSQL và InnoDB, autovacuum, bloat, XID wraparound | L D T | ⬜ |
@@ -437,7 +437,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | JVM | 2 | 2 | 7 | 0 | 11 |
 | Spring | 2 | 9 | 6 | 0 | 17 |
 | Testing | 2 | 6 | 1 | 0 | 9 |
-| Database | 4 | 12 | 8 | 14 | 24 |
+| Database | 4 | 12 | 8 | 16 | 24 |
 | Caching & Messaging | 2 | 5 | 6 | 0 | 13 |
 | Security | 3 | 5 | 4 | 0 | 12 |
 | Performance & Troubleshooting | 2 | 4 | 9 | 1 | 15 |
@@ -446,4 +446,4 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
 | System Design | 3 | 3 | 14 | 0 | 20 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **94** | **107** | **26** | **252** |
+| **Tổng** | **51** | **94** | **107** | **28** | **252** |

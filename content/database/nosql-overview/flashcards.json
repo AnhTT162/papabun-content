@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four-families", "front": "Bốn họ NoSQL chính và kiểu đọc mỗi họ tối ưu?", "back": "Key-value: theo khoá. Document: cả một aggregate. Wide-column: một dải dòng trong partition. Graph: đi theo quan hệ nhiều bước." },
+    { "id": "query-first", "front": "Nguyên tắc mô hình hoá dữ liệu cho NoSQL là gì?", "back": "Liệt kê access pattern trước rồi thiết kế khoá và bảng cho từng pattern; query không được tính trước thường không chạy được." },
+    { "id": "partition-vs-clustering", "front": "Partition key và clustering key trong Cassandra khác nhau thế nào?", "back": "Partition key quyết định dữ liệu nằm ở node nào; clustering key quyết định thứ tự các dòng trong partition đó." },
+    { "id": "partition-bucket", "front": "Làm sao giữ partition Cassandra không quá lớn?", "back": "Thêm bucket thời gian (tháng, ngày) vào partition key, giữ mỗi partition dưới khoảng 100MB." },
+    { "id": "quorum-math", "front": "Vì sao `QUORUM` ghi và `QUORUM` đọc với RF = 3 luôn thấy dữ liệu mới nhất?", "back": "Ghi 2 node, đọc 2 node trên 3: hai tập luôn chung ít nhất một node (R + W > N)." },
+    { "id": "gsi-vs-lsi", "front": "GSI và LSI của DynamoDB khác nhau thế nào?", "back": "GSI có partition key khác, cập nhật bất đồng bộ, thêm lúc nào cũng được. LSI cùng partition key, sort key khác, phải tạo cùng lúc với bảng." },
+    { "id": "embed-reference", "front": "MongoDB: khi nào nhúng, khi nào tham chiếu?", "back": "Nhúng khi dữ liệu con luôn đọc cùng cha và có giới hạn số lượng. Tham chiếu khi nó tăng không giới hạn hoặc được dùng chung (document tối đa 16MB)." },
+    { "id": "dynamodb-hot-key", "front": "Xử lý một khoá DynamoDB quá nóng thế nào?", "back": "Write sharding: thêm hậu tố ngẫu nhiên hoặc tính toán vào khoá để chia lưu lượng ra nhiều partition, rồi gộp khi đọc." },
+    { "id": "when-relational", "front": "Khi nào database quan hệ vẫn là lựa chọn đúng?", "back": "Dữ liệu nhiều quan hệ, cần transaction nhiều bản ghi, cần query tuỳ ý, hoặc access pattern chưa rõ." }
+  ]
+}

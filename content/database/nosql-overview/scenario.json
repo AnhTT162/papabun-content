@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn nơi lưu cho ứng dụng chat",
+  "prompt": "Ứng dụng chat có **20 triệu người dùng**, khoảng **2 tỷ tin nhắn mỗi tháng** (trung bình khoảng 770 tin/giây, cao điểm gấp 5 lần). Tin nhắn giữ vĩnh viễn. Các access pattern chính:\n\n1. Mở một cuộc trò chuyện: lấy 50 tin mới nhất, cuộn lên để tải tin cũ hơn.\n2. Danh sách cuộc trò chuyện của một người, sắp theo tin nhắn mới nhất.\n3. Trạng thái online của bạn bè, thay đổi phải hiện ra trong vài giây.\n4. Tìm tin nhắn theo từ khoá trong các cuộc trò chuyện của mình.\n5. Tài khoản, thanh toán gói premium, báo cáo nội bộ.\n\nĐội hiện chạy PostgreSQL. Hãy chọn nơi lưu cho từng phần và thiết kế khoá cho phần tin nhắn.",
+  "hints": [
+    "Pattern 1 luôn biết `conversation_id` và đọc theo thời gian giảm dần. Họ database nào lưu sẵn dữ liệu theo đúng thứ tự đó trong một partition?",
+    "Một nhóm chat lớn hoạt động nhiều năm có thể có hàng chục triệu tin. Partition chỉ theo `conversation_id` sẽ to tới đâu?",
+    "Pattern 2 sắp theo \"tin mới nhất\", giá trị này đổi mỗi khi có tin mới. Đặt nó trong clustering key của Cassandra thì mỗi lần cập nhật là gì?",
+    "Trạng thái online có cần bền vững không? Mất nó khi một node khởi động lại thì sao?"
+  ],
+  "solution": "**1. Tin nhắn: Cassandra hoặc ScyllaDB (hoặc DynamoDB nếu muốn dịch vụ managed).** Khoảng 770 tin/giây (cao điểm khoảng 3.900) thì một PostgreSQL vẫn ghi được. Thứ vượt một máy là **dung lượng tích luỹ**: giữ vĩnh viễn 2 tỷ tin mỗi tháng là khoảng 24 tỷ dòng mỗi năm, khoảng 1–2TB mỗi tháng tính cả index và bản sao, cộng thêm việc mỗi tin còn được ghi lan sang danh sách cuộc trò chuyện và search. Dữ liệu chỉ thêm mới, đọc luôn theo một cuộc trò chuyện và theo thời gian: đúng thế mạnh của wide-column trên LSM-tree, scale ngang bằng cách thêm node.\n\n```sql\nCREATE TABLE messages_by_conversation (\n    conversation_id uuid,\n    bucket          int,        -- tháng, ví dụ 202610\n    message_id      timeuuid,   -- vừa là thời gian, vừa unique\n    sender_id       uuid,\n    body            text,\n    PRIMARY KEY ((conversation_id, bucket), message_id)\n) WITH CLUSTERING ORDER BY (message_id DESC);\n```\n\nĐọc 50 tin mới nhất: `WHERE conversation_id = ? AND bucket = 202610 LIMIT 50`; cuộn lên: `AND message_id < ?`, hết bucket thì sang tháng trước. `bucket` giữ mỗi partition dưới khoảng 100MB kể cả với nhóm rất lớn. Cuộc trò chuyện thưa (im lặng nhiều tháng) sẽ phải dò nhiều bucket rỗng, nên lưu danh sách bucket có dữ liệu (hoặc `first_bucket`, `last_bucket`) trong bảng metadata của cuộc trò chuyện; nhóm cực lớn chia theo ngày thì cách chia bucket cũng phải lưu ở đó. Xoá tin là ghi cờ `deleted = true`, không xoá dòng và không đặt `body = null`, vì cả hai đều tạo tombstone.\n\n**2. Danh sách cuộc trò chuyện: không đặt `last_message_at` vào clustering key.** Mỗi tin mới sẽ là một lần xoá cộng một lần ghi, sinh tombstone liên tục trên partition của mọi thành viên. Thay vào đó, bảng `conversations_by_user` có `PRIMARY KEY (user_id, conversation_id)` cùng cột `last_message_at`, `last_message_preview`. Ứng dụng đọc cả partition của người dùng (thường vài trăm cuộc trò chuyện) rồi sắp xếp ở phía server, hoặc giữ danh sách sắp sẵn trong Redis sorted set (`ZADD inbox:{user} <timestamp> <conversation_id>`) làm lớp đọc nhanh. Nhóm 5.000 thành viên thì mỗi tin là 5.000 lần cập nhật, nên dùng cách lai: nhóm nhỏ thì ghi lan lúc ghi (fan-out on write); nhóm lớn chỉ lưu `last_message_at` ở bảng của cuộc trò chuyện và ghép vào danh sách lúc đọc (fan-out on read). Ghi `last_message_at` với `USING TIMESTAMP` bằng thời gian của tin, để bản ghi đến muộn không đè lên tin mới hơn.\n\n**3. Trạng thái online: Redis.** Gateway WebSocket ghi `presence:{user}` khi kết nối mở và xoá ngay khi kết nối đóng, nên bạn bè thấy thay đổi trong vài giây. TTL 60 giây cùng heartbeat 30 giây chỉ là lưới an toàn khi client chết đột ngột. Phần khó hơn là đẩy thay đổi tới bạn bè: dùng pub/sub theo những người đang mở ứng dụng, không đẩy cho mọi người trong danh bạ. Mất dữ liệu khi Redis khởi động lại không sao, vì client kết nối lại là có lại trạng thái. Không ghi trạng thái này vào database bền vững.\n\n**4. Tìm kiếm: Elasticsearch hoặc OpenSearch.** Để tránh dual write, dịch vụ chat ghi tin vào Kafka trước, rồi các consumer ghi vào cả Cassandra lẫn search index. Mỗi document mang `conversation_id`; lúc query, lọc theo danh sách cuộc trò chuyện người dùng đang là thành viên (lấy từ dịch vụ membership), không nhúng danh sách quyền tĩnh vào document, để người rời nhóm mất quyền xem ngay. Trễ vài giây là chấp nhận được.\n\n**5. Tài khoản, thanh toán, báo cáo: giữ PostgreSQL.** Đây là dữ liệu có quan hệ, cần transaction và ràng buộc, lượng ghi nhỏ. Báo cáo về tin nhắn chạy trên kho phân tích nhận dữ liệu từ cùng hàng đợi, không chạy trên Cassandra.\n\n**6. Cái giá phải chấp nhận**: bốn hệ thống phải vận hành; tin nhắn nằm ở hai nơi (Cassandra và search) nên cần cơ chế đồng bộ và đối soát; không có join hay query tuỳ ý trên tin nhắn. Nếu quy mô chỉ bằng một phần mười, PostgreSQL partition theo thời gian cùng index `(conversation_id, message_id DESC)` vẫn là lựa chọn đơn giản hơn.",
+  "tradeoffs": [
+    {
+      "option": "Chỉ PostgreSQL (partition theo thời gian)",
+      "pros": [
+        "Một hệ thống, đội đã quen",
+        "Transaction, join, query tuỳ ý",
+        "Đủ cho quy mô nhỏ hơn nhiều lần"
+      ],
+      "cons": [
+        "Hàng chục tỷ dòng và chục TB mỗi năm cần sharding (Citus) hoặc rất nhiều công vận hành",
+        "Mở rộng ghi ra nhiều máy không có sẵn"
+      ]
+    },
+    {
+      "option": "Cassandra / ScyllaDB",
+      "pros": [
+        "Ghi rẻ, scale ngang tuyến tính",
+        "Đọc theo partition và thứ tự clustering rất nhanh",
+        "Chạy nhiều data center"
+      ],
+      "cons": [
+        "Mỗi access pattern một bảng, dữ liệu ghi lặp",
+        "Tombstone và partition lớn là bẫy thường gặp",
+        "Cần đội vận hành có kinh nghiệm"
+      ]
+    },
+    {
+      "option": "DynamoDB",
+      "pros": [
+        "Managed, không vận hành cluster",
+        "Mô hình partition key + sort key tương tự"
+      ],
+      "cons": [
+        "Chi phí theo lượng đọc ghi, có thể rất lớn ở quy mô này",
+        "Item tối đa 400KB, giới hạn mỗi partition",
+        "Gắn chặt với một nhà cung cấp cloud"
+      ]
+    },
+    {
+      "option": "MongoDB",
+      "pros": [
+        "Mô hình document linh hoạt",
+        "Query và index phong phú hơn wide-column"
+      ],
+      "cons": [
+        "Nhúng tin nhắn vào document cuộc trò chuyện chạm giới hạn 16MB",
+        "Cần sharding theo khoá phù hợp để scale ghi"
+      ]
+    }
+  ]
+}

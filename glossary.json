@@ -725,7 +725,7 @@
       "meaning": "Index mà lá của nó chứa luôn toàn bộ dòng dữ liệu, nên bảng được lưu theo thứ tự của key. Trong MySQL InnoDB đó là primary key. Không có primary key thì InnoDB dùng index UNIQUE NOT NULL đầu tiên, hoặc một row ID ẩn. PostgreSQL không có clustered index.",
       "example": "InnoDB: index phụ trên `email` lưu kèm primary key, rồi tra tiếp clustered index để lấy dòng.",
       "related": ["b-tree", "covering-index"],
-      "topics": ["index-execution-plan", "relational-keys-normalization", "storage-engine"]
+      "topics": ["index-execution-plan", "relational-keys-normalization", "storage-engine", "data-modeling"]
     },
     {
       "id": "composite-index",
@@ -813,7 +813,7 @@
       "meaning": "Index chỉ chứa các dòng thoả một điều kiện `WHERE`, nên nhỏ và nhanh khi query luôn lọc theo điều kiện đó.",
       "example": "`CREATE INDEX ON orders (created_at) WHERE status = 'PENDING'`.",
       "related": ["expression-index", "selectivity"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "data-modeling"]
     },
     {
       "id": "hot-update",
@@ -1085,7 +1085,7 @@
       "meaning": "Cột (hoặc các cột) quyết định một dòng nằm ở partition nào. Nên là cột mà hầu hết query và việc xoá dữ liệu đều lọc theo.",
       "example": "`PARTITION BY RANGE (created_at)`: `created_at` là partition key.",
       "related": ["partitioning", "partition-pruning"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "nosql-overview"]
     },
     {
       "id": "partition-pruning",
@@ -1117,7 +1117,7 @@
       "meaning": "Chia dữ liệu qua nhiều database server (shard), mỗi shard giữ một phần dòng theo shard key. Mở rộng được ghi vượt một máy, nhưng query, transaction và index qua nhiều shard phức tạp hơn nhiều.",
       "example": "Khách có `hash(customer_id) % 8 = 3` nằm ở shard số 3.",
       "related": ["partitioning", "hot-partition"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "nosql-overview"]
     },
     {
       "id": "hot-partition",
@@ -1125,7 +1125,7 @@
       "meaning": "Một partition hoặc shard nhận phần lớn lượt đọc/ghi trong khi phần còn lại rảnh, thường do chọn key theo thời gian hoặc theo một khách hàng quá lớn.",
       "example": "Shard theo ngày: mọi đơn mới đều ghi vào shard của hôm nay.",
       "related": ["sharding", "partition-key"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "nosql-overview"]
     },
     {
       "id": "gsi",
@@ -1133,7 +1133,7 @@
       "meaning": "Global Secondary Index của DynamoDB: partition key và sort key tuỳ chọn (thường khác bảng chính), thêm được bất cứ lúc nào, cập nhật bất đồng bộ nên chỉ đọc eventually consistent.",
       "example": "Bảng `Orders` key theo `customerId`, thêm GSI theo `orderNo` để tra theo mã đơn.",
       "related": ["lsi", "global-index"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "nosql-overview"]
     },
     {
       "id": "lsi",
@@ -1141,7 +1141,7 @@
       "meaning": "Local Secondary Index của DynamoDB: cùng partition key với bảng nhưng sort key khác; phải tạo lúc tạo bảng, đọc strongly consistent được.",
       "example": "Bảng `Orders` (`customerId`, `createdAt`) thêm LSI sắp theo `total` của cùng khách.",
       "related": ["gsi", "local-index"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "nosql-overview"]
     },
     {
       "id": "gin-index",
@@ -1149,7 +1149,7 @@
       "meaning": "Generalized Inverted Index của PostgreSQL: index đảo ngược, ánh xạ từng phần tử (key JSON, phần tử mảng, từ, trigram) tới các dòng chứa nó.",
       "example": "`CREATE INDEX ON products USING gin (attributes jsonb_path_ops)` cho `WHERE attributes @> '{\"color\":\"red\"}'`.",
       "related": ["b-tree", "brin-index"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "data-modeling"]
     },
     {
       "id": "brin-index",
@@ -1245,7 +1245,7 @@
       "meaning": "Khoá nhân tạo không mang nghĩa nghiệp vụ (số tự tăng, UUID), dùng làm primary key thay cho natural key có thể thay đổi như email.",
       "example": "`users.id` là surrogate key; `email` chỉ có UNIQUE.",
       "related": ["primary-key"],
-      "topics": ["relational-keys-normalization"]
+      "topics": ["relational-keys-normalization", "data-modeling"]
     },
     {
       "id": "normalization",
@@ -1597,7 +1597,7 @@
       "meaning": "Log-Structured Merge-tree: cấu trúc lưu trữ ghi vào bảng trong RAM rồi đổ ra các file đã sắp xếp không sửa được, gộp dần ở nền. Tối ưu cho ghi.",
       "example": "RocksDB, Cassandra, ScyllaDB, LevelDB dùng LSM-tree.",
       "related": ["compaction", "bloom-filter", "b-tree"],
-      "topics": ["storage-engine"]
+      "topics": ["storage-engine", "nosql-overview"]
     },
     {
       "id": "compaction",
@@ -1677,7 +1677,7 @@
       "meaning": "Cột có giá trị tự tính từ các cột khác của cùng dòng; `STORED` lưu xuống đĩa, `VIRTUAL` tính khi đọc.",
       "example": "`total numeric GENERATED ALWAYS AS (price * quantity) STORED`.",
       "related": ["trigger"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "data-modeling"]
     },
     {
       "id": "cdc",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "nosql-overview"]
     },
     {
       "id": "replication-slot",
@@ -1718,6 +1718,134 @@
       "example": "Dòng tổng doanh thu của một merchant lớn được cộng trong mọi transaction đặt đơn.",
       "related": ["pessimistic-locking", "trigger"],
       "topics": ["views-procedures-triggers"]
+    },
+    {
+      "id": "uuid-v7",
+      "term": "UUID v7",
+      "meaning": "Phiên bản UUID theo RFC 9562 (2024): 48 bit đầu là thời gian Unix tính bằng mili giây, phần còn lại là bit ngẫu nhiên (có thể dùng một phần làm bộ đếm). Id mới gần như tăng dần nên hợp làm khoá trong B-tree.",
+      "example": "`0192b3a4-5c6d-7e8f-9a0b-1c2d3e4f5a6b`: chữ số đầu của nhóm thứ ba là `7`.",
+      "related": ["surrogate-key", "clustered-index"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "soft-delete",
+      "term": "Soft delete",
+      "meaning": "Xoá mềm: đánh dấu dòng là đã xoá (`deleted_at`, `is_deleted`) thay vì xoá thật, để khôi phục hoặc tra cứu sau này.",
+      "example": "`UPDATE users SET deleted_at = now() WHERE id = 7;` và mọi query phải thêm `WHERE deleted_at IS NULL`.",
+      "related": ["partial-index"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "audit-trail",
+      "term": "Audit trail",
+      "meaning": "Bản ghi ai đã thay đổi gì, khi nào, từ giá trị nào sang giá trị nào, dùng cho kiểm toán và điều tra sự cố.",
+      "example": "Bảng `salary_history` lưu mỗi lần sửa lương: người sửa, thời điểm, giá trị cũ và mới.",
+      "related": ["temporal-table", "cdc", "trigger"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "temporal-table",
+      "term": "Temporal table",
+      "meaning": "Bảng do database tự lưu lịch sử mọi phiên bản của từng dòng kèm khoảng thời gian hiệu lực (chuẩn SQL:2011), cho phép query \"dữ liệu lúc thời điểm X\".",
+      "example": "SQL Server: `SELECT * FROM product FOR SYSTEM_TIME AS OF '2026-10-01'`.",
+      "related": ["audit-trail"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "jsonb",
+      "term": "jsonb",
+      "meaning": "Kiểu JSON nhị phân của PostgreSQL: đã phân tích sẵn, bỏ khoảng trắng và khoá trùng, hỗ trợ toán tử như `@>` và GIN index.",
+      "example": "`WHERE attributes @> '{\"ram_gb\": 8}'` dùng GIN index trên cột `attributes`.",
+      "related": ["gin-index", "eav"],
+      "topics": ["data-modeling", "nosql-overview"]
+    },
+    {
+      "id": "eav",
+      "term": "EAV",
+      "meaning": "Entity-Attribute-Value: lưu thuộc tính linh hoạt thành các dòng (thực thể, tên thuộc tính, giá trị). Linh hoạt nhưng mất kiểu, ràng buộc và hiệu năng; thường bị coi là anti-pattern.",
+      "example": "Bảng `product_attribute(product_id, name, value)`; lọc 3 thuộc tính cần 3 self-join.",
+      "related": ["jsonb"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "exclusion-constraint",
+      "term": "Exclusion constraint",
+      "meaning": "Ràng buộc của PostgreSQL: không có hai dòng nào thoả cùng lúc mọi phép so sánh đã khai báo, ví dụ cùng phòng và khoảng thời gian chồng nhau.",
+      "example": "`EXCLUDE USING gist (room_id WITH =, during WITH &&)` chặn đặt trùng phòng.",
+      "related": ["constraint"],
+      "topics": ["data-modeling"]
+    },
+    {
+      "id": "key-value-store",
+      "term": "Key-value store",
+      "meaning": "Database chỉ lưu cặp khoá và giá trị, đọc ghi theo khoá, không tìm được theo nội dung giá trị. Rất nhanh và dễ scale ngang.",
+      "example": "Redis: `SET session:abc '{...}' EX 1800`, rồi `GET session:abc`.",
+      "related": ["document-database"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "document-database",
+      "term": "Document database",
+      "meaning": "Database lưu bản ghi dạng document lồng nhau (JSON/BSON), thường chứa trọn một aggregate, có index và query trên các field.",
+      "example": "MongoDB lưu một đơn hàng gồm thông tin khách và mảng các dòng hàng trong cùng một document.",
+      "related": ["key-value-store", "jsonb"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "wide-column-store",
+      "term": "Wide-column store",
+      "meaning": "Database chia dữ liệu theo partition key ra các node, trong mỗi partition sắp các dòng theo clustering key. Tối ưu cho ghi lớn và đọc một dải dòng trong partition.",
+      "example": "Cassandra, ScyllaDB, HBase, Bigtable.",
+      "related": ["partition-key", "clustering-key", "lsm-tree"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "graph-database",
+      "term": "Graph database",
+      "meaning": "Database lưu node và cạnh làm dữ liệu chính, tối ưu cho việc đi theo quan hệ nhiều bước.",
+      "example": "Neo4j, gợi ý bạn của bạn: `MATCH (a:User {id: 1})-[:FRIEND*2]-(b) WHERE b <> a AND NOT (a)-[:FRIEND]-(b) RETURN DISTINCT b`.",
+      "related": ["document-database"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "access-pattern",
+      "term": "Access pattern",
+      "meaning": "Một cách cụ thể ứng dụng đọc hoặc ghi dữ liệu: lọc theo gì, sắp theo gì, lấy bao nhiêu, tần suất ra sao. NoSQL thiết kế khoá theo danh sách access pattern.",
+      "example": "\"Lấy 50 tin nhắn mới nhất của một cuộc trò chuyện\", vài nghìn lần mỗi giây.",
+      "related": ["partition-key"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "clustering-key",
+      "term": "Clustering key",
+      "meaning": "Phần của khoá chính trong Cassandra quyết định thứ tự các dòng bên trong một partition; đọc theo dải của nó rất rẻ.",
+      "example": "`PRIMARY KEY ((conversation_id, bucket), message_id)`: `message_id` là clustering key.",
+      "related": ["partition-key", "wide-column-store"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "tunable-consistency",
+      "term": "Tunable consistency",
+      "meaning": "Cho phép chọn số replica phải xác nhận cho từng lần đọc hoặc ghi, đánh đổi giữa độ nhất quán, độ trễ và khả năng chịu lỗi.",
+      "example": "Cassandra RF = 3: ghi `QUORUM` thành công và đọc `QUORUM` luôn thấy bản mới nhất vì R + W > N; nhiều data center thì thường dùng `LOCAL_QUORUM`.",
+      "related": ["wide-column-store"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "single-table-design",
+      "term": "Single-table design",
+      "meaning": "Cách mô hình hoá DynamoDB đặt nhiều loại thực thể vào một bảng, với khoá được thiết kế để một `Query` lấy được nhiều loại liên quan cùng lúc.",
+      "example": "`PK = CUSTOMER#42`, `SK` là `PROFILE` hoặc `ORDER#2026-10-24#9001`.",
+      "related": ["gsi", "access-pattern"],
+      "topics": ["nosql-overview"]
+    },
+    {
+      "id": "polyglot-persistence",
+      "term": "Polyglot persistence",
+      "meaning": "Dùng nhiều loại database trong một hệ thống, mỗi loại cho phần việc nó làm tốt nhất, với một nguồn dữ liệu gốc rõ ràng.",
+      "example": "PostgreSQL cho đơn hàng, Redis cho cache và session, Elasticsearch cho tìm kiếm.",
+      "related": ["cdc"],
+      "topics": ["nosql-overview"]
     }
   ]
 }

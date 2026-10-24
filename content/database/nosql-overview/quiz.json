@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cassandra-query-without-partition-key",
+      "kind": "output",
+      "prompt": "Cassandra. Bảng có `PRIMARY KEY ((conversation_id, bucket), message_id)`. Query dưới đây cho kết quả gì?",
+      "code": "SELECT * FROM messages_by_conversation\nWHERE sender_id = 7c1e...\nLIMIT 20;",
+      "options": [
+        "20 tin nhắn của người gửi đó, dùng index tự động",
+        "Rỗng, vì `sender_id` không thuộc khoá chính",
+        "Lỗi: Cassandra từ chối query không chỉ rõ partition key và không có index trên `sender_id`; chỉ chạy khi thêm `ALLOW FILTERING`, và khi đó có thể phải quét mọi partition trên mọi node",
+        "20 tin bất kỳ"
+      ],
+      "answer": 2,
+      "explanation": "Cassandra chỉ chạy hiệu quả query biết partition key. Lọc theo cột khác có thể buộc đọc mọi partition trên mọi node (với `LIMIT 20` có thể dừng sớm nếu tìm đủ dòng khớp, nhưng không đoán trước được), nên nó báo `Cannot execute this query as it might involve data filtering and thus may have unpredictable performance... use ALLOW FILTERING`. `ALLOW FILTERING` gần như luôn là dấu hiệu thiết kế sai. Cassandra 5 có thể tạo SAI trên `sender_id` để query chạy được, nhưng vẫn phải hỏi mọi node. Cách đúng cho access pattern thường xuyên là một bảng mới `messages_by_sender` có `sender_id` trong partition key, ghi song song với bảng chính."
+    },
+    {
+      "id": "dynamodb-gsi-consistency",
+      "kind": "single",
+      "prompt": "DynamoDB. Ứng dụng ghi một đơn hàng rồi ngay lập tức `Query` GSI `orders_by_status` để hiển thị danh sách đơn `NEW`. Đôi khi đơn vừa tạo không xuất hiện. Vì sao?",
+      "options": [
+        "GSI được cập nhật bất đồng bộ từ bảng gốc và chỉ hỗ trợ eventually consistent read, nên có độ trễ nhỏ trước khi đơn mới xuất hiện trong index",
+        "Lỗi của SDK",
+        "Cần bật strongly consistent read trên GSI",
+        "Đơn bị ghi vào sai partition"
+      ],
+      "answer": 0,
+      "explanation": "Bảng gốc hỗ trợ strongly consistent read, GSI thì không: thay đổi được nhân sang index sau một khoảng ngắn (thường dưới một giây). Nếu cần thấy ngay bản vừa ghi, đọc từ bảng gốc theo khoá, hoặc trả về dữ liệu vừa ghi cho client thay vì đọc lại qua GSI."
+    },
+    {
+      "id": "mongodb-unbounded-array",
+      "kind": "single",
+      "prompt": "MongoDB. Collection `posts` nhúng mọi bình luận vào mảng `comments` của từng bài. Một bài viết lan truyền có 300.000 bình luận. Hiện tượng nào hay gặp nhất?",
+      "options": [
+        "Không có vấn đề, MongoDB tự chia document",
+        "MongoDB tự chuyển mảng sang collection khác",
+        "Index trên `comments` bị tắt",
+        "Mỗi bình luận mới làm document lớn dần, ghi và đọc bài chậm dần, và cuối cùng chạm giới hạn 16MB của một document thì lỗi khi ghi"
+      ],
+      "answer": 3,
+      "explanation": "Nhúng hợp với dữ liệu con có giới hạn số lượng. Mảng tăng không giới hạn làm mỗi lần đọc bài phải tải cả mảng, mỗi lần ghi phải sửa một document khổng lồ, và cuối cùng vượt 16MB. Dùng collection `comments` riêng có `post_id` và index `(post_id, created_at)`; có thể nhúng vài bình luận mới nhất vào bài để hiển thị nhanh."
+    },
+    {
+      "id": "choose-graph",
+      "kind": "single",
+      "prompt": "Tính năng \"gợi ý người bạn có thể biết\" cần tìm bạn của bạn của bạn (3 bước) cho 50 triệu người dùng, mỗi người khoảng 300 bạn. Loại database nào hợp nhất cho riêng tính năng này?",
+      "options": [
+        "Key-value, lưu danh sách bạn theo user id",
+        "Graph database: đi theo cạnh từng bước là thao tác chính, không cần join tập lớn ở mỗi bước",
+        "Wide-column, một bảng cho mỗi bước",
+        "Columnar"
+      ],
+      "answer": 1,
+      "explanation": "3 bước với 300 bạn mỗi người là tới 300³ = 27 triệu đường đi: trong SQL đó là ba lần self-join trên bảng hàng tỉ cạnh. Graph database lưu cạnh kề nhau nên đi từng bước rẻ, và có sẵn ngôn ngữ cho dạng query này (Cypher, Gremlin). Thực tế nhiều hệ thống vẫn tính trước các gợi ý theo lô rồi lưu vào key-value để đọc nhanh."
+    }
+  ]
+}

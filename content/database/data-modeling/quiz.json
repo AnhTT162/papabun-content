@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "order-item-snapshot",
+      "kind": "single",
+      "prompt": "Sản phẩm \"Áo thun basic\" đổi tên thành \"Áo thun cotton\" và tăng giá. Khách mở lại đơn đã mua tháng trước. Thiết kế nào cho kết quả đúng?",
+      "options": [
+        "`order_items` lưu `product_name` và `unit_price` lúc đặt hàng; đơn cũ hiển thị đúng như lúc mua",
+        "`order_items` chỉ lưu `product_id`; join với `product` để lấy tên và giá hiện tại",
+        "Dùng trigger cập nhật `order_items` mỗi khi sản phẩm đổi tên hoặc giá",
+        "Xoá sản phẩm cũ và tạo sản phẩm mới"
+      ],
+      "answer": 0,
+      "explanation": "Giá và tên lúc mua là một sự thật của đơn hàng, không phải bản sao của sản phẩm. Join lấy giá hiện tại làm hoá đơn cũ hiển thị sai số tiền khách đã trả. Trigger đồng bộ còn tệ hơn: nó cố ý ghi đè lịch sử. Xoá sản phẩm thì phá foreign key và mất lịch sử bán."
+    },
+    {
+      "id": "soft-delete-unique",
+      "kind": "output",
+      "prompt": "PostgreSQL. Bảng `users` có `UNIQUE (email)` và xoá mềm bằng `deleted_at`. Người dùng `an@example.com` đã xoá tài khoản (`deleted_at` có giá trị) giờ đăng ký lại. Lệnh `INSERT` cuối cho kết quả gì?",
+      "code": "UPDATE users SET deleted_at = now() WHERE email = 'an@example.com';\nINSERT INTO users (email) VALUES ('an@example.com');",
+      "options": [
+        "Thành công, vì dòng cũ đã bị xoá",
+        "Thành công và dòng cũ tự bị xoá thật",
+        "Lỗi `duplicate key value violates unique constraint`: dòng cũ vẫn còn trong bảng và vẫn nằm trong unique index",
+        "Thành công nhưng tạo ra hai tài khoản cùng hoạt động"
+      ],
+      "answer": 2,
+      "explanation": "Xoá mềm không xoá gì cả, nên unique constraint vẫn thấy email đó. Sửa bằng partial unique index `CREATE UNIQUE INDEX ON users (email) WHERE deleted_at IS NULL`: chỉ các tài khoản đang hoạt động phải unique. Đây là một trong những chi phí ẩn của xoá mềm."
+    },
+    {
+      "id": "enum-ordinal-shift",
+      "kind": "output",
+      "prompt": "Entity dùng `@Enumerated` mặc định. Ban đầu `enum Status { NEW, PAID, SHIPPED }` và đã có nhiều đơn `SHIPPED`. Sau đó một dev sửa enum như dưới đây. Các đơn cũ giờ được đọc ra trạng thái gì?",
+      "code": "enum Status { NEW, PENDING_PAYMENT, PAID, SHIPPED }",
+      "options": [
+        "`SHIPPED`, không đổi",
+        "`PAID`: mặc định là `EnumType.ORDINAL`, đơn cũ lưu số 2, và vị trí 2 giờ là `PAID`",
+        "Lỗi khi đọc vì giá trị không hợp lệ",
+        "`PENDING_PAYMENT`"
+      ],
+      "answer": 1,
+      "explanation": "`ORDINAL` lưu vị trí của hằng (NEW = 0, PAID = 1, SHIPPED = 2). Chèn `PENDING_PAYMENT` vào vị trí 1 đẩy `PAID` xuống 2, nên mọi đơn `SHIPPED` cũ lặng lẽ thành `PAID`: không có lỗi nào. Dùng `@Enumerated(EnumType.STRING)`, hoặc một `AttributeConverter` với mã cố định."
+    },
+    {
+      "id": "jsonb-filter-estimate",
+      "kind": "single",
+      "prompt": "Query `WHERE attributes @> '{\"brand\": \"X\"}'` trên `jsonb` có GIN index, nhưng plan ước lượng sai số dòng rất nhiều và join phía sau chọn plan tệ. `brand` được lọc ở hầu hết danh mục. Cách sửa hợp lý nhất?",
+      "options": [
+        "Tăng `work_mem`",
+        "Chuyển từ `jsonb` sang `json`",
+        "Tạo thêm GIN index thứ hai trên cùng cột",
+        "Đưa `brand` thành cột thường (hoặc generated column) có B-tree index, để planner có thống kê thật về phân bố giá trị"
+      ],
+      "answer": 3,
+      "explanation": "PostgreSQL chỉ có thống kê cho cả giá trị `jsonb` (MCV, histogram), không có thống kê theo từng khoá bên trong; với document đa dạng, ước lượng cho `@>` gần như rơi về hằng số mặc định. Thuộc tính quan trọng, lọc nhiều thì nên là cột thật: có kiểu, có ràng buộc, có thống kê. `json` còn tệ hơn vì không có GIN index; thêm GIN index không thay đổi chuyện thống kê."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thiết kế bảng sản phẩm cho sàn thương mại điện tử",
+  "prompt": "Sàn bán hàng trên PostgreSQL 16 có **2 triệu sản phẩm** thuộc **300 danh mục**. Mỗi danh mục có bộ thuộc tính riêng: điện thoại có RAM, dung lượng, kích thước màn hình; áo có size, màu, chất liệu. Đội vận hành thêm danh mục mới hằng tuần mà không muốn chờ migration.\n\nYêu cầu:\n1. Trang danh mục lọc theo 2–3 thuộc tính (ví dụ điện thoại RAM 8GB, dung lượng 256GB), p95 dưới 200ms.\n2. Lưu **lịch sử giá** để giải quyết khiếu nại \"hôm qua tôi thấy giá khác\".\n3. Sản phẩm ngừng bán phải biến khỏi trang bán, nhưng đơn hàng cũ vẫn hiển thị đúng tên và giá lúc mua.\n4. URL sản phẩm không được để lộ tổng số sản phẩm hay cho phép đoán sản phẩm kế tiếp.\n\nHãy thiết kế các bảng chính, cách lưu thuộc tính và index.",
+  "hints": [
+    "Thuộc tính thay đổi theo danh mục và danh mục thêm mới hằng tuần: một cột cho mỗi thuộc tính, EAV, hay một cột `jsonb`? Mỗi cách lọc \"RAM = 8GB AND dung lượng = 256GB\" thế nào?",
+    "Có cần sửa bảng `order_items` khi sản phẩm đổi giá hoặc đổi tên không? Đơn cũ nên lấy tên và giá từ đâu?",
+    "\"Ngừng bán\" có phải là \"xoá\" không? Nếu xoá mềm bằng `deleted_at`, đơn cũ và foreign key thì sao?",
+    "Lịch sử giá là các khoảng thời gian không được chồng nhau. Database có thể tự chặn hai khoảng giá chồng nhau không?"
+  ],
+  "solution": "**1. Bảng `product`: cột cố định cho phần chung, `jsonb` cho phần theo danh mục.**\n\n```sql\nCREATE TABLE product (\n    id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n    public_id   uuid NOT NULL UNIQUE,          -- UUID v7 sinh ở ứng dụng, dùng trong URL\n    category_id bigint NOT NULL REFERENCES category,\n    name        text NOT NULL,\n    status      text NOT NULL CHECK (status IN ('DRAFT', 'ACTIVE', 'DISCONTINUED')),\n    price       numeric(14, 2) NOT NULL,\n    attributes  jsonb NOT NULL DEFAULT '{}'\n);\nCREATE INDEX ON product USING gin (attributes jsonb_path_ops);\nCREATE INDEX ON product (category_id, price) WHERE status = 'ACTIVE';\n```\n\nLọc: `WHERE category_id = 12 AND status = 'ACTIVE' AND attributes @> '{\"ram_gb\": 8, \"storage_gb\": 256}'`. GIN index trả về các sản phẩm khớp cả hai thuộc tính trong một lần tra. Danh mục mới chỉ cần thêm định nghĩa thuộc tính vào bảng `category_attribute` (tên, kiểu, có lọc được không), không cần migration. Ứng dụng kiểm tra `attributes` theo định nghĩa đó trước khi ghi, vì database không kiểm tra được bên trong `jsonb`; kiểu cũng quan trọng: `{\"ram_gb\": 8}` không khớp `{\"ram_gb\": \"8\"}`. Extension `btree_gin` cho phép gộp `category_id` và `attributes` vào một GIN index. Thuộc tính được lọc ở hầu hết danh mục (thương hiệu) nên là cột thật có B-tree index và thống kê cho planner.\n\n**2. Lịch sử giá: bảng riêng, không bao giờ sửa dòng cũ.**\n\n```sql\nCREATE EXTENSION IF NOT EXISTS btree_gist;\nCREATE TABLE product_price (\n    product_id   bigint NOT NULL REFERENCES product,\n    price        numeric(14, 2) NOT NULL,\n    valid_during tstzrange NOT NULL,\n    changed_by   text NOT NULL,\n    EXCLUDE USING gist (product_id WITH =, valid_during WITH &&)\n);\n```\n\nĐổi giá là một transaction, theo đúng thứ tự:\n1. `SELECT ... FROM product WHERE id = ? FOR UPDATE` để mọi lần đổi giá của cùng sản phẩm chạy lần lượt.\n2. Đóng khoảng đang mở: `UPDATE product_price SET valid_during = tstzrange(lower(valid_during), now()) WHERE product_id = ? AND upper_inf(valid_during)`.\n3. Mở khoảng mới `tstzrange(now(), NULL)` và cập nhật `product.price`.\n\nPhải đóng trước rồi mới mở; chèn trước thì luôn vi phạm constraint. Exclusion constraint là lưới an toàn cuối: nếu một đường ghi nào đó bỏ qua bước khoá, người thứ hai nhận lỗi `23P01 exclusion_violation` và ứng dụng phải báo lỗi hoặc thử lại. Vì `now()` là thời điểm bắt đầu transaction, đổi giá hai lần trong cùng transaction sẽ tạo khoảng rỗng, mà khoảng rỗng không chồng với gì nên lọt qua constraint: chặn việc này ở ứng dụng. `product.price` là giá trị suy ra từ khoảng đang mở, chỉ được ghi trong chính transaction này. Tra khiếu nại: `WHERE product_id = ? AND valid_during @> timestamptz '2026-10-23 20:15+07'`.\n\n**3. Đơn hàng chụp lại giá trị lúc mua.** `order_items` lưu `product_id`, `product_name`, `unit_price` của lúc đặt. Đây không phải phi chuẩn hoá cần đồng bộ: đổi tên hay giá sản phẩm **không** được sửa đơn cũ.\n\n**4. Ngừng bán là trạng thái, không phải xoá.** `status = 'DISCONTINUED'` loại sản phẩm khỏi trang bán nhờ điều kiện `status = 'ACTIVE'`, đã nằm sẵn trong partial index. Foreign key từ `order_items` vẫn hợp lệ, không cần `deleted_at` phải nhớ lọc ở mọi query. Sản phẩm nháp sai thì có thể xoá thật.\n\n**5. Id**: `bigint` làm khoá chính cho join nội bộ gọn; `public_id` UUID v7 cho URL nên không lộ số lượng, khó đoán id kế tiếp, và vẫn chèn tuần tự vào unique index. Nó không phải cơ chế bảo mật: quyền xem vẫn phải được kiểm tra.\n\n**6. Khi nào vượt quá thiết kế này**: lọc kết hợp nhiều thuộc tính, đếm số sản phẩm theo từng giá trị (faceted search) và tìm kiếm theo chữ trên hàng chục triệu sản phẩm là việc của search engine. Khi đó PostgreSQL vẫn là nguồn dữ liệu gốc, và search engine được đồng bộ qua CDC (xem bài Search engine & Elasticsearch).",
+  "tradeoffs": [
+    {
+      "option": "Một cột cho mỗi thuộc tính (bảng rộng)",
+      "pros": [
+        "Có kiểu, ràng buộc, thống kê, B-tree index",
+        "Query đơn giản"
+      ],
+      "cons": [
+        "Hàng trăm cột phần lớn `NULL`",
+        "Danh mục mới cần migration",
+        "Index cho mọi tổ hợp lọc là không thể"
+      ]
+    },
+    {
+      "option": "EAV: bảng (product_id, attribute, value)",
+      "pros": [
+        "Thêm thuộc tính không cần migration"
+      ],
+      "cons": [
+        "Mọi giá trị là text, không ràng buộc",
+        "Lọc 3 thuộc tính cần 3 self-join",
+        "Planner ước lượng rất kém"
+      ]
+    },
+    {
+      "option": "Cột chung + `jsonb` có GIN index",
+      "pros": [
+        "Linh hoạt theo danh mục",
+        "Lọc nhiều thuộc tính bằng `@>` trong một lần tra index",
+        "Không cần migration cho danh mục mới"
+      ],
+      "cons": [
+        "Database không kiểm tra kiểu và ràng buộc bên trong",
+        "Không có thống kê bên trong `jsonb`",
+        "Sửa một khoá ghi lại cả document"
+      ]
+    },
+    {
+      "option": "Search engine (Elasticsearch, OpenSearch) cho trang lọc",
+      "pros": [
+        "Faceted search, tìm theo chữ, xếp hạng",
+        "Scale đọc độc lập với database"
+      ],
+      "cons": [
+        "Thêm hệ thống phải vận hành và đồng bộ",
+        "Dữ liệu trễ so với nguồn",
+        "Quá nặng nếu chỉ lọc vài thuộc tính"
+      ]
+    }
+  ]
+}

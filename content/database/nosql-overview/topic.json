@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "nosql-overview",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "database",
+  "title": "NoSQL: chọn loại nào",
+  "summary": "Bốn họ NoSQL (key-value, document, wide-column, graph) tối ưu cho cách đọc nào, mô hình hoá theo access pattern, DynamoDB và Cassandra từ partition key tới hot partition, MongoDB embed hay reference, nhất quán có thể chỉnh, và khi nào PostgreSQL vẫn là lựa chọn đúng.",
+  "level": "mid",
+  "order": 15,
+  "minutes": 18,
+  "prerequisites": ["data-modeling", "partitioning-index"],
+  "terms": ["key-value-store", "document-database", "wide-column-store", "graph-database", "access-pattern", "partition-key", "clustering-key", "gsi", "lsi", "hot-partition", "tunable-consistency", "single-table-design", "polyglot-persistence", "jsonb", "lsm-tree", "sharding", "cdc", "outbox"],
+  "references": [
+    { "title": "Amazon DynamoDB Developer Guide: Best practices for designing and architecting", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices.html" },
+    { "title": "Apache Cassandra Documentation: Data Modeling", "url": "https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/index.html" },
+    { "title": "MongoDB Manual: Data Modeling", "url": "https://www.mongodb.com/docs/manual/data-modeling/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống sẽ có nhiều người dùng, vậy có nên chọn NoSQL từ đầu cho dễ scale?\" Hỏi lại con số: bao nhiêu lần ghi mỗi giây, bao nhiêu dữ liệu, access pattern đã rõ chưa. Một PostgreSQL được tối ưu (index đúng, connection pool, read replica, partition) phục vụ được hàng chục nghìn query mỗi giây và vài TB dữ liệu. NoSQL đáng chọn khi access pattern ổn định và đơn giản (theo khoá), quy mô ghi vượt một máy, hoặc cần phân tán nhiều region; đổi lại mất join, ràng buộc và query tuỳ ý. Đổi database sau này là một dự án lớn, nên chọn theo nhu cầu đã đo, không theo dự đoán." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "snapshot-vs-derived", "front": "Hai loại phi chuẩn hoá có chủ đích khác nhau thế nào?", "back": "Chụp giá trị tại thời điểm (giá lúc mua) là sự thật riêng, không được đồng bộ. Giá trị suy ra (tổng tiền, bộ đếm) phải có người giữ đồng bộ và job đối soát." },
+    { "id": "uuid-v7", "front": "UUID v7 khác UUID v4 ở điểm nào quan trọng với index?", "back": "48 bit đầu của v7 là thời gian nên id mới gần như tăng dần và chèn vào cuối index; v4 ngẫu nhiên nên chèn rải rác, tách page." },
+    { "id": "uuid-mysql", "front": "Lưu UUID trong MySQL thế nào?", "back": "`BINARY(16)`, không phải `CHAR(36)`: chỉ bằng chưa tới một nửa, và mọi index phụ của InnoDB đều chứa khoá chính." },
+    { "id": "soft-delete-cost", "front": "Xoá mềm bằng `deleted_at` có những cái giá nào?", "back": "Mọi query phải lọc, unique phải thành partial index, foreign key vẫn trỏ tới dòng đã xoá, bảng phình mãi, khó đáp ứng yêu cầu xoá dữ liệu cá nhân." },
+    { "id": "enum-ordinal", "front": "Vì sao không dùng `@Enumerated(EnumType.ORDINAL)`?", "back": "Lưu vị trí của hằng; ai đó chèn hằng mới vào giữa enum là mọi dòng cũ đổi nghĩa. Dùng `EnumType.STRING`." },
+    { "id": "money-type", "front": "Kiểu nào để lưu tiền?", "back": "`numeric`/`DECIMAL` độ chính xác cố định, hoặc số nguyên theo đơn vị nhỏ nhất kèm mã tiền tệ. Không bao giờ `float`/`double`." },
+    { "id": "timestamptz", "front": "PostgreSQL nên dùng `timestamp` hay `timestamptz` cho thời điểm xảy ra sự kiện?", "back": "`timestamptz`: lưu thời điểm tuyệt đối. `timestamp` không có múi giờ nên lệch khi server và ứng dụng khác múi giờ." },
+    { "id": "jsonb-when", "front": "Khi nào cột `jsonb` là lựa chọn đúng?", "back": "Thuộc tính khác nhau theo loại, payload từ hệ ngoài, cấu hình. Không hợp với dữ liệu cần ràng buộc, foreign key, hay lọc và join thường xuyên." },
+    { "id": "price-history-exclusion", "front": "Làm sao để database tự chặn hai khoảng giá chồng nhau?", "back": "Cột `tstzrange` và `EXCLUDE USING gist (product_id WITH =, valid_during WITH &&)`, cần extension `btree_gist`." }
+  ]
+}
