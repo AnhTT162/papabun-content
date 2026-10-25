@@ -3398,6 +3398,94 @@
       "example": "`@Modifying @Query(\"update Coupon c set c.active = false where c.expiresAt < :now\")` chạy một câu SQL thay vì tải từng coupon.",
       "related": ["persistence-context", "flush-mode"],
       "topics": ["spring-data-jpa"]
+    },
+    {
+      "id": "security-filter-chain",
+      "term": "SecurityFilterChain",
+      "meaning": "Một chuỗi filter của Spring Security áp cho các request khớp `securityMatcher`. Ứng dụng có thể có nhiều chain; chỉ chain đầu tiên khớp (theo `@Order`) xử lý request.",
+      "example": "Một chain cho `/api/**` dùng JWT và stateless, một chain khác cho trang web dùng form login và session.",
+      "related": ["servlet-filter", "authentication-manager"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "authentication-manager",
+      "term": "AuthenticationManager",
+      "meaning": "Thành phần nhận thông tin đăng nhập chưa xác thực và trả về `Authentication` đã xác thực kèm authority, hoặc ném `AuthenticationException`. Bản thường dùng là `ProviderManager`, hỏi lần lượt các `AuthenticationProvider`.",
+      "example": "`DaoAuthenticationProvider` kiểm tra mật khẩu qua `UserDetailsService`; `JwtAuthenticationProvider` kiểm tra chữ ký và hạn của JWT.",
+      "related": ["security-filter-chain", "security-context"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "security-context",
+      "term": "SecurityContext",
+      "meaning": "Nơi giữ `Authentication` của người dùng hiện tại, mặc định gắn với thread qua `SecurityContextHolder` (ThreadLocal). Code chạy ở thread khác không thấy nó nếu không chép sang.",
+      "example": "Method `@Async` đọc `SecurityContextHolder.getContext().getAuthentication()` nhận `null` với executor thường.",
+      "related": ["thread-local", "authentication-manager"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "resource-server",
+      "term": "Resource server",
+      "meaning": "Trong OAuth2, service chứa API và chấp nhận access token do authorization server cấp; nó kiểm tra chữ ký và hạn của token ở mỗi request; issuer và audience chỉ được kiểm tra khi được cấu hình.",
+      "example": "`http.oauth2ResourceServer(rs -> rs.jwt(...))` cùng `spring.security.oauth2.resourceserver.jwt.issuer-uri` biến service thành resource server dùng JWT.",
+      "related": ["security-filter-chain"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "method-security",
+      "term": "Method security",
+      "meaning": "Kiểm tra quyền ngay trên method của bean bằng annotation như `@PreAuthorize`, chạy qua proxy AOP; bật bằng `@EnableMethodSecurity`.",
+      "example": "`@PreAuthorize(\"@orderAuthz.canView(#id, authentication)\")` chặn người dùng xem đơn của người khác.",
+      "related": ["aop-proxy", "self-invocation"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "csrf",
+      "term": "CSRF",
+      "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF hoặc cookie `SameSite`.",
+      "example": "Form ẩn trên trang độc hại tự submit `POST /transfer` tới ngân hàng đang đăng nhập trong cùng trình duyệt.",
+      "related": ["security-filter-chain"],
+      "topics": ["spring-security-architecture"]
+    },
+    {
+      "id": "api-gateway",
+      "term": "API gateway",
+      "meaning": "Cửa vào chung cho client bên ngoài, đứng trước các service: route, xác thực, rate limit, chuyển đổi header hay giao thức.",
+      "example": "Spring Cloud Gateway route `/orders/**` tới `lb://orders` và kiểm tra JWT trước khi chuyển tiếp.",
+      "related": ["service-discovery", "reverse-proxy"],
+      "topics": ["spring-cloud"]
+    },
+    {
+      "id": "service-discovery",
+      "term": "Service discovery",
+      "meaning": "Cơ chế để service tìm địa chỉ các instance đang chạy của service khác, qua registry (Eureka, Consul) hoặc DNS của nền tảng (Kubernetes Service).",
+      "example": "Order Service gọi `lb://payment`; LoadBalancer hỏi Eureka danh sách instance của `payment` rồi chọn một.",
+      "related": ["client-side-load-balancing", "api-gateway"],
+      "topics": ["spring-cloud"]
+    },
+    {
+      "id": "config-server",
+      "term": "Config Server",
+      "meaning": "Service của Spring Cloud cung cấp cấu hình tập trung cho các ứng dụng, thường đọc từ repo Git, theo tên ứng dụng và profile.",
+      "example": "`spring.config.import=configserver:http://config:8888` lấy `orders-prod.yml` lúc khởi động.",
+      "related": ["spring-profile"],
+      "topics": ["spring-cloud"]
+    },
+    {
+      "id": "client-side-load-balancing",
+      "term": "Load balancing phía client",
+      "meaning": "Caller tự giữ danh sách instance và tự chọn instance cho mỗi request, thay vì đi qua một load balancer ở giữa.",
+      "example": "Spring Cloud LoadBalancer chọn round-robin trong danh sách instance lấy từ Eureka, có cache 35 giây (nên tắt khi dùng với Eureka vì client Eureka đã cache).",
+      "related": ["service-discovery", "load-balancer"],
+      "topics": ["spring-cloud"]
+    },
+    {
+      "id": "circuit-breaker",
+      "term": "Circuit breaker",
+      "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
+      "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
+      "related": ["retry-backoff", "bulkhead"],
+      "topics": ["spring-cloud"]
     }
   ]
 }

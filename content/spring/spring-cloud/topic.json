@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-cloud",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring Cloud cho microservices",
+  "summary": "Gateway, discovery với Eureka và LoadBalancer, Config Server và @RefreshScope, Resilience4j, OpenFeign và HTTP interface client; Zuul, Hystrix, Ribbon đã bị bỏ; độ trễ khi instance chết; khi nào Kubernetes và service mesh làm thay phần lớn Spring Cloud.",
+  "level": "senior",
+  "order": 15,
+  "minutes": 15,
+  "prerequisites": ["spring-boot-autoconfig", "spring-observability"],
+  "terms": ["api-gateway", "service-discovery", "config-server", "client-side-load-balancing", "circuit-breaker", "retry-backoff", "rolling-deployment"],
+  "references": [
+    { "title": "Spring Cloud Gateway Reference", "url": "https://docs.spring.io/spring-cloud-gateway/reference/" },
+    { "title": "Spring Cloud Netflix Reference: Service Discovery (Eureka)", "url": "https://docs.spring.io/spring-cloud-netflix/reference/spring-cloud-netflix.html" },
+    { "title": "Spring Cloud Config Reference", "url": "https://docs.spring.io/spring-cloud-config/reference/" },
+    { "title": "Resilience4j: Getting Started with Spring Boot", "url": "https://resilience4j.readme.io/docs/getting-started-3" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lên Kubernetes rồi có còn cần Eureka không?\" Thường là không: Service DNS và readiness probe đã làm việc tìm và loại instance, và chạy cả hai thì có hai nguồn sự thật. Lý do còn giữ Eureka là hệ thống trải qua nhiều nền tảng (một phần trên VM, một phần trên Kubernetes) trong lúc chuyển đổi. Hỏi tiếp thường là \"vậy load balancing phía client còn ý nghĩa gì\": với gRPC hay HTTP/2 giữ kết nối lâu, kube-proxy chỉ chia theo kết nối nên tải lệch; khi đó cần load balancing phía client hoặc service mesh." },
+    { "type": "callout", "style": "warning", "markdown": "Retry ở nhiều tầng nhân số request lên rất nhanh: gateway thử 3 lần, service A thử 3 lần, sidecar thử 2 lần (tính cả lần đầu) là tới 18 request xuống service cuối cho một lần bấm của người dùng, đúng lúc nó đang quá tải. Chỉ retry ở một tầng, có backoff và jitter, và chỉ với request idempotent." }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "dead-instance",
+      "kind": "single",
+      "prompt": "Một instance của `orders` (đăng ký với Eureka) bị `kill -9`. Với cấu hình mặc định của Eureka và Spring Cloud LoadBalancer, caller có thể còn gửi request tới instance đó trong bao lâu?",
+      "options": [
+        "Vài phút: lease hết hạn chậm, cộng cache ở server, client và LoadBalancer",
+        "Dưới một giây: Eureka nhận tín hiệu khi kết nối TCP của instance bị đóng",
+        "Đúng 30 giây: bằng chu kỳ gia hạn lease của instance",
+        "Không lần nào: LoadBalancer kiểm tra sức khoẻ instance trước mỗi request"
+      ],
+      "answer": 0,
+      "explanation": "Instance chết không kịp huỷ đăng ký. Lease cấu hình 90 giây nhưng thực tế hết hạn sau khoảng 180 giây (lỗi đã biết trong `Lease.renew()`), task evict chạy mỗi 60 giây, response cache của server 30 giây, client tải danh sách mỗi 30 giây, và LoadBalancer cache thêm 35 giây. Cộng lại có thể vài phút. Retry cho request idempotent và huỷ đăng ký khi dừng có kiểm soát giảm thiệt hại; trên Kubernetes, EndpointSlice cập nhật nhanh hơn nhiều."
+    },
+    {
+      "id": "config-import",
+      "kind": "single",
+      "prompt": "Service khai báo `spring.config.import=configserver:http://config:8888` (không có `optional:`). Lúc deploy, Config Server đang khởi động lại. Chuyện gì xảy ra?",
+      "options": [
+        "Service không khởi động được vì không tải được cấu hình bắt buộc",
+        "Service khởi động với cấu hình trong `application.yml` rồi tự tải lại sau",
+        "Service khởi động và dùng bản cấu hình đã cache từ lần chạy trước",
+        "Service chờ Config Server vô hạn, không có timeout"
+      ],
+      "answer": 0,
+      "explanation": "Không có `optional:` nghĩa là nguồn cấu hình bắt buộc: không kết nối được thì khởi động thất bại (có thể bật retry với `spring.cloud.config.retry`). Có `optional:` thì service chạy với cấu hình cục bộ, tránh được lỗi khởi động nhưng có thể âm thầm chạy với giá trị sai. Config Server vì thế là phụ thuộc lúc khởi động của mọi service."
+    },
+    {
+      "id": "refresh-scope",
+      "kind": "single",
+      "prompt": "Sau khi sửa `app.payment.timeout` trong Git và gọi `/actuator/refresh` trên một instance, điều gì đúng?",
+      "options": [
+        "Chỉ instance đó, ở bean `@RefreshScope` hoặc `@ConfigurationProperties`",
+        "Mọi instance của service nhận giá trị mới vì chúng dùng chung Config Server",
+        "Mọi bean của ứng dụng được tạo lại, kể cả `DataSource` và thread pool",
+        "Giá trị mới chỉ có tác dụng sau khi instance khởi động lại"
+      ],
+      "answer": 0,
+      "explanation": "Refresh chỉ xảy ra trên instance nhận lời gọi. Bean `@RefreshScope` được tạo lại ở lần dùng tiếp theo, `@ConfigurationProperties` được bind lại; field `@Value` trong bean thường thì không đổi. Muốn mọi instance cùng refresh thì dùng Spring Cloud Bus hoặc rolling restart."
+    },
+    {
+      "id": "retry-breaker-order",
+      "kind": "single",
+      "prompt": "Method có cả `@Retry(name = \"payment\")` (3 lần thử) và `@CircuitBreaker(name = \"payment\")` của Resilience4j, thứ tự mặc định. Payment trả lỗi liên tục. Circuit breaker ghi nhận bao nhiêu lỗi cho một lần gọi method?",
+      "options": [
+        "3: retry bọc ngoài circuit breaker nên mỗi lần thử đều đi qua breaker",
+        "1: circuit breaker bọc ngoài retry nên chỉ thấy kết quả cuối cùng",
+        "0: lỗi đã được retry xử lý nên breaker không đếm",
+        "Tuỳ thứ tự viết annotation: viết `@Retry` trước thì retry bọc ngoài"
+      ],
+      "answer": 0,
+      "explanation": "Thứ tự aspect mặc định của Resilience4j là `Retry ( CircuitBreaker ( RateLimiter ( TimeLimiter ( Bulkhead ( method ) ) ) ) )`. Mỗi lần thử của retry đi qua circuit breaker, nên breaker mở nhanh hơn bạn nghĩ. Khi breaker đã mở, các lần thử sau nhận `CallNotPermittedException` ngay; nên cấu hình retry bỏ qua exception này. Thứ tự đổi được bằng thuộc tính `*-aspect-order`, không phụ thuộc thứ tự viết annotation."
+    },
+    {
+      "id": "feign-timeout",
+      "kind": "single",
+      "prompt": "Service dùng OpenFeign với cấu hình mặc định gọi Payment Service. Payment bị treo hẳn (nhận kết nối nhưng không trả lời). Mỗi request của Order Service phải chờ bao lâu?",
+      "options": [
+        "Khoảng 60 giây, read timeout mặc định của Spring Cloud OpenFeign",
+        "Khoảng 1 giây, Feign có timeout ngắn sẵn cho lời gọi nội bộ",
+        "Vô hạn, Feign không có timeout nếu không cấu hình",
+        "Khoảng 10 giây, bằng connect timeout mặc định"
+      ],
+      "answer": 0,
+      "explanation": "Spring Cloud OpenFeign mặc định connect timeout 10 giây và read timeout 60 giây. Kết nối thành công nên connect timeout không áp dụng; request chờ tới 60 giây, giữ thread của Tomcat suốt thời gian đó. Vài chục request như vậy là hết thread và Order Service cũng treo. Đặt timeout theo từng client, ngắn hơn timeout của caller."
+    }
+  ]
+}

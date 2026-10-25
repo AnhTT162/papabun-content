@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "entry", "front": "Spring Security nằm ở đâu trong một request servlet?", "back": "Là filter: `DelegatingFilterProxy` chuyển cho `FilterChainProxy`, chạy trước `DispatcherServlet`." },
+    { "id": "chain-select", "front": "Có nhiều `SecurityFilterChain` thì chain nào chạy?", "back": "Chỉ chain đầu tiên (theo `@Order`) có `securityMatcher` khớp; chain không có matcher khớp mọi request." },
+    { "id": "rule-order", "front": "Thứ tự rule trong `authorizeHttpRequests`?", "back": "Rule đầu tiên khớp quyết định; đặt rule cụ thể trước, `anyRequest()` cuối cùng." },
+    { "id": "has-role", "front": "`hasRole(\"ADMIN\")` kiểm tra authority nào? JWT mặc định cho authority gì?", "back": "`ROLE_ADMIN`. JWT mặc định chỉ cho `SCOPE_*` từ claim `scope`/`scp`; role phải tự ánh xạ bằng converter." },
+    { "id": "401-403", "front": "Ai quyết định 401 hay 403?", "back": "`ExceptionTranslationFilter`: chưa xác thực hoặc ẩn danh thì entry point (401), đã xác thực mà thiếu quyền thì 403." },
+    { "id": "save-context", "front": "Spring Security 6 thay đổi gì khi lưu `SecurityContext`?", "back": "Không tự lưu vào session nữa; đăng nhập tự viết phải gọi `SecurityContextRepository.saveContext`." },
+    { "id": "aud", "front": "Resource server có kiểm tra `aud` của JWT không?", "back": "Mặc định không; khai báo `spring.security.oauth2.resourceserver.jwt.audiences` hoặc thêm validator." },
+    { "id": "csrf-off", "front": "Khi nào tắt CSRF an toàn?", "back": "Khi xác thực hoàn toàn bằng header `Authorization`, trình duyệt không tự gửi cookie xác thực." }
+  ]
+}

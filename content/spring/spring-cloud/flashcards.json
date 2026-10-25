@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "removed", "front": "Thành phần Netflix nào đã bị bỏ, thay bằng gì?", "back": "Zuul → Spring Cloud Gateway, Hystrix → Resilience4j, Ribbon → Spring Cloud LoadBalancer (từ Spring Cloud 2020.0)." },
+    { "id": "k8s-replace", "front": "Trên Kubernetes, cái gì thường thay Eureka và Config Server?", "back": "Service DNS cùng readiness probe thay Eureka; ConfigMap và Secret thay Config Server." },
+    { "id": "eureka-lag", "front": "Vì sao instance chết vẫn nhận request một lúc với Eureka?", "back": "Lease hết hạn sau 90 giây, client tải lại danh sách 30 giây, LoadBalancer cache thêm; cộng lại có thể vài phút." },
+    { "id": "config-optional", "front": "`spring.config.import=configserver:` không có `optional:` nghĩa là gì?", "back": "Config Server không truy cập được thì ứng dụng không khởi động." },
+    { "id": "refresh-scope", "front": "`/actuator/refresh` đổi được gì?", "back": "Bean `@RefreshScope` và `@ConfigurationProperties` trên đúng instance đó; pool và cổng server cần khởi động lại." },
+    { "id": "r4j-order", "front": "Thứ tự mặc định của annotation Resilience4j?", "back": "Retry bọc CircuitBreaker, rồi RateLimiter, TimeLimiter, Bulkhead; mỗi lần retry đều được breaker đếm." },
+    { "id": "feign-status", "front": "Tình trạng của Spring Cloud OpenFeign?", "back": "Feature complete, chỉ bảo trì; code mới nên dùng HTTP interface client của Spring trên `RestClient`." },
+    { "id": "gateway-variants", "front": "Spring Cloud Gateway có những biến thể nào?", "back": "WebFlux trên Netty (không được chặn event loop) và Web MVC trên servlet." }
+  ]
+}

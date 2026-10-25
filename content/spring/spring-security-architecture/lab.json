@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Admin có role ADMIN mà vẫn nhận 403",
+  "context": "Service báo cáo là resource server, nhận access token JWT từ identity provider của công ty. Identity provider đặt role của người dùng vào claim `roles`. Đội vừa thêm API xuất báo cáo chỉ dành cho admin.",
+  "buggyCode": "@Bean\nSecurityFilterChain api(HttpSecurity http) throws Exception {\n    return http\n        .securityMatcher(\"/api/**\")\n        .authorizeHttpRequests(auth -> auth\n            .requestMatchers(\"/api/reports/export\").hasRole(\"ADMIN\")\n            .anyRequest().authenticated())\n        .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))\n        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))\n        .csrf(csrf -> csrf.disable())\n        .build();\n}\n\n// Payload của access token người dùng admin:\n// { \"iss\": \"https://id.example.com\", \"sub\": \"u-1029\", \"aud\": \"reports\",\n//   \"scope\": \"openid profile reports.read\", \"roles\": [\"ADMIN\"], \"exp\": 1792909200 }",
+  "symptom": {
+    "description": "Mọi người dùng, kể cả admin, gọi API xuất báo cáo đều nhận 403. Các API khác chạy bình thường với cùng token. Token đã được kiểm tra trên jwt.io: chữ ký hợp lệ, chưa hết hạn, có `\"roles\": [\"ADMIN\"]`.",
+    "output": "DEBUG FilterChainProxy                             : Securing GET /api/reports/export\nDEBUG JwtAuthenticationProvider                    : Authenticated token\nTRACE RequestMatcherDelegatingAuthorizationManager : Authorizing GET /api/reports/export\nTRACE RequestMatcherDelegatingAuthorizationManager : Checking authorization on GET /api/reports/export using AuthorityAuthorizationManager[authorities=[ROLE_ADMIN]]\nTRACE ExceptionTranslationFilter                   : Sending JwtAuthenticationToken [Principal=..., Granted Authorities=[SCOPE_openid, SCOPE_profile, SCOPE_reports.read]] to access denied handler since access is denied\n\nHTTP/1.1 403"
+  },
+  "diagnosis": {
+    "question": "Vì sao admin nhận 403?",
+    "options": [
+      "Converter mặc định chỉ đọc `scope` thành `SCOPE_*`, bỏ qua claim `roles`",
+      "`hasRole(\"ADMIN\")` so khớp phân biệt hoa thường, mà role trong token phải viết thường",
+      "Token không có `aud` khớp tên service nên Spring Security từ chối với mã 403",
+      "Chain đặt `STATELESS` nên không lưu được role giữa hai request, phải bật session"
+    ],
+    "answer": 0,
+    "explanation": "`JwtGrantedAuthoritiesConverter` mặc định chỉ đọc claim `scope` (hoặc `scp`) và thêm tiền tố `SCOPE_`. Log liệt kê authority của token: chỉ có ba `SCOPE_*`, không có `ROLE_ADMIN` mà `hasRole(\"ADMIN\")` cần. Token vẫn hợp lệ nên các API chỉ cần `authenticated()` chạy bình thường. Lỗi về `aud` là lỗi xác thực (401), không phải 403; hoa thường không phải vấn đề vì role đã viết đúng `ADMIN`; và resource server stateless đọc lại authority từ token ở mỗi request."
+  },
+  "fix": {
+    "code": "@Bean\nJwtAuthenticationConverter jwtAuthenticationConverter() {\n    JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();\n    roles.setAuthoritiesClaimName(\"roles\");\n    roles.setAuthorityPrefix(\"ROLE_\");\n\n    JwtGrantedAuthoritiesConverter scopes = new JwtGrantedAuthoritiesConverter();   // giữ SCOPE_*\n\n    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();\n    converter.setJwtGrantedAuthoritiesConverter(jwt -> {\n        Collection<GrantedAuthority> all = new ArrayList<>(scopes.convert(jwt));\n        all.addAll(roles.convert(jwt));\n        return all;\n    });\n    return converter;\n}\n\n// application.yml: chỉ nhận token cấp cho service này\n// spring.security.oauth2.resourceserver.jwt.audiences: reports",
+    "explanation": "Khai báo cách lấy role từ token: đọc claim `roles`, thêm tiền tố `ROLE_`, và vẫn giữ các `SCOPE_*` cho rule nào đang dùng scope. Boot tự dùng bean `JwtAuthenticationConverter` này cho resource server. Từ Boot 3.3 có thể chỉ cấu hình `spring.security.oauth2.resourceserver.jwt.authorities-claim-name: roles` và `authority-prefix: ROLE_`, nhưng khi đó mất các `SCOPE_*`; cần cả hai loại thì dùng converter như trên. Kèm theo nên khai báo `audiences` để token cấp cho service khác cùng issuer không dùng được ở đây. Cách nhanh hơn là đổi rule thành `hasAuthority(\"SCOPE_reports.export\")` nếu identity provider cấp scope riêng cho việc xuất báo cáo; khi đó quyền nằm ở scope chứ không ở role. Test bằng `jwt()` của `spring-security-test` mặc định dùng converter chuẩn chứ không dùng bean của bạn, nên dễ che lỗi này; tách phần ánh xạ authority thành một bean `Converter<Jwt, Collection<GrantedAuthority>>` rồi truyền nó vào `jwt().authorities(converter)`, hoặc test bằng token thật ký với khoá dùng cho test."
+  }
+}

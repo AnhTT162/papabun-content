@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "matcher-order",
+      "kind": "output",
+      "prompt": "Người dùng đã đăng nhập nhưng không có role ADMIN gọi `DELETE /api/admin/users/7`. Kết quả?",
+      "code": "http.authorizeHttpRequests(auth -> auth\n    .requestMatchers(\"/api/**\").authenticated()\n    .requestMatchers(\"/api/admin/**\").hasRole(\"ADMIN\")\n    .anyRequest().denyAll());",
+      "options": [
+        "Request được cho qua: rule `/api/**` khớp trước nên rule admin không được xét",
+        "403, vì Spring Security chọn rule có đường dẫn cụ thể nhất là `/api/admin/**`",
+        "403, vì `denyAll()` ở cuối áp cho mọi request không khớp đủ các rule",
+        "Ứng dụng lỗi lúc khởi động vì hai matcher chồng lên nhau"
+      ],
+      "answer": 0,
+      "explanation": "Rule được xét theo thứ tự khai báo, rule **đầu tiên** khớp quyết định. `/api/**` khớp nên chỉ cần đã đăng nhập; rule admin nằm sau không có tác dụng. Trong `authorizeHttpRequests`, Spring Security chỉ báo lỗi khởi động khi có rule đứng sau `anyRequest()`; nó không phát hiện rule bị rule rộng hơn che. Đặt rule cụ thể lên trước."
+    },
+    {
+      "id": "chain-order",
+      "kind": "single",
+      "prompt": "Ứng dụng chạy Spring Security 6.4 trở lên, có hai bean `SecurityFilterChain`: chain web (form login, không có `securityMatcher`, `@Order(1)`) và chain API (`securityMatcher(\"/api/**\")`, JWT, `@Order(2)`). Chuyện gì xảy ra?",
+      "options": [
+        "Không khởi động được: chain bắt mọi request đứng trước làm chain API vô dụng",
+        "Chain API xử lý `/api/**` vì `securityMatcher` cụ thể hơn luôn được ưu tiên",
+        "Cả hai chain chạy lần lượt, request API phải qua cả form login và JWT",
+        "Spring Security gộp hai chain thành một vì cùng khớp các request `/api/**`"
+      ],
+      "answer": 0,
+      "explanation": "Từ 6.4, `FilterChainProxy` kiểm tra lúc khởi động: nếu một chain khớp mọi request đứng trước chain khác thì ném `UnreachableFilterChainException`. Trước 6.4 thì chain web âm thầm nuốt `/api/**` và token bị bỏ qua. Spring Security không bao giờ chạy hai chain cho một request, cũng không ưu tiên matcher cụ thể hơn. Đặt chain có matcher hẹp ở order nhỏ hơn, chain bắt mọi thứ ở cuối."
+    },
+    {
+      "id": "anonymous-denied",
+      "kind": "single",
+      "prompt": "Request không có token gọi API cần `authenticated()` trên resource server. `AuthorizationFilter` ném `AccessDeniedException`. Client nhận gì?",
+      "options": [
+        "401: người dùng ẩn danh nên lỗi chuyển cho `AuthenticationEntryPoint`",
+        "403: mọi `AccessDeniedException` đều đi tới `AccessDeniedHandler`",
+        "500: exception không được bắt và rơi xuống tới servlet container",
+        "200 rỗng: request không token được coi là `permitAll`"
+      ],
+      "answer": 0,
+      "explanation": "`ExceptionTranslationFilter` xét danh tính hiện tại: nếu là ẩn danh, lỗi phân quyền được coi như chưa xác thực và gọi entry point (với resource server là 401 kèm `WWW-Authenticate: Bearer`). Chỉ người đã xác thực mà thiếu quyền mới nhận 403."
+    },
+    {
+      "id": "error-dispatch",
+      "kind": "single",
+      "prompt": "Ứng dụng Boot 3 với Spring Security 6. Endpoint `/public/search` là `permitAll` nhưng đôi khi ném `IllegalStateException`. Người dùng ẩn danh nhận 401 thay vì 500. Vì sao?",
+      "options": [
+        "Dispatch sang `/error` cũng bị phân quyền mà `/error` chưa `permitAll`",
+        "`IllegalStateException` là lớp con của `AuthenticationException` nên thành 401",
+        "Spring Security 6 bắt mọi exception của controller và trả 401 để không lộ thông tin",
+        "`permitAll` chỉ áp cho method `GET`, còn lỗi được xử lý như `POST`"
+      ],
+      "answer": 0,
+      "explanation": "Từ Spring Security 6, phân quyền áp cho mọi dispatcher type, kể cả `ERROR`. Boot forward lỗi sang `/error`; nếu không có rule cho nó thì rơi vào `anyRequest().authenticated()`, người dùng ẩn danh nhận 401 và lỗi thật bị che. Thêm `.requestMatchers(\"/error\").permitAll()` hoặc cho phép `DispatcherType.ERROR`."
+    },
+    {
+      "id": "save-context",
+      "kind": "single",
+      "prompt": "Trên Spring Security 6, controller đăng nhập tự viết gọi `authenticationManager.authenticate(...)` rồi `SecurityContextHolder.getContext().setAuthentication(auth)`. Request ngay sau đó vẫn là ẩn danh. Vì sao?",
+      "options": [
+        "Context không còn được tự lưu vào session; phải gọi `securityContextRepository.saveContext(...)`",
+        "`SecurityContextHolder` chỉ có tác dụng bên trong filter, không dùng được trong controller",
+        "`authenticate()` trả về token chưa xác thực, phải gọi thêm `setAuthenticated(true)`",
+        "Session bị tạo mới sau đăng nhập nên mọi thuộc tính, kể cả context, bị xoá"
+      ],
+      "answer": 0,
+      "explanation": "Từ 6.0, `SecurityContextHolderFilter` chỉ nạp context từ session ở đầu request, không lưu lại ở cuối như `SecurityContextPersistenceFilter` của bản 5. Code đăng nhập tự viết phải lưu bằng `SecurityContextRepository`. Đổi session id sau đăng nhập (chống session fixation) vẫn giữ thuộc tính của session."
+    },
+    {
+      "id": "async-context",
+      "kind": "single",
+      "prompt": "Method `@Async` gửi email đọc `SecurityContextHolder.getContext().getAuthentication()` để lấy người gửi. Nó nhận được gì, với executor mặc định của Boot?",
+      "options": [
+        "`null`: context gắn với `ThreadLocal` của thread request, thread của executor không có nó",
+        "Authentication của request gốc, vì Boot tự chép context sang mọi thread",
+        "Một `AnonymousAuthenticationToken` do `AnonymousAuthenticationFilter` tạo cho thread mới",
+        "Authentication của request cuối cùng đã dùng thread đó trong pool"
+      ],
+      "answer": 0,
+      "explanation": "Mặc định context nằm trong `ThreadLocal`. Thread của executor chưa từng chạy qua filter nên context rỗng và `getAuthentication()` trả `null`. Bọc executor bằng `DelegatingSecurityContextAsyncTaskExecutor`, hoặc truyền id người dùng làm tham số. Danh tính của request cũ chỉ rò sang khi dùng `MODE_INHERITABLETHREADLOCAL` với pool, nên không dùng chế độ đó."
+    }
+  ]
+}

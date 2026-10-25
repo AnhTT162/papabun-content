@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chuyển hệ thống Spring Cloud cũ lên Kubernetes",
+  "prompt": "Một nền tảng đặt vé có **14 service** Spring Boot 2.3 với Spring Cloud Hoxton chạy trên VM, dùng bộ Spring Cloud Netflix cũ: Zuul làm gateway, Eureka, Ribbon, Hystrix, Feign, và Config Server đọc từ Git (có cả mật khẩu database dạng rõ). Công ty quyết định chuyển lên Kubernetes và nâng Boot 3 trong hai quý.\n\nHiện trạng:\n- Mỗi lần deploy một service, lỗi 5xx của các service gọi tới nó tăng vọt trong **1–3 phút** rồi tự hết.\n- Retry đặt ở Zuul (2 lần) và ở Feign (3 lần); khi service thanh toán chậm, nó nhận gấp nhiều lần lượng request bình thường.\n- Đội vận hành muốn giảm số thành phần phải tự chạy.\n\nĐề xuất kiến trúc đích: giữ gì, thay gì, bỏ gì, và thứ tự chuyển đổi để không phải dừng hệ thống.",
+  "hints": [
+    "Vì sao lỗi kéo dài 1–3 phút sau mỗi lần deploy? Cộng các khoảng thời gian: lease của Eureka, cache danh sách instance ở client, và việc instance cũ dừng có báo trước không.",
+    "Zuul, Hystrix, Ribbon còn được hỗ trợ trên Boot 3 không? Thay bằng gì?",
+    "Trên Kubernetes, việc \"tìm instance còn sống\" và \"cấu hình theo môi trường\" do thành phần nào làm sẵn?",
+    "Một lần gọi của người dùng thành bao nhiêu request xuống service thanh toán khi cả gateway và Feign đều retry?",
+    "Trong lúc chuyển đổi, service trên VM và service trên Kubernetes gọi nhau bằng cách nào?"
+  ],
+  "solution": "**1. Chẩn đoán lỗi khi deploy**\n\n- Script deploy dừng bằng `kill -9` (hoặc timeout dừng quá ngắn) nên instance không kịp huỷ đăng ký; Eureka chỉ xoá nó sau ít nhất 90 giây (thực tế tới khoảng 3 phút).\n- Client Eureka tải lại danh sách mỗi 30 giây, Ribbon cache thêm 30 giây nữa: caller tiếp tục gửi request tới instance đã chết trong 1–3 phút.\n- Instance đang dừng cũng cắt ngang request đang xử lý, vì không có graceful shutdown.\n- Kể cả khi huỷ đăng ký, cache response của server (30 giây), lần tải danh sách của client (30 giây) và Ribbon (30 giây) vẫn để lại tới khoảng 90 giây, nên cần retry sang instance khác cho request idempotent.\n\n**2. Thay các thành phần đã bị bỏ** (Spring Cloud 2020.0 đã loại Zuul, Hystrix, Ribbon):\n\n- Zuul → Spring Cloud Gateway, hoặc Ingress/gateway của nền tảng nếu chỉ cần route và TLS.\n- Hystrix → Resilience4j.\n- Ribbon → không cần trên Kubernetes (Service DNS), Spring Cloud LoadBalancer nếu còn discovery.\n- Feign → giữ tạm (vẫn được bảo trì) rồi chuyển dần sang HTTP interface client trên `RestClient`.\n\n**3. Kiến trúc đích trên Kubernetes**\n\n- **Discovery**: bỏ Eureka. Service gọi nhau bằng `http://payment.booking.svc`. Readiness probe loại pod chưa sẵn sàng; pod đang dừng bị đánh dấu không sẵn sàng trong EndpointSlice ngay khi bắt đầu terminate, nhưng kube-proxy và Ingress cập nhật bất đồng bộ nên vẫn cần `preStop`.\n- **Deploy không lỗi**:\n  - Graceful shutdown (`server.shutdown=graceful`, mặc định từ Boot 3.4) và `preStop` chờ vài giây để Service và kube-proxy kịp gỡ pod trước khi ứng dụng ngừng nhận request.\n  - `terminationGracePeriodSeconds` lớn hơn tổng thời gian chờ đó.\n  - Rolling update với `maxUnavailable: 0`.\n- **Cấu hình**:\n  - Giá trị theo môi trường để ở ConfigMap; mật khẩu chuyển sang Secret (hoặc Vault, External Secrets).\n  - Đọc bằng `spring.config.import=configtree:` hoặc biến môi trường.\n  - Bỏ Config Server; lịch sử thay đổi nằm trong Git của repo triển khai (GitOps).\n  - Thay đổi cấu hình đi qua rolling restart, không dùng `@RefreshScope`.\n- **Gateway**: một Spring Cloud Gateway cho API công khai (xác thực token, rate limit theo người dùng), đứng sau Ingress. Gọi nội bộ giữa service không đi qua gateway.\n- **Resilience**:\n  - Timeout rõ ràng cho mọi HTTP client (ví dụ 2 giây cho thanh toán), thay cho 60 giây mặc định của Feign.\n  - Retry chỉ ở một tầng, chỉ cho request idempotent, có backoff và jitter.\n  - Circuit breaker quanh lời gọi thanh toán.\n  - Bỏ retry ở gateway cho `POST`.\n  - Hiện tại Zuul thử tối đa 3 lần (1 + 2 retry), mỗi lần Feign thử tối đa 4 lần (1 + 3 retry): một lượt đặt vé thành tới 12 request xuống thanh toán đúng lúc nó chậm.\n\n**4. Thứ tự chuyển đổi**\n\n1. Trên VM: bật graceful shutdown, huỷ đăng ký Eureka khi dừng, giảm retry trùng lặp, đặt timeout. Lỗi khi deploy giảm ngay, trước khi đổi nền tảng.\n2. Nâng từng service qua Boot 2.7 / Spring Cloud 2021.0 (bắt buộc thay Hystrix, Ribbon ở bước này), rồi lên Boot 3 (`javax` → `jakarta`), thay đổi lớn nhất về code. Thay Zuul bằng Spring Cloud Gateway sớm (cuối bước này), route qua Eureka bằng `lb://` và chạy song song có so sánh traffic, vì Zuul là thành phần hết hỗ trợ đứng ở cửa ngoài.\n3. Dựng cluster. Trong thời gian chạy song song, service trên Kubernetes vẫn đăng ký vào Eureka (hoặc dùng địa chỉ nội bộ cố định qua load balancer) để service trên VM gọi được. Chuyển từng service, bắt đầu từ service lá ít phụ thuộc.\n4. Khi service cuối cùng đã lên Kubernetes thì tắt Eureka và Config Server; Gateway chuyển sang route bằng Service DNS.\n\n**5. Đo kết quả**: tỉ lệ 5xx trong cửa sổ deploy, số request tới thanh toán trên mỗi lượt đặt vé, thời gian từ lúc pod nhận SIGTERM tới khi không còn nhận request mới.",
+  "tradeoffs": [
+    {
+      "option": "Giữ nguyên Eureka và Config Server, chỉ chạy chúng trên Kubernetes",
+      "pros": [
+        "Ít thay đổi code",
+        "Đội đã quen vận hành"
+      ],
+      "cons": [
+        "Hai cơ chế tìm instance chạy song song, dễ lệch nhau",
+        "Vẫn phải tự vận hành và nâng cấp thêm hai hệ thống"
+      ]
+    },
+    {
+      "option": "Bỏ Eureka, dùng Service DNS và readiness probe",
+      "pros": [
+        "Một nguồn sự thật, nền tảng tự lo",
+        "Pod bị gỡ khỏi Service ngay khi không sẵn sàng"
+      ],
+      "cons": [
+        "Cần cầu nối cho giai đoạn chạy song song với VM",
+        "kube-proxy chia tải theo kết nối, kém đều với kết nối giữ lâu"
+      ]
+    },
+    {
+      "option": "Thêm service mesh (Istio, Linkerd)",
+      "pros": [
+        "mTLS, retry, timeout, số liệu đồng nhất cho mọi service",
+        "Không cần thư viện trong từng ứng dụng"
+      ],
+      "cons": [
+        "Thêm một hệ thống lớn để vận hành",
+        "Retry ở mesh chồng lên retry trong code nếu không dọn"
+      ]
+    },
+    {
+      "option": "ConfigMap/Secret thay cho Config Server",
+      "pros": [
+        "Không còn một service trung tâm mà mọi service phụ thuộc khi khởi động",
+        "Gắn với quy trình triển khai, có lịch sử trong Git"
+      ],
+      "cons": [
+        "Đổi cấu hình cần rolling restart",
+        "Mất tính năng refresh lúc chạy"
+      ]
+    }
+  ]
+}

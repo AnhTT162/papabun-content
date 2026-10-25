@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một request có bearer token đi qua Spring Security",
+  "nodes": [
+    {
+      "id": "client",
+      "label": "Client",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "proxy",
+      "label": "FilterChainProxy",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "manager",
+      "label": "Auth Manager",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "bearer",
+      "label": "Bearer Token Filter",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "authz",
+      "label": "Authorization Filter",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "controller",
+      "label": "Controller",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-proxy",
+      "from": "client",
+      "to": "proxy",
+      "label": "GET /api/orders/42"
+    },
+    {
+      "id": "proxy-bearer",
+      "from": "proxy",
+      "to": "bearer",
+      "label": "chain đầu tiên khớp"
+    },
+    {
+      "id": "bearer-manager",
+      "from": "bearer",
+      "to": "manager",
+      "label": "authenticate()"
+    },
+    {
+      "id": "manager-authz",
+      "from": "manager",
+      "to": "authz",
+      "label": "Authentication"
+    },
+    {
+      "id": "authz-controller",
+      "from": "authz",
+      "to": "controller",
+      "label": "được phép"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Client gửi `GET /api/orders/42` kèm header `Authorization: Bearer <JWT>`.",
+      "show": [
+        "client"
+      ]
+    },
+    {
+      "caption": "Servlet container gọi `DelegatingFilterProxy`, nó chuyển request cho bean `FilterChainProxy`. Bean này duyệt các `SecurityFilterChain` theo `@Order` và chọn **chain đầu tiên** có `securityMatcher` khớp `/api/**`. Chỉ chain đó chạy.",
+      "show": [
+        "proxy",
+        "client-proxy"
+      ],
+      "highlight": [
+        "client-proxy"
+      ]
+    },
+    {
+      "caption": "Các filter chạy theo thứ tự: CORS, CSRF (đã tắt cho API stateless), rồi `BearerTokenAuthenticationFilter` tách token khỏi header.",
+      "show": [
+        "bearer",
+        "proxy-bearer"
+      ],
+      "highlight": [
+        "proxy-bearer"
+      ]
+    },
+    {
+      "caption": "Filter gọi `AuthenticationManager`. `JwtAuthenticationProvider` dùng `JwtDecoder` kiểm tra chữ ký bằng khoá từ JWKS của issuer, rồi `exp`, `iss`, và `aud` nếu đã khai báo. Token hỏng thì ném `AuthenticationException`, client nhận 401.",
+      "show": [
+        "manager",
+        "bearer-manager"
+      ],
+      "highlight": [
+        "bearer-manager"
+      ]
+    },
+    {
+      "caption": "Token hợp lệ thành `JwtAuthenticationToken` với authority, mặc định `SCOPE_orders.read` từ claim `scope`. `BearerTokenAuthenticationFilter` đặt nó vào `SecurityContextHolder`, gắn với thread của request. Các filter sau chạy tiếp, `ExceptionTranslationFilter` đứng chờ bắt lỗi phân quyền.",
+      "show": [
+        "authz",
+        "manager-authz"
+      ],
+      "highlight": [
+        "manager-authz"
+      ]
+    },
+    {
+      "caption": "`AuthorizationFilter` so request với các rule `requestMatchers` theo thứ tự, rule đầu tiên khớp quyết định. Không đủ quyền thì ném `AccessDeniedException`, `ExceptionTranslationFilter` đổi thành 403. Đủ quyền thì request tới `DispatcherServlet` và controller, nơi `@PreAuthorize` có thể kiểm tra thêm trên từng đơn hàng.",
+      "show": [
+        "controller",
+        "authz-controller"
+      ],
+      "highlight": [
+        "authz-controller"
+      ]
+    }
+  ]
+}

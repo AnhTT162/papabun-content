@@ -1,0 +1,148 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một request đi qua các thành phần Spring Cloud",
+  "nodes": [
+    {
+      "id": "client",
+      "label": "Mobile app",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "gateway",
+      "label": "Gateway",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "eureka",
+      "label": "Eureka",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "orders",
+      "label": "Order Service",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "config",
+      "label": "Config Server",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "payment",
+      "label": "Payment Service",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "config-orders",
+      "from": "config",
+      "to": "orders",
+      "label": "cấu hình khi start"
+    },
+    {
+      "id": "orders-eureka",
+      "from": "orders",
+      "to": "eureka",
+      "label": "đăng ký"
+    },
+    {
+      "id": "client-gateway",
+      "from": "client",
+      "to": "gateway",
+      "label": "POST /orders"
+    },
+    {
+      "id": "gateway-eureka",
+      "from": "gateway",
+      "to": "eureka",
+      "label": "hỏi instance"
+    },
+    {
+      "id": "gateway-orders",
+      "from": "gateway",
+      "to": "orders",
+      "label": "lb://orders"
+    },
+    {
+      "id": "orders-payment",
+      "from": "orders",
+      "to": "payment",
+      "label": "client + breaker"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Lúc khởi động, Order Service đọc `spring.config.import=configserver:` và lấy cấu hình (URL, timeout, feature flag) từ Config Server, nguồn thường là một repo Git.",
+      "show": [
+        "config",
+        "orders",
+        "config-orders"
+      ],
+      "highlight": [
+        "config-orders"
+      ]
+    },
+    {
+      "caption": "Order Service đăng ký địa chỉ của mình với Eureka và gia hạn lease mỗi 30 giây. Instance ngừng gia hạn thì phải vài phút sau Eureka mới xoá nó.",
+      "show": [
+        "eureka",
+        "orders-eureka"
+      ],
+      "highlight": [
+        "orders-eureka"
+      ]
+    },
+    {
+      "caption": "Ứng dụng di động gửi `POST /orders` tới Gateway, cửa vào duy nhất từ bên ngoài. Gateway kiểm tra token, rate limit, rồi chọn route theo đường dẫn.",
+      "show": [
+        "client",
+        "gateway",
+        "client-gateway"
+      ],
+      "highlight": [
+        "client-gateway"
+      ]
+    },
+    {
+      "caption": "Route trỏ tới `lb://orders`. Spring Cloud LoadBalancer lấy danh sách instance từ Eureka (có cache) và chọn một. Instance vừa chết vẫn có thể nằm trong danh sách cache.",
+      "show": [
+        "gateway-eureka"
+      ],
+      "highlight": [
+        "gateway-eureka"
+      ]
+    },
+    {
+      "caption": "Gateway chuyển request tới instance đã chọn, với timeout riêng của route.",
+      "show": [
+        "gateway-orders"
+      ],
+      "highlight": [
+        "gateway-orders"
+      ]
+    },
+    {
+      "caption": "Order Service gọi Payment Service qua HTTP client có timeout, bọc trong circuit breaker của Resilience4j. Payment lỗi liên tục thì breaker mở, lời gọi thất bại ngay thay vì chờ, và đơn có thể chuyển sang trạng thái chờ thanh toán. Trên Kubernetes, Eureka và Config Server thường được thay bằng Service DNS và ConfigMap.",
+      "show": [
+        "payment",
+        "orders-payment"
+      ],
+      "highlight": [
+        "orders-payment"
+      ]
+    }
+  ]
+}
