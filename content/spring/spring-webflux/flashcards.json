@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "loop-count",
+      "front": "Reactor Netty tạo bao nhiêu thread event loop?",
+      "back": "`max(số core, 4)`; pod 2 CPU vẫn có 4 thread."
+    },
+    {
+      "id": "golden-rule",
+      "front": "Quy tắc quan trọng nhất của WebFlux?",
+      "back": "Không chặn event loop: không JDBC, `RestTemplate`, `Thread.sleep`, `block()` trên thread `reactor-http-*`."
+    },
+    {
+      "id": "block-symptom",
+      "front": "Dấu hiệu event loop bị chặn?",
+      "back": "CPU thấp mà latency tăng vọt, health check timeout, thread dump thấy `reactor-http-*` trong I/O blocking."
+    },
+    {
+      "id": "offload",
+      "front": "Bắt buộc gọi thư viện blocking trong WebFlux thì làm gì?",
+      "back": "`Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())`; phát hiện chỗ sót bằng BlockHound trong test."
+    },
+    {
+      "id": "lazy",
+      "front": "Tạo `Mono` mà không subscribe thì sao?",
+      "back": "Không có gì chạy; lời gọi `WebClient` không được gửi."
+    },
+    {
+      "id": "context",
+      "front": "Thay cho `ThreadLocal` trong WebFlux dùng gì?",
+      "back": "Reactor `Context`, kèm context-propagation để MDC và trace id đi theo; security dùng `ReactiveSecurityContextHolder`."
+    },
+    {
+      "id": "when",
+      "front": "Khi nào chọn WebFlux thay Spring MVC + virtual thread?",
+      "back": "Gateway, streaming (SSE, WebSocket), backpressure từ nguồn tới client, ghép nhiều luồng bất đồng bộ; CRUD trên JDBC thì MVC."
+    }
+  ]
+}

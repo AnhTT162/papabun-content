@@ -1,0 +1,153 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một event loop phục vụ nhiều request",
+  "nodes": [
+    {
+      "id": "clients",
+      "label": "Client",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "loop",
+      "label": "Event loop",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "handler",
+      "label": "Handler (Mono)",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "webclient",
+      "label": "WebClient",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "jdbc",
+      "label": "JDBC blocking",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "elastic",
+      "label": "boundedElastic",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "clients-loop",
+      "from": "clients",
+      "to": "loop",
+      "label": "nhiều kết nối"
+    },
+    {
+      "id": "loop-handler",
+      "from": "loop",
+      "to": "handler",
+      "label": "chạy pipeline"
+    },
+    {
+      "id": "handler-webclient",
+      "from": "handler",
+      "to": "webclient",
+      "label": "gửi, không chờ"
+    },
+    {
+      "id": "webclient-loop",
+      "from": "webclient",
+      "to": "loop",
+      "label": "callback"
+    },
+    {
+      "id": "handler-jdbc",
+      "from": "handler",
+      "to": "jdbc",
+      "label": "chặn thread"
+    },
+    {
+      "id": "handler-elastic",
+      "from": "handler",
+      "to": "elastic",
+      "label": "subscribeOn"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Hàng nghìn client giữ kết nối tới service. Pod 2 CPU, Reactor Netty tạo 4 thread event loop.",
+      "show": [
+        "clients"
+      ]
+    },
+    {
+      "caption": "Mỗi kết nối được gắn vào một event loop. Thread đó xử lý mọi sự kiện của kết nối: đọc request, ghi response.",
+      "show": [
+        "loop",
+        "clients-loop"
+      ],
+      "highlight": [
+        "clients-loop"
+      ]
+    },
+    {
+      "caption": "Request tới, event loop chạy pipeline của handler: parse, kiểm tra, rồi tới bước cần dữ liệu từ service khác.",
+      "show": [
+        "handler",
+        "loop-handler"
+      ],
+      "highlight": [
+        "loop-handler"
+      ]
+    },
+    {
+      "caption": "`WebClient` gửi request đi rồi trả thread ngay. Trong lúc chờ, event loop phục vụ các kết nối khác.",
+      "show": [
+        "webclient",
+        "handler-webclient"
+      ],
+      "highlight": [
+        "handler-webclient"
+      ]
+    },
+    {
+      "caption": "Khi có phản hồi, Netty phát sự kiện và event loop chạy tiếp phần còn lại của pipeline. Không thread nào ngồi chờ, nên 4 thread đủ cho hàng nghìn request đang chờ I/O.",
+      "show": [
+        "webclient-loop"
+      ],
+      "highlight": [
+        "webclient-loop"
+      ]
+    },
+    {
+      "caption": "Nếu handler gọi JDBC hay `RestTemplate`, event loop **bị chặn** suốt thời gian chờ database: mọi kết nối khác trên thread đó đứng yên. 4 lời gọi chậm cùng lúc là cả service ngừng phản hồi, kể cả health check.",
+      "show": [
+        "jdbc",
+        "handler-jdbc"
+      ],
+      "highlight": [
+        "handler-jdbc"
+      ]
+    },
+    {
+      "caption": "Bắt buộc dùng thư viện blocking thì bọc nó: `Mono.fromCallable(() -> repo.find(id)).subscribeOn(Schedulers.boundedElastic())`. Lời gọi chạy trên pool riêng, event loop được trả lại ngay.",
+      "show": [
+        "elastic",
+        "handler-elastic"
+      ],
+      "highlight": [
+        "handler-elastic"
+      ]
+    }
+  ]
+}

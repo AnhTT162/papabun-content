@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-webflux",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring WebFlux & Netty",
+  "summary": "Event loop của Netty và số thread; Mono, Flux và việc không có gì chạy cho tới khi subscribe; block trên event loop, cách nhận ra và BlockHound; boundedElastic; mất ThreadLocal và Reactor Context; R2DBC; WebClient với timeout và pool; khi nào WebFlux đáng dùng, khi nào Spring MVC với virtual thread tốt hơn.",
+  "level": "senior",
+  "order": 17,
+  "minutes": 15,
+  "prerequisites": [
+    "spring-mvc-flow",
+    "spring-async-events"
+  ],
+  "terms": [
+    "event-loop",
+    "reactive-streams",
+    "blockhound",
+    "backpressure",
+    "virtual-thread",
+    "thread-local"
+  ],
+  "references": [
+    {
+      "title": "Spring Framework Reference: Web on Reactive Stack",
+      "url": "https://docs.spring.io/spring-framework/reference/web/webflux.html"
+    },
+    {
+      "title": "Reactor Netty Reference Guide",
+      "url": "https://projectreactor.io/docs/netty/release/reference/"
+    },
+    {
+      "title": "Project Reactor Reference: Debugging Reactor",
+      "url": "https://projectreactor.io/docs/core/release/reference/debugging.html"
+    },
+    {
+      "title": "BlockHound",
+      "url": "https://github.com/reactor/BlockHound"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "layered",
+      "file": "layered.md"
+    },
+    {
+      "type": "diagram",
+      "file": "diagram.json"
+    },
+    {
+      "type": "breakLab",
+      "file": "lab.json"
+    },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Có virtual thread rồi thì còn cần WebFlux không?\" Với service CRUD gọi database và vài API, Spring MVC trên virtual thread cho cùng khả năng chịu nhiều request chờ I/O mà code vẫn tuần tự, dễ debug, dùng được JPA và `ThreadLocal`. WebFlux vẫn có chỗ ở gateway, streaming (SSE, WebSocket), backpressure từ nguồn tới client, và ghép nhiều luồng dữ liệu bất đồng bộ. Câu trả lời tốt nêu rõ cái giá của reactive: khó debug, thư viện blocking phải cô lập, và cả đội phải quen mô hình."
+    },
+    {
+      "type": "callout",
+      "style": "warning",
+      "markdown": "Đừng \"sửa\" lỗi `block()/blockFirst()/blockLast() are blocking, which is not supported in thread reactor-http-epoll-2` bằng cách chuyển sang gọi thư viện blocking khác không ném lỗi. Thông báo đó là WebFlux đang bảo vệ event loop. Hoặc dùng API reactive từ đầu tới cuối, hoặc đẩy phần blocking sang `boundedElastic`, hoặc chuyển service về Spring MVC."
+    }
+  ]
+}

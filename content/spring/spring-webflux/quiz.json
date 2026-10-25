@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "no-subscribe",
+      "kind": "output",
+      "prompt": "Method sau được gọi từ một handler WebFlux sau khi lưu đơn hàng. Email có được gửi không?",
+      "code": "void sendConfirmation(Order order) {\n    mailClient.post()\n        .uri(\"/send\")\n        .bodyValue(Mail.confirm(order))\n        .retrieve()\n        .bodyToMono(Void.class);\n}",
+      "options": [
+        "Không: chưa ai subscribe `Mono` nên request không được gửi",
+        "Có, request được gửi ngay khi gọi `retrieve()`",
+        "Có, nhưng gửi trên thread của `boundedElastic` thay vì event loop",
+        "Không, vì `bodyToMono(Void.class)` huỷ request khi không có body"
+      ],
+      "answer": 0,
+      "explanation": "Trong Reactor, xây pipeline chỉ là mô tả; không có gì chạy cho tới khi có subscribe. Method trả `void` nên `Mono` bị bỏ đi và request không bao giờ đi. Trả `Mono<Void>` về để nối vào pipeline của handler (`then(...)`); gọi `.subscribe()` rời rạc thì mất xử lý lỗi và backpressure."
+    },
+    {
+      "id": "block-on-loop",
+      "kind": "single",
+      "prompt": "Trong handler WebFlux, developer gọi `webClient.get()...bodyToMono(Price.class).block()`. Chuyện gì xảy ra khi request chạy?",
+      "options": [
+        "Ném `IllegalStateException` vì thread `reactor-http-*` không cho block",
+        "Chạy được nhưng chậm, vì thread chờ phản hồi rồi mới đi tiếp",
+        "Spring tự chuyển lời gọi sang `boundedElastic` nên không ảnh hưởng gì",
+        "Request treo vĩnh viễn vì `block()` chờ chính event loop đang bị chặn"
+      ],
+      "answer": 0,
+      "explanation": "Reactor đánh dấu thread của Netty là non-blocking, và `block()`/`blockFirst()`/`blockLast()` kiểm tra điều đó rồi ném `IllegalStateException`. Cơ chế này chỉ bắt các lời gọi `block` của Reactor; JDBC, `RestTemplate` hay `Thread.sleep` thì không bị chặn lại, nên cần BlockHound trong test."
+    },
+    {
+      "id": "event-loop-count",
+      "kind": "single",
+      "prompt": "Pod giới hạn 2 CPU chạy WebFlux với cấu hình mặc định. Mỗi request gọi một hàm blocking mất 500ms ngay trên event loop. Service phục vụ tối đa khoảng bao nhiêu request mỗi giây?",
+      "options": [
+        "Khoảng 8: chỉ có 4 thread event loop, mỗi thread xong 2 request mỗi giây",
+        "Khoảng 400: Netty tự tạo thêm thread khi event loop bị chặn",
+        "Khoảng 4: mỗi CPU có một event loop, mỗi loop 2 request mỗi giây",
+        "Không giới hạn: request chờ được xếp vào hàng đợi rồi xử lý song song"
+      ],
+      "answer": 0,
+      "explanation": "Reactor Netty tạo `max(số core, 4)` event loop, nên pod 2 CPU có 4 thread. Mỗi thread bị chặn 500ms cho một request, tức 2 request mỗi giây, cả service khoảng 8 request mỗi giây. Netty không thêm thread khi bị chặn; request còn lại chờ trên kết nối. Spring MVC với 200 thread Tomcat hay virtual thread chịu tốt hơn nhiều trong trường hợp này."
+    },
+    {
+      "id": "mdc-lost",
+      "kind": "single",
+      "prompt": "Ứng dụng WebFlux đặt `traceId` vào MDC trong một `WebFilter`. Log trong callback của `WebClient` thường không có `traceId`. Vì sao, và sửa thế nào?",
+      "options": [
+        "MDC là `ThreadLocal`, callback chạy trên thread khác; cần context-propagation",
+        "MDC chỉ hoạt động với Logback, cần đổi sang Log4j2 để log có `traceId`",
+        "`WebFilter` chạy sau handler nên MDC chưa có giá trị lúc log",
+        "`WebClient` xoá MDC trước mỗi request để tránh lộ dữ liệu giữa các request"
+      ],
+      "answer": 0,
+      "explanation": "Một request reactive đi qua nhiều thread; MDC gắn với thread nên không đi theo. Đặt giá trị vào Reactor `Context` (Micrometer Tracing làm sẵn việc này) và bật context-propagation (`spring.reactor.context-propagation=auto` trên Boot 3.2+) để Reactor khôi phục `ThreadLocal` ở mỗi bước."
+    },
+    {
+      "id": "both-starters",
+      "kind": "single",
+      "prompt": "Ứng dụng Spring MVC thêm `spring-boot-starter-webflux` chỉ để dùng `WebClient`. Controller vẫn viết kiểu cũ, trả `Order`. Ứng dụng chạy trên server nào, theo mô hình nào?",
+      "options": [
+        "Tomcat với Spring MVC; có cả hai starter thì Boot chọn MVC",
+        "Netty với WebFlux, vì starter webflux luôn được ưu tiên khi có mặt",
+        "Cả Tomcat và Netty, mỗi server lắng nghe một cổng riêng",
+        "Ứng dụng lỗi khởi động vì hai stack web xung đột nhau"
+      ],
+      "answer": 0,
+      "explanation": "Khi có cả `spring-boot-starter-web` và `-webflux`, Boot chọn Spring MVC trên Tomcat; WebFlux chỉ được dùng làm thư viện (`WebClient`). Ứng dụng không trở thành reactive. Muốn ép kiểu thì đặt `spring.main.web-application-type=reactive`, nhưng khi đó controller kiểu servlet không còn chạy. Trong ứng dụng MVC, `RestClient` là lựa chọn đồng bộ không kéo theo Reactor."
+    }
+  ]
+}

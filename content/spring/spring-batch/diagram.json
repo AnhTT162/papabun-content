@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một chunk đi qua Spring Batch",
+  "nodes": [
+    {
+      "id": "job",
+      "label": "Job",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "step",
+      "label": "Chunk Step",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "reader",
+      "label": "ItemReader",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "processor",
+      "label": "ItemProcessor",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "writer",
+      "label": "ItemWriter",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "repo",
+      "label": "JobRepository",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "job-step",
+      "from": "job",
+      "to": "step",
+      "label": "chạy step"
+    },
+    {
+      "id": "step-reader",
+      "from": "step",
+      "to": "reader",
+      "label": "read() × 500"
+    },
+    {
+      "id": "reader-processor",
+      "from": "reader",
+      "to": "processor",
+      "label": "từng item"
+    },
+    {
+      "id": "processor-writer",
+      "from": "processor",
+      "to": "writer",
+      "label": "cả chunk 500"
+    },
+    {
+      "id": "writer-repo",
+      "from": "writer",
+      "to": "repo",
+      "label": "rồi lưu vị trí"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "`JobOperator` (hoặc `JobLauncher` ở bản 5) chạy job `interestJob` với tham số `date=2026-10-25`. JobRepository tạo `JobInstance` cho bộ tham số đó và một `JobExecution` mới.",
+      "show": [
+        "job"
+      ]
+    },
+    {
+      "caption": "Job chạy step chunk với kích thước 500. Step mở một transaction cho chunk đầu tiên.",
+      "show": [
+        "step",
+        "job-step"
+      ],
+      "highlight": [
+        "job-step"
+      ]
+    },
+    {
+      "caption": "Step gọi `read()` tới khi đủ 500 item hoặc reader trả `null` (hết dữ liệu). Reader phân trang đọc theo `sortKey`, ví dụ `WHERE id > ? ORDER BY id`.",
+      "show": [
+        "reader",
+        "step-reader"
+      ],
+      "highlight": [
+        "step-reader"
+      ]
+    },
+    {
+      "caption": "Mỗi item qua `ItemProcessor`: tính lãi, kiểm tra hợp lệ. Trả `null` nghĩa là lọc bỏ item. Processor không nên gọi ra ngoài, vì khi ghi lỗi nó sẽ bị gọi lại.",
+      "show": [
+        "processor",
+        "reader-processor"
+      ],
+      "highlight": [
+        "reader-processor"
+      ]
+    },
+    {
+      "caption": "Cả chunk 500 item được đưa cho `ItemWriter` trong một lần gọi, ví dụ `JdbcBatchItemWriter` gửi một JDBC batch.",
+      "show": [
+        "writer",
+        "processor-writer"
+      ],
+      "highlight": [
+        "processor-writer"
+      ]
+    },
+    {
+      "caption": "Sau khi writer trả về, step lưu vào JobRepository, trong **cùng transaction**: `ExecutionContext` (vị trí đã đọc) và số item đã đọc, ghi, bỏ qua, rồi commit. Pod chết ở chunk sau thì restart cùng tham số sẽ bắt đầu từ vị trí này; chunk đang dở bị rollback và làm lại.",
+      "show": [
+        "repo",
+        "writer-repo"
+      ],
+      "highlight": [
+        "writer-repo"
+      ]
+    }
+  ]
+}

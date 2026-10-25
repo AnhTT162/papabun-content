@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "instance-execution",
+      "front": "`JobInstance` khác `JobExecution` thế nào?",
+      "back": "Instance là job + bộ tham số định danh; execution là một lần thử chạy instance đó. Instance `COMPLETED` không chạy lại được."
+    },
+    {
+      "id": "chunk-tx",
+      "front": "Transaction trong step chunk bao những gì?",
+      "back": "Đọc và xử lý một chunk, ghi cả chunk, và lưu `ExecutionContext` (vị trí đọc) vào JobRepository, rồi commit."
+    },
+    {
+      "id": "restart-needs",
+      "front": "Hai điều kiện để restart an toàn?",
+      "back": "Reader có thứ tự ổn định theo khoá duy nhất; tác dụng ra ngoài database của writer phải idempotent."
+    },
+    {
+      "id": "skip-scan",
+      "front": "Ghi lỗi với exception skip được thì sao?",
+      "back": "Rollback chunk, xử lý và ghi lại từng item để tìm item hỏng; processor bị gọi lại nên không được có tác dụng phụ."
+    },
+    {
+      "id": "partition-vs-mt",
+      "front": "Partitioning khác multi-threaded step thế nào?",
+      "back": "Partitioning chia dữ liệu thành dải, mỗi dải có reader và vị trí riêng nên restart được; multi-threaded step (Batch 5) dùng chung một reader."
+    },
+    {
+      "id": "stuck-started",
+      "front": "Execution kẹt ở `STARTED` sau khi pod bị kill thì làm gì?",
+      "back": "Batch 6: `jobOperator.recover(execution)`; Batch 5: cập nhật bảng sang `FAILED` có kiểm soát (không dùng `abandon`). Rồi restart cùng tham số."
+    },
+    {
+      "id": "run-once",
+      "front": "Vì sao không nên chạy job lúc khởi động trong service web nhiều replica?",
+      "back": "Mỗi pod là một lần chạy; tham số tự tăng làm các lần chạy là instance khác nhau nên JobRepository không chặn trùng."
+    }
+  ]
+}

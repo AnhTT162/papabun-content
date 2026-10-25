@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-batch",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring Batch & xử lý lô",
+  "summary": "Job, Step, JobInstance và JobExecution; chunk và transaction mỗi chunk; JobRepository và restart từ chunk cuối; skip, retry và writer idempotent; multi-threaded step và partitioning; chỉ chạy một bản trên cụm; thay đổi ở Spring Batch 5 và 6; khi nào không cần Spring Batch.",
+  "level": "senior",
+  "order": 16,
+  "minutes": 15,
+  "prerequisites": [
+    "transactional-basics",
+    "spring-async-events",
+    "jdbc-basics"
+  ],
+  "terms": [
+    "chunk-processing",
+    "job-repository",
+    "job-instance",
+    "step-partitioning",
+    "keyset-pagination",
+    "idempotency-key"
+  ],
+  "references": [
+    {
+      "title": "Spring Batch Reference: The Domain Language of Batch",
+      "url": "https://docs.spring.io/spring-batch/reference/domain.html"
+    },
+    {
+      "title": "Spring Batch Reference: Chunk-oriented Processing",
+      "url": "https://docs.spring.io/spring-batch/reference/step/chunk-oriented-processing.html"
+    },
+    {
+      "title": "Spring Batch Reference: Scaling and Parallel Processing",
+      "url": "https://docs.spring.io/spring-batch/reference/scalability.html"
+    },
+    {
+      "title": "Spring Boot Reference: Batch Applications",
+      "url": "https://docs.spring.io/spring-boot/how-to/batch.html"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "layered",
+      "file": "layered.md"
+    },
+    {
+      "type": "diagram",
+      "file": "diagram.json"
+    },
+    {
+      "type": "scenario",
+      "file": "scenario.json"
+    },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Job chết ở dòng thứ 3 triệu thì chạy lại thế nào?\" Câu trả lời tốt gồm ba phần: JobRepository lưu vị trí đọc sau mỗi chunk đã commit nên restart đi tiếp từ đó; reader phải có thứ tự ổn định để \"vị trí\" có nghĩa; và chunk đang dở bị rollback rồi làm lại, nên mọi tác dụng ra ngoài database (gọi API, gửi message) phải idempotent. Hỏi tiếp thường là \"nếu pod bị kill thì sao\": execution kẹt ở `STARTED` và phải được đánh dấu `FAILED` trước khi restart."
+    },
+    {
+      "type": "callout",
+      "style": "warning",
+      "markdown": "Đừng để job chạy lúc khởi động trong một service web có nhiều replica. Mỗi lần deploy hay scale là thêm một lần chạy, và job có tham số tự tăng sẽ chạy trùng mà JobRepository không chặn. Tắt `spring.batch.job.enabled` trong service web, chạy job bằng tiến trình riêng do một scheduler duy nhất kích hoạt."
+    }
+  ]
+}

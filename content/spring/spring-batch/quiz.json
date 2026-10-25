@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "completed-instance",
+      "kind": "single",
+      "prompt": "Job `settlementJob` với tham số định danh `date=2026-10-24` đã `COMPLETED`. Đội vận hành chạy lại nó với đúng tham số đó. Kết quả?",
+      "options": [
+        "Báo `JobInstanceAlreadyCompleteException`, job không chạy lại",
+        "Job chạy lại từ đầu với một `JobExecution` mới cho instance cũ",
+        "Job chạy lại từ chunk cuối cùng đã commit trong lần trước",
+        "Spring Batch tự tạo instance mới vì instance cũ đã kết thúc"
+      ],
+      "answer": 0,
+      "explanation": "Một `JobInstance` được xác định bởi tên job và tham số định danh. Instance đã `COMPLETED` không chạy lại được; chỉ instance `FAILED` hoặc `STOPPED` mới restart. Muốn chạy lại có chủ đích thì dùng tham số khác (ví dụ thêm `run.id`), và lúc đó writer phải idempotent để không ghi trùng."
+    },
+    {
+      "id": "restart-position",
+      "kind": "single",
+      "prompt": "Step chunk 1.000 đọc 50.000 dòng. Pod bị kill khi đang xử lý dòng 23.456. Đánh dấu execution là `FAILED` rồi restart cùng tham số. Step bắt đầu đọc từ đâu, và những dòng nào có thể bị ghi hai lần?",
+      "options": [
+        "Từ dòng 23.001; database không có dòng nào bị ghi trùng",
+        "Từ dòng 1, vì execution bị kill không lưu được vị trí nào",
+        "Từ dòng 23.457, vì reader lưu vị trí sau từng item",
+        "Từ dòng 24.001, vì chunk đang dở được coi là đã xong"
+      ],
+      "answer": 0,
+      "explanation": "Vị trí đọc được commit cùng chunk. Chunk cuối đã commit kết thúc ở dòng 23.000, chunk 23.001–24.000 bị rollback cùng transaction, nên restart đọc lại từ 23.001. Những gì nằm trong transaction đó không bị trùng; còn tác dụng ra ngoài database (gọi API, gửi message) của chunk dở thì có thể đã xảy ra và sẽ xảy ra lại."
+    },
+    {
+      "id": "write-skip-reprocess",
+      "kind": "single",
+      "prompt": "Step `faultTolerant()` có `skip(DataIntegrityViolationException.class)`. Processor gọi API ngân hàng để lấy tỉ giá cho mỗi item. Một item trong chunk 100 vi phạm unique lúc ghi. Chuyện gì xảy ra với API ngân hàng?",
+      "options": [
+        "Bị gọi lại: chunk rollback rồi xử lý và ghi lại từng item để tìm item hỏng",
+        "Không bị gọi lại: Spring Batch giữ kết quả processor của cả chunk trong bộ nhớ",
+        "Chỉ item hỏng bị gọi lại, 99 item còn lại dùng kết quả cũ",
+        "Không bị gọi lại vì lỗi ghi không được tính là lỗi có thể skip"
+      ],
+      "answer": 0,
+      "explanation": "Khi ghi lỗi với một exception skip được, Spring Batch rollback chunk rồi chuyển sang \"scan\": xử lý và ghi lại từng item trong transaction riêng để tìm ra item hỏng. Processor chạy lại cho các item, nên lời gọi ra ngoài bị lặp. Có thể đánh dấu `processorNonTransactional()` để dùng lại kết quả đã xử lý, nhưng an toàn nhất là processor không có tác dụng phụ."
+    },
+    {
+      "id": "cursor-multithread",
+      "kind": "single",
+      "prompt": "Trên Spring Batch 5, để tăng tốc, đội thêm `taskExecutor(...)` với 8 thread cho step đang dùng `JdbcCursorItemReader`. Rủi ro chính là gì?",
+      "options": [
+        "`JdbcCursorItemReader` không thread-safe: item bị đọc trùng hoặc bỏ sót",
+        "Cursor bị đóng sau mỗi chunk nên step chạy chậm hơn trước",
+        "Mỗi thread mở một cursor riêng nên database phải quét bảng 8 lần",
+        "Spring Batch từ chối khởi động step có cursor reader và task executor"
+      ],
+      "answer": 0,
+      "explanation": "Multi-threaded step cho nhiều thread dùng chung một reader. `JdbcCursorItemReader` giữ trạng thái trên một `ResultSet` không thread-safe. Dùng reader thread-safe (`JdbcPagingItemReader`, hoặc bọc bằng `SynchronizedItemStreamReader`) và tắt lưu trạng thái, hoặc chuyển sang partitioning để mỗi thread có reader riêng."
+    },
+    {
+      "id": "enable-batch-boot3",
+      "kind": "single",
+      "prompt": "Trên Boot 3, developer thêm `@EnableBatchProcessing` vào class cấu hình \"cho chắc\". Sau đó job không còn tự chạy lúc khởi động và bảng `BATCH_*` không được tạo. Vì sao?",
+      "options": [
+        "Annotation này làm toàn bộ auto-configuration Batch của Boot lùi lại",
+        "Annotation này chỉ hợp lệ với Spring Batch 4 nên bị bỏ qua và báo cảnh báo",
+        "Boot 3 yêu cầu thêm `spring.batch.job.enabled=true` khi có annotation này",
+        "Annotation chuyển JobRepository sang lưu trong bộ nhớ thay vì database"
+      ],
+      "answer": 0,
+      "explanation": "Từ Boot 3, `BatchAutoConfiguration` chỉ áp dụng khi ứng dụng không tự khai báo cấu hình Batch; `@EnableBatchProcessing` (hoặc một bean `DefaultBatchConfiguration`) là tín hiệu \"tôi tự cấu hình\", nên Boot không chạy job lúc khởi động và không khởi tạo schema. Với Boot, thường không cần annotation này."
+    }
+  ]
+}

@@ -208,8 +208,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 13 | `spring-data-jpa` | Spring Data JPA & Hibernate chuyên sâu | senior | Dirty checking, flush mode, persistence context, bulk op, count query, `equals` của entity | L B T | ✅ |
 | 14 | `spring-security-architecture` | Kiến trúc Spring Security | senior | Filter chain, `AuthenticationManager`, SecurityContext, method security, resource server | L D B | ✅ |
 | 15 | `spring-cloud` | ✚ Spring Cloud cho microservices | senior | Gateway, OpenFeign, Config, Resilience4j, service discovery; khi nào không cần | L D Sc | ✅ |
-| 16 | `spring-batch` | ✚ Spring Batch & xử lý lô | senior | Chunk, restart, skip/retry, partition, chạy song song an toàn | L D Sc | ⬜ |
-| 17 | `spring-webflux` | Spring WebFlux & Netty | senior | Event loop của Netty, block trong reactive và cách phát hiện (BlockHound), WebClient, khi nào nên dùng | L D B | ⬜ |
+| 16 | `spring-batch` | ✚ Spring Batch & xử lý lô | senior | Chunk, restart, skip/retry, partition, chạy song song an toàn | L D Sc | ✅ |
+| 17 | `spring-webflux` | Spring WebFlux & Netty | senior | Event loop của Netty, block trong reactive và cách phát hiện (BlockHound), WebClient, khi nào nên dùng | L D B | ✅ |
 
 ### 6. Testing (`testing`)
 

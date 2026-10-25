@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Job tính lãi đêm chạy 5 tiếng và cộng lãi hai lần",
+  "prompt": "Một ví điện tử cộng lãi hằng ngày cho **12 triệu tài khoản**. Job hiện là một method `@Scheduled` trong service API (4 pod, có ShedLock), chạy một thread: đọc từng tài khoản, ghi một bút toán lãi, cộng số dư, rồi gọi API push để báo cho khách.\n\n- Job mất khoảng **5 giờ**; cửa sổ cho phép là 01:00–03:00, sau đó hệ thống đối soát của ngân hàng đối tác bắt đầu đọc dữ liệu.\n- Tuần trước pod chạy job bị OOMKilled ở khoảng 70%. Đội vận hành chạy lại từ đầu: **khoảng 8 triệu tài khoản bị cộng lãi hai lần** và nhận hai thông báo; phải viết script đảo bút toán.\n- Database là PostgreSQL, pool của service 20 connection.\n\nThiết kế lại job để chạy xong trong cửa sổ, chạy lại an toàn khi lỗi, và không ảnh hưởng API.",
+  "hints": [
+    "Vì sao chạy lại từ đầu lại cộng lãi hai lần? Database cần ràng buộc gì để \"cộng lãi ngày X cho tài khoản Y\" chỉ xảy ra một lần?",
+    "Restart từ chỗ đã dừng cần lưu gì, lưu ở đâu, và lưu cùng transaction với cái gì?",
+    "Cần bao nhiêu tài khoản mỗi giây để xong 12 triệu trong 2 giờ? Một thread làm được bao nhiêu nếu ghi theo batch?",
+    "Gửi thông báo nên nằm trong cùng bước với cộng tiền không? Nếu API push chậm hay lỗi thì sao?",
+    "Chạy job trong pod API có vấn đề gì về tài nguyên và về số bản chạy?"
+  ],
+  "solution": "**1. Làm cho việc cộng lãi idempotent**\n\n- Bảng `interest_entry` có unique `(account_id, accrual_date)`.\n- Writer chèn bút toán bằng `INSERT ... ON CONFLICT DO NOTHING RETURNING account_id`, rồi chỉ cộng số dư cho các tài khoản vừa được chèn, trong **cùng transaction** của chunk.\n- Chạy lại một ngày đã chạy (kể cả chạy lại từ đầu do nhầm) không cộng thêm đồng nào. Đây là lưới an toàn quan trọng nhất, độc lập với Spring Batch.\n\n**2. Cấu trúc job** (tham số định danh `accrualDate`):\n\n- **Step 1, tính và ghi lãi**, partitioning theo dải `id`:\n  - `Partitioner` chia 12 triệu tài khoản thành 32 dải; 8 thread xử lý song song, dải nào xong thì lấy dải tiếp.\n  - Mỗi partition: `JdbcPagingItemReader` với `sortKey = id` trong dải, chunk 1.000, processor tính lãi, và writer tự viết, một câu cho cả chunk: `WITH ins AS (INSERT INTO interest_entry (account_id, accrual_date, amount) SELECT * FROM unnest(?::bigint[], ?::date[], ?::numeric[]) ON CONFLICT DO NOTHING RETURNING account_id, amount) UPDATE account a SET balance = a.balance + ins.amount FROM ins WHERE a.id = ins.account_id`. Không ghép `JdbcBatchItemWriter` với một câu `UPDATE` riêng, vì chạy lại sẽ cộng lãi lần nữa.\n  - JobRepository dùng JDBC: vị trí đọc của từng partition commit cùng chunk.\n- **Step 2, thông báo**: đọc `interest_entry` của ngày đó có `notified = false`, gọi API push theo lô, đánh dấu `notified = true` sau khi gửi được. API push chậm hay lỗi chỉ làm step 2 chậm, không ảnh hưởng tiền; retry có backoff cho lỗi tạm thời, skip có giới hạn cho số máy không còn hợp lệ. Gửi trùng vẫn có thể xảy ra khi chunk lỗi sau khi đã gửi, nên kèm id bút toán làm idempotency key cho dịch vụ push.\n\n**3. Ước lượng thông lượng**\n\n- Cần 12.000.000 / 7.200 giây ≈ 1.700 tài khoản mỗi giây.\n- Job hiện tại đạt khoảng 670 tài khoản mỗi giây (12 triệu / 18.000 giây), phần lớn thời gian là chờ API push và ghi từng dòng. Bỏ push khỏi bước cộng tiền và ghi theo lô thì mỗi thread nhanh hơn; ước lượng thận trọng khoảng 500 mỗi thread, 8 thread là 4.000 mỗi giây, xong trong khoảng 50 phút, còn dư biên cho lần chạy lại. Đo thật trên dữ liệu cỡ thật trước khi chốt số thread.\n- Pool của job: 8 thread worker + JobRepository + dự phòng, khoảng 12 connection, tách khỏi pool của API.\n\n**4. Chạy ở đâu và khi nào**\n\n- Đóng gói job thành ứng dụng riêng, chạy bằng Kubernetes `CronJob` lúc 01:00 với `concurrencyPolicy: Forbid`, tài nguyên riêng; service API không còn chạy job.\n- Ứng dụng thoát với mã lỗi khi job `FAILED`. Chạy lại cùng `accrualDate`: chỉ các partition chưa xong được chạy tiếp, từ chunk cuối đã commit.\n- Pod bị kill khiến execution kẹt ở `STARTED`: runbook đánh dấu `FAILED` (Batch 6: `jobOperator.recover`) rồi chạy lại.\n- Đặt `backoffLimit: 0` cho Job (hoặc để ứng dụng tự `recover` execution kẹt trước khi restart), vì Kubernetes tự tạo lại pod sau OOMKilled, và lần chạy đó gặp ngay execution `STARTED`.\n\n**5. Theo dõi**\n\n- Metric số tài khoản đã xử lý theo thời gian và thời gian mỗi chunk; cảnh báo nếu tới 02:30 chưa xong.\n- Sau job, đối soát: số bút toán bằng số tài khoản đủ điều kiện, tổng lãi bằng tổng tính độc lập bằng một câu SQL.\n- Job chạy lúc tải API thấp, nhưng vẫn theo dõi lock và độ trễ replication vì 24 triệu câu ghi trong 2 giờ không nhỏ.",
+  "tradeoffs": [
+    {
+      "option": "Giữ `@Scheduled` + ShedLock, chỉ thêm ràng buộc unique",
+      "pros": [
+        "Ít thay đổi nhất",
+        "Hết cộng lãi hai lần"
+      ],
+      "cons": [
+        "Vẫn 5 giờ, vẫn chạy lại từ đầu khi lỗi",
+        "Chiếm tài nguyên của pod API"
+      ]
+    },
+    {
+      "option": "Một câu SQL set-based theo lô id (`INSERT ... SELECT` rồi `UPDATE ... FROM`)",
+      "pros": [
+        "Nhanh nhất, ít code",
+        "Database tự tối ưu"
+      ],
+      "cons": [
+        "Logic tính lãi phức tạp khó viết bằng SQL",
+        "Mỗi lô là một transaction lớn, cần tự quản lý tiến độ"
+      ]
+    },
+    {
+      "option": "Spring Batch multi-threaded step",
+      "pros": [
+        "Cấu hình đơn giản"
+      ],
+      "cons": [
+        "Reader phải thread-safe, mất khả năng restart đúng vị trí"
+      ]
+    },
+    {
+      "option": "Spring Batch local partitioning (đề xuất)",
+      "pros": [
+        "Song song và restart theo từng partition",
+        "Một tiến trình, dễ vận hành"
+      ],
+      "cons": [
+        "Giới hạn bởi một máy và pool connection của nó"
+      ]
+    },
+    {
+      "option": "Remote partitioning qua broker",
+      "pros": [
+        "Mở rộng ra nhiều máy"
+      ],
+      "cons": [
+        "Thêm broker và worker phải vận hành",
+        "Thừa với 12 triệu dòng mỗi ngày"
+      ]
+    }
+  ]
+}

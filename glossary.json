@@ -3486,6 +3486,62 @@
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
       "topics": ["spring-cloud"]
+    },
+    {
+      "id": "chunk-processing",
+      "term": "Chunk processing",
+      "meaning": "Cách Spring Batch xử lý dữ liệu lớn: đọc và xử lý từng item, gom đủ một nhóm (chunk) rồi ghi cả nhóm và commit trong một transaction.",
+      "example": "Chunk 500: đọc 500 tài khoản, tính lãi, ghi 500 bút toán bằng một JDBC batch rồi commit.",
+      "related": ["job-repository", "jdbc-batching"],
+      "topics": ["spring-batch"]
+    },
+    {
+      "id": "job-repository",
+      "term": "JobRepository",
+      "meaning": "Nơi Spring Batch lưu trạng thái các lần chạy job: instance, execution, số item đã xử lý và vị trí đọc (`ExecutionContext`), thường trong các bảng `BATCH_*`.",
+      "example": "Pod chết giữa chừng; chạy lại cùng tham số, step đọc vị trí từ JobRepository và đi tiếp từ chunk đã commit cuối.",
+      "related": ["chunk-processing", "job-instance"],
+      "topics": ["spring-batch"]
+    },
+    {
+      "id": "job-instance",
+      "term": "JobInstance",
+      "meaning": "Một lần chạy logic của job, xác định bởi tên job và bộ tham số định danh. Mỗi lần thử chạy là một `JobExecution`; instance đã `COMPLETED` không chạy lại được.",
+      "example": "`interestJob` với `date=2026-10-25` là một instance; lỗi rồi chạy lại là execution thứ hai của cùng instance.",
+      "related": ["job-repository"],
+      "topics": ["spring-batch"]
+    },
+    {
+      "id": "step-partitioning",
+      "term": "Partitioning (Spring Batch)",
+      "meaning": "Chia dữ liệu của một step thành nhiều phần (thường theo dải khoá), mỗi phần chạy như một step riêng có vị trí đọc riêng, song song trên thread pool hoặc nhiều máy.",
+      "example": "12 triệu tài khoản chia 32 dải id, 8 thread xử lý; lỗi thì chỉ các dải chưa xong chạy lại.",
+      "related": ["chunk-processing"],
+      "topics": ["spring-batch"]
+    },
+    {
+      "id": "event-loop",
+      "term": "Event loop",
+      "meaning": "Thread chạy vòng lặp nhận sự kiện I/O (có dữ liệu, ghi xong) và gọi callback tương ứng, nhờ đó vài thread phục vụ được rất nhiều kết nối. Chặn thread này là chặn mọi kết nối của nó.",
+      "example": "Reactor Netty có `max(số core, 4)` thread event loop; một lời gọi JDBC trên đó làm đứng mọi request cùng thread.",
+      "related": ["reactive-streams", "blockhound"],
+      "topics": ["spring-webflux"]
+    },
+    {
+      "id": "reactive-streams",
+      "term": "Reactive Streams",
+      "meaning": "Chuẩn cho luồng dữ liệu bất đồng bộ có backpressure, gồm `Publisher`, `Subscriber`, `Subscription`; Project Reactor (`Mono`, `Flux`) là một cài đặt.",
+      "example": "Subscriber gọi `request(10)` để chỉ nhận 10 phần tử, producer không đẩy thêm khi chưa được yêu cầu.",
+      "related": ["backpressure", "event-loop"],
+      "topics": ["spring-webflux"]
+    },
+    {
+      "id": "blockhound",
+      "term": "BlockHound",
+      "meaning": "Java agent của Reactor phát hiện lời gọi blocking (I/O, `sleep`, lock) trên thread non-blocking và ném lỗi, thường bật trong test; trên JDK 13+ cần cờ `-XX:+AllowRedefinitionToAddDeleteMethods`.",
+      "example": "`BlockHound.install()` làm test đỏ khi handler WebFlux gọi repository JPA trên event loop.",
+      "related": ["event-loop"],
+      "topics": ["spring-webflux"]
     }
   ]
 }

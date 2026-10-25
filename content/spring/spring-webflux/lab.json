@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Service gợi ý ngừng phản hồi dù CPU chỉ 10%",
+  "context": "Service gợi ý sản phẩm viết bằng WebFlux, gọi service giá bằng `WebClient`. Bản mới thêm bước lấy sở thích người dùng từ bảng `preference`; vì chưa có repository reactive, developer dùng lại `PreferenceRepository` (Spring Data JPA) có sẵn. Pod 2 CPU.",
+  "buggyCode": "@GetMapping(\"/recommendations/{userId}\")\npublic Mono<List<Product>> recommend(@PathVariable long userId) {\n    return Mono.just(userId)\n        .map(id -> preferenceRepository.findByUserId(id))          // JPA, chạy khoảng 40ms, lúc cao điểm tới 800ms\n        .flatMap(pref -> priceClient.topProducts(pref.categories())  // WebClient\n            .map(products -> rank(products, pref)));\n}",
+  "symptom": {
+    "description": "Lúc tải thấp mọi thứ bình thường. Giờ cao điểm, p99 tăng từ 120ms lên 9 giây, readiness probe (`/actuator/health`) timeout và Kubernetes gỡ pod khỏi Service, làm các pod còn lại càng quá tải. CPU của pod chỉ khoảng 10%, connection pool database còn trống một nửa.",
+    "output": "\"reactor-http-epoll-1\" #31 daemon RUNNABLE\n   at sun.nio.ch.SocketDispatcher.read0(Native Method)\n   ...\n   at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:...)\n   ...\n   at com.example.reco.PreferenceRepository.findByUserId(...)\n   at com.example.reco.RecommendationController.lambda$recommend$0(...)\n   at reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onNext(...)\n\n\"reactor-http-epoll-2\" #32 daemon RUNNABLE   (cùng stack)\n\"reactor-http-epoll-3\" #33 daemon RUNNABLE   (cùng stack)\n\"reactor-http-epoll-4\" #34 daemon RUNNABLE   (cùng stack)"
+  },
+  "diagnosis": {
+    "question": "Vì sao service ngừng phản hồi khi CPU còn thấp?",
+    "options": [
+      "Lời gọi JPA chạy trên cả 4 event loop, không còn thread nào nhận request",
+      "Connection pool của database hết chỗ nên mọi request phải chờ connection",
+      "`WebClient` không có timeout nên kết nối tới service giá bị treo",
+      "`Mono.just` chạy ngay khi tạo nên request bị xử lý hai lần"
+    ],
+    "answer": 0,
+    "explanation": "Cả 4 thread `reactor-http-epoll-*` đều nằm trong `socketRead` của driver PostgreSQL, gọi từ `map` của controller. Event loop bị chặn suốt thời gian chờ database, nên request mới, response của `WebClient` và cả health check đều xếp hàng. CPU thấp vì thread đang chờ chứ không tính toán. Pool database còn trống, và thread dump không có thread nào chờ `WebClient`. `Mono.just` chỉ giữ giá trị có sẵn; nó không làm request chạy hai lần."
+  },
+  "fix": {
+    "code": "@GetMapping(\"/recommendations/{userId}\")\npublic Mono<List<Product>> recommend(@PathVariable long userId) {\n    return Mono.fromCallable(() -> preferenceRepository.findByUserId(userId))\n        .subscribeOn(Schedulers.boundedElastic())                     // JPA chạy trên pool riêng\n        .flatMap(pref -> priceClient.topProducts(pref.categories())\n            .map(products -> rank(products, pref)))\n        .timeout(Duration.ofSeconds(2));\n}\n\n// Test: phát hiện lời gọi blocking trên event loop\n@BeforeAll\nstatic void installBlockHound() {\n    BlockHound.install();\n}",
+    "explanation": "Đẩy lời gọi blocking ra `boundedElastic` bằng `fromCallable` + `subscribeOn`: event loop được trả lại ngay, chỉ thread của pool riêng phải chờ database. Đặt `timeout` để request không treo vô hạn. Về lâu dài có hai hướng sạch hơn: chuyển bảng này sang R2DBC để cả luồng reactive, hoặc nếu service chủ yếu đọc database thì chuyển về Spring MVC với virtual thread. Cài BlockHound trong test tích hợp để lần sau ai đưa lời gọi blocking vào pipeline thì test đỏ ngay; trên JDK 13+ phải chạy test với `-XX:+AllowRedefinitionToAddDeleteMethods` (`argLine` của Surefire hoặc `jvmArgs` của Gradle), nếu không BlockHound không cài được."
+  }
+}
