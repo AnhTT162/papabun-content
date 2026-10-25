@@ -2,7 +2,7 @@
   "$schema": "../../../schema/blocks/simulation.schema.json",
   "engine": "stateMachine",
   "title": "Semaphore(2) và lần release() thừa",
-  "instructions": "API đối tác chỉ chịu 2 lời gọi đồng thời, nên service bọc lời gọi bằng `Semaphore(2)`:\n\n```java\ntry {\n    validate(req);          // có thể ném exception\n    permits.acquire();\n    return partner.call(req);\n} finally {\n    permits.release();\n}\n```\n\nBấm \"Request mới\" và \"Request xong\" để thấy semaphore giới hạn ở 2. Rồi bấm \"Lỗi rồi release()\": `validate` ném exception **trước** `acquire`, nhưng `finally` vẫn `release`. Thread bị interrupt trong lúc chờ `acquire()` cũng đi vào `finally` mà chưa lấy được permit, cùng một lỗi.",
+  "instructions": "API đối tác chỉ chịu 2 lời gọi đồng thời, nên service bọc lời gọi bằng `Semaphore(2)`:\n\n```java\ntry {\n    validate(req);   // có thể ném\n    permits.acquire();\n    return partner.call(req);\n} finally {\n    permits.release();\n}\n```\n\nBấm \"Request mới\" và \"Request xong\" để thấy semaphore giới hạn ở 2. Rồi bấm \"Lỗi rồi release()\": `validate` ném exception **trước** `acquire`, nhưng `finally` vẫn `release`. Thread bị interrupt trong lúc chờ `acquire()` cũng đi vào `finally` mà chưa lấy được permit, cùng một lỗi.",
   "config": {
     "states": [
       {
