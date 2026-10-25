@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "listener-rollback",
+      "kind": "output",
+      "prompt": "Bảng `orders` có dòng mới sau khi `placeOrder` chạy không?",
+      "code": "@Transactional\npublic void placeOrder(Order order) {\n    orderRepository.save(order);\n    publisher.publishEvent(new OrderPlaced(order.id()));\n}\n\n@EventListener\nvoid onPlaced(OrderPlaced e) {\n    loyaltyClient.addPoints(e.orderId());   // ném RuntimeException vì dịch vụ loyalty lỗi\n}",
+      "options": [
+        "Không: listener chạy đồng bộ, exception về tới `placeOrder` và rollback",
+        "Có: listener chạy sau commit nên lỗi của nó không ảnh hưởng đơn hàng",
+        "Có: exception của listener luôn được Spring bắt và chỉ ghi log",
+        "Không, vì `publishEvent` không được gọi trong transaction"
+      ],
+      "answer": 0,
+      "explanation": "`@EventListener` mặc định chạy ngay trong `publishEvent`, trên cùng thread và trong cùng transaction. Exception đi ngược lên `placeOrder`, ra khỏi proxy và làm rollback. Muốn đơn hàng không phụ thuộc loyalty thì dùng `@TransactionalEventListener` (sau commit), kèm `@Async` hoặc outbox."
+    },
+    {
+      "id": "default-executor",
+      "kind": "single",
+      "prompt": "Boot, cấu hình mặc định. 1.000 lời gọi `@Async` tới cùng lúc, mỗi task mất 2 giây. Có bao nhiêu task chạy song song?",
+      "options": [
+        "8: core 8, queue không giới hạn nên không thêm thread",
+        "1.000: mỗi lời gọi `@Async` tạo một thread mới",
+        "200: dùng chung giới hạn thread của Tomcat",
+        "Số core CPU, vì Boot dùng `ForkJoinPool.commonPool()`"
+      ],
+      "answer": 0,
+      "explanation": "`ThreadPoolTaskExecutor` chỉ tạo thêm thread vượt core khi queue đầy, mà queue mặc định không giới hạn. Nên chỉ 8 task chạy, 992 task chờ. Một thread mới mỗi task là hành vi của `SimpleAsyncTaskExecutor` khi không có Boot. Cơ chế core, queue và max xem bài Executor & thread pool."
+    },
+    {
+      "id": "tx-listener-no-tx",
+      "kind": "single",
+      "prompt": "Method publish event bị bỏ `@Transactional` trong một lần refactor. Listener `@TransactionalEventListener` gửi email thì sao?",
+      "options": [
+        "Không chạy nữa, vì không có transaction để chờ commit",
+        "Chạy ngay lập tức như `@EventListener` thường",
+        "Chạy sau khi method publish trả về",
+        "Khởi động lỗi vì listener không có transaction"
+      ],
+      "answer": 0,
+      "explanation": "`@TransactionalEventListener` đăng ký chạy theo một phase của transaction. Không có transaction thì event bị bỏ qua, không lỗi, không log ở mức INFO, trừ khi đặt `fallbackExecution = true`. Đây là lỗi im lặng điển hình."
+    },
+    {
+      "id": "multi-pod",
+      "kind": "single",
+      "prompt": "Job `@Scheduled(cron = \"0 0 1 * * *\")` gửi hoá đơn tháng. Ứng dụng chạy 4 pod. Khách nhận mấy email?",
+      "options": [
+        "4 email: mỗi pod có scheduler riêng và đều chạy job",
+        "1 email: Spring tự chọn một pod để chạy job",
+        "1 email: Kubernetes chỉ cho một pod nhận lịch cron",
+        "Không email nào: các pod khoá nhau nên job bị huỷ"
+      ],
+      "answer": 0,
+      "explanation": "`@Scheduled` chạy trong từng JVM, không biết các pod khác. Cần khoá phân tán (ShedLock), leader election, hoặc tách job ra CronJob của Kubernetes; và việc gửi nên idempotent để chạy lặp không gửi trùng."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "checked-commit",
+      "kind": "output",
+      "prompt": "`InvoiceException extends Exception`. Sau khi gọi `issue(7)` và exception bay ra, bảng `invoice` có dòng mới không?",
+      "code": "@Transactional\npublic void issue(long orderId) throws InvoiceException {\n    invoiceRepository.save(new Invoice(orderId));\n    if (!taxService.isValid(orderId)) {\n        throw new InvoiceException(\"tax code invalid\");\n    }\n}",
+      "options": [
+        "Có: checked exception không kích hoạt rollback mặc định nên transaction commit",
+        "Không: mọi exception thoát khỏi method `@Transactional` đều làm rollback",
+        "Không, vì `save` chưa flush trước khi exception được ném",
+        "Có, nhưng chỉ khi `taxService` cũng có `@Transactional`"
+      ],
+      "answer": 0,
+      "explanation": "Rollback rule mặc định chỉ áp cho `RuntimeException` và `Error`. Với checked exception, proxy commit (flush `INSERT` lúc đó) rồi ném exception tiếp. Thêm `rollbackFor = Exception.class` hoặc đổi `InvoiceException` sang unchecked."
+    },
+    {
+      "id": "swallowed",
+      "kind": "single",
+      "prompt": "Trong method `@Transactional`, code `catch (DataIntegrityViolationException e) { log.warn(...); }` rồi trả về bình thường. Method chạy ba lệnh `jdbcTemplate.update(...)` trên MySQL, lệnh thứ hai vi phạm unique và bị bắt như vậy. Kết quả?",
+      "options": [
+        "Proxy không thấy exception nên commit; các lệnh còn lại vẫn được lưu",
+        "Spring tự rollback vì `DataAccessException` luôn đánh dấu transaction",
+        "Rollback toàn bộ vì MySQL huỷ cả transaction khi có lỗi ràng buộc",
+        "Lỗi `UnexpectedRollbackException` lúc commit trong mọi trường hợp"
+      ],
+      "answer": 0,
+      "explanation": "Proxy chỉ quyết định dựa trên exception thoát ra khỏi method. Exception bị nuốt thì proxy thấy method thành công và commit. MySQL chỉ huỷ câu lệnh lỗi, nên các `UPDATE` khác được commit: dữ liệu dở dang. Trên PostgreSQL thì khác: transaction đã hỏng, commit thực chất thành rollback. `UnexpectedRollbackException` thường xảy ra khi exception đã đi qua proxy của một method `@Transactional` khác bên trong (ví dụ một method repository của Spring Data), vì proxy đó đánh dấu transaction rollback-only; `JdbcTemplate` không có proxy như vậy."
+    },
+    {
+      "id": "async-thread",
+      "kind": "single",
+      "prompt": "Method `@Transactional` gọi `CompletableFuture.runAsync(() -> auditRepository.save(log))` rồi ném `RuntimeException`. Bản ghi audit thì sao?",
+      "options": [
+        "Vẫn được lưu: nó chạy ở thread khác, ngoài transaction đã rollback",
+        "Bị rollback cùng transaction vì được tạo bên trong method",
+        "Không lưu được vì thread khác không được truy cập repository",
+        "Bị chặn cho tới khi transaction gốc commit rồi mới lưu"
+      ],
+      "answer": 0,
+      "explanation": "Transaction gắn với thread gọi qua `ThreadLocal`. Lambda chạy trên thread của common pool, nên `save` tự mở transaction riêng của repository và commit ngay, độc lập với transaction gốc bị rollback."
+    },
+    {
+      "id": "private-method",
+      "kind": "single",
+      "prompt": "Spring 6, proxy CGLIB. Method nào sau đây có transaction khi được bean khác gọi qua proxy?",
+      "options": [
+        "`@Transactional protected void settle()` trong class được proxy",
+        "`@Transactional private void settle()` trong class được proxy",
+        "`@Transactional public static void settle()` trong class được proxy",
+        "`@Transactional public final void settle()` trong class được proxy"
+      ],
+      "answer": 0,
+      "explanation": "Proxy CGLIB là lớp con, nên chỉ chặn được method override được. Từ Spring 6, `@Transactional` áp cho cả method `protected` và package-private. Method `private`, `static` và `final` không override được nên không bao giờ có transaction qua proxy."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "self-requires-new",
+      "kind": "output",
+      "prompt": "`placeOrder` ném exception sau khi gọi `audit`. Bảng `audit_log` có dòng mới không?",
+      "code": "@Service\nclass OrderService {\n    @Transactional\n    public void placeOrder(Order order) {\n        orderRepository.save(order);\n        audit(order);                       // gọi qua this\n        throw new IllegalStateException(\"stock\");\n    }\n\n    @Transactional(propagation = Propagation.REQUIRES_NEW)\n    public void audit(Order order) {\n        auditRepository.save(AuditLog.of(order));\n    }\n}",
+      "options": [
+        "Không: `audit` chạy chung transaction của `placeOrder` và bị rollback theo",
+        "Có: `REQUIRES_NEW` mở transaction riêng và commit trước khi lỗi xảy ra",
+        "Có, vì repository luôn tự commit mỗi lần `save`",
+        "Không, và Spring báo lỗi vì hai propagation mâu thuẫn"
+      ],
+      "answer": 0,
+      "explanation": "`audit(order)` là `this.audit(order)`, không qua proxy, nên `REQUIRES_NEW` bị bỏ qua và `audit` chạy trong transaction của `placeOrder`. `auditRepository.save` tham gia transaction đó. Exception làm rollback cả hai. Chuyển `audit` sang bean khác thì mới có transaction riêng."
+    },
+    {
+      "id": "jdk-inject-class",
+      "kind": "single",
+      "prompt": "Ứng dụng đặt `spring.aop.proxy-target-class=false`. `PaymentServiceImpl implements PaymentService` có `@Transactional`. Bean khác inject `PaymentServiceImpl` (class cụ thể). Điều gì xảy ra?",
+      "options": [
+        "Khởi động lỗi: bean là JDK proxy chỉ implement interface, không phải `PaymentServiceImpl`",
+        "Chạy bình thường vì Spring tự nhận ra cần lớp con và chuyển sang CGLIB",
+        "Chạy, nhưng `@Transactional` bị bỏ qua cho riêng bean đó",
+        "Spring inject object gốc thay cho proxy nên không có lỗi gì"
+      ],
+      "answer": 0,
+      "explanation": "Với `proxy-target-class=false`, bean có interface được bọc bằng JDK proxy, một class sinh ra implement `PaymentService`, không phải lớp con của `PaymentServiceImpl`. Inject theo class cụ thể gặp `BeanNotOfRequiredTypeException` (bọc trong lỗi khởi động). Đây là lý do Boot mặc định dùng CGLIB."
+    },
+    {
+      "id": "advice-order",
+      "kind": "single",
+      "prompt": "Aspect `Timing` có `@Order(1)`, aspect `Audit` có `@Order(2)`, cùng `@Around` một method. Thứ tự chạy là gì?",
+      "options": [
+        "Timing vào trước và ra sau cùng, bọc ngoài Audit",
+        "Audit vào trước vì số order lớn hơn được ưu tiên",
+        "Cả hai chạy song song trên hai thread khác nhau",
+        "Không xác định, Spring chọn thứ tự theo tên class"
+      ],
+      "answer": 0,
+      "explanation": "Số order nhỏ có độ ưu tiên cao, nghĩa là nằm ngoài cùng: vào trước và ra sau cùng, giống lớp vỏ bọc ngoài. Vì vậy Timing đo cả thời gian của Audit."
+    },
+    {
+      "id": "around-no-return",
+      "kind": "single",
+      "prompt": "Một `@Around` viết `pjp.proceed(); return null;` cho method trả `Order`. Caller nhận gì?",
+      "options": [
+        "Luôn `null`, dù method gốc trả `Order` đúng",
+        "`Order` đúng, vì Spring lấy kết quả từ method gốc",
+        "Lỗi biên dịch vì advice phải trả kiểu `Order`",
+        "`Order` đúng ở lần gọi đầu, `null` ở các lần sau"
+      ],
+      "answer": 0,
+      "explanation": "Giá trị trả về của `@Around` thay cho giá trị của method. `proceed()` trả kết quả của method gốc, phải `return` nó. Advice nhận và trả `Object` nên trình biên dịch không bắt được lỗi này."
+    }
+  ]
+}

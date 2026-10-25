@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-aop-proxy",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "AOP & proxy",
+  "summary": "Aspect, pointcut, advice; proxy được tạo ở đâu và chuỗi interceptor chạy thế nào; JDK proxy và CGLIB, mặc định của Boot; self-invocation và các cách sửa; thứ tự advice và vì sao retry phải nằm ngoài transaction; method final trên proxy CGLIB; getClass, @Around quên proceed, pointcut quá rộng; khi nào cần AspectJ.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 15,
+  "prerequisites": ["bean-lifecycle-scopes", "transactional-basics"],
+  "terms": ["aop-proxy", "jdk-dynamic-proxy", "cglib", "self-invocation", "bean-post-processor"],
+  "references": [
+    { "title": "Spring Framework Reference: Aspect Oriented Programming with Spring", "url": "https://docs.spring.io/spring-framework/reference/core/aop.html" },
+    { "title": "Spring Framework Reference: Proxying Mechanisms", "url": "https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" },
+    { "title": "Spring Framework Reference: Resilience Features", "url": "https://docs.spring.io/spring-framework/reference/core/resilience.html" },
+    { "title": "Spring Framework Reference: Advice Ordering", "url": "https://docs.spring.io/spring-framework/reference/core/aop/ataspectj/advice.html#aop-ataspectj-advice-ordering" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`@Retryable` và `@Transactional` trên cùng method thì cái nào chạy trước?\" Phải để retry ở ngoài: mỗi lần thử mở transaction mới, vì sau lỗi (deadlock, optimistic lock) transaction cũ đã hỏng. Thứ tự do `order` của các advisor quyết định, số nhỏ ở ngoài; transaction mặc định có order thấp nhất nên thường nằm trong cùng. Kiểm tra bằng log, đừng đoán. `@Retryable` có sẵn trong Spring Framework 7 tự đứng trước các advisor khác nên nằm ngoài transaction; với Spring Retry cũ thì phải kiểm tra `order`. Hỏi tiếp thường là \"JDK proxy và CGLIB khác gì, Boot dùng cái nào\": Boot mặc định CGLIB kể cả khi bean có interface." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng đánh dấu `final` cho class hay method public của bean có `@Transactional`, `@Async`, `@Cacheable` hay aspect nào khác. Method `final` không bị proxy chặn, chạy thẳng trên instance proxy với mọi field `null`, nên lỗi dễ bị bỏ qua: unit test dùng `new` không thấy, chỉ còn một dòng log lúc khởi động (WARN ở Spring 7)." }
+  ]
+}

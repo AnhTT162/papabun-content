@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Token hết hạn đúng lúc job báo cáo chạy",
+  "context": "Ứng dụng gọi API đối tác bằng access token sống 60 giây, được làm mới mỗi 30 giây bằng `@Scheduled`. Đội vừa thêm job xuất báo cáo đối soát lúc 2 giờ sáng. Cấu hình scheduler để mặc định của Boot.",
+  "buggyCode": "@Component\nclass PartnerTokenRefresher {\n    @Scheduled(fixedRate = 30_000)\n    void refresh() {\n        tokenHolder.set(partnerAuth.fetchToken());   // token sống 60 giây\n    }\n}\n\n@Component\nclass ReconciliationReport {\n    @Scheduled(cron = \"0 0 2 * * *\", zone = \"Asia/Ho_Chi_Minh\")\n    void export() {\n        reportService.exportYesterday();   // quét vài triệu dòng, khoảng 6 phút\n    }\n}",
+  "symptom": {
+    "description": "Mỗi đêm, từ khoảng 2:01 tới 2:06, mọi lời gọi tới đối tác trả 401. Sau đó tự hết. Ban ngày không bao giờ bị.",
+    "output": "01:59:30.002 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:00:30\n02:00:00.001 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:01:00\n02:00:00.004 [scheduling-1] INFO  ReconciliationReport  : export started\n02:01:02.310 [http-nio-8080-exec-17] WARN  PartnerClient : 401 Unauthorized (token expired)\n...\n02:06:11.872 [scheduling-1] INFO  ReconciliationReport  : export finished in 371868 ms\n02:06:11.875 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:07:11\n02:06:11.903 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:07:11\n02:06:11.931 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:07:11\n... (12 lần trong chưa tới nửa giây)\n02:06:30.001 [scheduling-1] INFO  PartnerTokenRefresher : token refreshed, expires 02:07:30"
+  },
+  "diagnosis": {
+    "question": "Vì sao token không được làm mới trong lúc job báo cáo chạy?",
+    "options": [
+      "Scheduler mặc định chỉ có một thread, job báo cáo chiếm nó suốt 6 phút",
+      "`fixedRate` bỏ qua các lần chạy bị lỡ khi có cron job chạy cùng lúc",
+      "Cron với `zone` khác múi giờ server làm lệch lịch của job còn lại",
+      "Job báo cáo giữ transaction nên refresher không ghi được token"
+    ],
+    "answer": 0,
+    "explanation": "Mọi dòng log của cả hai job đều trên `scheduling-1`: Boot cấu hình `ThreadPoolTaskScheduler` với pool size 1. Từ 2:00 job báo cáo giữ thread duy nhất, nên lần refresh lúc 2:00:30 phải chờ tới 2:06:11. Token cấp lúc 2:00:00 hết hạn lúc 2:01:00, và từ đó mọi request bị 401. `fixedRate` không bỏ lần nào: khi có thread, nó chạy bù liền 12 lần đã lỡ (02:00:30 tới 02:06:00) rồi mới về nhịp cũ. Đó là một bẫy riêng: 12 lần gọi API xác thực dồn một lúc có thể dính rate limit của đối tác. Cron và `zone` không ảnh hưởng job kia."
+  },
+  "fix": {
+    "code": "# application.yml: đủ thread cho các job định kỳ\nspring:\n  task:\n    scheduling:\n      pool:\n        size: 4\n\n// Job nặng: scheduler chỉ khởi động, việc nặng chạy trên executor riêng\n@Component\nclass ReconciliationReport {\n    @Scheduled(cron = \"0 0 2 * * *\", zone = \"Asia/Ho_Chi_Minh\")\n    @SchedulerLock(name = \"reconciliation-export\", lockAtLeastFor = \"5m\", lockAtMostFor = \"30m\")   // ShedLock: chỉ một pod chạy\n    void export() {\n        reportExecutor.execute(reportService::exportYesterday);\n    }\n}\n\n// Token: làm mới theo hạn còn lại, và thử lại một lần khi gặp 401\nString token() {\n    if (tokenHolder.expiresWithin(Duration.ofSeconds(10))) refreshNow();\n    return tokenHolder.value();\n}\n\n<T> T callPartner(Function<String, T> call) {\n    try {\n        return call.apply(token());\n    } catch (HttpClientErrorException.Unauthorized e) {\n        refreshNow();\n        return call.apply(token());\n    }\n}",
+    "explanation": "Tăng pool của scheduler để job này không chặn job kia, và tách việc nặng sang executor riêng để scheduler chỉ làm việc khởi động. Chạy nhiều pod thì thêm khoá phân tán (ShedLock) để báo cáo không bị xuất nhiều lần; khi việc chạy nền trên executor, khoá chỉ bao phần khởi động và nhả sau vài mili giây, nên `lockAtLeastFor` giữ khoá đủ lâu để pod có đồng hồ lệch không chạy lại; muốn khoá trọn quá trình thì chạy đồng bộ trên scheduler (pool đã tăng). Quan trọng hơn: tính đúng đắn không nên phụ thuộc vào việc một job chạy đúng giờ. Client nên tự làm mới token khi sắp hết hạn hoặc khi nhận 401, còn job định kỳ chỉ là tối ưu. Thêm cảnh báo khi một job `@Scheduled` chạy quá lâu."
+  }
+}

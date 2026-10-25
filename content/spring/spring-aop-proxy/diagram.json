@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Lời gọi đi qua proxy và lời gọi đi vòng",
+  "nodes": [
+    {"id": "caller", "label": "Controller", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "proxy", "label": "Proxy CGLIB", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "target", "label": "Object gốc", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "chain", "label": "Chuỗi advice", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "self", "label": "this.audit()", "kind": "external", "x": 0.1, "y": 0.95},
+    {"id": "other", "label": "Audit Service", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "caller-proxy", "from": "caller", "to": "proxy", "label": "gọi bean đã inject"},
+    {"id": "proxy-chain", "from": "proxy", "to": "chain", "label": "@Order: ngoài vào"},
+    {"id": "chain-target", "from": "chain", "to": "target", "label": "proceed()"},
+    {"id": "target-self", "from": "target", "to": "self", "label": "gọi qua this"},
+    {"id": "target-other", "from": "target", "to": "other", "label": "gọi bean khác"}
+  ],
+  "steps": [
+    {"caption": "Controller giữ một field `OrderService`, nhưng thứ được inject vào là proxy chứ không phải object bạn viết.", "show": ["caller"]},
+    {"caption": "Lời gọi `placeOrder()` vào proxy CGLIB, lớp con được tạo lúc khởi động. Nó override mọi method override được.", "show": ["proxy", "caller-proxy"], "highlight": ["caller-proxy"]},
+    {"caption": "Proxy chạy chuỗi interceptor theo `@Order`, số nhỏ ở ngoài cùng: ví dụ retry, rồi transaction, rồi aspect đo thời gian. Mỗi cái làm việc của mình rồi gọi `proceed()`.", "show": ["chain", "proxy-chain"], "highlight": ["proxy-chain"]},
+    {"caption": "Cuối chuỗi, `proceed()` gọi method trên object gốc. Kết quả và exception đi ngược lại qua chuỗi: transaction commit hay rollback ở đó.", "show": ["target", "chain-target"], "highlight": ["chain-target"]},
+    {"caption": "Bên trong object gốc, `this.audit()` là lời gọi Java thường: không đi qua proxy, nên `@Transactional(propagation = REQUIRES_NEW)` hay `@Async` trên `audit()` bị bỏ qua.", "show": ["self", "target-self"], "highlight": ["target-self"]},
+    {"caption": "Chuyển `audit()` sang bean `AuditService` và inject vào: lời gọi lại đi qua proxy của bean đó, nên mọi annotation có tác dụng.", "show": ["other", "target-other"], "highlight": ["target-other"]}
+  ]
+}

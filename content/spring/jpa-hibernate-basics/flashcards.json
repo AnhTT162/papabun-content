@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "states", "front": "Bốn trạng thái của entity JPA?", "back": "Transient (mới `new`), managed (trong persistence context), detached (context đã đóng), removed (chờ `DELETE`)." },
+    { "id": "dirty-checking", "front": "Sửa entity managed mà không gọi `save()` thì sao?", "back": "Vẫn được lưu: lúc flush Hibernate so với bản chụp và sinh `UPDATE`." },
+    { "id": "merge", "front": "`merge()` trả về gì?", "back": "Một bản managed khác đã chép state; object truyền vào vẫn detached." },
+    { "id": "owning-side", "front": "Trong quan hệ hai chiều, bên nào quyết định cột khoá ngoại?", "back": "Owning side, thường là `@ManyToOne`; bên `mappedBy` bị bỏ qua khi ghi." },
+    { "id": "identity", "front": "Vì sao `IDENTITY` làm mất JDBC batch insert?", "back": "Hibernate phải insert ngay để lấy id; dùng `SEQUENCE` với `allocationSize` để batch." },
+    { "id": "save-select", "front": "Vì sao `save()` chạy `SELECT` trước `INSERT`?", "back": "Entity có id gán sẵn bị coi là không mới nên `save` gọi `merge`; dùng `@Version` hoặc `Persistable`." },
+    { "id": "get-reference", "front": "`getReferenceById` dùng khi nào?", "back": "Khi chỉ cần gán khoá ngoại: nó trả proxy chưa tải, không chạy `SELECT`." }
+  ]
+}

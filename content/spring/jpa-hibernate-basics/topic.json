@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jpa-hibernate-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "JPA & Hibernate cơ bản",
+  "summary": "Entity transient, managed, detached, removed; persistence context và dirty checking; persist, merge, remove và save của Spring Data; owning side của quan hệ hai chiều, cascade và orphanRemoval; LAZY và EAGER; entity và DTO; sinh id, thứ tự SQL khi flush, getReference; Hibernate 5, 6 và 7.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 16,
+  "prerequisites": ["jdbc-basics", "acid-transactions-basics"],
+  "terms": ["jpa", "entity-state", "owning-side", "persistence-context", "dirty-checking", "orm", "lazy-loading", "eager-loading", "uuid-v7", "dto-projection", "n-plus-one"],
+  "references": [
+    { "title": "Hibernate ORM User Guide: Persistence Context", "url": "https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#pc" },
+    { "title": "Jakarta Persistence 3.2 Specification", "url": "https://jakarta.ee/specifications/persistence/3.2/" },
+    { "title": "Spring Data JPA Reference: Persisting Entities", "url": "https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`persist` và `merge` khác nhau thế nào, gọi `save()` có cần không?\" `persist` biến chính object đó thành managed; `merge` trả về một bản managed khác và để nguyên object cũ, nên phải dùng giá trị trả về. Trong transaction, entity đã managed không cần `save()`: dirty checking tự sinh `UPDATE`. Hỏi tiếp thường là \"vậy sao vẫn thấy `SELECT` trước `INSERT`\": entity có id gán sẵn bị coi là không mới, nên `save` đi đường `merge`; dùng `@Version` hoặc `Persistable`." },
+    { "type": "callout", "style": "warning", "markdown": "Dirty checking ghi mọi thay đổi trên entity managed, kể cả thay đổi bạn không định lưu: định dạng lại tên để hiển thị, tính thử giá sau giảm, sắp xếp lại collection. Đừng dùng entity làm object tính toán tạm trong transaction; copy sang DTO hoặc dùng `@Transactional(readOnly = true)` cho luồng chỉ đọc (Hibernate khi đó bỏ qua dirty checking)." }
+  ]
+}

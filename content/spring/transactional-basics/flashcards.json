@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "default-rollback", "front": "`@Transactional` mặc định rollback với exception nào?", "back": "`RuntimeException` và `Error`. Checked exception vẫn commit, trừ khi khai báo `rollbackFor`." },
+    { "id": "thread-bound", "front": "Transaction của Spring gắn với cái gì?", "back": "Với thread hiện tại, qua `ThreadLocal`; code ở thread khác không thấy transaction đó." },
+    { "id": "swallow", "front": "Bắt và nuốt exception trong method `@Transactional` thì sao?", "back": "Proxy không thấy exception nên commit, có thể để lại dữ liệu dở dang." },
+    { "id": "boundary", "front": "Đặt `@Transactional` ở tầng nào?", "back": "Service, một method cho một use case; không ở controller và không bọc lời gọi hệ thống ngoài." },
+    { "id": "no-effect", "front": "Ba trường hợp `@Transactional` không có tác dụng?", "back": "Gọi qua `this`, method `private`/`final`/`static` hoặc object tự `new`, và code chạy ở thread khác." },
+    { "id": "readonly", "front": "`readOnly = true` làm gì với Hibernate?", "back": "Flush mode `MANUAL` và session read-only: không giữ bản chụp, bỏ dirty checking. Connection cũng read-only." },
+    { "id": "test-rollback", "front": "Vì sao test `@Transactional` có thể che lỗi ràng buộc?", "back": "Test rollback cuối cùng và thường không flush, nên lỗi chỉ xảy ra lúc flush không lộ ra." }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "NullPointerException trên field được inject qua constructor",
+  "context": "`PricingService` dùng constructor injection, field `final`. Một method được đánh dấu `final` để \"không ai override được logic thuế\". Unit test `new PricingService(fakeRepo)` đều xanh.",
+  "buggyCode": "@Service\npublic class PricingService {\n    private final TaxRateRepository taxRates;\n\n    public PricingService(TaxRateRepository taxRates) {\n        this.taxRates = taxRates;\n    }\n\n    @Transactional(readOnly = true)\n    public Money basePrice(long productId) { ... }\n\n    public final Money priceWithTax(long productId, String region) {\n        Money base = basePrice(productId);\n        return base.plus(base.times(taxRates.rateFor(region)));\n    }\n}\n\n// CheckoutController\nMoney price = pricingService.priceWithTax(productId, \"VN-HN\");",
+  "symptom": {
+    "description": "Ứng dụng khởi động bình thường. Mọi request gọi `priceWithTax` đều lỗi 500. Unit test và test gọi `basePrice` qua controller khác vẫn chạy đúng.",
+    "output": "java.lang.NullPointerException: Cannot invoke \"com.example.pricing.TaxRateRepository.rateFor(String)\" because \"this.taxRates\" is null\n    at com.example.pricing.PricingService.priceWithTax(PricingService.java:14)\n    at com.example.checkout.CheckoutController.quote(CheckoutController.java:31)\n\n# debug: pricingService.getClass()\nclass com.example.pricing.PricingService$$SpringCGLIB$$0"
+  },
+  "diagnosis": {
+    "question": "Vì sao `taxRates` là `null` dù đã được inject qua constructor?",
+    "options": [
+      "Method `final` chạy thẳng trên instance proxy, mà proxy được tạo không qua constructor nên field là `null`",
+      "Constructor injection chưa chạy xong khi controller gọi method này lần đầu tiên",
+      "`@Transactional(readOnly = true)` làm Spring bỏ inject các repository khác",
+      "Field `final` không được inject khi bean có proxy, phải bỏ `final` khỏi field"
+    ],
+    "answer": 0,
+    "explanation": "`PricingService` có `@Transactional` nên controller nhận proxy CGLIB. Proxy override được `basePrice` nhưng không override được `priceWithTax` vì nó `final`, nên `priceWithTax` chạy trên chính instance proxy. Spring tạo instance đó bằng Objenesis, không gọi constructor, nên mọi field của nó là `null`. Object gốc (có `taxRates` đúng) nằm phía sau proxy và không được gọi tới. Unit test dùng `new` nên không có proxy và không thấy lỗi."
+  },
+  "fix": {
+    "code": "@Service\npublic class PricingService {\n    private final TaxRateRepository taxRates;\n\n    public PricingService(TaxRateRepository taxRates) {\n        this.taxRates = taxRates;\n    }\n\n    @Transactional(readOnly = true)\n    public Money basePrice(long productId) { ... }\n\n    @Transactional(readOnly = true)\n    public Money priceWithTax(long productId, String region) {   // bỏ final\n        Money base = basePrice(productId);                        // self-invocation: chạy trong transaction của method này\n        return base.plus(base.times(taxRates.rateFor(region)));\n    }\n}",
+    "explanation": "Bỏ `final` để proxy override được và chuyển lời gọi sang object gốc. Ở đây `basePrice` gọi qua `this` nên annotation của nó không có tác dụng; vì vậy đặt `@Transactional(readOnly = true)` lên `priceWithTax`, để cả hai cùng chạy trong một transaction. Muốn \"không ai override\" thì dùng composition, không dùng `final` trên bean có proxy. Lúc khởi động, Spring 7 log WARN \"Public final method ... cannot get proxied via CGLIB\": đáng đưa vào kiểm tra log. Với Kotlin, bật plugin `kotlin-spring` để class Spring tự `open`. Thêm một test `@SpringBootTest` gọi method qua bean thật để bắt loại lỗi này."
+  }
+}

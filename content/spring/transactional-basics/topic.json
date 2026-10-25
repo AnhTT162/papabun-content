@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "transactional-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "@Transactional cơ bản",
+  "summary": "Proxy và TransactionManager mở, gắn transaction vào thread rồi commit hay rollback thế nào; mặc định chỉ rollback với unchecked exception; khi nào annotation không có tác dụng (self-invocation, private, thread khác); đặt ranh giới transaction ở service và không gọi hệ thống ngoài bên trong; readOnly, timeout, rollback-only và test.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 13,
+  "prerequisites": ["acid-transactions-basics", "bean-lifecycle-scopes"],
+  "terms": ["autocommit", "thread-local", "self-invocation", "dual-write", "transaction", "connection-pool", "checked-exception", "unchecked-exception"],
+  "references": [
+    { "title": "Spring Framework Reference: Declarative Transaction Management", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative.html" },
+    { "title": "Spring Framework Reference: Rolling Back a Declarative Transaction", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html" },
+    { "title": "Spring Framework Reference: Using @Transactional", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao Spring không rollback khi gặp checked exception?\" Spring giữ quy ước của EJB: checked exception được coi là kết quả nghiệp vụ dự kiến mà caller xử lý được, còn unchecked là lỗi bất ngờ. Thực tế nhiều đội thấy quy ước này gây bẫy hơn là giúp, nên thường đặt `rollbackFor = Exception.class` hoặc chỉ dùng unchecked exception trong code nghiệp vụ. Hỏi tiếp thường là \"transaction có sang thread của `@Async` không\": không, vì transaction gắn với `ThreadLocal` của thread gọi." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng gọi API bên ngoài, gửi email hay chờ broker bên trong `@Transactional`. Đối tác chậm 10 giây là 10 giây giữ một connection; vài chục request như vậy là pool cạn và mọi API khác cũng treo. Tệ hơn, lời gọi ra ngoài không rollback được: commit thất bại sau khi đã gửi tiền hay gửi email là dữ liệu hai bên lệch nhau." }
+  ]
+}

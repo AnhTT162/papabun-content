@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Tiền bị trừ mà đơn nạp không thành công",
+  "context": "Nạp tiền điện thoại từ ví: trừ ví, gọi API nhà mạng, ghi đơn thành công. Client của nhà mạng là thư viện cũ, ném checked `TopUpException`.",
+  "buggyCode": "@Service\nclass TopUpService {\n    @Transactional\n    public void topUp(long walletId, String phone, long amount) throws TopUpException {\n        walletRepository.debit(walletId, amount);                 // UPDATE wallet SET balance = balance - ?\n        TopUpResult result = carrierClient.topUp(phone, amount);  // HTTP, ném TopUpException khi nhà mạng từ chối\n        topUpRepository.save(TopUp.success(walletId, phone, amount, result.ref()));\n    }\n}",
+  "symptom": {
+    "description": "Khi nhà mạng bảo trì, nhiều khách báo bị trừ tiền ví nhưng không nhận được tiền nạp, và không có đơn nạp nào trong lịch sử. Log có exception rõ ràng, nhưng số dư vẫn bị trừ.",
+    "output": "DEBUG JpaTransactionManager : Initiating transaction commit\n\nERROR TopUpController : top-up failed wallet=5531 phone=09xxxx1234\ncom.example.carrier.TopUpException: CARRIER_MAINTENANCE\n    at CarrierClient.topUp(CarrierClient.java:88)\n    at TopUpService.topUp(TopUpService.java:6)\n\nselect balance from wallet where id = 5531;   -- 150000, trước đó 250000\nselect count(*) from top_up where wallet_id = 5531 and created_at > now() - interval '1 hour';   -- 0"
+  },
+  "diagnosis": {
+    "question": "Vì sao lệnh trừ ví không bị rollback dù method ném exception?",
+    "options": [
+      "`TopUpException` là checked exception, mà mặc định Spring commit khi gặp checked exception",
+      "Lệnh `debit` chạy trong transaction riêng của repository nên đã commit trước",
+      "Proxy không bắt exception từ thư viện bên ngoài, chỉ bắt exception của Spring",
+      "Gọi HTTP bên trong làm transaction hết hạn và tự commit phần đã chạy"
+    ],
+    "answer": 0,
+    "explanation": "Rollback rule mặc định chỉ rollback với `RuntimeException` và `Error`. `TopUpException` kế thừa `Exception`, nên proxy commit rồi mới ném exception ra ngoài; log `Initiating transaction commit` là bằng chứng. `debit` tham gia transaction của `topUp` (propagation mặc định `REQUIRED`), không chạy riêng."
+  },
+  "fix": {
+    "code": "// Transaction ngắn tách sang bean riêng, để mọi lời gọi đi qua proxy\n@Service\nclass TopUpTxService {\n    @Transactional\n    public TopUp reserve(long walletId, String phone, long amount) {      // trừ ví + ghi PENDING\n        walletRepository.debit(walletId, amount);\n        return topUpRepository.save(TopUp.pending(walletId, phone, amount));\n    }\n\n    @Transactional\n    public void markSuccess(long topUpId, String carrierRef) {\n        topUpRepository.transition(topUpId, PENDING, SUCCESS, carrierRef);  // UPDATE ... WHERE status = 'PENDING'\n    }\n\n    @Transactional\n    public void refund(long topUpId) {\n        if (topUpRepository.transition(topUpId, PENDING, FAILED, null) == 1) {\n            walletRepository.creditBack(topUpId);                          // chỉ hoàn khi chuyển trạng thái thành công\n        }\n    }\n}\n\n@Service\nclass TopUpService {\n    public void topUp(long walletId, String phone, long amount) {        // không có @Transactional\n        TopUp topUp = tx.reserve(walletId, phone, amount);\n        try {\n            TopUpResult result = carrierClient.topUp(phone, amount, topUp.id());  // id làm idempotency key\n            tx.markSuccess(topUp.id(), result.ref());\n        } catch (TopUpRejectedException e) {                                // nhà mạng từ chối rõ ràng\n            tx.refund(topUp.id());\n        } catch (TopUpException e) {                                        // timeout, 5xx: không biết đã nạp chưa\n            // để PENDING, job đối soát hỏi lại nhà mạng bằng topUp.id()\n        }\n    }\n}",
+    "explanation": "Sửa nhanh nhất là `rollbackFor = Exception.class` (hoặc bật `rollbackOn = ALL_EXCEPTIONS` cho cả ứng dụng), nhưng thiết kế vẫn sai: transaction giữ connection suốt lúc chờ nhà mạng, và nếu nhà mạng đã nạp mà commit lỗi thì tiền mất theo chiều ngược lại. Cách đúng là tách: transaction ngắn trừ ví và ghi đơn `PENDING`; gọi nhà mạng ngoài transaction, kèm id đơn làm idempotency key; transaction thứ hai chốt `SUCCESS` hoặc hoàn tiền. Chỉ hoàn tiền khi nhà mạng **từ chối rõ ràng**; timeout hay lỗi 5xx thì chưa biết đã nạp hay chưa, nên để `PENDING` cho job đối soát. `markSuccess` và `refund` chỉ chuyển được từ `PENDING`, để luồng chính và job đối soát không hoàn tiền hai lần. Các method transaction nằm ở bean riêng nên lời gọi đi qua proxy; gọi `this.reserve()` trong cùng class sẽ không có transaction."
+  }
+}

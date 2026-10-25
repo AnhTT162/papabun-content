@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "async-default", "front": "Executor mặc định của `@Async` trong Boot?", "back": "`ThreadPoolTaskExecutor` 8 core thread, queue không giới hạn, nên tối đa 8 task chạy cùng lúc." },
+    { "id": "async-void", "front": "Exception trong method `@Async` trả `void` đi đâu?", "back": "Tới `AsyncUncaughtExceptionHandler`, mặc định chỉ log; caller không biết." },
+    { "id": "scheduler-one", "front": "Scheduler mặc định của Boot có mấy thread?", "back": "Một. Job chậm chặn mọi job khác; tăng `spring.task.scheduling.pool.size`." },
+    { "id": "rate-delay", "front": "`fixedRate` và `fixedDelay` khác nhau thế nào?", "back": "`fixedRate` tính từ lúc lần trước bắt đầu, `fixedDelay` từ lúc lần trước kết thúc." },
+    { "id": "event-sync", "front": "`@EventListener` mặc định chạy thế nào?", "back": "Đồng bộ, cùng thread và cùng transaction với bên publish; exception đi ngược về bên publish." },
+    { "id": "after-commit", "front": "`@TransactionalEventListener` chạy khi nào?", "back": "Mặc định sau commit; không có transaction thì không chạy trừ khi `fallbackExecution = true`." },
+    { "id": "context-lost", "front": "Đổi thread bằng `@Async` thì mất những gì?", "back": "Transaction, `SecurityContext`, MDC, request scope; copy qua `TaskDecorator` khi cần." }
+  ]
+}

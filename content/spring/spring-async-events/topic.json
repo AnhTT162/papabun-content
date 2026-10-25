@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-async-events",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "@Async, @Scheduled & event",
+  "summary": "Executor mặc định của @Async và queue không giới hạn; exception của method void; scheduler mặc định một thread, fixedRate và fixedDelay, job chạy trên mọi pod; event đồng bộ, @Async listener và @TransactionalEventListener; mất transaction, SecurityContext, MDC khi đổi thread; virtual thread, shutdown, và khi nào cần queue thật.",
+  "level": "mid",
+  "order": 9,
+  "minutes": 15,
+  "prerequisites": ["transactional-basics", "executor-thread-pool"],
+  "terms": ["transactional-event-listener", "outbox", "thread-local", "thread-pool", "virtual-thread", "self-invocation"],
+  "references": [
+    { "title": "Spring Framework Reference: Task Execution and Scheduling", "url": "https://docs.spring.io/spring-framework/reference/integration/scheduling.html" },
+    { "title": "Spring Boot Reference: Task Execution and Scheduling", "url": "https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html" },
+    { "title": "Spring Framework Reference: Transaction-bound Events", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gửi email xác nhận sau khi đặt hàng thì dùng gì?\" `@EventListener` thường chạy trước commit, nên rollback vẫn gửi email; `@TransactionalEventListener(AFTER_COMMIT)` gửi sau commit nhưng mất event nếu pod chết ngay sau commit. Việc chấp nhận mất thỉnh thoảng thì dùng cái sau; việc không được mất thì ghi outbox trong cùng transaction rồi gửi từ đó. Hỏi tiếp thường là \"`@Async` có giữ transaction không\": không, thread mới không thấy transaction của thread gọi." },
+    { "type": "callout", "style": "warning", "markdown": "Executor mặc định của Boot cho `@Async` có queue không giới hạn: khi việc đến nhanh hơn 8 thread xử lý, task xếp hàng trong heap tới khi OOM, và mọi task mất sạch khi pod restart. Luôn đặt `queue-capacity`, chọn `RejectedExecutionHandler` có chủ đích, và theo dõi kích thước queue." }
+  ]
+}

@@ -3254,6 +3254,70 @@
       "example": "`PUT /users/me` nhận entity `User` trực tiếp; client gửi thêm `\"role\":\"ADMIN\"` và được lưu.",
       "related": ["dto-projection"],
       "topics": ["spring-mvc-flow"]
+    },
+    {
+      "id": "jpa",
+      "term": "JPA",
+      "meaning": "Jakarta Persistence: chuẩn Java để ánh xạ object sang bảng và quản lý vòng đời entity; Hibernate là bản cài đặt phổ biến nhất.",
+      "example": "`@Entity class Order` cùng `EntityManager.persist(order)` là API của JPA, Hibernate sinh SQL phía dưới.",
+      "related": ["orm", "persistence-context", "entity-state"],
+      "topics": ["jpa-hibernate-basics"]
+    },
+    {
+      "id": "entity-state",
+      "term": "Entity state",
+      "meaning": "Trạng thái của entity với persistence context: transient (chưa được quản lý), managed (được theo dõi thay đổi), detached (context đã đóng), removed (chờ xoá).",
+      "example": "Entity trả về từ method `@Transactional` đã detached khi tới controller.",
+      "related": ["persistence-context", "dirty-checking"],
+      "topics": ["jpa-hibernate-basics"]
+    },
+    {
+      "id": "owning-side",
+      "term": "Owning side",
+      "meaning": "Phía của quan hệ hai chiều mà JPA dùng để ghi khoá ngoại; phía kia khai báo `mappedBy` và bị bỏ qua khi ghi.",
+      "example": "`OrderItem.order` (`@ManyToOne`) là owning side; chỉ thêm item vào `Order.items` thì `order_id` vẫn `NULL`.",
+      "related": ["jpa", "foreign-key"],
+      "topics": ["jpa-hibernate-basics"]
+    },
+    {
+      "id": "thread-local",
+      "term": "ThreadLocal",
+      "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
+      "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
+      "related": ["transaction"],
+      "topics": ["transactional-basics"]
+    },
+    {
+      "id": "aop-proxy",
+      "term": "AOP proxy",
+      "meaning": "Object Spring đặt vào chỗ bean thật, chặn lời gọi method để chạy advice (transaction, cache, bảo mật) rồi chuyển tiếp sang object gốc.",
+      "example": "Bean có `@Transactional` được inject dưới dạng `OrderService$$SpringCGLIB$$0`.",
+      "related": ["jdk-dynamic-proxy", "self-invocation", "bean-post-processor"],
+      "topics": ["spring-aop-proxy"]
+    },
+    {
+      "id": "jdk-dynamic-proxy",
+      "term": "JDK dynamic proxy",
+      "meaning": "Proxy do `java.lang.reflect.Proxy` tạo lúc chạy, chỉ implement các interface; khác CGLIB tạo lớp con của class.",
+      "example": "Bean JDK proxy của `PaymentService` không inject được vào field kiểu `PaymentServiceImpl`.",
+      "related": ["aop-proxy"],
+      "topics": ["spring-aop-proxy"]
+    },
+    {
+      "id": "transactional-event-listener",
+      "term": "@TransactionalEventListener",
+      "meaning": "Listener event của Spring gắn với một phase của transaction đang chạy, mặc định `AFTER_COMMIT`; không có transaction thì không chạy, trừ khi `fallbackExecution = true`.",
+      "example": "Gửi email xác nhận trong listener `AFTER_COMMIT` để đơn bị rollback thì không có email.",
+      "related": ["transaction", "outbox"],
+      "topics": ["spring-async-events"]
+    },
+    {
+      "id": "cglib",
+      "term": "CGLIB",
+      "meaning": "Thư viện sinh bytecode tạo lớp con của một class lúc chạy; Spring dùng nó để proxy bean theo class. Không override được class hay method `final`.",
+      "example": "Bean `OrderService` có `@Transactional` thành `OrderService$$SpringCGLIB$$0`.",
+      "related": ["aop-proxy", "jdk-dynamic-proxy"],
+      "topics": ["spring-aop-proxy"]
     }
   ]
 }

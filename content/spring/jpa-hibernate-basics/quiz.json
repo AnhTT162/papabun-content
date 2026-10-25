@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "dirty-no-save",
+      "kind": "output",
+      "prompt": "Method sau chạy xong, bảng `customers` có thay đổi không? Bật log SQL thì thấy gì?",
+      "code": "@Transactional\nvoid rename(long id, String name) {\n    Customer c = customerRepository.findById(id).orElseThrow();\n    c.setName(name);\n    // không gọi save()\n}",
+      "options": [
+        "Có: một `SELECT` rồi một `UPDATE` lúc commit nhờ dirty checking",
+        "Không: chỉ có `SELECT`, vì chưa gọi `save()` nên thay đổi bị bỏ",
+        "Có, nhưng `UPDATE` chạy ngay trong `setName` thay vì lúc commit",
+        "Không, và Hibernate ghi cảnh báo entity bị sửa mà chưa lưu"
+      ],
+      "answer": 0,
+      "explanation": "`findById` trả entity managed. Lúc flush trước commit, Hibernate so với bản chụp, thấy `name` khác nên sinh `UPDATE`. Setter là method Java thường, không chạy SQL. Nếu method không có transaction, entity trả về đã detached ngay sau `findById` và thay đổi bị bỏ."
+    },
+    {
+      "id": "merge-returns-copy",
+      "kind": "single",
+      "prompt": "`Order detached` được sửa rồi gọi `Order saved = em.merge(detached); detached.setStatus(PAID);` trong cùng transaction. Status `PAID` có được lưu không?",
+      "options": [
+        "Không: `merge` trả bản managed khác, object cũ vẫn detached",
+        "Có: sau `merge`, object `detached` trở thành managed",
+        "Có, vì `merge` gắn cả hai object vào persistence context",
+        "Không, vì `merge` đã chạy `UPDATE` ngay và đóng transaction"
+      ],
+      "answer": 0,
+      "explanation": "`merge` chép state từ object truyền vào sang bản managed (tải từ database hoặc lấy trong context) rồi trả về bản managed đó. Object truyền vào vẫn detached. Thay đổi sau `merge` phải làm trên `saved`."
+    },
+    {
+      "id": "identity-batch",
+      "kind": "single",
+      "prompt": "Bật `hibernate.jdbc.batch_size=50`, insert 10.000 entity dùng `@GeneratedValue(strategy = IDENTITY)`. Log cho thấy 10.000 lần gửi `INSERT` riêng lẻ. Vì sao?",
+      "options": [
+        "IDENTITY buộc Hibernate insert ngay để lấy id, nên không gom batch được",
+        "`batch_size` chỉ có tác dụng với `UPDATE`, không với `INSERT`",
+        "Phải gọi `flush()` sau mỗi entity thì batch mới có hiệu lực",
+        "PostgreSQL và MySQL không hỗ trợ JDBC batch cho bảng có khoá chính"
+      ],
+      "answer": 0,
+      "explanation": "Với IDENTITY, id chỉ có sau khi database insert dòng, mà Hibernate cần id ngay khi `persist` để đưa entity vào persistence context. Nên mỗi `persist` là một `INSERT` riêng. Dùng `SEQUENCE` với `allocationSize` lớn để vừa có id trước vừa batch được."
+    },
+    {
+      "id": "lazy-outside-tx",
+      "kind": "single",
+      "prompt": "Service `@Transactional` trả về entity `Order`, controller đọc `order.getItems().size()`. `spring.jpa.open-in-view=false`. Kết quả?",
+      "options": [
+        "`LazyInitializationException` vì `order` đã detached",
+        "Hibernate tự mở transaction mới để tải `items`",
+        "Trả về 0 vì collection LAZY chưa tải được coi là rỗng",
+        "Chạy bình thường vì `size()` không cần tải phần tử"
+      ],
+      "answer": 0,
+      "explanation": "Khi method service kết thúc, persistence context đóng và `order` thành detached. `items` vẫn là proxy collection chưa tải; gọi `size()` cần tải nên lỗi. Sửa bằng cách tải trong service (fetch join, entity graph) hoặc trả DTO đã có đủ dữ liệu."
+    }
+  ]
+}

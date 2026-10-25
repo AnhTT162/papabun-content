@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Bốn trạng thái của một entity",
+  "nodes": [
+    {"id": "transient", "label": "Transient", "kind": "generic", "x": 0.1, "y": 0.05},
+    {"id": "managed", "label": "Managed", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "detached", "label": "Detached", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "db", "label": "Database", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "copy", "label": "Bản managed mới", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "removed", "label": "Removed", "kind": "external", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "transient-managed", "from": "transient", "to": "managed", "label": "persist()"},
+    {"id": "managed-db", "from": "managed", "to": "db", "label": "flush: SQL"},
+    {"id": "managed-detached", "from": "managed", "to": "detached", "label": "hết transaction"},
+    {"id": "detached-copy", "from": "detached", "to": "copy", "label": "merge(): bản sao"},
+    {"id": "managed-removed", "from": "managed", "to": "removed", "label": "remove()"}
+  ],
+  "steps": [
+    {"caption": "`new Order()` là object Java thường: chưa được persistence context quản lý (có thể đã có id tự gán), Hibernate không biết tới nó. Đó là trạng thái transient.", "show": ["transient"]},
+    {"caption": "`persist()` đưa nó vào persistence context: từ giờ nó là managed, Hibernate giữ bản chụp để so sánh. Entity tải bằng `find` hay query cũng là managed.", "show": ["managed", "transient-managed"], "highlight": ["transient-managed"]},
+    {"caption": "Lúc flush (trước commit, hoặc trước một query cần thấy dữ liệu mới), Hibernate sinh `INSERT` cho entity mới và `UPDATE` cho entity có field khác bản chụp, không cần gọi `save()`.", "show": ["db", "managed-db"], "highlight": ["managed-db"]},
+    {"caption": "Transaction kết thúc, persistence context đóng: entity thành detached. Sửa field không sinh SQL nào, và chạm vào quan hệ LAZY chưa tải thì lỗi `LazyInitializationException`.", "show": ["detached", "managed-detached"], "highlight": ["managed-detached"]},
+    {"caption": "`merge(detached)` tải bản managed theo id, chép state từ object detached sang, rồi trả về **bản managed đó**. Object bạn truyền vào vẫn detached; tiếp tục sửa nó là sửa nhầm chỗ.", "show": ["copy", "detached-copy"], "highlight": ["detached-copy"]},
+    {"caption": "`remove()` trên entity managed đánh dấu removed; `DELETE` chạy lúc flush, kèm cascade nếu có. `remove()` một entity detached thì báo lỗi.", "show": ["removed", "managed-removed"], "highlight": ["managed-removed"]}
+  ]
+}

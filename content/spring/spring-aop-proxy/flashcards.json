@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "how", "front": "Spring AOP thêm hành vi vào method bằng cách nào?", "back": "Thay bean bằng proxy; proxy chạy chuỗi advice rồi gọi object gốc qua `proceed()`." },
+    { "id": "jdk-cglib", "front": "JDK proxy và CGLIB khác nhau thế nào?", "back": "JDK proxy implement interface; CGLIB là lớp con của class. Boot mặc định CGLIB." },
+    { "id": "not-intercepted", "front": "Lời gọi nào không đi qua advice?", "back": "Gọi qua `this`, method `private`, `final`, `static`, và object tự `new`." },
+    { "id": "self-fix", "front": "Cách sửa self-invocation tốt nhất?", "back": "Tách method sang bean khác; ngoài ra có self-inject, `TransactionTemplate`, hoặc AspectJ." },
+    { "id": "order", "front": "`@Order` nhỏ hơn thì aspect nằm ở đâu?", "back": "Ngoài cùng: vào trước, ra sau cùng." },
+    { "id": "retry-tx", "front": "Retry và transaction, cái nào nên ở ngoài?", "back": "Retry ở ngoài, để mỗi lần thử có transaction mới." },
+    { "id": "final-npe", "front": "Vì sao method `final` của bean có proxy lại thấy field `null`?", "back": "Nó chạy thẳng trên instance proxy, được tạo không qua constructor nên field chưa được gán." }
+  ]
+}

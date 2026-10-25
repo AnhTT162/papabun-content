@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đơn hàng lưu xong nhưng dòng hàng không thuộc đơn nào",
+  "context": "Quan hệ hai chiều giữa `Order` và `OrderItem`. Code tạo đơn được viết theo hướng \"thêm item vào list của order\".",
+  "buggyCode": "@Entity\n@Table(name = \"orders\")\nclass Order {\n    @Id @GeneratedValue Long id;\n    @OneToMany(mappedBy = \"order\", cascade = CascadeType.ALL)\n    List<OrderItem> items = new ArrayList<>();\n}\n\n@Entity\nclass OrderItem {\n    @Id @GeneratedValue Long id;\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"order_id\")\n    Order order;\n    String sku;\n    int qty;\n}\n\n@Transactional\nLong placeOrder(List<CartLine> lines) {\n    Order order = new Order();\n    for (CartLine line : lines) {\n        OrderItem item = new OrderItem();\n        item.sku = line.sku();\n        item.qty = line.qty();\n        order.items.add(item);\n    }\n    orderRepository.save(order);\n    return order.id;\n}",
+  "symptom": {
+    "description": "API tạo đơn trả 200 và có id. Trang chi tiết đơn hiện \"Đơn không có sản phẩm\". Bảng `order_item` vẫn có dòng mới, chỉ là không gắn với đơn nào. Cột `order_id` cho phép `NULL` vì là schema cũ.",
+    "output": "insert into orders (id) values (?)                                   -- id = 9001\ninsert into order_item (order_id, qty, sku, id) values (?, ?, ?, ?)   -- order_id = null\ninsert into order_item (order_id, qty, sku, id) values (?, ?, ?, ?)   -- order_id = null\n\nselect id, order_id, sku from order_item where id >= 7700;\n 7701 | NULL | A-1\n 7702 | NULL | B-7"
+  },
+  "diagnosis": {
+    "question": "Vì sao `order_id` là `NULL` dù item đã nằm trong `order.items`?",
+    "options": [
+      "Khoá ngoại lấy từ owning side `OrderItem.order`, mà field này đang `null`",
+      "`cascade = ALL` lưu item trước order nên lúc đó order chưa có id",
+      "`FetchType.LAZY` trên `@ManyToOne` làm Hibernate không ghi cột `order_id`",
+      "`save()` trả về bản sao của order, nên item gắn vào object cũ bị mất liên kết"
+    ],
+    "answer": 0,
+    "explanation": "Với quan hệ hai chiều, bên có `mappedBy` (`Order.items`) là inverse side: Hibernate dùng nó để cascade (nên item vẫn được insert) nhưng **không** dùng nó để ghi khoá ngoại. Cột `order_id` lấy từ owning side `OrderItem.order`, ở đây là `null`. Hibernate insert order trước nên id không phải vấn đề; LAZY chỉ ảnh hưởng lúc đọc. Order mới nên `save` gọi `persist`, không tạo bản sao."
+  },
+  "fix": {
+    "code": "@Entity\nclass Order {\n    @Id @GeneratedValue Long id;\n    @OneToMany(mappedBy = \"order\", cascade = CascadeType.ALL, orphanRemoval = true)\n    private List<OrderItem> items = new ArrayList<>();\n\n    void addItem(OrderItem item) {      // luôn cập nhật cả hai phía\n        items.add(item);\n        item.order = this;\n    }\n\n    void removeItem(OrderItem item) {\n        items.remove(item);\n        item.order = null;\n    }\n}\n\n// placeOrder: order.addItem(item) thay cho order.items.add(item)\n\n// Migration: cột khoá ngoại không được để NULL\n// ALTER TABLE order_item ALTER COLUMN order_id SET NOT NULL;",
+    "explanation": "Đóng gói collection và chỉ cho thêm, bớt qua method cập nhật cả hai phía, để owning side luôn đúng. `@JoinColumn(nullable = false)` trên `@ManyToOne` chỉ ảnh hưởng schema Hibernate tự sinh; còn ở database thật, ràng buộc `NOT NULL` trên `order_id` mới làm lỗi lộ ra ngay lúc insert thay vì để dữ liệu mồ côi tích tụ (bài Khoá, ràng buộc & chuẩn hoá). Cuối cùng là dọn các dòng `order_item` đang mồ côi."
+  }
+}
