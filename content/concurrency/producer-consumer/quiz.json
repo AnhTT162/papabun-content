@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "if-vs-while",
+      "kind": "single",
+      "prompt": "Queue tự viết có hai consumer. `take()` dùng `if (items.isEmpty()) wait();` rồi `return items.remove(0);`, còn `put()` gọi `notifyAll()`. Thỉnh thoảng một consumer ném `IndexOutOfBoundsException`. Vì sao?",
+      "options": [
+        "Consumer kia lấy phần tử trước, còn consumer này không kiểm tra lại sau khi thức",
+        "`notifyAll()` nhả monitor ngay lập tức, trước khi `put()` kịp thêm xong phần tử vào list",
+        "`wait()` không nhả monitor nên consumer thứ hai đọc list khi `put()` đang ghi dở",
+        "`notifyAll()` chỉ hợp với một consumer; khi có nhiều consumer phải dùng `notify()`"
+      ],
+      "answer": 0,
+      "explanation": "Thức dậy từ `wait()` không có nghĩa điều kiện vẫn đúng: thread khác có thể đã lấy mất phần tử trước khi thread này lấy lại được monitor, và spurious wakeup cũng có thể xảy ra. Viết `while (items.isEmpty()) wait();` để kiểm tra lại mỗi lần thức. `wait()` có nhả monitor, và `notifyAll()` không nhả monitor ngay; nó chỉ đánh thức, monitor được nhả khi ra khỏi khối `synchronized`."
+    },
+    {
+      "id": "unbounded-lbq-oom",
+      "kind": "single",
+      "prompt": "Service nhận sự kiện từ webhook và đẩy vào `new LinkedBlockingQueue<>()` bằng `put`; 4 consumer ghi vào database. Database chậm hẳn trong 30 phút. Điều gì xảy ra với service?",
+      "options": [
+        "`put` không bao giờ chặn vì queue không giới hạn; queue phình tới khi hết heap",
+        "`put` chặn khi queue chạm mức mặc định 1.000 phần tử, nên webhook bị chậm lại theo",
+        "Queue tự bỏ các phần tử cũ nhất khi bộ nhớ thấp để còn chỗ nhận phần tử mới",
+        "Thread consumer tự được tạo thêm để đuổi kịp tốc độ producer khi queue dài ra"
+      ],
+      "answer": 0,
+      "explanation": "Không truyền capacity thì `LinkedBlockingQueue` có giới hạn `Integer.MAX_VALUE`, coi như không giới hạn. Producer không bao giờ bị chặn nên không có backpressure; sự kiện tích lại trong heap, latency tăng dần rồi `OutOfMemoryError`, và mọi thứ trong queue mất khi tiến trình chết. Truyền capacity, và quyết định rõ khi đầy thì chặn, trả lỗi hay bỏ."
+    },
+    {
+      "id": "poison-pill-count",
+      "kind": "single",
+      "prompt": "Có 4 consumer cùng `take()` từ một queue. Producer xong việc thì `put(POISON)` một lần. Mỗi consumer nhận `POISON` thì `return`. Chuyện gì xảy ra khi tắt ứng dụng?",
+      "options": [
+        "Một consumer dừng, ba consumer kia chờ ở `take()` mãi và JVM có thể không thoát",
+        "Cả bốn dừng, vì `take()` trả cùng một phần tử `POISON` cho mọi consumer đang chờ",
+        "Ba consumer còn lại nhận `InterruptedException` khi queue rỗng sau phần tử `POISON`",
+        "`put(POISON)` chặn cho tới khi cả bốn consumer đều đã gọi `take()` và nhận được nó"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi phần tử chỉ được một consumer lấy. Bốn consumer cần bốn pill, hoặc consumer nhận pill thì `put` lại pill trước khi thoát. Thread không phải daemon còn sống thì JVM không thoát. Queue rỗng không làm `take()` ném `InterruptedException`; chỉ interrupt mới làm vậy."
+    },
+    {
+      "id": "swallow-interrupt",
+      "kind": "output",
+      "prompt": "Consumer chạy trong `ExecutorService`. Lúc shutdown, ứng dụng gọi `executor.shutdownNow()` rồi `awaitTermination(30, SECONDS)`. Điều gì xảy ra?",
+      "code": "while (true) {\n    try {\n        Order order = queue.take();\n        process(order);\n    } catch (InterruptedException e) {\n        log.warn(\"interrupted\", e);\n    }\n}",
+      "options": [
+        "Consumer ghi log rồi lại chờ ở `take()`; `awaitTermination` trả `false` sau 30 giây",
+        "Consumer dừng ngay vì `shutdownNow()` buộc dừng hẳn thread ngay sau khi interrupt nó",
+        "`take()` trả `null` sau interrupt nên vòng lặp ném `NullPointerException` rồi thoát",
+        "Consumer xử lý hết các phần tử còn trong queue rồi mới dừng, vì interrupt chờ queue rỗng"
+      ],
+      "answer": 0,
+      "explanation": "`shutdownNow()` chỉ interrupt worker, không buộc dừng. `take()` ném `InterruptedException` và xoá cờ interrupt; code bắt, ghi log rồi quay lại `take()`, nên thread không bao giờ dừng. Trong `catch` phải thoát vòng lặp và gọi `Thread.currentThread().interrupt()` để giữ lại tín hiệu."
+    },
+    {
+      "id": "offer-timeout",
+      "kind": "single",
+      "prompt": "API nhận ảnh rồi `put` vào `ArrayBlockingQueue(200)` để thread nền resize. Khi worker chậm, request HTTP treo vài phút và Tomcat hết thread. Cách sửa phù hợp nhất?",
+      "options": [
+        "`offer(job, 200, MILLISECONDS)`; trả `false` thì trả 503 kèm `Retry-After`",
+        "Tăng capacity lên 1.000.000 để `put` hầu như không bao giờ chặn",
+        "Đổi sang `SynchronousQueue` để request trao việc thẳng cho worker",
+        "Dùng `add` thay `put` và bắt `IllegalStateException` để thử lại trong vòng lặp"
+      ],
+      "answer": 0,
+      "explanation": "Chặn vô hạn trên thread xử lý request truyền độ chậm của worker ngược lên tới Tomcat. `offer` có timeout giữ backpressure nhưng giới hạn thời gian chờ, và báo cho client thử lại. Tăng capacity chỉ đổi việc treo thành chờ rất lâu trong queue và tốn heap; `SynchronousQueue` vẫn chặn khi không có worker rảnh; thử lại `add` trong vòng lặp là busy-spin."
+    },
+    {
+      "id": "drain-to",
+      "kind": "single",
+      "prompt": "Consumer ghi từng sự kiện vào database bằng một câu `INSERT` nên chỉ đạt 800 sự kiện mỗi giây. Muốn gom lô mà tải thấp vẫn không bị trễ. Cách nào hợp?",
+      "options": [
+        "`take()` một phần tử, rồi `drainTo(batch, 499)` và ghi cả lô bằng JDBC batch",
+        "Chờ tới khi `queue.size() >= 500` rồi mới lấy cả 500 phần tử ra và ghi cùng lúc",
+        "Gọi `poll()` liên tục trong vòng lặp tới khi gom đủ 500 phần tử rồi mới ghi",
+        "Đổi sang `PriorityBlockingQueue` để các sự kiện cùng bảng được xếp nằm cạnh nhau"
+      ],
+      "answer": 0,
+      "explanation": "`take()` chờ phần tử đầu tiên, `drainTo` lấy ngay những gì đang có mà không chờ thêm: tải thấp thì lô nhỏ và ghi ngay, tải cao thì lô lớn. Chờ đủ 500 làm sự kiện bị trễ khi tải thấp; `poll()` trong vòng lặp đốt CPU khi queue rỗng."
+    }
+  ]
+}

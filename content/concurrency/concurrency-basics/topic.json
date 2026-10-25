@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "concurrency-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Race condition, atomicity & thread-safe",
+  "summary": "Thread dùng chung heap; race condition kiểu read-modify-write và check-then-act; critical section; \"thread-safe\" nghĩa là gì và các cách đạt được; vì sao bean singleton phải stateless; khi nào khoá trong JVM không đủ.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["race-condition", "check-then-act", "critical-section", "atomicity", "visibility", "thread-safe", "thread-confinement", "immutable", "data-race", "lost-update", "bean-scope", "jmm", "prototype-in-singleton"],
+  "references": [
+    { "title": "The Java Tutorials: Thread Interference", "url": "https://docs.oracle.com/javase/tutorial/essential/concurrency/interfere.html" },
+    { "title": "Javadoc ConcurrentHashMap (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentHashMap.html" },
+    { "title": "Spring Framework: Bean Scopes", "url": "https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" }
+  ]
+}

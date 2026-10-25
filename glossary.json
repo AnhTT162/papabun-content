@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics"]
     },
     {
       "id": "dns",
@@ -206,7 +206,7 @@
       "meaning": "Vòng lặp liên tục kiểm tra một điều kiện mà không ngủ hay block, đốt trọn một core trong lúc chờ.",
       "example": "`while (!ready) { }` hoặc retry ngay lập tức không có backoff.",
       "related": ["catastrophic-backtracking"],
-      "topics": ["java-high-cpu", "synchronized-volatile"]
+      "topics": ["java-high-cpu", "synchronized-volatile", "producer-consumer"]
     },
     {
       "id": "thread-pool",
@@ -246,7 +246,7 @@
       "meaning": "Hàng đợi chứa task đang chờ thread rảnh trong `ThreadPoolExecutor`. Có giới hạn hay không quyết định pool có tạo thread thêm và có reject hay không.",
       "example": "`new ArrayBlockingQueue<>(100)` chứa tối đa 100 task chờ.",
       "related": ["core-pool-size", "rejection-policy"],
-      "topics": ["executor-thread-pool", "completable-future"]
+      "topics": ["executor-thread-pool", "completable-future", "producer-consumer"]
     },
     {
       "id": "rejection-policy",
@@ -254,7 +254,7 @@
       "meaning": "Cách `ThreadPoolExecutor` xử lý task khi queue đầy và đã đủ max thread, hoặc khi pool đã shutdown.",
       "example": "`AbortPolicy` (ném exception, mặc định), `CallerRunsPolicy`, `DiscardPolicy`, `DiscardOldestPolicy`.",
       "related": ["work-queue", "backpressure"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "producer-consumer"]
     },
     {
       "id": "backpressure",
@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool", "messaging-fundamentals"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer"]
     },
     {
       "id": "cpu-bound",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer"]
     },
     {
       "id": "virtual-thread",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer"]
     },
     {
       "id": "pinning",
@@ -302,7 +302,7 @@
       "meaning": "Virtual thread bị dính chặt vào carrier thread khi block, nên carrier không phục vụ được virtual thread khác. Ở Java 21–23 xảy ra khi block trong `synchronized`; JEP 491 (Java 24) bỏ trường hợp này.",
       "example": "Gọi JDBC chặn bên trong khối `synchronized` trên Java 21 sẽ giữ carrier suốt thời gian chờ.",
       "related": ["virtual-thread"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "producer-consumer"]
     },
     {
       "id": "bulkhead",
@@ -373,7 +373,7 @@
       "meaning": "Lock gắn sẵn với mọi object Java, được lấy khi vào khối `synchronized` và nhả khi ra. Mỗi lúc chỉ một thread giữ, và nó có wait set cho `wait`/`notify`.",
       "example": "`synchronized (order) { ... }` lấy monitor của object `order`; thread khác muốn vào phải BLOCKED.",
       "related": ["reentrancy", "happens-before"],
-      "topics": ["thread-lifecycle", "synchronized-volatile", "deadlock"]
+      "topics": ["thread-lifecycle", "synchronized-volatile", "deadlock", "producer-consumer"]
     },
     {
       "id": "spurious-wakeup",
@@ -381,7 +381,7 @@
       "meaning": "Thread đang `wait()` thức dậy mà không có ai `notify`, `interrupt` hay hết giờ. Spec cho phép điều này, nên điều kiện chờ phải được kiểm tra lại trong vòng `while`.",
       "example": "`while (queue.isEmpty()) { queue.wait(); }` thay vì `if (queue.isEmpty()) queue.wait();`.",
       "related": ["monitor"],
-      "topics": ["thread-lifecycle"]
+      "topics": ["thread-lifecycle", "producer-consumer"]
     },
     {
       "id": "thread-interrupt",
@@ -389,7 +389,7 @@
       "meaning": "Cơ chế yêu cầu một thread dừng việc đang chờ: `thread.interrupt()` đặt cờ ngắt, các method chặn như `sleep`, `wait`, `join` ném `InterruptedException` và xoá cờ.",
       "example": "Bắt `InterruptedException` thì gọi lại `Thread.currentThread().interrupt()` để không làm mất tín hiệu.",
       "related": ["monitor"],
-      "topics": ["thread-lifecycle", "exceptions"]
+      "topics": ["thread-lifecycle", "exceptions", "producer-consumer"]
     },
     {
       "id": "jmm",
@@ -397,7 +397,7 @@
       "meaning": "Phần của JLS (chương 17) quy định khi nào một lần ghi của thread này chắc chắn được thread khác nhìn thấy, dựa trên quan hệ happens-before.",
       "example": "Không có `volatile` hay khoá, JMM cho phép thread đọc mãi giá trị cũ của một biến.",
       "related": ["happens-before", "visibility", "data-race"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "concurrency-basics"]
     },
     {
       "id": "happens-before",
@@ -413,7 +413,7 @@
       "meaning": "Một thread có thấy giá trị mà thread khác vừa ghi hay không. Thiếu happens-before thì không có gì đảm bảo thấy.",
       "example": "Cờ `running` không volatile: main ghi `false` nhưng worker vẫn đọc `true`.",
       "related": ["happens-before", "jmm"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "concurrency-basics"]
     },
     {
       "id": "atomicity",
@@ -421,7 +421,7 @@
       "meaning": "Một thao tác diễn ra trọn vẹn như một bước, thread khác không thể chen vào giữa hay nhìn thấy trạng thái dở dang.",
       "example": "`count++` không atomic (đọc, cộng, ghi); `AtomicInteger.incrementAndGet()` thì atomic.",
       "related": ["cas", "lost-update"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "concurrency-basics"]
     },
     {
       "id": "instruction-reordering",
@@ -437,7 +437,7 @@
       "meaning": "Hai thread truy cập cùng một biến, ít nhất một bên ghi, mà không có happens-before giữa hai lần truy cập. Kết quả khi đó không được JMM đảm bảo.",
       "example": "Hai thread cùng `count++` trên một `int` thường không khoá.",
       "related": ["race-condition", "happens-before"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "concurrency-basics"]
     },
     {
       "id": "lost-update",
@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics"]
     },
     {
       "id": "race-condition",
@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile", "cache-patterns"]
+      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics"]
     },
     {
       "id": "cas",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer"]
     },
     {
       "id": "replication-slot",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer"]
     },
     {
       "id": "poison-message",
@@ -3173,7 +3173,7 @@
       "meaning": "Quy định container tạo bao nhiêu object cho một bean: `singleton` (mặc định, một object mỗi container), `prototype` (mỗi lần hỏi một object), `request`, `session`.",
       "example": "`@Scope(\"prototype\")` trên `ReportBuilder` để mỗi lần `getObject()` có một builder mới.",
       "related": ["prototype-in-singleton", "bean"],
-      "topics": ["bean-lifecycle-scopes"]
+      "topics": ["bean-lifecycle-scopes", "concurrency-basics"]
     },
     {
       "id": "prototype-in-singleton",
@@ -3181,7 +3181,7 @@
       "meaning": "Bean prototype inject vào singleton chỉ được tạo một lần, lúc singleton được tạo, nên bị dùng chung như singleton. Lấy qua `ObjectProvider` hoặc `@Lookup` để có object mới mỗi lần.",
       "example": "`CheckoutService` giữ một `DiscountCalculator` prototype trong field: mọi request dùng chung một calculator.",
       "related": ["bean-scope"],
-      "topics": ["bean-lifecycle-scopes"]
+      "topics": ["bean-lifecycle-scopes", "concurrency-basics"]
     },
     {
       "id": "conditional-annotation",
@@ -3542,6 +3542,78 @@
       "example": "`BlockHound.install()` làm test đỏ khi handler WebFlux gọi repository JPA trên event loop.",
       "related": ["event-loop"],
       "topics": ["spring-webflux"]
+    },
+    {
+      "id": "check-then-act",
+      "term": "Check-then-act",
+      "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
+      "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
+      "related": ["race-condition", "atomicity"],
+      "topics": ["concurrency-basics"]
+    },
+    {
+      "id": "critical-section",
+      "term": "Critical section",
+      "meaning": "Đoạn code truy cập state dùng chung mà chỉ được một thread chạy tại một thời điểm, thường bảo vệ bằng `synchronized` hay `Lock`. Phải bao trọn thao tác ghép, và càng ngắn càng tốt.",
+      "example": "Đọc số dư, kiểm tra đủ tiền và trừ tiền nằm trong cùng một khối `synchronized`.",
+      "related": ["race-condition", "monitor"],
+      "topics": ["concurrency-basics"]
+    },
+    {
+      "id": "thread-safe",
+      "term": "Thread-safe",
+      "meaning": "Class hay method vẫn đúng khi nhiều thread gọi cùng lúc, với bất kỳ cách xen kẽ nào, mà bên gọi không phải tự đồng bộ thêm.",
+      "example": "`ConcurrentHashMap` và `DateTimeFormatter` thread-safe; `HashMap` và `SimpleDateFormat` thì không.",
+      "related": ["race-condition", "immutable", "thread-confinement"],
+      "topics": ["concurrency-basics"]
+    },
+    {
+      "id": "thread-confinement",
+      "term": "Thread confinement",
+      "meaning": "Đạt thread-safe bằng cách không chia sẻ: dữ liệu chỉ một thread chạm tới, như biến cục bộ, tham số hay `ThreadLocal` (trong thread pool phải `remove()` khi xong, nếu không dữ liệu rò sang request sau).",
+      "example": "Tạo `List<String> errors` trong method `validate` thay vì giữ nó trong field của bean singleton.",
+      "related": ["thread-safe", "thread-local"],
+      "topics": ["concurrency-basics"]
+    },
+    {
+      "id": "producer-consumer",
+      "term": "Producer–consumer",
+      "meaning": "Mẫu tách bên tạo việc khỏi bên xử lý bằng một hàng đợi dùng chung, để hai bên chạy theo tốc độ riêng.",
+      "example": "Thread nhận webhook `put` sự kiện vào `BlockingQueue`, bốn thread nền `take` ra và ghi database.",
+      "related": ["blocking-queue", "backpressure"],
+      "topics": ["producer-consumer"]
+    },
+    {
+      "id": "blocking-queue",
+      "term": "BlockingQueue",
+      "meaning": "Interface hàng đợi thread-safe của `java.util.concurrent`: `put` chặn khi đầy, `take` chặn khi rỗng, kèm các biến thể trả giá trị hoặc chờ có hạn. Không chứa `null`.",
+      "example": "`ArrayBlockingQueue<Order> queue = new ArrayBlockingQueue<>(1000);`",
+      "related": ["producer-consumer", "bounded-queue", "work-queue"],
+      "topics": ["producer-consumer"]
+    },
+    {
+      "id": "bounded-queue",
+      "term": "Bounded queue",
+      "meaning": "Hàng đợi có sức chứa tối đa. Khi đầy, bên gửi phải chờ, nhận lỗi hoặc bỏ phần tử: đó là chỗ backpressure xuất hiện.",
+      "example": "`new LinkedBlockingQueue<>(5_000)`; không truyền số thì giới hạn là `Integer.MAX_VALUE`.",
+      "related": ["backpressure", "blocking-queue"],
+      "topics": ["producer-consumer"]
+    },
+    {
+      "id": "poison-pill",
+      "term": "Poison pill",
+      "meaning": "Phần tử đánh dấu được đưa vào queue để báo consumer dừng sau khi xử lý hết các phần tử đứng trước nó. Mỗi consumer cần một pill.",
+      "example": "`static final Order POISON = new Order(-1);` và consumer `return` khi `take() == POISON` (so sánh bằng `==`, không dùng `equals`).",
+      "related": ["producer-consumer", "thread-interrupt"],
+      "topics": ["producer-consumer"]
+    },
+    {
+      "id": "condition-variable",
+      "term": "Condition",
+      "meaning": "Hàng chờ gắn với một lock, nơi thread chờ một điều kiện cụ thể (`await`) và được báo khi điều kiện có thể đã đúng (`signal`). Một lock có thể có nhiều `Condition`, khác với `wait`/`notify` chỉ có một hàng chờ mỗi monitor.",
+      "example": "`ArrayBlockingQueue` dùng một `ReentrantLock` với hai `Condition`: `notFull` cho producer, `notEmpty` cho consumer.",
+      "related": ["monitor", "spurious-wakeup"],
+      "topics": ["producer-consumer"]
     }
   ]
 }

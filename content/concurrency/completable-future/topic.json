@@ -7,7 +7,7 @@
   "title": "CompletableFuture",
   "summary": "Nối tiếp và gộp tác vụ bất đồng bộ bằng thenApply, thenCompose, thenCombine, allOf; xử lý lỗi và timeout; vì sao phải dùng executor riêng và các bẫy khiến code chạy tuần tự.",
   "level": "senior",
-  "order": 6,
+  "order": 7,
   "minutes": 15,
   "prerequisites": ["executor-thread-pool"],
   "terms": ["completion-stage", "common-pool", "completion-exception", "structured-concurrency", "virtual-thread", "io-bound", "work-queue"],

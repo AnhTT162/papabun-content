@@ -7,7 +7,7 @@
   "title": "Deadlock",
   "summary": "Bốn điều kiện Coffman, phòng deadlock bằng lock ordering và tryLock có timeout, phát hiện bằng thread dump và ThreadMXBean, cùng livelock và starvation.",
   "level": "mid",
-  "order": 3,
+  "order": 4,
   "minutes": 15,
   "prerequisites": ["synchronized-volatile"],
   "terms": ["deadlock", "coffman-conditions", "lock-ordering", "livelock", "starvation", "thread-dump", "monitor", "reentrancy"],

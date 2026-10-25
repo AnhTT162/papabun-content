@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Bean singleton giữ \"user hiện tại\" trong field",
+  "instructions": "`OrderService` là bean singleton nên hai request dùng chung một object. Code lưu `userId` vào field `currentUserId` rồi mới đọc lại để tải đơn hàng. Chạy lịch \"Lần lượt\" rồi \"Hai request cùng lúc\" và xem mỗi request nhận đơn của ai.",
+  "config": {
+    "memoryModel": "simple",
+    "resources": [
+      { "id": "current-user", "kind": "variable", "label": "this.currentUserId", "valueType": "int", "initial": 0 },
+      { "id": "result-a", "kind": "variable", "label": "Request A nhận đơn của user", "valueType": "int", "initial": 0 },
+      { "id": "result-b", "kind": "variable", "label": "Request B nhận đơn của user", "valueType": "int", "initial": 0 }
+    ],
+    "threads": [
+      { "id": "a", "name": "Request A (user 1)", "steps": [
+        { "op": "write", "target": "current-user", "value": 1, "code": "this.currentUserId = 1;" },
+        { "op": "work", "code": "checkPermission(request);" },
+        { "op": "read", "target": "current-user", "into": "uid", "code": "int uid = this.currentUserId;" },
+        { "op": "write", "target": "result-a", "from": "uid", "code": "return orders.findByUser(uid);" }
+      ] },
+      { "id": "b", "name": "Request B (user 2)", "steps": [
+        { "op": "write", "target": "current-user", "value": 2, "code": "this.currentUserId = 2;" },
+        { "op": "work", "code": "checkPermission(request);" },
+        { "op": "read", "target": "current-user", "into": "uid", "code": "int uid = this.currentUserId;" },
+        { "op": "write", "target": "result-b", "from": "uid", "code": "return orders.findByUser(uid);" }
+      ] }
+    ],
+    "schedules": [
+      { "id": "sequential", "title": "Lần lượt", "order": ["a", "a", "a", "a", "b", "b", "b", "b"] },
+      { "id": "concurrent", "title": "Hai request cùng lúc", "order": ["a", "b", "a", "b", "a", "b", "a", "b"] }
+    ],
+    "expect": [
+      { "target": "result-a", "value": 1 },
+      { "target": "result-b", "value": 2 }
+    ],
+    "outcomes": {
+      "mismatch": "Một request nhận đơn hàng của user kia: request sau ghi đè `currentUserId` trong lúc request trước đang kiểm tra quyền. Đây là [[race-condition|race condition]] trên state dùng chung, và là lỗi lộ dữ liệu chứ không chỉ sai số. Sửa bằng cách bỏ field: truyền `userId` qua tham số hoặc biến cục bộ, vì mỗi thread có stack riêng. Bean singleton nên **stateless**.",
+      "success": "Mỗi request nhận đúng đơn của mình, nhưng chỉ vì request B bắt đầu sau khi A xong. Server có hàng trăm thread xử lý request song song nên không ai hứa thứ tự này. Thử lịch \"Hai request cùng lúc\"."
+    }
+  }
+}

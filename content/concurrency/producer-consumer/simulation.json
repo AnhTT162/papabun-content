@@ -1,0 +1,284 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Một producer, một consumer, ArrayBlockingQueue(3)",
+  "instructions": "Producer nhận đơn và gọi `queue.put(order)`; consumer lặp `take()` rồi xử lý. Bấm `put(order)` khi producer có đơn mới, `take()` khi consumer xử lý xong và lấy đơn tiếp. Thử làm đầy queue, làm rỗng queue, rồi gửi `put(POISON)` để dừng consumer và xem điều gì xảy ra nếu producer vẫn gửi tiếp.",
+  "config": {
+    "states": [
+      {
+        "id": "running",
+        "label": "Cả hai đang chạy",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "Không ai bị chặn. Producer thêm đơn, consumer lấy đơn; queue đóng vai bộ đệm khi hai bên chạy nhanh chậm khác nhau."
+      },
+      {
+        "id": "consumer-wait",
+        "label": "Consumer chờ",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Queue rỗng nên `take()` chặn consumer. Thread nằm ở trạng thái `WAITING` trên condition `notEmpty`, không tốn CPU, cho tới khi có phần tử."
+      },
+      {
+        "id": "producer-wait",
+        "label": "Producer chờ",
+        "x": 0.9,
+        "y": 0.5,
+        "note": "Queue đầy nên `put()` chặn producer: đây là **backpressure**, producer bị kéo chậm lại bằng tốc độ của consumer. Nếu producer là thread xử lý HTTP thì request cũng chờ theo; khi không muốn chờ, dùng `offer(order, 200, MILLISECONDS)` và trả 503 khi hết hạn."
+      },
+      {
+        "id": "pill-queued",
+        "label": "Pill trong queue",
+        "x": 0.5,
+        "y": 0.05,
+        "note": "Poison pill nằm **sau** các đơn đang chờ, nên consumer xử lý hết chúng trước rồi mới gặp pill. Bộ đếm \"Trong queue\" có tính cả pill."
+      },
+      {
+        "id": "stopped",
+        "label": "Consumer đã dừng",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "Consumer lấy được pill và thoát vòng lặp. Không còn ai gọi `take()`; mọi thứ được `put` vào từ đây sẽ nằm mãi trong queue."
+      },
+      {
+        "id": "stuck",
+        "label": "Producer kẹt mãi",
+        "x": 0.5,
+        "y": 0.95,
+        "note": "Queue đầy và không còn consumer: `put()` chặn vĩnh viễn. Thread dump thấy producer ở `WAITING` trong `ArrayBlockingQueue.put`. Pill phải là thứ cuối cùng producer gửi; nếu không chắc, dùng `offer` có timeout thay `put`."
+      },
+      {
+        "id": "orphan",
+        "label": "Đơn sau pill",
+        "x": 0.9,
+        "y": 0.05,
+        "note": "Đơn mới nằm **sau** pill. Consumer xử lý các đơn trước pill, gặp pill và thoát; đơn này nằm lại trong queue mãi mãi và mất khi tiến trình dừng. Đây là lý do pill phải là thứ cuối cùng producer gửi, và với nhiều producer thì chỉ gửi khi producer cuối cùng xong."
+      }
+    ],
+    "initial": "running",
+    "events": [
+      {
+        "id": "put",
+        "label": "put(order)"
+      },
+      {
+        "id": "take",
+        "label": "take()"
+      },
+      {
+        "id": "poison",
+        "label": "put(POISON)"
+      }
+    ],
+    "counters": [
+      {
+        "id": "queue",
+        "label": "Trong queue (tối đa 3)",
+        "initial": 0
+      },
+      {
+        "id": "done",
+        "label": "Đã xử lý",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "put-ok",
+        "from": "running",
+        "event": "put",
+        "to": "running",
+        "guard": {
+          "counter": "queue",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": 1
+          }
+        ],
+        "note": "Còn chỗ: `put` thêm phần tử và trả về ngay."
+      },
+      {
+        "id": "put-full",
+        "from": "running",
+        "event": "put",
+        "to": "producer-wait",
+        "label": "put() khi đầy",
+        "guard": {
+          "counter": "queue",
+          "gte": 3
+        }
+      },
+      {
+        "id": "take-ok",
+        "from": "running",
+        "event": "take",
+        "to": "running",
+        "guard": {
+          "counter": "queue",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": -1
+          },
+          {
+            "counter": "done",
+            "add": 1
+          }
+        ],
+        "note": "`take` lấy phần tử đầu (FIFO) và đánh thức một producer đang chờ chỗ trống, nếu có."
+      },
+      {
+        "id": "take-empty",
+        "from": "running",
+        "event": "take",
+        "to": "consumer-wait",
+        "label": "take() khi rỗng",
+        "guard": {
+          "counter": "queue",
+          "eq": 0
+        }
+      },
+      {
+        "id": "pill",
+        "from": "running",
+        "event": "poison",
+        "to": "pill-queued",
+        "guard": {
+          "counter": "queue",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "wake-consumer",
+        "from": "consumer-wait",
+        "event": "put",
+        "to": "running",
+        "label": "put() đánh thức",
+        "effects": [
+          {
+            "counter": "done",
+            "add": 1
+          }
+        ],
+        "note": "`put` báo hiệu condition `notEmpty`; consumer thức dậy, lấy ngay phần tử vừa thêm và xử lý. Queue lại rỗng."
+      },
+      {
+        "id": "pill-to-waiting",
+        "from": "consumer-wait",
+        "event": "poison",
+        "to": "stopped",
+        "label": "nhận pill",
+        "note": "Consumer đang chờ nhận ngay pill và thoát."
+      },
+      {
+        "id": "wake-producer",
+        "from": "producer-wait",
+        "event": "take",
+        "to": "running",
+        "label": "take() đánh thức",
+        "effects": [
+          {
+            "counter": "done",
+            "add": 1
+          }
+        ],
+        "note": "Consumer lấy một phần tử, có chỗ trống, `put` đang chờ của producer hoàn tất. Queue vẫn đầy 3."
+      },
+      {
+        "id": "drain",
+        "from": "pill-queued",
+        "event": "take",
+        "to": "pill-queued",
+        "guard": {
+          "counter": "queue",
+          "gte": 2
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": -1
+          },
+          {
+            "counter": "done",
+            "add": 1
+          }
+        ],
+        "note": "Đơn đứng trước pill vẫn được xử lý bình thường."
+      },
+      {
+        "id": "take-pill",
+        "from": "pill-queued",
+        "event": "take",
+        "to": "stopped",
+        "label": "lấy pill",
+        "guard": {
+          "counter": "queue",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": -1
+          }
+        ]
+      },
+      {
+        "id": "put-after-stop",
+        "from": "stopped",
+        "event": "put",
+        "to": "stopped",
+        "guard": {
+          "counter": "queue",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": 1
+          }
+        ],
+        "note": "`put` vẫn thành công vì còn chỗ, nhưng đơn này sẽ không bao giờ được xử lý."
+      },
+      {
+        "id": "put-dead",
+        "from": "stopped",
+        "event": "put",
+        "to": "stuck",
+        "label": "put() khi đầy",
+        "guard": {
+          "counter": "queue",
+          "gte": 3
+        }
+      },
+      {
+        "id": "put-after-pill",
+        "from": "pill-queued",
+        "event": "put",
+        "to": "orphan",
+        "label": "put() sau pill",
+        "guard": {
+          "counter": "queue",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "queue",
+            "add": 1
+          }
+        ]
+      }
+    ],
+    "invalidNote": "Không áp dụng ở trạng thái này. Consumer đang chờ trong `take()` thì không gọi `take()` lần nữa; producer đang bị chặn thì không gửi thêm được; consumer đã dừng thì không còn ai gọi `take()`; mỗi consumer chỉ cần một pill. Mô phỏng không cho gửi pill khi queue đầy: `put(POISON)` sẽ bị chặn như `put` thường cho tới khi có chỗ. Ở \"Đơn sau pill\", bấm \"Làm lại\" để chạy lượt mới."
+  }
+}

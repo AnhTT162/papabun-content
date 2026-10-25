@@ -7,9 +7,9 @@
   "title": "synchronized & volatile",
   "summary": "Atomicity, visibility và ordering; quy tắc happens-before của Java Memory Model; vì sao volatile không làm count++ atomic; AtomicInteger, LongAdder, double-checked locking và reentrancy.",
   "level": "mid",
-  "order": 2,
+  "order": 3,
   "minutes": 15,
-  "prerequisites": ["thread-lifecycle"],
+  "prerequisites": ["thread-lifecycle", "concurrency-basics"],
   "terms": ["jmm", "happens-before", "visibility", "atomicity", "instruction-reordering", "data-race", "lost-update", "cas", "reentrancy", "double-checked-locking", "monitor", "busy-spin", "immutable", "jit", "memory-barrier"],
   "references": [
     { "title": "JLS chương 17: Threads and Locks (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html" },

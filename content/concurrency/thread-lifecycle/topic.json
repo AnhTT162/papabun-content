@@ -7,7 +7,7 @@
   "title": "Thread Lifecycle",
   "summary": "Sáu trạng thái của Thread.State, cách wait/notify, sleep, join và synchronized đưa thread qua lại giữa chúng, và cách đọc đúng trạng thái trong thread dump.",
   "level": "junior",
-  "order": 1,
+  "order": 2,
   "minutes": 12,
   "prerequisites": [],
   "terms": ["monitor", "spurious-wakeup", "thread-interrupt", "thread-dump", "virtual-thread"],

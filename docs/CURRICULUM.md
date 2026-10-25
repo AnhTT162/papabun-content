@@ -155,11 +155,11 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `concurrency-basics` | ✚ Race condition, atomicity & thread-safe | foundation | Critical section, atomicity và visibility, "thread-safe" nghĩa là gì, vì sao bean singleton phải stateless | A L S | ⬜ |
+| 1 | `concurrency-basics` | ✚ Race condition, atomicity & thread-safe | foundation | Critical section, atomicity và visibility, "thread-safe" nghĩa là gì, vì sao bean singleton phải stateless | A L S | ✅ |
 | 2 | `thread-lifecycle` | Thread Lifecycle | junior | Trạng thái, interrupt | L S | ✅ |
 | 3 | `synchronized-volatile` | synchronized & volatile | mid | Monitor, visibility, lost update | A L S B | ✅ |
 | 4 | `deadlock` | Deadlock | mid | Coffman, lock ordering, phát hiện | A L S B | ✅ |
-| 5 | `producer-consumer` | ✚ Producer–consumer & BlockingQueue | mid | `wait/notify` và `BlockingQueue`, bounded queue, backpressure, poison pill | A L S | ⬜ |
+| 5 | `producer-consumer` | ✚ Producer–consumer & BlockingQueue | mid | `wait/notify` và `BlockingQueue`, bounded queue, backpressure, poison pill | A L S | ✅ |
 | 6 | `executor-thread-pool` | ExecutorService & Thread Pool | mid | Tham số, sizing, virtual thread | A L D Sc | ✅ |
 | 7 | `synchronizers` | CountDownLatch, Semaphore, CyclicBarrier, Phaser | mid | Chọn đúng công cụ, giới hạn đồng thời | L S | ⬜ |
 | 8 | `threadlocal` | ThreadLocal & ScopedValue | mid | Rò rỉ trong thread pool, MDC, context propagation | L B | ⬜ |

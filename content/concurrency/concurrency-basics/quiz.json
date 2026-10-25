@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "controller-counter",
+      "kind": "single",
+      "prompt": "`@RestController` (singleton) có field `private int hits;` và mỗi request chạy `hits++`. 50 thread phục vụ đúng 1.000.000 request. Giá trị `hits` cuối cùng thế nào?",
+      "options": [
+        "Không quá 1.000.000 và thường nhỏ hơn: các lần cộng chen nhau bị mất",
+        "Đúng 1.000.000, vì Spring tuần tự hoá lời gọi vào cùng một bean",
+        "Đúng 1.000.000, vì đọc và ghi một `int` trong Java luôn atomic",
+        "Lớn hơn 1.000.000, vì một số lần cộng bị chạy lại khi thread tranh nhau"
+      ],
+      "answer": 0,
+      "explanation": "Spring không đồng bộ lời gọi vào bean; mọi thread request gọi thẳng vào cùng object. Từng lần đọc hay ghi `int` là atomic, nhưng `hits++` là đọc, cộng, ghi: hai thread cùng đọc một giá trị rồi cùng ghi giá trị +1, mất một lần cộng. Không có cơ chế nào cộng thừa. Dùng `AtomicLong` hoặc `LongAdder`, hay tốt hơn là metric của Micrometer."
+    },
+    {
+      "id": "chm-check-then-act",
+      "kind": "output",
+      "prompt": "`sessions` là `ConcurrentHashMap<String, Session>`. Hai thread cùng gọi `open(\"u1\")` lúc khoá `u1` chưa có. Điều gì có thể xảy ra?",
+      "code": "Session open(String userId) {\n    if (!sessions.containsKey(userId)) {\n        sessions.put(userId, createSession(userId));\n    }\n    return sessions.get(userId);\n}",
+      "options": [
+        "`createSession` có thể chạy hai lần và hai thread nhận hai session khác nhau",
+        "Chỉ một session được tạo, vì `ConcurrentHashMap` giữ khoá của `u1` từ `containsKey` tới `put`",
+        "Thread thứ hai ném `ConcurrentModificationException` ở lời gọi `put` vì map vừa bị sửa",
+        "Hai thread deadlock vì cùng chờ khoá của bin chứa `u1` trong lúc gọi `createSession`"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lời gọi của `ConcurrentHashMap` an toàn, nhưng cặp `containsKey` rồi `put` là check-then-act: cả hai thread cùng thấy chưa có, cùng tạo, cùng `put`. Thread ghi trước có thể đọc `get` sau khi thread kia ghi đè, hoặc trước đó. Sửa bằng `sessions.computeIfAbsent(userId, this::createSession)`: atomic, và khi khoá còn vắng thì hàm chỉ chạy một lần cho cả hai thread."
+    },
+    {
+      "id": "stateful-validator",
+      "kind": "single",
+      "prompt": "Bean singleton `OrderValidator` có field `private final List<String> errors = new ArrayList<>();`. `validate(order)` gọi `errors.clear()`, thêm lỗi vào `errors`, rồi trả về `List.copyOf(errors)`. Vì sao `final` không làm nó an toàn?",
+      "options": [
+        "`final` chỉ cố định tham chiếu; mọi request vẫn sửa cùng một `ArrayList`",
+        "`final` khiến `clear()` ném lỗi khi gọi từ thread khác thread khởi tạo",
+        "`List.copyOf` không thread-safe nên phải thay bằng `new ArrayList<>(errors)`",
+        "Spring bỏ qua `final` khi bean được tạo qua proxy CGLIB"
+      ],
+      "answer": 0,
+      "explanation": "`final` nghĩa là field không được gán object khác, còn nội dung `ArrayList` vẫn đổi được. Hai request cùng `clear()` và `add` vào một list: request này nhận lỗi của request kia, hoặc `ArrayList` bị hỏng do ghi đồng thời. Tạo list cục bộ trong `validate` là đủ: không chia sẻ thì không cần khoá."
+    },
+    {
+      "id": "oversell-pods",
+      "kind": "single",
+      "prompt": "Service chạy 3 pod. Method `reserve(productId)` đọc tồn kho, nếu còn thì trừ 1, và được đánh dấu `synchronized`. Trong đợt flash sale vẫn bán quá số hàng. Cách sửa nào đúng?",
+      "options": [
+        "`UPDATE ... SET qty = qty - 1 WHERE id = ? AND qty > 0`, rồi kiểm tra số dòng",
+        "Đổi `synchronized` thành `ReentrantLock(true)` để các pod lấy khoá lần lượt theo thứ tự đến",
+        "Khai báo biến tồn kho trong bean là `volatile` để mọi pod luôn thấy giá trị mới nhất",
+        "Đổi bean sang scope `prototype` để mỗi request có một object riêng, không dùng chung"
+      ],
+      "answer": 0,
+      "explanation": "`synchronized`, `ReentrantLock` hay `volatile` chỉ có tác dụng trong một JVM; ba pod là ba tiến trình. Kiểm tra và trừ phải xảy ra atomic ở nơi dữ liệu nằm: câu `UPDATE` có điều kiện làm cả hai việc trong một lệnh, trả 0 dòng khi hết hàng. Scope `prototype` không liên quan, vì state thật nằm trong database."
+    },
+    {
+      "id": "date-format",
+      "kind": "single",
+      "prompt": "Trong một bean singleton, code dùng `private static final SimpleDateFormat FMT = new SimpleDateFormat(\"yyyy-MM-dd\")` để parse ngày trong mọi request. Dưới tải, log thỉnh thoảng có `NumberFormatException` với chuỗi ngày hợp lệ. Cách sửa gọn nhất?",
+      "options": [
+        "Dùng `DateTimeFormatter.ofPattern(\"yyyy-MM-dd\")` với `LocalDate.parse`",
+        "Bọc `FMT.parse` trong `try-catch` và parse lại thêm một lần khi gặp lỗi",
+        "Bỏ `static` để mỗi bean có một `SimpleDateFormat` riêng thay vì dùng chung",
+        "Khai báo `FMT` là `volatile` để mọi thread luôn thấy trạng thái mới nhất của nó"
+      ],
+      "answer": 0,
+      "explanation": "`SimpleDateFormat` giữ trạng thái trung gian (một `Calendar`) trong object, nên hai thread parse cùng lúc làm hỏng kết quả của nhau. `DateTimeFormatter` bất biến, dùng chung an toàn. Bỏ `static` vẫn để mọi request dùng chung một object vì bean là singleton; `volatile` không làm thao tác parse thành atomic; parse lại có thể ra ngày sai mà không ném lỗi."
+    },
+    {
+      "id": "synced-list-iterate",
+      "kind": "single",
+      "prompt": "`List<Job> jobs = Collections.synchronizedList(new ArrayList<>())`. Một thread thêm job, thread khác chạy `for (Job j : jobs) report(j);`. Vòng lặp thỉnh thoảng ném `ConcurrentModificationException`. Vì sao?",
+      "options": [
+        "Nó chỉ khoá từng lời gọi; cả vòng lặp phải nằm trong `synchronized (jobs)`",
+        "`synchronizedList` chỉ khoá `get` và `remove`, còn `add` chạy không khoá nên làm hỏng list",
+        "Vòng `for-each` duyệt trên một bản sao của list nên phát hiện bản gốc đã thay đổi",
+        "`ArrayList` bên trong phải được khai báo `volatile` để iterator thấy phần tử mới"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi method của `synchronizedList` khoá trên chính list, nhưng duyệt bằng iterator là nhiều lời gọi `hasNext`/`next`; thread khác chen `add` vào giữa thì iterator phát hiện thay đổi và ném lỗi. Javadoc yêu cầu bên gọi tự khoá list khi duyệt. Nếu đọc nhiều ghi ít, `CopyOnWriteArrayList` duyệt trên ảnh chụp và không cần khoá."
+    }
+  ]
+}

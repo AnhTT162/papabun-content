@@ -7,7 +7,7 @@
   "title": "ExecutorService & Thread Pool",
   "summary": "Các tham số của ThreadPoolExecutor, thứ tự core → queue → thread thêm → reject, vì sao Executors.newFixed/newCached nguy hiểm, cách chọn kích thước, shutdown, và virtual thread của Java 21.",
   "level": "mid",
-  "order": 5,
+  "order": 6,
   "minutes": 15,
   "prerequisites": [],
   "terms": ["thread-pool", "core-pool-size", "maximum-pool-size", "keep-alive-time", "work-queue", "rejection-policy", "backpressure", "cpu-bound", "io-bound", "littles-law", "virtual-thread", "pinning", "bulkhead"],

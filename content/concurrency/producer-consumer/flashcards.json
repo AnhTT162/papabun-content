@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "while-wait", "front": "Vì sao gọi `wait()` trong `while` chứ không trong `if`?", "back": "Thức dậy không có nghĩa điều kiện đúng: có spurious wakeup, và thread khác có thể đã lấy mất phần tử. Phải kiểm tra lại mỗi lần thức." },
+    { "id": "notify-all", "front": "Vì sao queue tự viết nên dùng `notifyAll()` thay `notify()`?", "back": "Producer và consumer chờ trên cùng monitor; `notify()` có thể đánh thức thread cùng loại, nó chờ tiếp, và thread cần thức không được gọi. Hoặc dùng hai `Condition`." },
+    { "id": "monitor-required", "front": "Gọi `wait()` khi không giữ monitor thì sao?", "back": "Ném `IllegalMonitorStateException`. `wait()` phải nằm trong `synchronized` trên chính object đó, và nhả monitor trong lúc chờ." },
+    { "id": "methods", "front": "Bốn kiểu thêm vào `BlockingQueue`?", "back": "`add` ném exception, `offer` trả `false`, `put` chặn, `offer(e, timeout, unit)` chặn có hạn. Bên lấy: `remove`, `poll`, `take`, `poll(timeout, unit)`." },
+    { "id": "lbq-default", "front": "`new LinkedBlockingQueue<>()` có giới hạn bao nhiêu?", "back": "`Integer.MAX_VALUE`, coi như không giới hạn: không có backpressure, dễ hết heap. Luôn truyền capacity." },
+    { "id": "array-vs-linked", "front": "`ArrayBlockingQueue` khác `LinkedBlockingQueue` thế nào?", "back": "Array: mảng cố định, một lock cho cả hai đầu. Linked: hai lock riêng cho đầu thêm và đầu lấy nên ít tranh chấp hơn, mặc định không giới hạn." },
+    { "id": "poison-pill", "front": "N consumer cần bao nhiêu poison pill?", "back": "N cái, vì mỗi phần tử chỉ một consumer lấy. Hoặc consumer nhận pill thì `put` lại trước khi thoát. Nhiều producer: chỉ gửi khi producer cuối cùng xong." },
+    { "id": "interrupted", "front": "Bắt `InterruptedException` trong consumer thì làm gì?", "back": "Thoát vòng lặp và gọi `Thread.currentThread().interrupt()`. Nuốt exception rồi lặp tiếp làm thread không bao giờ dừng khi shutdown." },
+    { "id": "full-policy", "front": "Queue đầy: ba cách phản ứng?", "back": "Chặn (`put`) cho job nền; chặn có hạn (`offer` timeout) rồi báo lỗi như 503; bỏ (`offer` trả `false`) cho dữ liệu chấp nhận mất, kèm đếm số lần bỏ." },
+    { "id": "in-memory-loss", "front": "Queue trong bộ nhớ có hợp cho việc không được mất không?", "back": "Không. Deploy, OOM hay `kill -9` làm mất mọi thứ trong queue. Dùng Kafka, RabbitMQ hay bảng outbox." }
+  ]
+}

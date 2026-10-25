@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "race-condition", "front": "Race condition là gì?", "back": "Kết quả đúng hay sai phụ thuộc vào thứ tự xen kẽ của các thread. Hai dạng hay gặp: đọc-sửa-ghi (`count++`) và kiểm tra rồi hành động." },
+    { "id": "check-then-act", "front": "Vì sao `containsKey` rồi `put` trên `ConcurrentHashMap` vẫn sai?", "back": "Từng lời gọi an toàn nhưng cặp lời gọi thì không: hai thread cùng thấy chưa có rồi cùng `put`. Dùng `computeIfAbsent` hoặc `putIfAbsent`." },
+    { "id": "thread-safe", "front": "\"Thread-safe\" nghĩa là gì?", "back": "Vẫn đúng khi nhiều thread gọi cùng lúc, với bất kỳ cách xen kẽ nào, mà bên gọi không phải tự đồng bộ thêm." },
+    { "id": "ways", "front": "Bốn cách đạt thread-safe, theo thứ tự nên nghĩ tới?", "back": "Không chia sẻ (biến cục bộ), không thay đổi (immutable), dùng class đồng thời của JDK, cuối cùng mới tự khoá." },
+    { "id": "singleton-bean", "front": "Vì sao bean singleton của Spring nên stateless?", "back": "Mọi thread request gọi vào cùng một object. Field giữ dữ liệu theo request bị các request ghi đè lẫn nhau; dữ liệu đó phải đi qua tham số." },
+    { "id": "critical-section", "front": "Critical section phải bao những gì?", "back": "Toàn bộ thao tác ghép trên state dùng chung, kể cả phần kiểm tra. Không bao I/O chậm, vì khoá giữ lâu biến mọi thread thành hàng đợi." },
+    { "id": "race-vs-data-race", "front": "Race condition khác data race thế nào?", "back": "Data race: truy cập cùng biến, có ghi, không đồng bộ (định nghĩa của JMM). Race condition: lỗi logic do thứ tự xen kẽ, có thể xảy ra cả khi không có data race." },
+    { "id": "multi-pod", "front": "`synchronized` có chống bán quá tồn kho khi chạy 3 pod không?", "back": "Không, nó chỉ chặn thread trong một JVM. Cần thao tác atomic ở database: `UPDATE` có điều kiện, khoá dòng, hoặc ràng buộc." },
+    { "id": "hashmap-concurrent", "front": "Nhiều thread cùng ghi `HashMap` thì sao?", "back": "Mất phần tử, `size()` sai, có thể `ClassCastException` hoặc treo 100% CPU (Java 7: vòng khi resize; Java 8+: trong bin dạng cây). Dùng `ConcurrentHashMap`." }
+  ]
+}
