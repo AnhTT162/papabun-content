@@ -19,6 +19,7 @@
   "blocks": [
     { "type": "analogy", "file": "analogy.md" },
     { "type": "simulation", "file": "simulation.json" },
-    { "type": "layered", "file": "layered.md" }
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Queue đầy thì làm gì?\" Không có câu trả lời chung; phải chọn theo nghiệp vụ: chặn producer (`put`) cho job nền, chặn có hạn rồi báo lỗi (`offer` có timeout, trả 503) cho request của người dùng, hoặc bỏ và đếm (`offer`) cho dữ liệu chấp nhận mất. Hỏi tiếp thường là \"thế sao không dùng queue không giới hạn cho khỏi lo\": vì nó chỉ dời lỗi sang hết heap và latency tăng không kiểm soát." }
   ]
 }

@@ -1,0 +1,344 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Semaphore(2) và lần release() thừa",
+  "instructions": "API đối tác chỉ chịu 2 lời gọi đồng thời, nên service bọc lời gọi bằng `Semaphore(2)`:\n\n```java\ntry {\n    validate(req);          // có thể ném exception\n    permits.acquire();\n    return partner.call(req);\n} finally {\n    permits.release();\n}\n```\n\nBấm \"Request mới\" và \"Request xong\" để thấy semaphore giới hạn ở 2. Rồi bấm \"Lỗi rồi release()\": `validate` ném exception **trước** `acquire`, nhưng `finally` vẫn `release`. Thread bị interrupt trong lúc chờ `acquire()` cũng đi vào `finally` mà chưa lấy được permit, cùng một lỗi.",
+  "config": {
+    "states": [
+      {
+        "id": "avail",
+        "label": "Còn permit",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Còn permit: request mới `acquire` được ngay và gọi API. Tổng \"Permit còn\" + \"Đang gọi API\" luôn là 2."
+      },
+      {
+        "id": "full",
+        "label": "Hết permit",
+        "x": 0.85,
+        "y": 0.5,
+        "note": "Hai lời gọi đang chạy, permit bằng 0. Request mới bị chặn trong `acquire()` (thread ở trạng thái `WAITING`) cho tới khi có `release()`."
+      },
+      {
+        "id": "widened",
+        "label": "Giới hạn bị nới",
+        "x": 0.5,
+        "y": 0.95,
+        "note": "`release()` không kiểm tra thread gọi có từng `acquire` hay không: nó chỉ cộng thêm một permit. Giới hạn giờ là 2 cộng số lần `release()` thừa, và không tự quay về 2. API đối tác nhận nhiều lời gọi hơn mức cho phép và bắt đầu trả 429. Sửa: `acquire()` trước `try`, hoặc chỉ `release()` khi `tryAcquire` thành công."
+      }
+    ],
+    "initial": "avail",
+    "events": [
+      {
+        "id": "req",
+        "label": "Request mới"
+      },
+      {
+        "id": "done",
+        "label": "Request xong"
+      },
+      {
+        "id": "bug",
+        "label": "Lỗi rồi release()"
+      }
+    ],
+    "counters": [
+      {
+        "id": "permits",
+        "label": "Permit còn",
+        "initial": 2
+      },
+      {
+        "id": "running",
+        "label": "Đang gọi API",
+        "initial": 0
+      },
+      {
+        "id": "waiting",
+        "label": "Đang chờ acquire()",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "req-ok",
+        "from": "avail",
+        "event": "req",
+        "to": "avail",
+        "guard": {
+          "counter": "permits",
+          "gte": 2
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": -1
+          },
+          {
+            "counter": "running",
+            "add": 1
+          }
+        ],
+        "note": "`acquire()` lấy một permit và trả về ngay."
+      },
+      {
+        "id": "req-last",
+        "from": "avail",
+        "event": "req",
+        "to": "full",
+        "label": "lấy permit cuối",
+        "guard": {
+          "counter": "permits",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": -1
+          },
+          {
+            "counter": "running",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "done-avail",
+        "from": "avail",
+        "event": "done",
+        "to": "avail",
+        "guard": {
+          "counter": "running",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          },
+          {
+            "counter": "running",
+            "add": -1
+          }
+        ],
+        "note": "`release()` trong `finally` trả permit."
+      },
+      {
+        "id": "req-block",
+        "from": "full",
+        "event": "req",
+        "to": "full",
+        "label": "acquire() chặn",
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": 1
+          }
+        ],
+        "note": "Không còn permit: thread này chờ trong `acquire()`. Với thread pool cố định, nhiều thread cùng chờ ở đây có thể làm cạn pool; dùng `tryAcquire(timeout)` khi không muốn chờ lâu."
+      },
+      {
+        "id": "done-handoff",
+        "from": "full",
+        "event": "done",
+        "to": "full",
+        "label": "trao cho bên chờ",
+        "guard": {
+          "counter": "waiting",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": -1
+          }
+        ],
+        "note": "Một lời gọi xong và `release()`; thread đang chờ lấy ngay permit đó và bắt đầu gọi API. Số lời gọi đang chạy vẫn là 2."
+      },
+      {
+        "id": "done-free",
+        "from": "full",
+        "event": "done",
+        "to": "avail",
+        "label": "release()",
+        "guard": {
+          "counter": "waiting",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          },
+          {
+            "counter": "running",
+            "add": -1
+          }
+        ]
+      },
+      {
+        "id": "bug-avail",
+        "from": "avail",
+        "event": "bug",
+        "to": "widened",
+        "label": "release() thừa",
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "bug-full-wake",
+        "from": "full",
+        "event": "bug",
+        "to": "widened",
+        "label": "release() thừa",
+        "guard": {
+          "counter": "waiting",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": -1
+          },
+          {
+            "counter": "running",
+            "add": 1
+          }
+        ],
+        "note": "Permit thừa đánh thức một thread đang chờ: giờ có **3** lời gọi chạy cùng lúc dù semaphore khởi tạo với 2."
+      },
+      {
+        "id": "bug-full",
+        "from": "full",
+        "event": "bug",
+        "to": "widened",
+        "label": "release() thừa",
+        "guard": {
+          "counter": "waiting",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "w-req-block",
+        "from": "widened",
+        "event": "req",
+        "to": "widened",
+        "label": "acquire() chặn",
+        "guard": {
+          "counter": "permits",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "w-done-handoff",
+        "from": "widened",
+        "event": "done",
+        "to": "widened",
+        "label": "trao cho bên chờ",
+        "guard": {
+          "counter": "waiting",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": -1
+          }
+        ]
+      },
+      {
+        "id": "w-bug-wake",
+        "from": "widened",
+        "event": "bug",
+        "to": "widened",
+        "label": "release() thừa",
+        "guard": {
+          "counter": "waiting",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": -1
+          },
+          {
+            "counter": "running",
+            "add": 1
+          }
+        ],
+        "note": "Permit thừa đánh thức thêm một thread đang chờ: số lời gọi chạy cùng lúc lại tăng."
+      },
+      {
+        "id": "w-req",
+        "from": "widened",
+        "event": "req",
+        "to": "widened",
+        "guard": {
+          "counter": "permits",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": -1
+          },
+          {
+            "counter": "running",
+            "add": 1
+          }
+        ],
+        "note": "Vẫn `acquire` được dù đã có đủ 2 lời gọi chạy, nếu bạn đã gây ra permit thừa."
+      },
+      {
+        "id": "w-done",
+        "from": "widened",
+        "event": "done",
+        "to": "widened",
+        "guard": {
+          "counter": "running",
+          "gte": 1
+        },
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          },
+          {
+            "counter": "running",
+            "add": -1
+          }
+        ]
+      },
+      {
+        "id": "w-bug",
+        "from": "widened",
+        "event": "bug",
+        "to": "widened",
+        "effects": [
+          {
+            "counter": "permits",
+            "add": 1
+          }
+        ],
+        "note": "Mỗi lần lỗi lại nới thêm một permit."
+      }
+    ],
+    "invalidNote": "Không áp dụng lúc này: không có lời gọi nào đang chạy để kết thúc. Bấm \"Làm lại\" để chạy lại từ đầu."
+  }
+}

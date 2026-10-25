@@ -214,7 +214,7 @@
       "meaning": "Nhóm thread tạo sẵn và tái sử dụng để chạy nhiều task, thay vì tạo và huỷ thread cho mỗi task.",
       "example": "`ThreadPoolExecutor` với 10 thread xử lý 10.000 task lần lượt.",
       "related": ["core-pool-size", "work-queue", "connection-pool"],
-      "topics": ["executor-thread-pool"]
+      "topics": ["executor-thread-pool", "threadlocal"]
     },
     {
       "id": "core-pool-size",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal"]
     },
     {
       "id": "pinning",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers"]
     },
     {
       "id": "hash-spreading",
@@ -389,7 +389,7 @@
       "meaning": "Cơ chế yêu cầu một thread dừng việc đang chờ: `thread.interrupt()` đặt cờ ngắt, các method chặn như `sleep`, `wait`, `join` ném `InterruptedException` và xoá cờ.",
       "example": "Bắt `InterruptedException` thì gọi lại `Thread.currentThread().interrupt()` để không làm mất tín hiệu.",
       "related": ["monitor"],
-      "topics": ["thread-lifecycle", "exceptions", "producer-consumer"]
+      "topics": ["thread-lifecycle", "exceptions", "producer-consumer", "synchronizers"]
     },
     {
       "id": "jmm",
@@ -405,7 +405,7 @@
       "meaning": "Quan hệ thứ tự của JMM: nếu A happens-before B thì mọi thứ A ghi đều hiện ra với B. Tạo bởi program order, unlock→lock cùng monitor, ghi→đọc cùng biến volatile, `start()`, `join()`, và có tính bắc cầu.",
       "example": "Ghi `ready = true` (volatile) sau `data = 42`; thread đọc thấy `ready` là `true` thì chắc chắn thấy `data = 42`.",
       "related": ["jmm", "visibility"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "synchronizers"]
     },
     {
       "id": "visibility",
@@ -709,7 +709,7 @@
       "meaning": "Mô hình (`StructuredTaskScope`, preview từ Java 21, API còn thay đổi giữa các bản) coi các task con là một khối: chờ cùng nhau, một task lỗi thì huỷ các task còn lại.",
       "example": "Gọi song song user và orders; orders lỗi thì user tự bị huỷ.",
       "related": ["virtual-thread"],
-      "topics": ["completable-future"]
+      "topics": ["completable-future", "synchronizers", "threadlocal"]
     },
     {
       "id": "b-tree",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers"]
     },
     {
       "id": "redis-sentinel",
@@ -3285,7 +3285,7 @@
       "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
       "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
       "related": ["transaction"],
-      "topics": ["transactional-basics"]
+      "topics": ["transactional-basics", "threadlocal"]
     },
     {
       "id": "aop-proxy",
@@ -3573,7 +3573,7 @@
       "meaning": "Đạt thread-safe bằng cách không chia sẻ: dữ liệu chỉ một thread chạm tới, như biến cục bộ, tham số hay `ThreadLocal` (trong thread pool phải `remove()` khi xong, nếu không dữ liệu rò sang request sau).",
       "example": "Tạo `List<String> errors` trong method `validate` thay vì giữ nó trong field của bean singleton.",
       "related": ["thread-safe", "thread-local"],
-      "topics": ["concurrency-basics"]
+      "topics": ["concurrency-basics", "threadlocal"]
     },
     {
       "id": "producer-consumer",
@@ -3614,6 +3614,86 @@
       "example": "`ArrayBlockingQueue` dùng một `ReentrantLock` với hai `Condition`: `notFull` cho producer, `notEmpty` cho consumer.",
       "related": ["monitor", "spurious-wakeup"],
       "topics": ["producer-consumer"]
+    },
+    {
+      "id": "count-down-latch",
+      "term": "CountDownLatch",
+      "meaning": "Bộ đếm dùng một lần: `countDown()` giảm và không chặn, `await()` chặn tới khi bộ đếm về 0. Dùng để chờ N việc xong.",
+      "example": "Thread chính `await(30, SECONDS)` chờ 4 tác vụ nạp cache, mỗi tác vụ `countDown()` trong `finally`.",
+      "related": ["cyclic-barrier", "aqs"],
+      "topics": ["synchronizers"]
+    },
+    {
+      "id": "semaphore",
+      "term": "Semaphore",
+      "meaning": "Bộ đếm permit giới hạn số thread làm một việc cùng lúc: `acquire()` lấy permit (hết thì chờ), `release()` trả. Permit không gắn với thread, nên `release()` thừa làm tăng giới hạn.",
+      "example": "`Semaphore(20)` quanh lời gọi API đối tác chỉ chịu 20 request đồng thời.",
+      "related": ["bulkhead", "aqs"],
+      "topics": ["synchronizers"]
+    },
+    {
+      "id": "cyclic-barrier",
+      "term": "CyclicBarrier",
+      "meaning": "Điểm hẹn cho một nhóm cố định N thread: thread tới gọi `await()` và chờ tới khi đủ N, rồi cả nhóm đi tiếp và barrier tự đặt lại cho vòng sau. Một bên lỗi thì barrier vỡ.",
+      "example": "4 worker tính 4 phần của lưới, chờ nhau ở barrier sau mỗi bước mô phỏng.",
+      "related": ["count-down-latch", "phaser"],
+      "topics": ["synchronizers"]
+    },
+    {
+      "id": "phaser",
+      "term": "Phaser",
+      "meaning": "Barrier nhiều pha với số bên tham gia thay đổi được lúc chạy: `register()`, `arriveAndAwaitAdvance()`, `arriveAndDeregister()`.",
+      "example": "Mỗi tác vụ con tự `register()` khi được tạo và `arriveAndDeregister()` khi xong; bên điều phối chờ từng pha.",
+      "related": ["cyclic-barrier"],
+      "topics": ["synchronizers"]
+    },
+    {
+      "id": "aqs",
+      "term": "AQS",
+      "meaning": "`AbstractQueuedSynchronizer`: khung dựng lock và synchronizer của `java.util.concurrent`, gồm một biến state `int` đổi bằng CAS và một hàng đợi các thread đang chờ.",
+      "example": "`ReentrantLock`, `Semaphore`, `CountDownLatch` đều có lớp `Sync` nội bộ kế thừa AQS, mỗi lớp hiểu state theo cách riêng.",
+      "related": ["cas", "semaphore", "count-down-latch"],
+      "topics": ["synchronizers"]
+    },
+    {
+      "id": "scoped-value",
+      "term": "ScopedValue",
+      "meaning": "Giá trị bất biến gắn vào một phạm vi thực thi (`ScopedValue.where(K, v).run(...)`), đọc được trong phạm vi đó và trong task con của `StructuredTaskScope` (vẫn preview ở JDK 25), tự hết khi ra khỏi phạm vi. Chính thức từ JDK 25.",
+      "example": "`ScopedValue.where(TENANT, \"t-42\").run(() -> handle(request));`",
+      "related": ["thread-local", "structured-concurrency"],
+      "topics": ["threadlocal"]
+    },
+    {
+      "id": "mdc",
+      "term": "MDC",
+      "meaning": "Mapped Diagnostic Context: bảng key-value theo thread của thư viện log (SLF4J, Logback), tự gắn vào mọi dòng log của thread đó. Dựa trên `ThreadLocal` nên không tự sang thread khác.",
+      "example": "`MDC.put(\"traceId\", id)` trong filter, pattern log có `%X{traceId}`.",
+      "related": ["thread-local", "context-propagation"],
+      "topics": ["threadlocal"]
+    },
+    {
+      "id": "inheritable-thread-local",
+      "term": "InheritableThreadLocal",
+      "meaning": "`ThreadLocal` mà giá trị được copy sang thread con lúc thread con được **tạo**. Không hợp với thread pool vì thread được tạo một lần rồi dùng lại.",
+      "example": "`SecurityContextHolder.MODE_INHERITABLETHREADLOCAL` làm thread trong pool mang danh tính của request đã tạo ra nó.",
+      "related": ["thread-local"],
+      "topics": ["threadlocal"]
+    },
+    {
+      "id": "context-propagation",
+      "term": "Context propagation",
+      "meaning": "Copy context theo request (trace id, MDC, user, tenant) từ thread này sang thread khác khi công việc đổi thread, vì `ThreadLocal` không tự đi theo.",
+      "example": "`TaskDecorator` lấy `MDC.getCopyOfContextMap()` lúc nộp task và `MDC.setContextMap(...)` trong thread chạy task.",
+      "related": ["thread-local", "mdc"],
+      "topics": ["threadlocal"]
+    },
+    {
+      "id": "weak-reference",
+      "term": "Weak reference",
+      "meaning": "Tham chiếu không giữ object khỏi bị GC: khi chỉ còn weak reference trỏ tới, object có thể bị thu hồi ở lần GC tiếp theo.",
+      "example": "`ThreadLocalMap` giữ key `ThreadLocal` bằng weak reference, nhưng value bằng tham chiếu mạnh.",
+      "related": ["thread-local"],
+      "topics": ["threadlocal"]
     }
   ]
 }

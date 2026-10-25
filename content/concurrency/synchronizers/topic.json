@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "synchronizers",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "CountDownLatch, Semaphore, CyclicBarrier, Phaser",
+  "summary": "Chọn đúng công cụ phối hợp thread: chờ N việc xong (CountDownLatch), giới hạn số việc chạy đồng thời (Semaphore), hẹn nhau từng vòng (CyclicBarrier, Phaser); các bẫy release thừa, quên countDown, barrier bị vỡ; và khi nào CompletableFuture hay structured concurrency hợp hơn.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool"],
+  "terms": ["count-down-latch", "semaphore", "cyclic-barrier", "phaser", "aqs", "bulkhead", "happens-before", "virtual-thread", "structured-concurrency", "thread-interrupt", "rate-limiting"],
+  "references": [
+    { "title": "Javadoc java.util.concurrent: Synchronizers (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/package-summary.html" },
+    { "title": "Javadoc Semaphore (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Semaphore.html" },
+    { "title": "Javadoc CyclicBarrier (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CyclicBarrier.html" },
+    { "title": "Javadoc Phaser (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Phaser.html" },
+    { "title": "JEP 444: Virtual Threads", "url": "https://openjdk.org/jeps/444" }
+  ],
+  "blocks": [
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`Semaphore(1)` có thay được `ReentrantLock` không?\" Không hẳn. Semaphore không gắn permit với thread: không reentrant (thread đang giữ gọi `acquire()` lần nữa là tự chặn mình), và thread khác `release()` được, nên không có khái niệm \"chủ sở hữu\". Lock có `Condition`, `isHeldByCurrentThread()` và nhả đúng thread. Semaphore 1 permit chỉ hợp khi cố ý cần thread khác mở khoá. Hỏi tiếp thường là \"Semaphore khác rate limiter thế nào\": giới hạn số việc đang chạy, không phải số việc mỗi giây." }
+  ]
+}

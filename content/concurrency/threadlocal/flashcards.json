@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "where", "front": "Giá trị `ThreadLocal` được lưu ở đâu?", "back": "Trong `ThreadLocalMap` của từng `Thread`, key là object `ThreadLocal`. Sống tới khi thread chết hoặc gọi `remove()`." },
+    { "id": "pool-leak", "front": "Vì sao `ThreadLocal` không dọn trong thread pool nguy hiểm?", "back": "Thread được dùng lại: request sau trên cùng thread đọc được giá trị của request trước (tenant, user). Dọn bằng `remove()` trong `finally`." },
+    { "id": "posthandle", "front": "Dọn context trong `HandlerInterceptor.postHandle` có đủ không?", "back": "Không. `postHandle` bị bỏ qua khi handler ném exception. Dùng `afterCompletion`, hoặc filter với `try`/`finally`." },
+    { "id": "remove-vs-null", "front": "`remove()` khác `set(null)` thế nào?", "back": "`set(null)` để lại entry với giá trị `null`; `remove()` xoá entry, lần `get()` sau gọi lại `initialValue()`." },
+    { "id": "async", "front": "Vì sao `@Async` mất MDC và `SecurityContext`?", "back": "Chúng nằm trong `ThreadLocal` của thread gọi; task chạy trên thread khác. Copy bằng `TaskDecorator` hoặc context propagation của Micrometer." },
+    { "id": "inheritable", "front": "Vì sao `InheritableThreadLocal` sai với thread pool?", "back": "Chỉ copy lúc tạo thread. Thread trong pool tạo một lần rồi dùng lại, nên mang giá trị của request đã tạo ra nó." },
+    { "id": "weak-key", "front": "`ThreadLocalMap` giữ key và value thế nào?", "back": "Key là weak reference tới `ThreadLocal`, value là tham chiếu mạnh. Thread sống lâu thì value còn đó dù `ThreadLocal` đã bị bỏ: rò bộ nhớ." },
+    { "id": "vt", "front": "`ThreadLocal` với virtual thread có vấn đề gì?", "back": "Chạy đúng, nhưng mỗi virtual thread một bản: cache object đắt theo thread vừa tốn bộ nhớ vừa không tái dùng được." },
+    { "id": "scoped", "front": "`ScopedValue` khác `ThreadLocal` thế nào?", "back": "Bất biến, chỉ sống trong `where(...).run(...)`, không cần dọn, và task con của `StructuredTaskScope` (vẫn preview) tự thấy. Chính thức từ JDK 25." },
+    { "id": "parallel", "front": "Đọc `ThreadLocal` trong parallel stream thì sao?", "back": "Phần chạy trên thread gọi thấy giá trị, phần chạy trên common pool thì không: lỗi chập chờn. Truyền qua tham số." }
+  ]
+}

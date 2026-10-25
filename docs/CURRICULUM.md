@@ -161,8 +161,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `deadlock` | Deadlock | mid | Coffman, lock ordering, phát hiện | A L S B | ✅ |
 | 5 | `producer-consumer` | ✚ Producer–consumer & BlockingQueue | mid | `wait/notify` và `BlockingQueue`, bounded queue, backpressure, poison pill | A L S | ✅ |
 | 6 | `executor-thread-pool` | ExecutorService & Thread Pool | mid | Tham số, sizing, virtual thread | A L D Sc | ✅ |
-| 7 | `synchronizers` | CountDownLatch, Semaphore, CyclicBarrier, Phaser | mid | Chọn đúng công cụ, giới hạn đồng thời | L S | ⬜ |
-| 8 | `threadlocal` | ThreadLocal & ScopedValue | mid | Rò rỉ trong thread pool, MDC, context propagation | L B | ⬜ |
+| 7 | `synchronizers` | CountDownLatch, Semaphore, CyclicBarrier, Phaser | mid | Chọn đúng công cụ, giới hạn đồng thời | L S | ✅ |
+| 8 | `threadlocal` | ThreadLocal & ScopedValue | mid | Rò rỉ trong thread pool, MDC, context propagation | L B | ✅ |
 | 9 | `completable-future` | CompletableFuture | senior | Nối chuỗi, lỗi, executor | L D B | ✅ |
 | 10 | `java-memory-model` | Java Memory Model | senior | Happens-before, safe publication, final field, reordering, DCL | L S B | ⬜ |
 | 11 | `locks-aqs` | Lock & AQS | senior | ReentrantLock, ReadWriteLock, StampedLock, Condition, fairness, AQS | L S B | ⬜ |

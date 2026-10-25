@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "threadlocal",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "ThreadLocal & ScopedValue",
+  "summary": "ThreadLocal lưu ở đâu và vì sao rò dữ liệu giữa các request trong thread pool; dọn bằng remove trong finally; context không tự đi sang thread khác (MDC, SecurityContext, @Async); InheritableThreadLocal; ThreadLocal với virtual thread; ScopedValue thay thế thế nào.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool"],
+  "terms": ["thread-local", "scoped-value", "mdc", "inheritable-thread-local", "context-propagation", "thread-confinement", "thread-pool", "virtual-thread", "structured-concurrency", "weak-reference"],
+  "references": [
+    { "title": "Javadoc ThreadLocal (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ThreadLocal.html" },
+    { "title": "JEP 506: Scoped Values", "url": "https://openjdk.org/jeps/506" },
+    { "title": "Logback manual: Mapped Diagnostic Context", "url": "https://logback.qos.ch/manual/mdc.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Key của `ThreadLocalMap` là weak reference, sao vẫn rò bộ nhớ?\" Vì chỉ key là yếu. Value giữ bằng tham chiếu mạnh từ chính `Thread`, nên khi object `ThreadLocal` bị bỏ, entry còn lại với key `null` và value vẫn sống tới khi map tình cờ dọn hoặc thread chết. Thread pool sống suốt đời ứng dụng nên value ở lại mãi. Hỏi tiếp thường là \"vậy `ScopedValue` có rò không\": không, liên kết tự hết khi ra khỏi `run`." }
+  ]
+}

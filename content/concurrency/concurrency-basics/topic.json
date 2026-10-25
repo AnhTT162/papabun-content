@@ -19,6 +19,7 @@
   "blocks": [
     { "type": "analogy", "file": "analogy.md" },
     { "type": "simulation", "file": "simulation.json" },
-    { "type": "layered", "file": "layered.md" }
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`ConcurrentHashMap` thread-safe rồi, sao code dùng nó vẫn sai?\" Vì thread-safe là từng lời gọi, không phải chuỗi lời gọi. `containsKey` rồi `put`, hay `get` rồi `put` để cộng dồn, là thao tác ghép: hai thread chen vào giữa được. Dùng thao tác atomic của chính map (`computeIfAbsent`, `merge`, `putIfAbsent`). Hỏi tiếp thường là \"còn nhiều instance thì sao\": khoá trong JVM không đủ, phải đưa thao tác atomic xuống database." }
   ]
 }

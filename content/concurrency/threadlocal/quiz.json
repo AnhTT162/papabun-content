@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "async-mdc",
+      "kind": "single",
+      "prompt": "Filter đặt `MDC.put(\"traceId\", ...)` cho mỗi request. Service gọi một method `@Async`; log trong method đó không có `traceId`. Vì sao?",
+      "options": [
+        "MDC nằm trong `ThreadLocal`, còn method `@Async` chạy trên thread khác",
+        "`@Async` tạo bean mới qua proxy nên MDC của bean cũ không được dùng lại",
+        "Logback chỉ ghi MDC cho log của các thread `http-nio-*` theo cấu hình mặc định",
+        "`MDC.put` chỉ có hiệu lực tới khi filter trả về, trước khi service chạy"
+      ],
+      "answer": 0,
+      "explanation": "MDC của Logback lưu trong `ThreadLocal`; executor của `@Async` chạy task trên thread khác nên MDC trống, và Logback từ 1.1.5 không cho thread con kế thừa MDC. Copy MDC lúc nộp task bằng `TaskDecorator`, hoặc dùng context propagation của Micrometer."
+    },
+    {
+      "id": "inheritable-pool",
+      "kind": "single",
+      "prompt": "Để `@Async` thấy user hiện tại, nhóm đổi `SecurityContextHolder` sang `MODE_INHERITABLETHREADLOCAL`. Executor là pool 8 thread. Sau vài giờ, audit log ghi sai người thực hiện. Vì sao?",
+      "options": [
+        "Giá trị chỉ được copy khi tạo thread; thread trong pool giữ user của request đã tạo ra nó",
+        "`InheritableThreadLocal` chỉ hoạt động với virtual thread, nên pool platform thread đọc rỗng",
+        "Spring Security xoá context của thread cha ngay khi `@Async` trả về `Future`",
+        "Chế độ inheritable dùng chung một context cho mọi thread nên request song song ghi đè nhau"
+      ],
+      "answer": 0,
+      "explanation": "`InheritableThreadLocal` copy giá trị một lần lúc tạo thread con. Thread trong pool được tạo ở vài request đầu rồi dùng lại mãi, nên mang danh tính của request đó cho mọi task sau. Dùng `DelegatingSecurityContextAsyncTaskExecutor` hoặc `TaskDecorator` để copy context cho từng task."
+    },
+    {
+      "id": "set-null",
+      "kind": "single",
+      "prompt": "Code dọn bằng `CURRENT.set(null)` thay vì `CURRENT.remove()`, với `CURRENT = ThreadLocal.withInitial(() -> \"default\")`. Lần `CURRENT.get()` sau trên cùng thread trả gì?",
+      "options": [
+        "`null`: entry vẫn còn nên `initialValue` không chạy lại",
+        "`\"default\"`, vì `set(null)` tương đương `remove()` trong `ThreadLocal`",
+        "Ném `NullPointerException` vì `ThreadLocalMap` không chứa giá trị `null`",
+        "Giá trị trước đó, vì `set(null)` bị bỏ qua để tránh xoá nhầm"
+      ],
+      "answer": 0,
+      "explanation": "`set(null)` lưu `null` làm giá trị; entry vẫn còn nên `get()` trả `null` và không gọi `initialValue()`. `remove()` xoá entry, lần `get()` sau mới gọi lại `initialValue()` và trả `\"default\"`."
+    },
+    {
+      "id": "vt-cache",
+      "kind": "single",
+      "prompt": "Một thư viện cache `byte[64 KB]` trong `ThreadLocal` để tái dùng buffer. Chuyển ứng dụng sang virtual thread với 50.000 request đồng thời. Điều gì đáng lo nhất?",
+      "options": [
+        "Mỗi virtual thread có một buffer riêng: khoảng 3 GB và không tái dùng được",
+        "Virtual thread không hỗ trợ `ThreadLocal`, nên `get()` ném `UnsupportedOperationException`",
+        "Mọi virtual thread trên cùng carrier dùng chung một buffer nên dữ liệu bị trộn",
+        "Buffer bị copy mỗi lần virtual thread đổi carrier thread nên CPU tăng mạnh"
+      ],
+      "answer": 0,
+      "explanation": "`ThreadLocal` gắn với virtual thread, không với carrier, nên mỗi virtual thread một bản và không bị trộn hay copy khi đổi carrier. Nhưng virtual thread sống ngắn, mỗi request một thread, nên cache theo thread mất tác dụng: 50.000 × 64 KB là khoảng 3 GB tạo ra rồi bỏ. Dùng pool object có giới hạn hoặc cấp buffer theo request."
+    },
+    {
+      "id": "scoped-value-executor",
+      "kind": "output",
+      "prompt": "Với JDK 25, đoạn sau in gì?",
+      "code": "static final ScopedValue<String> USER = ScopedValue.newInstance();\n\nScopedValue.where(USER, \"alice\").run(() -> {\n    System.out.println(USER.get());\n    CompletableFuture.runAsync(() -> System.out.println(USER.isBound()), executor).join();\n});\nSystem.out.println(USER.isBound());",
+      "options": [
+        "`alice`, `false`, `false`",
+        "`alice`, `true`, `false`",
+        "`alice`, `true`, `true`",
+        "`alice`, rồi `NoSuchElementException` trong task của executor"
+      ],
+      "answer": 0,
+      "explanation": "Trong `run`, `USER` gắn với `alice`. Task nộp vào executor thường chạy trên thread khác và không kế thừa scoped value; chỉ task con của `StructuredTaskScope` mới kế thừa, nên `isBound()` là `false` (không ném lỗi vì không gọi `get()`). Ra khỏi `run`, giá trị hết hiệu lực."
+    },
+    {
+      "id": "parallel-stream",
+      "kind": "single",
+      "prompt": "Trong request có `TenantContext` (một `ThreadLocal`), code gọi `orders.parallelStream().map(this::enrich).toList()`, và `enrich` đọc `TenantContext.get()`. Kết quả hay gặp là gì?",
+      "options": [
+        "Một số phần tử thấy tenant, số khác không, tuỳ phần tử chạy trên thread nào",
+        "Mọi phần tử thấy tenant vì parallel stream copy `ThreadLocal` sang common pool",
+        "Không phần tử nào thấy tenant vì parallel stream không bao giờ dùng thread gọi",
+        "Ném `IllegalStateException` vì `ThreadLocal` bị cấm trong parallel stream"
+      ],
+      "answer": 0,
+      "explanation": "Parallel stream chia việc cho `ForkJoinPool.commonPool()` và cả thread gọi cùng làm. Phần chạy trên thread gọi thấy tenant, phần chạy trên common pool thì không: lỗi chập chờn tuỳ dữ liệu và tải. Truyền tenant qua tham số, hoặc không dùng parallel stream cho code phụ thuộc context."
+    }
+  ]
+}

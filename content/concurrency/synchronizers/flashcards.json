@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "latch", "front": "`CountDownLatch` dùng khi nào?", "back": "Chờ tới khi N việc xong, một lần. `countDown()` không chặn, `await()` chặn tới khi bộ đếm về 0. Không đặt lại được." },
+    { "id": "latch-finally", "front": "Vì sao `countDown()` phải nằm trong `finally`?", "back": "Task ném exception mà bỏ qua `countDown()` thì bộ đếm không về 0 và `await()` chờ mãi. Thêm `await(timeout, unit)` và kiểm tra kết quả." },
+    { "id": "semaphore", "front": "`Semaphore` dùng khi nào?", "back": "Giới hạn số việc chạy cùng lúc, ví dụ tối đa 20 lời gọi đồng thời tới một downstream." },
+    { "id": "release-extra", "front": "`release()` khi chưa `acquire()` thì sao?", "back": "Permit tăng vượt số ban đầu, giới hạn bị nới vĩnh viễn. Đặt `acquire()` ngoài `try` và `release()` trong `finally`." },
+    { "id": "barrier", "front": "`CyclicBarrier` khác `CountDownLatch` thế nào?", "back": "Barrier: N thread chờ lẫn nhau, thread tới sau cùng chạy action, rồi barrier tự đặt lại cho vòng sau. Latch: một bên chờ N sự kiện, dùng một lần." },
+    { "id": "broken", "front": "Barrier \"vỡ\" khi nào?", "back": "Một thread chờ bị interrupt, hết timeout, hoặc barrier action ném exception. Các thread khác nhận `BrokenBarrierException` tới khi `reset()`." },
+    { "id": "phaser", "front": "Khi nào dùng `Phaser`?", "back": "Nhiều pha mà số bên tham gia thay đổi: `register()` để vào, `arriveAndDeregister()` để rời, `arriveAndAwaitAdvance()` để chờ cả nhóm." },
+    { "id": "vt-semaphore", "front": "Giới hạn đồng thời với virtual thread thế nào?", "back": "Không gom virtual thread vào pool; đặt `Semaphore` quanh tài nguyên khan hiếm (database, API đối tác), như JEP 444 khuyên." },
+    { "id": "aqs", "front": "Synchronizer nào dựng trên AQS?", "back": "`CountDownLatch` và `Semaphore` (chế độ chia sẻ). `CyclicBarrier` dùng `ReentrantLock` + `Condition`; `Phaser` tự quản lý state." },
+    { "id": "jvm-only", "front": "4 pod mỗi pod `Semaphore(20)` cho phép bao nhiêu lời gọi đồng thời?", "back": "80. Semaphore chỉ trong một JVM; giới hạn chung cần gateway, rate limiter dùng chung, hoặc chia hạn mức theo số pod." }
+  ]
+}

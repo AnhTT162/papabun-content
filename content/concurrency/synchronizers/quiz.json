@@ -1,0 +1,85 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pick-tool",
+      "kind": "single",
+      "prompt": "Lúc khởi động, service nạp song song 4 bộ cache, và chỉ được nhận traffic khi cả 4 đã nạp xong. Mỗi bộ nạp một lần. Công cụ nào hợp nhất?",
+      "options": [
+        "`CountDownLatch(4)`, `countDown()` trong `finally`, thread chính `await(timeout)`",
+        "`Semaphore(4)`: mỗi tác vụ `acquire()` khi bắt đầu, thread chính chờ tới khi còn permit",
+        "`CyclicBarrier(4)`: bốn tác vụ chờ nhau, rồi thread chính tự động đi tiếp sau barrier",
+        "`Phaser` không cần đăng ký bên nào, vì phaser tự đếm số thread đang có trong executor"
+      ],
+      "answer": 0,
+      "explanation": "Chờ N việc xong một lần là đúng việc của `CountDownLatch`. `CyclicBarrier(4)` chỉ cho bốn tác vụ chờ lẫn nhau; thread chính không tham gia nên không biết khi nào xong, trừ khi tính nó vào và đặt 5 bên. `Semaphore` giới hạn số việc chạy cùng lúc, không báo khi nào xong. `Phaser` không tự đếm thread; phải `register`. Trong thực tế `CompletableFuture.allOf` cũng làm được việc này gọn hơn."
+    },
+    {
+      "id": "latch-exception",
+      "kind": "output",
+      "prompt": "Một trong ba tác vụ ném `IllegalStateException`. Thread chính làm gì?",
+      "code": "CountDownLatch done = new CountDownLatch(3);\nfor (Job job : jobs) {          // 3 job\n    executor.submit(() -> {\n        job.run();\n        done.countDown();\n    });\n}\ndone.await();\nSystem.out.println(\"xong\");",
+      "options": [
+        "Chờ mãi ở `await()`, và log không có dòng lỗi nào",
+        "In \"xong\" vì latch tự giảm bộ đếm khi task ném exception trong executor",
+        "`await()` ném lại `IllegalStateException` của task bị lỗi cho thread chính",
+        "`await()` ném `BrokenBarrierException` vì một bên không tới được điểm hẹn"
+      ],
+      "answer": 0,
+      "explanation": "Task lỗi không gọi `countDown()`, bộ đếm dừng ở 1 và `await()` không có timeout nên chờ mãi. Với `submit`, exception được giữ trong `Future` không ai đọc, nên log không có gì. Latch không biết gì về task và không chuyển exception; `BrokenBarrierException` là của `CyclicBarrier`. Sửa: `countDown()` trong `finally`, `await(timeout, unit)` và kiểm tra kết quả, hoặc dùng `invokeAll`/`CompletableFuture` để nhận cả lỗi."
+    },
+    {
+      "id": "semaphore-release-unacquired",
+      "kind": "output",
+      "prompt": "Đoạn sau in gì?",
+      "code": "Semaphore s = new Semaphore(2);\ns.acquire();\ns.release();\ns.release();\nSystem.out.println(s.availablePermits());",
+      "options": [
+        "`3`",
+        "`2`, vì semaphore không cho vượt số permit ban đầu",
+        "Ném `IllegalMonitorStateException` ở lần `release()` thứ hai",
+        "Ném `IllegalStateException` vì thread này chỉ `acquire` một lần"
+      ],
+      "answer": 0,
+      "explanation": "`Semaphore` không theo dõi thread nào giữ permit và không có trần: mỗi `release()` cộng một permit. Lần `release()` thừa nâng giới hạn lên 3. `IllegalMonitorStateException` là của monitor và `ReentrantLock` khi nhả lock không giữ, không phải của semaphore."
+    },
+    {
+      "id": "barrier-broken",
+      "kind": "single",
+      "prompt": "Bốn worker dùng `CyclicBarrier(4)` để đồng bộ từng vòng tính toán. Ở vòng 7, worker 3 bị interrupt trong lúc `await()`. Ba worker còn lại thế nào?",
+      "options": [
+        "Bên đang chờ và bên tới sau đều nhận `BrokenBarrierException`",
+        "Tiếp tục chờ worker 3 quay lại, vì barrier chỉ đếm số lần gọi `await()`",
+        "Đi tiếp sang vòng 8 với ba bên, vì barrier tự giảm số bên tham gia",
+        "Cũng nhận `InterruptedException`, vì interrupt được truyền cho cả nhóm"
+      ],
+      "answer": 0,
+      "explanation": "Một bên bị interrupt, hết timeout hay barrier action lỗi thì barrier vỡ: thread bị interrupt nhận `InterruptedException`, các thread khác đang chờ (và mọi lần `await()` sau đó) nhận `BrokenBarrierException`. Barrier không tự giảm số bên; số bên thay đổi được là đặc điểm của `Phaser`."
+    },
+    {
+      "id": "virtual-thread-limit",
+      "kind": "single",
+      "prompt": "Service chuyển từ pool 30 platform thread sang `Executors.newVirtualThreadPerTaskExecutor()`. Sau đó HikariCP liên tục báo timeout khi chờ connection và API đối tác trả 429. Cách sửa phù hợp nhất?",
+      "options": [
+        "Giữ virtual thread, đặt `Semaphore` quanh lời gọi database và đối tác",
+        "Quay về pool 30 platform thread, vì virtual thread không hợp với tác vụ I/O",
+        "Đổi sang `newFixedThreadPool(30)` nhưng truyền factory sinh virtual thread",
+        "Tăng `maximumPoolSize` của HikariCP lên bằng số request đồng thời lúc cao điểm"
+      ],
+      "answer": 0,
+      "explanation": "Pool 30 thread từng ngầm giới hạn 30 việc đồng thời; virtual thread bỏ giới hạn đó, nên phải giới hạn rõ ở đúng tài nguyên khan hiếm. JEP 444 khuyên dùng semaphore thay vì gom virtual thread vào pool. Pool cố định sinh virtual thread chính là điều JEP 444 khuyên tránh: virtual thread rẻ, không cần gom, và giới hạn nên gắn với tài nguyên chứ không với số thread; tăng pool connection chỉ chuyển áp lực sang database."
+    },
+    {
+      "id": "multi-pod",
+      "kind": "single",
+      "prompt": "Đối tác cho phép tối đa 20 lời gọi đồng thời. Service chạy 4 pod, mỗi pod bọc lời gọi bằng `Semaphore(20)`. Có bao nhiêu lời gọi đồng thời tới đối tác lúc cao điểm?",
+      "options": [
+        "Tới 80, vì mỗi pod có semaphore riêng",
+        "Tối đa 20, vì các pod sau phải chờ ở `acquire()`",
+        "Tối đa 20, vì `Semaphore` dùng chung qua JMX giữa các JVM",
+        "Tối đa 5 mỗi pod, vì semaphore tự chia theo số replica"
+      ],
+      "answer": 0,
+      "explanation": "Semaphore chỉ sống trong một JVM. Muốn giới hạn chung thì đặt ở chỗ dùng chung (gateway, rate limiter dùng Redis), hoặc chia hạn mức theo số pod (`Semaphore(5)` mỗi pod) và cập nhật khi scale."
+    }
+  ]
+}
