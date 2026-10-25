@@ -1,0 +1,422 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Bước con lỗi bên trong transaction: REQUIRED, REQUIRES_NEW và NESTED",
+  "instructions": "`OrderService.placeOrder()` có `@Transactional`: ghi đơn hàng, rồi gọi `couponService.redeem()` ở bean khác. `redeem()` ném `RuntimeException` (mã giảm giá hết hạn); `placeOrder()` `catch` lỗi đó và đặt đơn không giảm giá. Repository dùng `JdbcTemplate`. Bấm \"Đổi propagation\" để chọn propagation của `redeem()`, chạy hết một lượt, rồi đổi sang kiểu khác (ngay ở bước cuối) và chạy lại. \"Đơn đã commit\" và \"Lỗi 500\" cộng dồn qua các lượt để bạn so sánh; bấm \"Làm lại\" để đưa về 0.",
+  "config": {
+    "states": [
+      {
+        "id": "idle",
+        "label": "Chưa có tx",
+        "x": 0.1,
+        "y": 0.1,
+        "note": "Chưa có request. Bộ đếm \"Propagation\" cho biết kiểu đang chọn cho `redeem()`: 0 là `REQUIRED`, 1 là `REQUIRES_NEW`, 2 là `NESTED`."
+      },
+      {
+        "id": "outer",
+        "label": "Tx ngoài",
+        "x": 0.5,
+        "y": 0.1,
+        "note": "Proxy của `placeOrder()` lấy connection #1, tắt autocommit, gắn transaction vào thread rồi chạy `INSERT INTO orders`. Dòng mới chưa commit. Bấm \"Gọi redeem()\"."
+      },
+      {
+        "id": "joined",
+        "label": "Cùng tx",
+        "x": 0.9,
+        "y": 0.1,
+        "note": "`REQUIRED`: đã có transaction nên `redeem()` **tham gia**, cùng connection #1. Nó không có quyền commit hay rollback riêng."
+      },
+      {
+        "id": "new-tx",
+        "label": "Tx mới",
+        "x": 0.9,
+        "y": 0.5,
+        "note": "`REQUIRES_NEW`: Spring tạm dừng transaction ngoài (gỡ khỏi thread nhưng **connection #1 vẫn bị giữ**, kèm mọi lock của nó) rồi lấy connection #2 từ pool cho transaction mới."
+      },
+      {
+        "id": "savepoint",
+        "label": "Savepoint",
+        "x": 0.9,
+        "y": 0.9,
+        "note": "`NESTED`: vẫn connection #1. Spring gọi `Connection.setSavepoint()` trước khi chạy `redeem()`."
+      },
+      {
+        "id": "marked",
+        "label": "Rollback-only",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "`placeOrder()` `catch` lỗi, log cảnh báo và chạy tiếp như không có gì. Nhưng dấu rollback-only vẫn nằm trên transaction chung, và không có cách nào gỡ nó ra."
+      },
+      {
+        "id": "resumed",
+        "label": "Tx ngoài chạy tiếp",
+        "x": 0.5,
+        "y": 0.9,
+        "note": "Phần việc của `redeem()` đã bị huỷ riêng; transaction ngoài không bị đánh dấu gì. `placeOrder()` `catch` lỗi và đặt đơn không giảm giá."
+      },
+      {
+        "id": "failed",
+        "label": "Commit lỗi",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Commit thất bại: `UnexpectedRollbackException: Transaction silently rolled back because it has been marked as rollback-only`. Client nhận 500, đơn hàng không được lưu."
+      },
+      {
+        "id": "committed",
+        "label": "Đã commit",
+        "x": 0.1,
+        "y": 0.9,
+        "note": "Đơn hàng được lưu, không có giảm giá. Lỗi của `redeem()` không kéo theo transaction ngoài."
+      }
+    ],
+    "initial": "idle",
+    "events": [
+      {
+        "id": "toggle",
+        "label": "Đổi propagation"
+      },
+      {
+        "id": "call",
+        "label": "Gọi placeOrder()"
+      },
+      {
+        "id": "inner",
+        "label": "Gọi redeem()"
+      },
+      {
+        "id": "step",
+        "label": "Bước tiếp"
+      }
+    ],
+    "counters": [
+      {
+        "id": "mode",
+        "label": "Propagation (0 REQUIRED, 1 REQUIRES_NEW, 2 NESTED)",
+        "initial": 0
+      },
+      {
+        "id": "conn",
+        "label": "Connection đang giữ",
+        "initial": 0
+      },
+      {
+        "id": "orders",
+        "label": "Đơn đã commit",
+        "initial": 0
+      },
+      {
+        "id": "errors",
+        "label": "Lỗi 500 trả cho client",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "to-new",
+        "from": "idle",
+        "event": "toggle",
+        "to": "idle",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 1
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = REQUIRES_NEW)`."
+      },
+      {
+        "id": "to-nested",
+        "from": "idle",
+        "event": "toggle",
+        "to": "idle",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 2
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = NESTED)`."
+      },
+      {
+        "id": "to-required",
+        "from": "idle",
+        "event": "toggle",
+        "to": "idle",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 2
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 0
+          }
+        ],
+        "note": "`redeem()` quay lại `@Transactional` mặc định, tức `REQUIRED`."
+      },
+      {
+        "id": "begin",
+        "from": "idle",
+        "event": "call",
+        "to": "outer",
+        "label": "begin",
+        "effects": [
+          {
+            "counter": "conn",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "join",
+        "from": "outer",
+        "event": "inner",
+        "to": "joined",
+        "label": "REQUIRED",
+        "guard": {
+          "counter": "mode",
+          "eq": 0
+        }
+      },
+      {
+        "id": "suspend",
+        "from": "outer",
+        "event": "inner",
+        "to": "new-tx",
+        "label": "REQUIRES_NEW",
+        "guard": {
+          "counter": "mode",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "conn",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "set-savepoint",
+        "from": "outer",
+        "event": "inner",
+        "to": "savepoint",
+        "label": "NESTED",
+        "guard": {
+          "counter": "mode",
+          "eq": 2
+        }
+      },
+      {
+        "id": "mark",
+        "from": "joined",
+        "event": "step",
+        "to": "marked",
+        "label": "ném lỗi",
+        "note": "`redeem()` ném `CouponExpiredException` (unchecked). Rollback rule khớp, nhưng vì transaction không do nó mở, proxy chỉ gọi `setRollbackOnly()` lên transaction chung rồi ném lỗi tiếp."
+      },
+      {
+        "id": "commit-marked",
+        "from": "marked",
+        "event": "step",
+        "to": "failed",
+        "label": "commit?",
+        "effects": [
+          {
+            "counter": "conn",
+            "set": 0
+          },
+          {
+            "counter": "errors",
+            "add": 1
+          }
+        ],
+        "note": "`placeOrder()` trả về bình thường, proxy gọi commit. Transaction manager thấy dấu rollback-only nên rollback **cả** `INSERT INTO orders`, rồi ném `UnexpectedRollbackException` để báo rằng caller tưởng commit nhưng thực tế không."
+      },
+      {
+        "id": "rollback-new",
+        "from": "new-tx",
+        "event": "step",
+        "to": "resumed",
+        "label": "rollback riêng",
+        "effects": [
+          {
+            "counter": "conn",
+            "add": -1
+          }
+        ],
+        "note": "`redeem()` ném lỗi, transaction mới rollback và trả connection #2 về pool. Spring gắn lại transaction ngoài vào thread. Trong lúc `redeem()` chạy, request này giữ **hai** connection; và nếu `redeem()` đụng dòng mà transaction ngoài đã khoá, nó sẽ chờ tới lock timeout."
+      },
+      {
+        "id": "rollback-savepoint",
+        "from": "savepoint",
+        "event": "step",
+        "to": "resumed",
+        "label": "về savepoint",
+        "note": "`redeem()` ném lỗi, Spring gọi `rollback(savepoint)`: chỉ các câu SQL sau savepoint bị huỷ, `INSERT INTO orders` vẫn còn. Không cần connection thứ hai, không có rủi ro tự chờ lock. Với `JpaTransactionManager`, `NESTED` mặc định bị từ chối, và savepoint không rollback entity trong persistence context."
+      },
+      {
+        "id": "commit-ok",
+        "from": "resumed",
+        "event": "step",
+        "to": "committed",
+        "label": "commit",
+        "effects": [
+          {
+            "counter": "conn",
+            "set": 0
+          },
+          {
+            "counter": "orders",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "again-failed",
+        "from": "failed",
+        "event": "call",
+        "to": "outer",
+        "label": "lại",
+        "effects": [
+          {
+            "counter": "conn",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "again-ok",
+        "from": "committed",
+        "event": "call",
+        "to": "outer",
+        "label": "lại",
+        "effects": [
+          {
+            "counter": "conn",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "to-new-failed",
+        "from": "failed",
+        "event": "toggle",
+        "to": "failed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 1
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = REQUIRES_NEW)`."
+      },
+      {
+        "id": "to-nested-failed",
+        "from": "failed",
+        "event": "toggle",
+        "to": "failed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 2
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = NESTED)`."
+      },
+      {
+        "id": "to-required-failed",
+        "from": "failed",
+        "event": "toggle",
+        "to": "failed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 2
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 0
+          }
+        ],
+        "note": "`redeem()` quay lại `@Transactional` mặc định, tức `REQUIRED`."
+      },
+      {
+        "id": "to-new-committed",
+        "from": "committed",
+        "event": "toggle",
+        "to": "committed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 0
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 1
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = REQUIRES_NEW)`."
+      },
+      {
+        "id": "to-nested-committed",
+        "from": "committed",
+        "event": "toggle",
+        "to": "committed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 2
+          }
+        ],
+        "note": "`redeem()` giờ là `@Transactional(propagation = NESTED)`."
+      },
+      {
+        "id": "to-required-committed",
+        "from": "committed",
+        "event": "toggle",
+        "to": "committed",
+        "label": "đổi",
+        "guard": {
+          "counter": "mode",
+          "eq": 2
+        },
+        "effects": [
+          {
+            "counter": "mode",
+            "set": 0
+          }
+        ],
+        "note": "`redeem()` quay lại `@Transactional` mặc định, tức `REQUIRED`."
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở bước hiện tại. Đổi propagation khi chưa có request hoặc khi một lượt đã kết thúc; \"Gọi redeem()\" chỉ có nghĩa khi transaction ngoài đang mở; \"Bước tiếp\" đưa lượt hiện tại đi tới commit."
+  }
+}

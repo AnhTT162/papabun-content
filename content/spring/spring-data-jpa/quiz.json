@@ -1,0 +1,98 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "clear-automatically",
+      "kind": "output",
+      "prompt": "`archiveOld` là `@Modifying(clearAutomatically = true)` với câu `update Ticket t set t.archived = true where t.closedAt < :before`. Sau khi `cleanup()` commit, ticket 42 có `note` mới không?",
+      "code": "@Transactional\npublic void cleanup(Instant before) {\n    Ticket ticket = tickets.findById(42L).orElseThrow();\n    tickets.archiveOld(before);\n    ticket.setNote(\"đã rà soát\");\n}",
+      "options": [
+        "Không: câu bulk `clear()` persistence context nên `ticket` thành detached",
+        "Có: `clearAutomatically` chỉ xoá entity bị câu bulk cập nhật, ticket 42 vẫn được theo dõi",
+        "Có, nhưng câu `UPDATE` đè lại `archived = false` lên kết quả của câu bulk",
+        "Không, vì `@Modifying` chạy trong transaction riêng và rollback mọi thay đổi khác"
+      ],
+      "answer": 0,
+      "explanation": "`clearAutomatically = true` gọi `EntityManager.clear()` sau câu bulk: **mọi** entity managed thành detached. `setNote` trên object detached chỉ đổi bộ nhớ, không có dirty checking, không có lỗi. Nếu không có `clearAutomatically` thì ngược lại: `note` được lưu nhưng `UPDATE` ghi mọi cột có thể đè `archived`. Cách an toàn là không trộn hai kiểu ghi, hoặc tải lại entity sau câu bulk."
+    },
+    {
+      "id": "derived-delete",
+      "kind": "single",
+      "prompt": "Repository có `void deleteByStatus(Status status)` (derived query). Gọi với trạng thái có 10.000 dòng thì database nhận những câu gì?",
+      "options": [
+        "Một `SELECT` tải 10.000 entity, rồi 10.000 câu `DELETE` theo id",
+        "Một câu `DELETE FROM ... WHERE status = ?` duy nhất",
+        "Một `SELECT count(*)` rồi một câu `DELETE` có `LIMIT 10000`",
+        "10.000 câu `SELECT` theo id rồi một câu `DELETE ... WHERE id IN (...)`"
+      ],
+      "answer": 0,
+      "explanation": "Derived delete tải entity trước rồi gọi `remove()` từng cái, để cascade và callback `@PreRemove` vẫn chạy. Với nhiều dòng, dùng `@Modifying @Query(\"delete from ...\")` (một câu SQL, bỏ qua cascade và callback) hoặc xoá theo lô có giới hạn để không giữ lock quá lâu."
+    },
+    {
+      "id": "slice-vs-page",
+      "kind": "single",
+      "prompt": "Màn hình \"tải thêm\" của ứng dụng di động chỉ cần biết còn trang sau hay không. Repository đang trả `Page<Order>` trên bảng 80 triệu dòng. Đổi sang kiểu trả về nào, và vì sao?",
+      "options": [
+        "`Slice<Order>`: lấy `size + 1` dòng để biết còn trang sau, không chạy câu `count`",
+        "`List<Order>`: Spring Data bỏ phân trang và trả toàn bộ kết quả một lần",
+        "`Page<Order>` với `@QueryHints` để cache kết quả câu `count` trong Hibernate",
+        "`Stream<Order>`: driver đọc dần nên câu `count` chạy nền không làm chậm"
+      ],
+      "answer": 0,
+      "explanation": "`Page` cần tổng số dòng nên chạy thêm `SELECT count(*)` với cùng điều kiện, có thể rất chậm trên bảng lớn. `Slice` chỉ cần biết có trang sau, nên lấy thừa một dòng. Trang sâu thì `OFFSET` vẫn chậm; keyset pagination giải quyết phần đó."
+    },
+    {
+      "id": "hash-by-id",
+      "kind": "output",
+      "prompt": "`Tag` có id `@GeneratedValue` (kiểu `Long`), `equals` và `hashCode` sinh từ id (`Objects.hash(id)`). Đoạn code sau in gì?",
+      "code": "Set<Tag> tags = new HashSet<>();\nTag tag = new Tag(\"java\");          // id = null\ntags.add(tag);\nentityManager.persist(tag);          // id được gán, ví dụ 101\nSystem.out.println(tags.contains(tag));",
+      "options": [
+        "`false`: hash đổi sau khi id được gán, `HashSet` tìm sai bucket",
+        "`true`: `contains` so bằng `==` trước khi xét `hashCode`",
+        "`true`: Hibernate tính lại hash cho mọi `Set` chứa entity khi `persist`",
+        "Ném `NullPointerException` vì `Objects.hash` nhận id `null`"
+      ],
+      "answer": 0,
+      "explanation": "Lúc `add`, hash tính từ `id = null`. Sau `persist`, id là 101, `hashCode` khác, nên `HashSet` tìm trong bucket khác và không thấy (so sánh `==` chỉ xảy ra trong bucket đúng). `Objects.hash(null)` không ném lỗi. Cách quen thuộc: `equals` so id khi id khác `null`, `hashCode` trả hằng số theo class; hoặc dùng business key bất biến."
+    },
+    {
+      "id": "flush-commit-dup",
+      "kind": "single",
+      "prompt": "Job đặt `entityManager.setFlushMode(FlushModeType.COMMIT)` để chạy nhanh hơn, rồi với mỗi dòng: `findByCode(code)`, không có thì `persist(new Product(code))`. `Product` dùng id `SEQUENCE`. File có hai dòng cùng mã `SKU-7`. Kết quả?",
+      "options": [
+        "Hai `INSERT` cùng mã: lần tìm thứ hai không thấy sản phẩm chưa flush, commit lỗi unique",
+        "Một `INSERT`: persistence context trả lại sản phẩm vừa tạo cho lần tìm thứ hai",
+        "Một `INSERT`: Hibernate vẫn flush trước query khi phát hiện trùng khoá",
+        "Lỗi ngay ở lần `persist` thứ hai vì Hibernate kiểm tra unique trong bộ nhớ"
+      ],
+      "answer": 0,
+      "explanation": "`findByCode` là query, luôn chạy SQL. Với `COMMIT`, Hibernate không flush trước query, nên database chưa có `SKU-7` và lần tìm thứ hai trả rỗng. Persistence context chỉ trả object có sẵn khi tìm theo id (hoặc khi dòng trả về trùng id), không theo cột khác. Hai `INSERT` chạy lúc commit, lỗi unique, và cả transaction rollback. Với id `IDENTITY` thì khác: `persist` chạy `INSERT` ngay nên lần tìm thứ hai thấy sản phẩm."
+    },
+    {
+      "id": "ignore-case",
+      "kind": "single",
+      "prompt": "Bảng `account` trên PostgreSQL có unique index trên `email`. `findByEmailIgnoreCase(email)` chạy chậm dần khi bảng lớn lên. Cách sửa nào đúng?",
+      "options": [
+        "Tạo index trên `upper(email)`, hoặc lưu email đã chuẩn hoá và tìm bằng `findByEmail`",
+        "Thêm `@QueryHints` bật cache câu query để Hibernate không chạy lại SQL",
+        "Đổi sang `existsByEmailIgnoreCase` vì `exists` luôn dùng được index",
+        "Đặt `hibernate.query.in_clause_parameter_padding` để giảm số biến thể câu SQL"
+      ],
+      "answer": 0,
+      "explanation": "`IgnoreCase` sinh `where upper(email) = upper(?)`. Index trên `email` không dùng được cho biểu thức `upper(email)`, nên database quét bảng. Cần expression index trên đúng biểu thức đó, hoặc chuẩn hoá email khi ghi (với PostgreSQL có thể dùng `citext`). `exists` vẫn dùng cùng điều kiện nên vẫn quét."
+    },
+    {
+      "id": "open-projection",
+      "kind": "single",
+      "prompt": "Interface projection `OrderSummary` có getter `getId()` và `@Value(\"#{target.customer.name + ' - ' + target.total}\") String getLabel()`. Spring Data sinh câu SQL thế nào?",
+      "options": [
+        "Tải cả entity `Order` (và `customer` khi chạm tới), vì projection \"mở\" cần object đầy đủ",
+        "Chỉ chọn `id`, `customer.name` và `total` nhờ phân tích biểu thức SpEL",
+        "Chỉ chọn `id`; `getLabel()` trả `null` vì SpEL không chạy trong projection",
+        "Báo lỗi lúc khởi động vì projection không được truy cập quan hệ"
+      ],
+      "answer": 0,
+      "explanation": "Projection có `@Value` là projection \"mở\": Spring Data không biết biểu thức cần cột nào nên tải cả entity rồi tính trên đó, thường kèm thêm query cho quan hệ lazy. Muốn chỉ lấy cột cần, dùng projection \"đóng\" (chỉ getter khớp thuộc tính) hoặc record DTO với constructor expression."
+    }
+  ]
+}

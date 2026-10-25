@@ -1,0 +1,87 @@
+{
+  "$schema": "../../../schema/troubleshoot.schema.json",
+  "title": "Job import chậm dần rồi chạy hơn 4 tiếng",
+  "symptom": "Job đêm nhập file 200.000 sản phẩm từ nhà cung cấp vào PostgreSQL, viết bằng Spring Data JPA. Với file thử 2.000 dòng nó xong trong khoảng 2 giây. Với file thật, log tiến độ cho thấy 10.000 dòng đầu mất 40 giây, mỗi 10.000 dòng sau chậm hơn khoảng 80 giây; job chạy hơn 4 tiếng, lấn sang giờ mở bán. CPU của pod job ở mức 100% một core, database gần như rảnh, heap sau GC tăng đều tới 1,6GB trên 2GB.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn xem gì trước?",
+      "choices": [
+        {
+          "label": "Vài thread dump của pod trong lúc job chạy, xem thread job đang làm gì",
+          "quality": "good",
+          "feedback": "CPU ứng dụng cao trong khi database rảnh nghĩa là thời gian nằm trong JVM. Vài thread dump cách nhau vài giây cho thấy ngay đoạn code nóng.",
+          "next": "dump"
+        },
+        {
+          "label": "Bật `pg_stat_statements` để tìm câu SQL chậm",
+          "quality": "ok",
+          "feedback": "Sẽ thấy mỗi câu `SELECT` đều nhanh, và database gần như rảnh. Loại trừ được database, nhưng chưa chỉ ra chỗ tốn thời gian.",
+          "next": "dump"
+        },
+        {
+          "label": "Tăng heap lên 4GB và thêm CPU cho pod job",
+          "quality": "poor",
+          "feedback": "Thời gian mỗi lô tăng đều theo số dòng đã xử lý: đó là dấu hiệu của thuật toán bậc hai, thêm tài nguyên chỉ chia nhỏ hằng số.",
+          "next": "dump"
+        }
+      ]
+    },
+    {
+      "id": "dump",
+      "evidence": "\"product-import-1\" #41 prio=5 RUNNABLE\n   at org.hibernate.event.internal.DefaultFlushEntityEventListener.dirtyCheck(...)\n   at org.hibernate.event.internal.DefaultFlushEntityEventListener.onFlushEntity(...)\n   at org.hibernate.event.internal.AbstractFlushingEventListener.flushEntities(...)\n   at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(...)\n   at org.hibernate.event.internal.DefaultAutoFlushEventListener.onAutoFlush(...)\n   ...\n   at com.example.catalog.ProductRepository.findByCode(...)\n   at com.example.catalog.ProductImportJob.lambda$importAll$0(...)\n\n# Hibernate statistics (generate_statistics=true) lúc job kết thúc:\nSession Metrics {\n    ...\n    9817330412 nanoseconds spent executing 1 flushes (flushing a total of 200000 entities and 0 collections);\n    51204480 nanoseconds spent executing 200000 pre-partial-flushes;\n    15412887004113 nanoseconds spent executing 200000 partial-flushes (flushing a total of 19999900000 entities and 19999900000 collections)\n}\n# Số \"collections\" của partial-flushes in trùng số entities là lỗi hiển thị của Hibernate 6.6/7.1; entity Product không có collection.",
+      "evidenceFormat": "monospace",
+      "question": "Thời gian đi đâu?",
+      "choices": [
+        {
+          "label": "Mỗi `findByCode` gây auto flush, dirty check toàn bộ persistence context",
+          "quality": "good",
+          "feedback": "Đúng. 200.000 lần auto flush (Hibernate gọi là partial flush), tổng cộng gần 20 tỷ lượt kiểm tra entity: lần thứ n phải duyệt n − 1 entity đã tích luỹ, cộng lại là bậc hai theo số dòng, và chiếm khoảng 4 giờ 17 phút của thời gian chạy. Mọi entity của cả job nằm trong một persistence context vì cả job là một transaction.",
+          "next": "code"
+        },
+        {
+          "label": "`findByCode` thiếu index nên mỗi câu query phải quét cả bảng",
+          "quality": "ok",
+          "feedback": "Nếu vậy thời gian sẽ nằm ở database chứ không ở CPU của JVM. Thread dump cho thấy thread đang trong `dirtyCheck`, không chờ socket.",
+          "next": "code"
+        },
+        {
+          "label": "GC chạy liên tục vì heap gần đầy, làm thread job bị dừng",
+          "quality": "poor",
+          "feedback": "Heap tăng là triệu chứng thứ hai của cùng nguyên nhân (200.000 entity cùng bản chụp nằm trong bộ nhớ). Stack trace cho thấy CPU nằm ở code của Hibernate, không ở GC.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "@Transactional\npublic void importAll(Path csv) {\n    try (Stream<ProductRow> rows = reader.read(csv)) {\n        rows.forEach(row -> {\n            Product product = products.findByCode(row.code())\n                    .orElseGet(() -> new Product(row.code()));\n            product.update(row.name(), row.price());\n            products.save(product);\n        });\n    }\n}\n\n@Entity\nclass Product {\n    @Id @GeneratedValue(strategy = GenerationType.SEQUENCE)\n    private Long id;\n    @Column(unique = true) private String code;\n    ...\n}\n\n# application.yml\nspring.jpa.properties.hibernate.jdbc.batch_size: 50",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Chia lô 1.000 dòng mỗi transaction, tải sẵn cả lô bằng `findAllByCodeIn`",
+          "quality": "good",
+          "feedback": "Persistence context chỉ chứa tối đa 1.000 entity rồi được bỏ đi khi transaction kết thúc, nên chi phí flush không tăng theo kích thước file. Một query cho cả lô thay vì 1.000 query, và lỗi ở một lô không làm mất công của cả job.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Giữ một transaction, gọi `entityManager.flush()` và `clear()` sau mỗi 1.000 dòng",
+          "quality": "ok",
+          "feedback": "Bỏ được chi phí bậc hai và giữ heap thấp. Nhưng vẫn là một transaction dài vài phút giữ lock và connection, vẫn 200.000 câu `findByCode`, và lỗi ở dòng cuối là rollback cả file.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đặt flush mode `COMMIT` để `findByCode` không còn kích hoạt flush",
+          "quality": "poor",
+          "feedback": "Hết auto flush, nhưng id ở đây là `SEQUENCE` nên `findByCode` không thấy sản phẩm vừa tạo mà chưa flush. File có hai dòng cùng mã sẽ sinh hai `INSERT`, vi phạm unique lúc commit, và cả 200.000 dòng bị rollback. Heap vẫn tăng như cũ. (Với `IDENTITY`, mỗi `persist` đã là một `INSERT` ngay nên không trùng, nhưng không batch được.)",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: cả job chạy trong một transaction, nên persistence context giữ mọi entity đã chạm tới; mỗi query trong vòng lặp kích hoạt auto flush, và mỗi lần flush dirty check toàn bộ context.** Chi phí lần thứ n tỷ lệ với n, tổng là bậc hai theo số dòng. File thử 2.000 dòng không lộ ra vì 2.000² nhỏ hơn 200.000² mười nghìn lần.\n\n**Sửa**:\n- Chia lô theo transaction (`TransactionTemplate` hoặc chunk của Spring Batch), mỗi lô vài trăm tới vài nghìn dòng.\n- Trong lô, một query `findAllByCodeIn(codes)` thay cho mỗi dòng một query; gom dòng trùng mã trong file trước khi ghi.\n- Bật `order_inserts`, `order_updates` (id đã là `SEQUENCE`) để `batch_size` thật sự gộp được câu ghi.\n- Với job chỉ chép dữ liệu, `JdbcTemplate.batchUpdate` với `INSERT ... ON CONFLICT DO UPDATE` bỏ qua hẳn persistence context.\n\n**Phòng ngừa**:\n- Test hiệu năng của job với dữ liệu cỡ thật, và vẽ thời gian theo từng lô: đường thời gian mỗi lô đi lên là dấu hiệu bậc hai.\n- Bật `hibernate.generate_statistics` ở môi trường test; số entity được flush lớn gấp nhiều lần số dòng là cảnh báo sớm.\n- Quy ước: không để job dữ liệu lớn chạy trong một `@Transactional` duy nhất."
+    }
+  ]
+}

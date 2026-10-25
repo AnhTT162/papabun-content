@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "flush-cost", "front": "Vì sao vòng lặp vừa tạo entity vừa query trong một transaction chậm dần?", "back": "Auto flush trước query phải dirty check mọi entity managed; tổng chi phí tăng theo bình phương số entity." },
+    { "id": "bulk-bypass", "front": "`@Modifying @Query(\"update ...\")` bỏ qua những gì?", "back": "Entity trong persistence context, `@Version`, callback `@PreUpdate`, cascade và auditing." },
+    { "id": "clear-automatically", "front": "Bẫy của `clearAutomatically = true`?", "back": "Mọi entity đã tải thành detached; sửa tiếp không được lưu và không có lỗi." },
+    { "id": "derived-delete", "front": "`deleteByStatus` sinh SQL gì?", "back": "Một `SELECT` tải mọi entity khớp, rồi một câu `DELETE` cho mỗi entity; với nhiều dòng dùng câu `delete` bằng `@Modifying`." },
+    { "id": "page-count", "front": "`Page` khác `Slice` thế nào?", "back": "`Page` chạy thêm `SELECT count(*)`; `Slice` lấy `size + 1` dòng để biết còn trang sau." },
+    { "id": "entity-equals", "front": "Viết `equals`/`hashCode` cho entity có id tự sinh thế nào?", "back": "So id khi khác `null`, `hashCode` hằng số theo class, dùng `instanceof` vì proxy là lớp con; hoặc dùng business key bất biến." },
+    { "id": "dynamic-update", "front": "Mặc định `UPDATE` của Hibernate ghi những cột nào?", "back": "Mọi cột của entity; `@DynamicUpdate` chỉ ghi cột thay đổi." },
+    { "id": "batch-insert", "front": "Cần gì để `saveAll` thành JDBC batch thật?", "back": "`hibernate.jdbc.batch_size`, `order_inserts`, id kiểu `SEQUENCE` (không phải `IDENTITY`), và cờ rewrite batch của driver." }
+  ]
+}

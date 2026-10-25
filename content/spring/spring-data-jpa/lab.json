@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Khách đủ điểm mà không được lên hạng",
+  "context": "Chương trình khách hàng thân thiết: điểm được cộng khi thanh toán (đã commit từ trước). Khi đơn hoàn tất, khách hạng SILVER có từ 1.000 điểm trở lên được nâng lên GOLD. Developer dùng câu bulk có điều kiện trên `points` \"để tránh race giữa hai đơn cùng lúc\". Entity `Customer` không có `@DynamicUpdate` và không có `@Version`.",
+  "buggyCode": "public interface CustomerRepository extends JpaRepository<Customer, Long> {\n    @Modifying\n    @Query(\"update Customer c set c.tier = com.example.loyalty.Tier.GOLD \" +\n           \"where c.id = :id and c.tier = com.example.loyalty.Tier.SILVER and c.points >= :min\")\n    int promoteToGold(@Param(\"id\") long id, @Param(\"min\") int min);\n}\n\n@Service\nclass OrderCompletionService {\n    @Transactional\n    public void complete(long orderId) {\n        Order order = orders.findById(orderId).orElseThrow();\n        Customer customer = customers.findById(order.getCustomerId()).orElseThrow();   // tier = SILVER, points = 1240\n        if (customer.getTier() == Tier.SILVER) {\n            customers.promoteToGold(customer.getId(), 1_000);\n        }\n        customer.setLastOrderAt(Instant.now());\n        order.markCompleted();\n    }\n}",
+  "symptom": {
+    "description": "Khách phàn nàn đã vượt 1.000 điểm nhưng vẫn là SILVER. Test đơn vị của `promoteToGold` chạy riêng thì đúng. Log SQL của một lần `complete` cho thấy câu bulk trả về 1 dòng, rồi sau đó có thêm một câu `UPDATE customer`.",
+    "output": "select o1_0.id,... from orders o1_0 where o1_0.id=?\nselect c1_0.id,c1_0.last_order_at,c1_0.name,c1_0.points,c1_0.tier from customer c1_0 where c1_0.id=?\nupdate customer c1_0 set tier='GOLD' where c1_0.id=? and c1_0.tier='SILVER' and c1_0.points>=?   -- 1 row\nupdate orders set completed_at=?,customer_id=?,status=? where id=?\nupdate customer set last_order_at=?,name=?,points=?,tier=? where id=?\n    binding parameter (1:TIMESTAMP_UTC) <- [2026-10-25T09:12:44Z]\n    binding parameter (4:VARCHAR) <- [SILVER]\n\nselect tier from customer where id = 5521;   -- SILVER"
+  },
+  "diagnosis": {
+    "question": "Vì sao khách vẫn là SILVER dù câu bulk đã cập nhật 1 dòng?",
+    "options": [
+      "`customer` trong bộ nhớ vẫn SILVER; flush ghi mọi cột nên `UPDATE` sau đè lên GOLD",
+      "Câu bulk chạy trong transaction riêng của repository nên bị rollback khi `complete` kết thúc",
+      "`@Modifying` không flush thay đổi trước khi chạy, nên câu bulk không thấy `points` mới",
+      "Hibernate cache kết quả `findById` ở cache cấp 2 nên đọc lại vẫn ra SILVER"
+    ],
+    "answer": 0,
+    "explanation": "Câu bulk đi thẳng xuống database; persistence context không biết, nên object `customer` đã tải vẫn có `tier = SILVER`. Sau đó `setLastOrderAt` làm entity dirty. Lúc flush, Hibernate (không có `@DynamicUpdate`) sinh `UPDATE` ghi **mọi cột** từ object trong bộ nhớ, kể cả `tier = 'SILVER'`: kết quả của câu bulk bị đè. Câu bulk tham gia transaction của `complete` (method `@Modifying` vẫn chạy trong transaction có sẵn) nên không bị rollback riêng. `points` đã commit từ trước nên điều kiện đúng; log cũng cho thấy câu bulk trả về 1 dòng."
+  },
+  "fix": {
+    "code": "@Entity\nclass Customer {\n    @Version\n    private Long version;\n\n    boolean promoteIfEligible(int min) {          // logic nằm trong entity\n        if (tier == Tier.SILVER && points >= min) {\n            tier = Tier.GOLD;\n            return true;\n        }\n        return false;\n    }\n}\n\n@Service\nclass OrderCompletionService {\n    @Transactional\n    public void complete(long orderId) {\n        Order order = orders.findById(orderId).orElseThrow();\n        Customer customer = customers.findById(order.getCustomerId()).orElseThrow();\n        customer.promoteIfEligible(1_000);\n        customer.setLastOrderAt(Instant.now());\n        order.markCompleted();\n    }   // một UPDATE customer ... where id=? and version=?\n}",
+    "explanation": "Khi đã tải entity để sửa, hãy sửa qua entity: mọi thay đổi gộp vào một `UPDATE` lúc flush, không có hai nguồn sự thật cùng ghi một dòng. Race mà developer lo được xử lý bằng `@Version`: hai đơn cùng lúc thì đơn commit sau nhận `ObjectOptimisticLockingFailureException`; cần cơ chế thử lại, ví dụ `@Retryable` bọc ngoài transaction. Nếu buộc phải dùng câu bulk trong transaction đã tải entity, gọi `entityManager.refresh(customer)` sau câu bulk. `clearAutomatically = true` không phải cách sửa ở đây: nó làm `customer` thành detached, nên `setLastOrderAt` sau đó không được lưu và không báo lỗi. `@DynamicUpdate` chỉ ghi cột thay đổi nên che được lỗi này, nhưng hai nguồn ghi vẫn còn đó."
+  }
+}

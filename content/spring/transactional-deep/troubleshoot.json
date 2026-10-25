@@ -1,0 +1,87 @@
+{
+  "$schema": "../../../schema/troubleshoot.schema.json",
+  "title": "API đổi địa chỉ trả 200 nhưng không lưu gì",
+  "symptom": "Service hồ sơ khách hàng dùng Spring Boot 3.3, JPA, PostgreSQL, đã tắt Open Session in View (`spring.jpa.open-in-view=false`). Sau bản deploy thêm API đổi địa chỉ giao hàng, khách phàn nàn: bấm lưu thấy \"Thành công\", tải lại trang thì vẫn địa chỉ cũ. Không có exception nào trong log, API trả 200, test tích hợp của API vẫn xanh. Các API cũ của cùng service (đổi số điện thoại) vẫn lưu bình thường.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn xem gì trước?",
+      "choices": [
+        {
+          "label": "Bật log SQL của Hibernate và log của transaction manager cho đúng request đó",
+          "quality": "good",
+          "feedback": "\"Báo thành công nhưng không lưu\" mà không có exception thì câu hỏi đầu tiên là có câu `UPDATE` nào được gửi đi không, và transaction được mở với thuộc tính gì.",
+          "next": "sql-log"
+        },
+        {
+          "label": "Kiểm tra replica của PostgreSQL có bị trễ không, vì trang đọc từ replica",
+          "quality": "ok",
+          "feedback": "Hợp lý khi đọc từ replica, nhưng ở đây trang đọc từ primary, và địa chỉ cũ còn nguyên sau nhiều phút. Nhìn vào log SQL sẽ nhanh hơn.",
+          "next": "sql-log"
+        },
+        {
+          "label": "Thêm `addressRepository.save(customer)` vào cuối method cho chắc",
+          "quality": "poor",
+          "feedback": "Đây chính là điều developer đã thử trước khi báo lên: thêm `save()` vẫn không lưu. Đoán cách sửa khi chưa biết vì sao là cách tốn thời gian nhất.",
+          "next": "sql-log"
+        }
+      ]
+    },
+    {
+      "id": "sql-log",
+      "evidence": "DEBUG JpaTransactionManager : Creating new transaction with name [com.example.profile.CustomerService.changeAddress]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,readOnly\nDEBUG JpaTransactionManager : Participating in existing transaction\nDEBUG SQL : select c1_0.id,c1_0.address_line,c1_0.city,c1_0.phone,c1_0.version from customer c1_0 where c1_0.id=?\nDEBUG JpaTransactionManager : Participating in existing transaction\nDEBUG JpaTransactionManager : Initiating transaction commit\nDEBUG JpaTransactionManager : Committing JPA transaction on EntityManager [SessionImpl(1093318221<open>)]\n\n# Cùng log cho API đổi số điện thoại:\nDEBUG JpaTransactionManager : Creating new transaction with name [com.example.profile.CustomerService.changePhone]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT\nDEBUG SQL : select c1_0.id,... from customer c1_0 where c1_0.id=?\nDEBUG SQL : update customer set address_line=?,city=?,phone=?,version=? where id=? and version=?",
+      "evidenceFormat": "monospace",
+      "question": "Log cho thấy điều gì?",
+      "choices": [
+        {
+          "label": "Transaction mở với cờ `readOnly`; `save()` chỉ tham gia nên không có `UPDATE`",
+          "quality": "good",
+          "feedback": "Đúng. Dòng \"Creating new transaction\" có cờ `readOnly`, còn `changePhone` thì không. Trong transaction read-only, Hibernate để flush mode `MANUAL` và tải entity ở chế độ read-only, nên dirty checking bỏ qua thay đổi. `save()` là method `@Transactional` thường, nhưng nó **tham gia** transaction có sẵn, và thuộc tính `readOnly` của nó bị bỏ qua.",
+          "next": "code"
+        },
+        {
+          "label": "Entity `Customer` bị detached nên Hibernate không theo dõi thay đổi",
+          "quality": "ok",
+          "feedback": "Triệu chứng giống, nhưng log cho thấy entity được tải trong cùng transaction và `save()` cũng chạy trong đó. Khác biệt duy nhất với `changePhone` là cờ `readOnly`.",
+          "next": "code"
+        },
+        {
+          "label": "Transaction bị rollback ngầm nhưng exception bị nuốt ở controller",
+          "quality": "poor",
+          "feedback": "Log ghi rõ `Initiating transaction commit` và không có câu `UPDATE` nào được gửi; không có gì để rollback cả.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "@Service\n@Transactional(readOnly = true)              // thêm từ đầu để mọi method đọc nhanh hơn\nclass CustomerService {\n\n    public CustomerView find(long id) { ... }\n\n    @Transactional                          // method ghi cũ được khai báo riêng\n    public void changePhone(long id, String phone) { ... }\n\n    public void changeAddress(long id, AddressRequest req) {   // method mới, quên annotation\n        Customer customer = customers.findById(id).orElseThrow();\n        customer.moveTo(req.line(), req.city());\n        customers.save(customer);\n    }\n}\n\n// Test tích hợp\n@Test\nvoid changeAddress_returnsOk() {\n    mvc.perform(put(\"/customers/7/address\").content(json))\n       .andExpect(status().isOk());\n}",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào, và chặn lỗi kiểu này về sau ra sao?",
+      "choices": [
+        {
+          "label": "Thêm `@Transactional` cho method ghi và cho test đọc lại dữ liệu từ database",
+          "quality": "good",
+          "feedback": "`@Transactional` ở method ghi đè thuộc tính của class. Test hiện chỉ kiểm tra mã 200, nên mọi lỗi \"không lưu\" đều lọt; test cần đọc lại bằng query riêng (hoặc `JdbcTemplate`) sau khi gọi API. `setValidateExistingTransaction(true)` làm Spring ném lỗi khi một method không read-only cố tham gia transaction read-only, nên lần sau `save()` sẽ báo lỗi ngay thay vì im lặng.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đổi `customers.save(customer)` thành `saveAndFlush(customer)`",
+          "quality": "poor",
+          "feedback": "Entity được tải ở chế độ read-only nên flush vẫn bỏ qua nó; và nếu có câu ghi nào lọt xuống thì connection read-only của PostgreSQL sẽ từ chối. Nếu bật Open Session in View thì session không read-only, `saveAndFlush` sẽ gửi `UPDATE` nhưng PostgreSQL báo lỗi read-only: vẫn không lưu được. Gốc rễ là ranh giới transaction sai, không phải thiếu flush.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Bỏ `@Transactional(readOnly = true)` ở class, chỉ khai báo từng method",
+          "quality": "ok",
+          "feedback": "Loại bỏ được bẫy này, nhưng mất lợi ích của read-only cho các method đọc, và method mới quên annotation thì lại chạy không transaction, mỗi câu tự commit. Vẫn cần test đọc lại dữ liệu.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: method ghi kế thừa `@Transactional(readOnly = true)` của class.** Transaction được mở ở `changeAddress` với cờ read-only. Hibernate đặt flush mode `MANUAL` và session read-only nên thay đổi trên entity không bao giờ thành `UPDATE`. `save()` của repository có `@Transactional` riêng, nhưng nó chỉ tham gia transaction có sẵn, nên thuộc tính của nó không có tác dụng. Không có exception, commit \"thành công\" với không câu ghi nào.\n\n**Sửa**:\n- Khai báo `@Transactional` cho mọi method ghi trong class có `readOnly = true`.\n- Test tích hợp kiểm tra kết quả trong database, không chỉ mã HTTP.\n\n**Phòng ngừa**:\n- Bật `setValidateExistingTransaction(true)` trên transaction manager (qua `TransactionManagerCustomizer<JpaTransactionManager>`, có từ Boot 3.2) để lỗi lộ ra ngay ở test.\n- Quy ước của đội: class read-only thì method ghi bắt buộc có annotation; có thể kiểm tra bằng ArchUnit (method tên `change*`, `create*`, `delete*` phải có `@Transactional` không read-only).\n- Khi review, đọc dòng `Creating new transaction ... readOnly` trong log DEBUG của request ghi là cách nhanh nhất để thấy ranh giới thật."
+    }
+  ]
+}

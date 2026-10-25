@@ -204,8 +204,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 9 | `spring-async-events` | @Async, @Scheduled & event | mid | Thread pool mặc định, `@Scheduled` một thread, event đồng bộ và bất đồng bộ | L B | ✅ |
 | 10 | `spring-cache` | ✚ Spring Cache | mid | `@Cacheable` và self-invocation, cache key, TTL, cache đúng chỗ | L B | ✅ |
 | 11 | `spring-observability` | Micrometer & tracing | mid | Metric, tracing, log correlation | L T | ✅ |
-| 12 | `transactional-deep` | @Transactional chuyên sâu | senior | Propagation, rollback rule, `readOnly`, self-invocation, `@TransactionalEventListener` | L S B T | ⬜ |
-| 13 | `spring-data-jpa` | Spring Data JPA & Hibernate chuyên sâu | senior | Dirty checking, flush mode, persistence context, bulk op, count query, `equals` của entity | L B T | ⬜ |
+| 12 | `transactional-deep` | @Transactional chuyên sâu | senior | Propagation, rollback rule, `readOnly`, self-invocation, `@TransactionalEventListener` | L S B T | ✅ |
+| 13 | `spring-data-jpa` | Spring Data JPA & Hibernate chuyên sâu | senior | Dirty checking, flush mode, persistence context, bulk op, count query, `equals` của entity | L B T | ✅ |
 | 14 | `spring-security-architecture` | Kiến trúc Spring Security | senior | Filter chain, `AuthenticationManager`, SecurityContext, method security, resource server | L D B | ⬜ |
 | 15 | `spring-cloud` | ✚ Spring Cloud cho microservices | senior | Gateway, OpenFeign, Config, Resilience4j, service discovery; khi nào không cần | L D Sc | ⬜ |
 | 16 | `spring-batch` | ✚ Spring Batch & xử lý lô | senior | Chunk, restart, skip/retry, partition, chạy song song an toàn | L D Sc | ⬜ |

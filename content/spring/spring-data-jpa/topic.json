@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-data-jpa",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring Data JPA & Hibernate chuyên sâu",
+  "summary": "Derived query, @Query và projection; chi phí dirty checking khi persistence context phình; flush mode AUTO, COMMIT, MANUAL; bulk update bằng @Modifying bỏ qua entity trong bộ nhớ và ghi đè lẫn nhau; Page và câu count; equals và hashCode của entity; ghi theo lô, khoá, Stream và Lombok.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 16,
+  "prerequisites": ["jpa-hibernate-basics", "n-plus-one", "transactional-deep"],
+  "terms": ["spring-data-repository", "derived-query", "flush-mode", "bulk-update", "persistence-context", "dirty-checking", "keyset-pagination", "expression-index", "open-session-in-view"],
+  "references": [
+    { "title": "Spring Data JPA Reference: JPA Query Methods", "url": "https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html" },
+    { "title": "Spring Data JPA Reference: Projections", "url": "https://docs.spring.io/spring-data/jpa/reference/repositories/projections.html" },
+    { "title": "Hibernate ORM User Guide: Flushing", "url": "https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#flushing" },
+    { "title": "Hibernate ORM User Guide: Batching", "url": "https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#batch" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào không nên dùng JPA?\" Khi việc chính là xử lý tập dữ liệu lớn (import, báo cáo, cập nhật hàng loạt) chứ không phải sửa vài aggregate theo nghiệp vụ. Persistence context và dirty checking có ích khi sửa ít entity với logic phức tạp, nhưng thành gánh nặng khi duyệt hàng trăm nghìn dòng. Câu trả lời tốt là dùng cả hai: JPA cho luồng nghiệp vụ, `JdbcTemplate`/jOOQ hoặc câu SQL bulk cho job dữ liệu, chung một transaction manager." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng dùng `@Data` của Lombok cho entity. `hashCode` và `toString` sinh từ mọi field sẽ chạm vào collection lazy (gây `LazyInitializationException` hoặc tải cả cây dữ liệu) và lặp vô hạn ở quan hệ hai chiều. Viết `equals`/`hashCode` theo business key hoặc theo id có kiểm tra `null`, và `toString` chỉ gồm vài field đơn giản." }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thanh toán treo 50 giây rồi lỗi lock",
+  "context": "Ví điện tử trên MySQL 8, `innodb_lock_wait_timeout` mặc định 50 giây. Đội sản phẩm muốn mọi lần thanh toán, kể cả lần thất bại, đều cập nhật \"lần hoạt động cuối\" của ví, nên bước đó được tách ra `REQUIRES_NEW` để không bị rollback theo giao dịch chính.",
+  "buggyCode": "@Service\nclass PaymentService {\n    @Transactional\n    public void pay(long walletId, long amount, String merchantId) {\n        walletDao.debit(walletId, amount);            // UPDATE wallet SET balance = balance - ? WHERE id = ? AND balance >= ?\n        activityService.touch(walletId);              // bean khác\n        paymentDao.insert(walletId, amount, merchantId);\n    }\n}\n\n@Service\nclass ActivityService {\n    @Transactional(propagation = Propagation.REQUIRES_NEW)\n    public void touch(long walletId) {\n        walletDao.updateLastActivity(walletId);       // UPDATE wallet SET last_activity_at = now() WHERE id = ?\n    }\n}",
+  "symptom": {
+    "description": "Sau bản deploy, mọi lần thanh toán đều mất đúng khoảng 50 giây rồi lỗi; không lần nào thành công. Số dư không bị trừ. Ở môi trường test, gateway cắt request sau 30 giây nên tester chỉ thấy lỗi timeout.",
+    "output": "WARN  PaymentController : pay failed wallet=8812 took=50.04s\norg.springframework.dao.CannotAcquireLockException: PreparedStatementCallback; SQL [UPDATE wallet SET last_activity_at = now() WHERE id = ?]; Lock wait timeout exceeded; try restarting transaction\n    at ...WalletDao.updateLastActivity(WalletDao.java:41)\n    at ...ActivityService.touch(ActivityService.java:9)\n    at ...PaymentService.pay(PaymentService.java:6)\n\nmysql> SELECT waiting_query, blocking_query, wait_age FROM sys.innodb_lock_waits;\n+------------------------------------------------------------+----------------+----------+\n| waiting_query                                              | blocking_query | wait_age |\n+------------------------------------------------------------+----------------+----------+\n| UPDATE wallet SET last_activity_at = now() WHERE id = 8812 | NULL           | 00:00:37 |\n+------------------------------------------------------------+----------------+----------+"
+  },
+  "diagnosis": {
+    "question": "Vì sao lần thanh toán nào cũng treo đúng 50 giây?",
+    "options": [
+      "`touch` chạy trên connection thứ hai và chờ lock dòng ví mà chính transaction của `pay` đang giữ",
+      "Hai request thanh toán cùng một ví chạy song song và deadlock với nhau trên dòng `wallet`",
+      "Pool hết connection nên `touch` phải chờ connection thứ hai cho transaction mới",
+      "`REQUIRES_NEW` bị bỏ qua do self-invocation nên `touch` tham gia transaction của `pay`"
+    ],
+    "answer": 0,
+    "explanation": "`debit` đã khoá dòng `wallet` id 8812 trong transaction ngoài. `REQUIRES_NEW` tạm dừng transaction đó (connection #1 vẫn giữ lock) và mở transaction mới trên connection #2, rồi `UPDATE` chính dòng ấy nên phải chờ. Transaction ngoài chỉ commit khi `touch` trả về, nên không ai nhả: request tự chờ chính nó tới `innodb_lock_wait_timeout`. MySQL không phát hiện được đây là deadlock vì một bên đang chờ code Java chứ không chờ lock; `blocking_query` là `NULL` vì connection #1 đang rảnh trong transaction. Deadlock giữa hai request sẽ bị InnoDB phát hiện gần như ngay. Hết pool thì lỗi là timeout của HikariCP, không phải lock wait. Self-invocation không áp dụng vì `touch` nằm ở bean khác; nếu nó tham gia cùng transaction thì đã không phải chờ."
+  },
+  "fix": {
+    "code": "@Service\nclass PaymentService {\n    public void pay(long walletId, long amount, String merchantId) {   // không có @Transactional\n        try {\n            paymentTx.debitAndRecord(walletId, amount, merchantId);    // @Transactional ở bean khác\n        } finally {\n            activityService.touch(walletId);                          // transaction riêng, chạy sau khi lock đã nhả\n        }\n    }\n}\n\n@Service\nclass ActivityService {\n    @Transactional\n    public void touch(long walletId) {\n        activityDao.upsert(walletId);   // bảng wallet_activity riêng, không đụng dòng wallet\n    }\n}",
+    "explanation": "Hai nguyên tắc: transaction mới không được đụng dòng mà transaction ngoài đang giữ, và việc \"luôn phải chạy\" thì đặt **sau** khi transaction chính kết thúc thay vì lồng bên trong. Ở đây `touch` chạy trong `finally`, sau khi transaction của `debitAndRecord` đã commit hoặc rollback, nên không cần `REQUIRES_NEW` và mỗi request chỉ giữ một connection mỗi lúc. Thực tế nên bọc `touch` trong `try/catch` riêng và chỉ log, để lỗi của nó không che lỗi thanh toán. Tách \"lần hoạt động cuối\" sang bảng `wallet_activity` còn bớt tranh chấp trên dòng `wallet`, vốn là dòng nóng nhất của hệ thống. Nếu chỉ cần chạy khi thành công thì dùng `@TransactionalEventListener(AFTER_COMMIT)`. Đặt `innodb_lock_wait_timeout` (hoặc `lock_timeout` của PostgreSQL, mặc định là chờ mãi) ngắn hơn timeout của request để lỗi kiểu này lộ ra nhanh thay vì treo cả pool."
+  }
+}

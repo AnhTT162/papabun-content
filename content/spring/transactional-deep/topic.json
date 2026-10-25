@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "transactional-deep",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "@Transactional chuyên sâu",
+  "summary": "Bảy kiểu propagation và cái giá của REQUIRES_NEW (hai connection, tự chờ lock của chính mình); rollback-only và UnexpectedRollbackException; NESTED là savepoint; rollback rule theo kiểu exception; readOnly khi tham gia transaction có sẵn và định tuyến sang replica; các phase của @TransactionalEventListener; transaction lồng nhau trong test.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 16,
+  "prerequisites": ["transactional-basics", "spring-aop-proxy", "spring-async-events"],
+  "terms": ["propagation", "rollback-only", "savepoint", "pool-deadlock", "transactional-event-listener", "lock-timeout", "self-invocation", "routing-datasource"],
+  "references": [
+    { "title": "Spring Framework Reference: Transaction Propagation", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html" },
+    { "title": "Spring Framework Reference: Transaction-bound Events", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" },
+    { "title": "Spring Framework Javadoc: AbstractPlatformTransactionManager", "url": "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/support/AbstractPlatformTransactionManager.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Muốn lưu log lỗi kể cả khi transaction chính rollback thì làm sao?\" `REQUIRES_NEW` trên một bean khác là câu trả lời quen thuộc, nhưng nên nói kèm cái giá: mỗi request giữ hai connection cùng lúc (pool cạn thì deadlock ở pool), và transaction mới không được đụng dòng mà transaction ngoài đang khoá. Với log hay audit, ghi vào bảng riêng chỉ `INSERT`, hoặc đẩy ra ngoài sau khi transaction kết thúc, thường an toàn hơn." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng `catch` exception từ một method `@Transactional` khác (cùng transaction) rồi coi như đã xử lý xong. Proxy của method đó đã đánh dấu transaction rollback-only; commit ở ngoài sẽ thành rollback và ném `UnexpectedRollbackException`. Muốn bỏ qua lỗi của một bước thì bước đó phải chạy trong transaction riêng, hoặc kiểm tra điều kiện trước thay vì để nó ném lỗi." }
+  ]
+}

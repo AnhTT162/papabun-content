@@ -1,0 +1,99 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "catch-participant",
+      "kind": "output",
+      "prompt": "`InventoryService` là bean khác, `reserve()` có `@Transactional` mặc định và ném `IllegalStateException` khi hết hàng. Gọi `placeOrder()` khi hết hàng thì sao?",
+      "code": "@Transactional\npublic OrderId placeOrder(OrderRequest req) {\n    Order order = orderRepository.save(Order.from(req));\n    try {\n        inventoryService.reserve(req.items());\n    } catch (IllegalStateException e) {\n        order.markBackorder();          // đặt trước, giao sau\n    }\n    return order.id();\n}",
+      "options": [
+        "Commit thất bại với `UnexpectedRollbackException`, đơn hàng không được lưu",
+        "Đơn hàng được lưu với trạng thái đặt trước, vì lỗi đã được `catch`",
+        "Chỉ phần `reserve()` bị rollback, đơn hàng vẫn được commit",
+        "`IllegalStateException` bay ra controller vì `catch` không có tác dụng trong proxy"
+      ],
+      "answer": 0,
+      "explanation": "`reserve()` tham gia transaction của `placeOrder()`. Proxy của nó thấy `RuntimeException`, không được rollback transaction chung nên đánh dấu rollback-only. `placeOrder()` bắt được lỗi và trả về bình thường, nhưng lúc commit Spring thấy dấu đó, rollback tất cả và ném `UnexpectedRollbackException`. Muốn \"hết hàng thì đặt trước\" thì kiểm tra tồn kho mà không ném lỗi, hoặc cho `reserve()` chạy trong transaction riêng."
+    },
+    {
+      "id": "requires-new-survives",
+      "kind": "output",
+      "prompt": "`AuditService.record()` ở bean khác có `@Transactional(propagation = REQUIRES_NEW)` và chạy thành công. Sau khi `transfer()` ném exception, bảng nào có dòng mới?",
+      "code": "@Transactional\npublic void transfer(long from, long to, long amount) {\n    ledgerRepository.save(Entry.debit(from, amount));\n    auditService.record(\"transfer\", from, to, amount);\n    throw new LimitExceededException();   // RuntimeException\n}",
+      "options": [
+        "Chỉ `audit`: transaction của `record()` đã commit riêng trước khi `transfer()` lỗi",
+        "Cả `ledger` và `audit`, vì exception ném sau khi cả hai đã `save`",
+        "Không bảng nào, vì transaction ngoài rollback kéo theo transaction bên trong",
+        "Chỉ `ledger`, vì `REQUIRES_NEW` chưa commit khi transaction ngoài còn mở"
+      ],
+      "answer": 0,
+      "explanation": "`REQUIRES_NEW` tạm dừng transaction ngoài, chạy `record()` trong transaction mới và commit ngay khi `record()` trả về. Rollback của `transfer()` sau đó chỉ huỷ `ledger`. Đây đúng là lý do dùng `REQUIRES_NEW` cho audit, nhưng cũng là bẫy nếu bạn muốn hai việc cùng thành công hoặc cùng thất bại."
+    },
+    {
+      "id": "nested-jpa",
+      "kind": "single",
+      "prompt": "Ứng dụng Spring Boot dùng JPA (`JpaTransactionManager` mặc định). Một method `@Transactional(propagation = NESTED)` được gọi bên trong transaction có sẵn. Chuyện gì xảy ra?",
+      "options": [
+        "Spring ném `NestedTransactionNotSupportedException` vì JPA mặc định không cho nested",
+        "Spring tạo savepoint, lỗi thì rollback cả câu SQL lẫn entity trong bộ nhớ",
+        "Spring tự chuyển sang `REQUIRES_NEW` và mở connection thứ hai cho method đó",
+        "Annotation bị bỏ qua và method tham gia transaction như `REQUIRED`"
+      ],
+      "answer": 0,
+      "explanation": "`JpaTransactionManager` để `nestedTransactionAllowed = false` mặc định, nên `NESTED` gặp transaction có sẵn thì ném `NestedTransactionNotSupportedException`. Bật cờ đó lên thì Spring tạo savepoint JDBC, nhưng rollback savepoint chỉ huỷ SQL; entity trong persistence context vẫn giữ giá trị đã sửa. `DataSourceTransactionManager` hỗ trợ savepoint mặc định."
+    },
+    {
+      "id": "listener-required",
+      "kind": "single",
+      "prompt": "Trên Spring 6.2+, listener sau được khai báo để ghi điểm thưởng sau khi đơn hàng commit. Kết quả?",
+      "code": "@TransactionalEventListener            // AFTER_COMMIT\n@Transactional                          // REQUIRED\npublic void on(OrderPlaced event) {\n    pointsRepository.save(Points.of(event));\n}",
+      "options": [
+        "Ứng dụng lỗi lúc khởi động vì listener chỉ được dùng `REQUIRES_NEW` hoặc `NOT_SUPPORTED`",
+        "Điểm được ghi trong một transaction mới, vì transaction gốc đã commit xong",
+        "Điểm được ghi chung với đơn hàng, vì listener chạy trước khi transaction đóng",
+        "Listener chạy nhưng `save()` bị bỏ qua mà không có lỗi nào"
+      ],
+      "answer": 0,
+      "explanation": "Ở phase `AFTER_COMMIT`, transaction gốc đã commit nhưng tài nguyên vẫn gắn vào thread. `REQUIRED` sẽ tham gia transaction đã xong và thay đổi không bao giờ được commit. Trước 6.1 đây là lỗi im lặng (điểm bị mất). Từ 6.1, Spring kiểm tra lúc khởi động và báo lỗi, buộc khai báo `REQUIRES_NEW` (từ 6.1.3 thêm `NOT_SUPPORTED`)."
+    },
+    {
+      "id": "lazy-routing",
+      "kind": "single",
+      "prompt": "Bạn dùng `AbstractRoutingDataSource` chọn replica khi `TransactionSynchronizationManager.isCurrentTransactionReadOnly()` là `true`. Method `@Transactional(readOnly = true)` vẫn luôn chạy trên primary. Vì sao?",
+      "options": [
+        "Transaction manager lấy connection trước khi cờ read-only được gắn vào thread",
+        "`readOnly = true` chỉ có tác dụng với method `public` của interface",
+        "Routing chỉ xét cờ read-only khi propagation là `REQUIRES_NEW`",
+        "Hibernate ghi đè cờ read-only khi flush mode là `MANUAL`"
+      ],
+      "answer": 0,
+      "explanation": "Khi mở transaction, `doBegin()` lấy connection ngay, rồi Spring mới đặt các cờ đồng bộ (trong đó có read-only) cho thread. Lúc routing hỏi thì cờ vẫn là `false`, nên luôn chọn primary. Bọc routing bằng `LazyConnectionDataSourceProxy` để connection thật chỉ được lấy ở câu SQL đầu tiên; từ Spring 6.1.2 proxy này có sẵn `setReadOnlyDataSource`."
+    },
+    {
+      "id": "class-name-rule",
+      "kind": "single",
+      "prompt": "Method khai báo `@Transactional(noRollbackForClassName = \"NotFoundException\")`. Exception nào sau đây **cũng** không gây rollback dù bạn không định như vậy?",
+      "options": [
+        "`AccountNotFoundExceptionWrapper`, vì so khớp theo chuỗi con của tên lớp",
+        "`IllegalStateException`, vì rule theo tên áp cho mọi unchecked exception",
+        "`DataIntegrityViolationException`, vì nó là lớp con của `NotFoundException`",
+        "Không có exception nào khác, vì rule theo tên chỉ khớp đúng tên đầy đủ"
+      ],
+      "answer": 0,
+      "explanation": "Rule khai báo bằng tên lớp (`rollbackForClassName`, `noRollbackForClassName`) là pattern so khớp chuỗi con với tên đầy đủ của exception và các lớp cha. `AccountNotFoundExceptionWrapper` chứa `NotFoundException` nên khớp. Dùng dạng `Class` (`noRollbackFor = NotFoundException.class`) để so theo kiểu."
+    },
+    {
+      "id": "test-leak",
+      "kind": "single",
+      "prompt": "Test có `@Transactional` gọi `orderService.place()`, bên trong có `auditService.record()` với `REQUIRES_NEW`. Chạy cả bộ test thì một test khác đếm số dòng `audit` thấy lệch. Vì sao?",
+      "options": [
+        "`record()` commit trong transaction riêng nên không bị rollback cuối test",
+        "Spring Test không rollback khi test có gọi method ở bean khác",
+        "Test chạy song song nên hai transaction đọc lẫn dữ liệu của nhau",
+        "`@Transactional` của test chỉ rollback các bảng có entity JPA"
+      ],
+      "answer": 0,
+      "explanation": "Spring Test chỉ rollback transaction mà nó mở cho test. `REQUIRES_NEW` mở transaction khác và commit thật vào database test, nên dòng `audit` còn lại cho test sau. Dọn dữ liệu bằng script sau mỗi test, hoặc chạy test này không bọc transaction và dọn thủ công."
+    }
+  ]
+}

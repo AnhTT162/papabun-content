@@ -3342,6 +3342,62 @@
       "example": "Timer có tag `userId` với 16.000 người dùng và 70 bucket histogram sinh hơn một triệu series.",
       "related": ["micrometer"],
       "topics": ["spring-observability"]
+    },
+    {
+      "id": "propagation",
+      "term": "Propagation",
+      "meaning": "Thuộc tính của `@Transactional` quyết định method làm gì khi được gọi lúc đã có hoặc chưa có transaction: tham gia, mở transaction mới, dùng savepoint, chạy không transaction hay báo lỗi.",
+      "example": "`REQUIRED` (mặc định) tham gia transaction có sẵn; `REQUIRES_NEW` tạm dừng nó và mở transaction riêng trên connection khác.",
+      "related": ["transaction", "savepoint", "rollback-only"],
+      "topics": ["transactional-deep"]
+    },
+    {
+      "id": "rollback-only",
+      "term": "Rollback-only",
+      "meaning": "Dấu trên transaction cho biết nó chỉ còn được rollback. Method tham gia transaction mà ném lỗi sẽ đặt dấu này; commit sau đó thành rollback và Spring ném `UnexpectedRollbackException`.",
+      "example": "Bắt lỗi của `inventoryService.reserve()` (cùng transaction) rồi đi tiếp vẫn làm cả đơn hàng bị rollback.",
+      "related": ["propagation", "transaction"],
+      "topics": ["transactional-deep"]
+    },
+    {
+      "id": "routing-datasource",
+      "term": "Routing DataSource",
+      "meaning": "`DataSource` chọn database đích cho từng connection theo một khoá, ví dụ transaction hiện tại có read-only không, để gửi câu đọc sang replica.",
+      "example": "`AbstractRoutingDataSource` bọc trong `LazyConnectionDataSourceProxy` để connection chỉ được lấy khi cờ read-only đã có.",
+      "related": ["datasource", "replica-lag"],
+      "topics": ["transactional-deep"]
+    },
+    {
+      "id": "spring-data-repository",
+      "term": "Spring Data repository",
+      "meaning": "Interface kế thừa `JpaRepository` hay `CrudRepository` mà Spring Data tạo proxy cài đặt (dựa trên `SimpleJpaRepository`) lúc khởi động, hoặc sinh code lúc build với AOT repository; bên dưới vẫn là `EntityManager` của JPA.",
+      "example": "`interface OrderRepository extends JpaRepository<Order, Long>` có sẵn `save`, `findById`, phân trang và derived query.",
+      "related": ["jpa", "derived-query"],
+      "topics": ["spring-data-jpa"]
+    },
+    {
+      "id": "derived-query",
+      "term": "Derived query",
+      "meaning": "Method repository mà Spring Data sinh câu query từ tên method; tên không hợp lệ thường lỗi ngay lúc khởi động (hoặc lúc build nếu dùng AOT repository).",
+      "example": "`findTop10ByStatusOrderByCreatedAtDesc(Status s)` thành JPQL `... where x.status = ?1 order by x.createdAt desc` và giới hạn 10 dòng.",
+      "related": ["spring-data-repository", "jpql"],
+      "topics": ["spring-data-jpa"]
+    },
+    {
+      "id": "flush-mode",
+      "term": "Flush mode",
+      "meaning": "Quy tắc khi nào Hibernate đẩy thay đổi trong persistence context xuống database: `AUTO` (trước commit và trước query có thể bị ảnh hưởng), `COMMIT` (chỉ lúc commit), `MANUAL` (chỉ khi gọi `flush()`).",
+      "example": "Với Spring, transaction `readOnly = true` đặt `MANUAL`: sửa entity không tự thành `UPDATE`.",
+      "related": ["persistence-context", "dirty-checking"],
+      "topics": ["spring-data-jpa"]
+    },
+    {
+      "id": "bulk-update",
+      "term": "Bulk update",
+      "meaning": "Câu `UPDATE` hoặc `DELETE` bằng JPQL hay SQL tác động nhiều dòng trực tiếp trong database, không đi qua entity; persistence context không biết và giữ giá trị cũ.",
+      "example": "`@Modifying @Query(\"update Coupon c set c.active = false where c.expiresAt < :now\")` chạy một câu SQL thay vì tải từng coupon.",
+      "related": ["persistence-context", "flush-mode"],
+      "topics": ["spring-data-jpa"]
     }
   ]
 }

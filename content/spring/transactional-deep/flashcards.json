@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "required-join", "front": "`REQUIRED` làm gì khi đã có transaction?", "back": "Tham gia transaction đó: cùng connection, không tự commit hay rollback được, chỉ đánh dấu rollback-only khi lỗi." },
+    { "id": "unexpected-rollback", "front": "Khi nào gặp `UnexpectedRollbackException`?", "back": "Method bên trong (cùng transaction) ném lỗi và đánh dấu rollback-only, bên ngoài `catch` rồi trả về bình thường; commit thành rollback." },
+    { "id": "requires-new-cost", "front": "Ba cái giá của `REQUIRES_NEW`?", "back": "Hai connection mỗi request (pool deadlock), tự chờ lock mà transaction ngoài đang giữ, và phần đã commit không rollback theo transaction ngoài." },
+    { "id": "nested", "front": "`NESTED` khác `REQUIRES_NEW` thế nào?", "back": "Savepoint trên cùng connection, không có connection thứ hai. `JpaTransactionManager` mặc định không cho dùng." },
+    { "id": "ignored-attrs", "front": "Thuộc tính nào bị bỏ qua khi method tham gia transaction có sẵn?", "back": "`readOnly`, `isolation`, `timeout`: transaction ngoài quyết định. `setValidateExistingTransaction(true)` để báo lỗi khi `readOnly` hay `isolation` không khớp (không xét `timeout`)." },
+    { "id": "listener-phases", "front": "Bốn phase của `@TransactionalEventListener`?", "back": "`BEFORE_COMMIT` (còn trong transaction), `AFTER_COMMIT` (mặc định), `AFTER_ROLLBACK`, `AFTER_COMPLETION`." },
+    { "id": "listener-write", "front": "Ghi database trong listener `AFTER_COMMIT` cần gì?", "back": "Transaction mới: `@Transactional(propagation = REQUIRES_NEW)`. Từ Spring 6.1, khai báo `REQUIRED` làm ứng dụng lỗi lúc khởi động (`NOT_SUPPORTED` được chấp nhận từ 6.1.3)." },
+    { "id": "routing-lazy", "front": "Vì sao routing replica theo `readOnly` cần `LazyConnectionDataSourceProxy`?", "back": "Connection được lấy trước khi cờ read-only gắn vào thread; proxy hoãn việc lấy tới câu SQL đầu tiên." }
+  ]
+}
