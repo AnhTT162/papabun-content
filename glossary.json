@@ -3318,6 +3318,30 @@
       "example": "Bean `OrderService` có `@Transactional` thành `OrderService$$SpringCGLIB$$0`.",
       "related": ["aop-proxy", "jdk-dynamic-proxy"],
       "topics": ["spring-aop-proxy"]
+    },
+    {
+      "id": "micrometer",
+      "term": "Micrometer",
+      "meaning": "Thư viện đo lường cho ứng dụng JVM mà Spring Boot dùng: code ghi metric qua `MeterRegistry`, còn nơi xuất (Prometheus, Datadog, OTLP) là cấu hình.",
+      "example": "`registry.counter(\"orders.placed\", \"channel\", \"web\").increment()`.",
+      "related": ["observation-api", "metric-cardinality"],
+      "topics": ["spring-observability"]
+    },
+    {
+      "id": "observation-api",
+      "term": "Observation API",
+      "meaning": "API của Micrometer (từ Boot 3) để đo một đoạn code một lần mà sinh ra cả timer, span tracing và trace id trong log.",
+      "example": "`Observation.createNotStarted(\"order.place\", registry).observe(() -> place(cmd))`.",
+      "related": ["micrometer"],
+      "topics": ["spring-observability"]
+    },
+    {
+      "id": "metric-cardinality",
+      "term": "Cardinality của metric",
+      "meaning": "Số time series mà một metric sinh ra, bằng số tổ hợp giá trị tag. Tag có giá trị không giới hạn (id, URL thô) làm phình bộ nhớ ứng dụng và hệ thống giám sát.",
+      "example": "Timer có tag `userId` với 16.000 người dùng và 70 bucket histogram sinh hơn một triệu series.",
+      "related": ["micrometer"],
+      "topics": ["spring-observability"]
     }
   ]
 }

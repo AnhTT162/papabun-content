@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "uri-tag",
+      "kind": "output",
+      "prompt": "Gọi 10.000 user id khác nhau qua đoạn code sau. Tag `uri` của metric `http.client.requests` có bao nhiêu giá trị?",
+      "code": "UserView a = restClient.get().uri(\"/users/{id}\", id).retrieve().body(UserView.class);\n\nUserView b = restClient.get().uri(\"/users/\" + id).retrieve().body(UserView.class);",
+      "options": [
+        "Dòng đầu: 1 giá trị; dòng sau: mỗi id một giá trị tới giới hạn",
+        "Cả hai dòng chỉ 1 giá trị vì Spring tự nhận ra phần id",
+        "Cả hai dòng đều 10.000 giá trị vì mỗi id tạo URL khác",
+        "Dòng đầu: 10.000 giá trị; dòng sau: chỉ 1 giá trị"
+      ],
+      "answer": 0,
+      "explanation": "`RestClient.uri(String, ...)` ghi chính chuỗi được truyền vào làm template cho tag `uri`. Truyền template thì tag là `/users/{id}`; nối chuỗi thì chuỗi đó đã chứa id, nên mỗi id một giá trị tag. (Truyền object `URI` dựng sẵn thì tag là `none`, URL đầy đủ chỉ nằm ở span.) Boot chặn sau `max-uri-tags` (mặc định 100) và log cảnh báo, nên series mới bị bỏ chứ không phình mãi, nhưng metric của client đó cũng mất ý nghĩa."
+    },
+    {
+      "id": "percentile-merge",
+      "kind": "single",
+      "prompt": "Mỗi pod xuất p99 tính sẵn (`publishPercentiles(0.99)`). Có 6 pod. Cách nào cho p99 đúng của cả dịch vụ?",
+      "options": [
+        "Không cách nào; phải gộp bucket histogram rồi tính percentile",
+        "Lấy trung bình cộng giá trị p99 của cả 6 pod",
+        "Lấy giá trị p99 lớn nhất trong số 6 pod",
+        "Lấy trung bình có trọng số theo số request của mỗi pod"
+      ],
+      "answer": 0,
+      "explanation": "Percentile của từng pod không chứa đủ thông tin về phân bố để gộp lại, dù lấy trung bình, max hay trọng số. Bucket histogram là số đếm nên cộng được giữa các pod, rồi mới tính percentile."
+    },
+    {
+      "id": "sampling",
+      "kind": "single",
+      "prompt": "Boot với Micrometer Tracing, cấu hình mặc định. Một request lỗi 500 hiếm gặp. Khả năng cao nhất là gì?",
+      "options": [
+        "Khoảng 10% khả năng có trace, vì sampling mặc định là 0.1",
+        "Luôn có trace vì request lỗi được giữ tự động",
+        "Không bao giờ có trace vì tracing mặc định tắt",
+        "Luôn có trace vì mặc định giữ 100% request"
+      ],
+      "answer": 0,
+      "explanation": "`management.tracing.sampling.probability` mặc định 0.1 và quyết định ở đầu request (head-based), trước khi biết request lỗi. Log vẫn có trace id. Muốn giữ mọi trace lỗi thì dùng tail sampling ở OpenTelemetry Collector."
+    },
+    {
+      "id": "gauge-weak",
+      "kind": "single",
+      "prompt": "`Gauge.builder(\"queue.size\", new ArrayList<>(jobs), List::size).register(registry)`. Sau một lúc gauge trả `NaN`. Vì sao?",
+      "options": [
+        "Gauge giữ tham chiếu yếu; list tạo tạm không ai giữ nên bị GC",
+        "List rỗng nên Micrometer trả `NaN` thay cho giá trị 0",
+        "Gauge chỉ đo được kiểu `Number`, không đo được `List`",
+        "Prometheus không đọc được gauge có giá trị thay đổi liên tục"
+      ],
+      "answer": 0,
+      "explanation": "Micrometer giữ object được đo bằng tham chiếu yếu để không gây rò bộ nhớ. List copy tạm không có ai giữ, GC dọn nó và gauge trả `NaN`. Đo object được giữ lâu dài (field của bean). Kể cả khi giữ, một bản copy cũng không bao giờ đổi giá trị; phải đo chính collection đang dùng."
+    }
+  ]
+}

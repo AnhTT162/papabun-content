@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Khách hàng mất dần khuyến mãi sau khi đổi sang Caffeine",
+  "context": "Bảng giá theo vùng được cache bằng `@Cacheable`. Để giảm tải Redis, đội vừa chuyển cache này sang Caffeine trong JVM (`spring.cache.type=caffeine`, TTL 10 phút). Code còn lại giữ nguyên.",
+  "buggyCode": "public class PriceList {\n    private final List<PriceRule> rules;          // ArrayList nạp từ database\n    public List<PriceRule> rules() { return rules; }\n}\n\n@Service\nclass PricingService {\n    @Cacheable(\"price-lists\")\n    public PriceList priceList(String region) {\n        return priceListRepository.load(region);\n    }\n}\n\n@Service\nclass CheckoutService {\n    Money quote(Customer customer, Cart cart) {\n        PriceList list = pricingService.priceList(customer.region());\n        list.rules().removeIf(rule -> !rule.appliesTo(customer));   // chỉ giữ quy tắc của khách này\n        return list.apply(cart);\n    }\n}",
+  "symptom": {
+    "description": "Sau deploy, khách VIP mất giảm giá: vài giây sau mỗi lần bảng giá được nạp lại (mỗi 10 phút), gần như mọi khách VIP không còn được giảm. Restart pod thì hết một lúc. Khi còn dùng Redis, code này chạy đúng hai năm.",
+    "output": "10:00:03 INFO  quote customer=VIP-118 region=VN rules=[BASE, VIP_10, FREESHIP]   total=405000\n10:00:05 INFO  quote customer=NEW-552 region=VN rules=[BASE, FREESHIP]           total=450000\n10:00:09 INFO  quote customer=VIP-731 region=VN rules=[BASE, FREESHIP]           total=450000   <- thiếu VIP_10\n10:00:12 INFO  quote customer=NEW-901 region=VN rules=[BASE, FREESHIP]           total=450000\n\n# debug: identityHashCode(list) ở mọi request vùng VN\nPriceList@1b6d3586  PriceList@1b6d3586  PriceList@1b6d3586"
+  },
+  "diagnosis": {
+    "question": "Vì sao khách VIP thứ hai mất quy tắc `VIP_10`?",
+    "options": [
+      "Caffeine trả chính object trong cache; `removeIf` của request trước đã sửa bản dùng chung",
+      "Key mặc định của `@Cacheable` không phân biệt khách hàng nên trả nhầm bảng giá của khách khác",
+      "TTL 10 phút của Caffeine làm bảng giá hết hạn giữa chừng và bị nạp thiếu dữ liệu",
+      "Caffeine không lưu đủ `List` lồng trong object nên chỉ giữ lại phần tử đầu tiên"
+    ],
+    "answer": 0,
+    "explanation": "Cache trong JVM lưu tham chiếu. Mọi request vùng VN nhận cùng một `PriceList` (hash code giống nhau). Request của khách thường `NEW-552` gọi `removeIf` và xoá `VIP_10` khỏi chính danh sách đang nằm trong cache, nên khách VIP sau đó không còn quy tắc này cho tới khi entry hết hạn và được nạp lại. Với Redis, mỗi lần đọc là một bản mới deserialize, nên việc sửa object chỉ ảnh hưởng request đó và lỗi bị che. Key theo vùng là đúng ý đồ: bảng giá không phụ thuộc khách hàng."
+  },
+  "fix": {
+    "code": "public record PriceList(List<PriceRule> rules) {\n    public PriceList {\n        rules = List.copyOf(rules);                 // bất biến: không ai sửa được bản trong cache\n    }\n\n    public PriceList forCustomer(Customer customer) {\n        return new PriceList(rules.stream().filter(rule -> rule.appliesTo(customer)).toList());\n    }\n}\n\n@Service\nclass CheckoutService {\n    Money quote(Customer customer, Cart cart) {\n        PriceList list = pricingService.priceList(customer.region()).forCustomer(customer);   // bản mới\n        return list.apply(cart);\n    }\n}",
+    "explanation": "Giá trị đưa vào cache trong JVM phải bất biến: record với `List.copyOf` làm mọi lời gọi sửa ném `UnsupportedOperationException` ngay, thay vì âm thầm làm hỏng dữ liệu dùng chung. Việc lọc theo khách tạo object mới. `ConcurrentMapCacheManager` có tuỳ chọn `storeByValue` để copy khi đọc, nhưng tốn serialize mỗi lần và không áp cho Caffeine; bất biến vẫn là cách đúng. Thêm test gọi `quote` cho hai khách khác nhau liên tiếp với cache thật để bắt lỗi kiểu này."
+  }
+}

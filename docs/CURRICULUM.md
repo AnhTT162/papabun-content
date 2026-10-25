@@ -202,8 +202,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 7 | `transactional-basics` | ✚ @Transactional cơ bản | mid | Proxy mở và commit transaction thế nào, rollback mặc định chỉ với unchecked, đặt ranh giới transaction ở đâu | L B | ✅ |
 | 8 | `spring-aop-proxy` | AOP & proxy | mid | JDK và CGLIB proxy, self-invocation, thứ tự advice | L D B | ✅ |
 | 9 | `spring-async-events` | @Async, @Scheduled & event | mid | Thread pool mặc định, `@Scheduled` một thread, event đồng bộ và bất đồng bộ | L B | ✅ |
-| 10 | `spring-cache` | ✚ Spring Cache | mid | `@Cacheable` và self-invocation, cache key, TTL, cache đúng chỗ | L B | ⬜ |
-| 11 | `spring-observability` | Micrometer & tracing | mid | Metric, tracing, log correlation | L T | ⬜ |
+| 10 | `spring-cache` | ✚ Spring Cache | mid | `@Cacheable` và self-invocation, cache key, TTL, cache đúng chỗ | L B | ✅ |
+| 11 | `spring-observability` | Micrometer & tracing | mid | Metric, tracing, log correlation | L T | ✅ |
 | 12 | `transactional-deep` | @Transactional chuyên sâu | senior | Propagation, rollback rule, `readOnly`, self-invocation, `@TransactionalEventListener` | L S B T | ⬜ |
 | 13 | `spring-data-jpa` | Spring Data JPA & Hibernate chuyên sâu | senior | Dirty checking, flush mode, persistence context, bulk op, count query, `equals` của entity | L B T | ⬜ |
 | 14 | `spring-security-architecture` | Kiến trúc Spring Security | senior | Filter chain, `AuthenticationManager`, SecurityContext, method security, resource server | L D B | ⬜ |

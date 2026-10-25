@@ -53,7 +53,7 @@
   - Chứa mọi chiều làm kết quả khác đi (tenant, ngôn ngữ, quyền nếu kết quả lọc theo quyền).
   - Có tiền tố theo loại và phiên bản, ví dụ `v3:product:{tenant}:{id}`: đổi cấu trúc object thì tăng phiên bản, không phải đọc nhầm dữ liệu kiểu cũ đã serialize.
   - Key dài tốn bộ nhớ ở Redis; giá trị lớn (vài MB) làm chậm mọi lệnh khác vì Redis xử lý lệnh tuần tự.
-- **Spring Cache**: `@Cacheable("products")` dùng tham số làm key mặc định. Nó chạy qua proxy, nên gọi method có `@Cacheable` từ chính class đó không đi qua cache ([[self-invocation|self-invocation]]), giống `@Transactional`. `@CacheEvict` khi sửa; `sync = true` để nhiều thread cùng miss một key chỉ một thread tải, nhưng với Caffeine chỉ trong **một instance**: 20 pod cùng miss vẫn là 20 lần tải; với Redis, tác dụng tuỳ phiên bản Spring Data Redis (bài Stampede, penetration, avalanche, hot key). Key mặc định chỉ dựa trên tham số, không có tên method: `findById(Long id)` và `findPriceById(Long id)` cùng cache `products` sẽ đè key của nhau và trả nhầm kiểu; dùng tên cache riêng hoặc `key = "'price:' + #id"`.
+- **Spring Cache**: `@Cacheable` chạy qua proxy ([[self-invocation|self-invocation]]) và key mặc định chỉ dựa trên tham số, không có tên method; chi tiết ở bài Spring Cache.
 - **Khi nào không nên cache**:
   - Dữ liệu ghi nhiều hơn đọc, hoặc mỗi giá trị chỉ được đọc một lần.
   - Dữ liệu phải luôn chính xác tuyệt đối tại thời điểm đọc (số dư khi trừ tiền, tồn kho khi chốt đơn): đọc từ nguồn, cache chỉ dùng để hiển thị.

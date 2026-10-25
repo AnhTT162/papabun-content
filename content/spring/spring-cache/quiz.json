@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "key-collision",
+      "kind": "output",
+      "prompt": "Gọi `findName(7)` rồi `findStock(7)`. Lần gọi thứ hai trả gì?",
+      "code": "@Cacheable(\"products\")\npublic String findName(long id) { return repo.name(id); }      // \"Áo thun\"\n\n@Cacheable(\"products\")\npublic Integer findStock(long id) { return repo.stock(id); }   // 42",
+      "options": [
+        "`ClassCastException`: nhận `\"Áo thun\"` từ key `7`",
+        "`42`, vì Spring tự thêm tên method vào key mặc định",
+        "`42`, vì kiểu trả về khác nhau nên được lưu riêng",
+        "`null`, vì cache không chứa được hai kiểu khác nhau"
+      ],
+      "answer": 0,
+      "explanation": "Key mặc định chỉ là tham số (`7`), không có tên method. Lần gọi thứ hai hit key `7` trong cache `products` và nhận `\"Áo thun\"`; trả về `String` cho method khai báo `Integer` nên lỗi ép kiểu ở caller. Dùng tên cache riêng hoặc `key = \"'stock:' + #id\"`."
+    },
+    {
+      "id": "condition-unless",
+      "kind": "single",
+      "prompt": "Muốn `@Cacheable` không cache khi method trả danh sách rỗng hoặc `null`. Viết thế nào?",
+      "options": [
+        "`unless = \"#result == null || #result.isEmpty()\"`",
+        "`condition = \"#result.isEmpty() == false\"`, vì `condition` lọc trước khi lưu",
+        "`condition = \"!#result.isEmpty()\"` kèm `sync = true`",
+        "Không làm được bằng annotation, phải tự gọi `CacheManager`"
+      ],
+      "answer": 0,
+      "explanation": "Với `@Cacheable`, `condition` được đánh giá trước khi gọi method nên chưa có `#result` (khác `@CachePut`). `unless` đánh giá sau, nên lọc theo kết quả được. `sync = true` lại không dùng chung được với `unless`."
+    },
+    {
+      "id": "redis-down",
+      "kind": "single",
+      "prompt": "Cấu hình mặc định, Redis làm cache bị mất kết nối. Database vẫn khoẻ. API có `@Cacheable` thì sao?",
+      "options": [
+        "Lỗi: error handler mặc định ném lại exception của Redis",
+        "Vẫn chạy: Spring tự bỏ qua cache và gọi thẳng database",
+        "Vẫn chạy nhưng chậm hơn vì Spring thử lại Redis ba lần",
+        "Trả dữ liệu cũ từ bản sao Spring giữ trong bộ nhớ"
+      ],
+      "answer": 0,
+      "explanation": "`SimpleCacheErrorHandler` mặc định ném lại exception, nên mỗi request lỗi (sau khi chờ hết timeout lệnh, mặc định của Lettuce là 60 giây nếu không đặt `spring.data.redis.timeout`). Khai báo `CacheErrorHandler` chỉ log để request đi thẳng vào method, và đặt timeout Redis ngắn."
+    },
+    {
+      "id": "self-cacheable",
+      "kind": "single",
+      "prompt": "`getProduct(id)` gọi `this.loadProduct(id)`, method có `@Cacheable`. Trong cùng class. Kết quả?",
+      "options": [
+        "Mỗi lần đều chạy query, vì lời gọi qua `this` không đi qua proxy",
+        "Cache hoạt động bình thường vì annotation nằm trên method",
+        "Cache chỉ hoạt động sau lần gọi đầu tiên qua proxy",
+        "Khởi động lỗi vì `@Cacheable` không được gọi nội bộ"
+      ],
+      "answer": 0,
+      "explanation": "`@Cacheable` là advice của proxy, giống `@Transactional`. Gọi qua `this` đi thẳng vào object gốc nên không đọc hay ghi cache. Đưa `loadProduct` sang bean khác, hoặc đặt `@Cacheable` lên chính method được gọi từ bên ngoài."
+    }
+  ]
+}

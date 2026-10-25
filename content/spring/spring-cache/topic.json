@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-cache",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring Cache",
+  "summary": "@Cacheable, @CachePut, @CacheEvict chạy qua proxy và self-invocation; key mặc định SimpleKey và key bằng SpEL; condition và unless; TTL và serializer nằm ở provider; object trong cache JVM bị sửa chung; Redis lỗi làm request lỗi và CacheErrorHandler; sync, null, kiểu bất đồng bộ, metric, thứ tự với transaction.",
+  "level": "mid",
+  "order": 10,
+  "minutes": 13,
+  "prerequisites": ["spring-aop-proxy", "caching-basics"],
+  "terms": ["self-invocation", "cache-key", "ttl", "local-cache", "distributed-cache", "immutable", "cache-penetration"],
+  "references": [
+    { "title": "Spring Framework Reference: Cache Abstraction", "url": "https://docs.spring.io/spring-framework/reference/integration/cache.html" },
+    { "title": "Spring Boot Reference: Caching", "url": "https://docs.spring.io/spring-boot/reference/io/caching.html" },
+    { "title": "Spring Data Redis Reference: Redis Cache", "url": "https://docs.spring.io/spring-data/redis/reference/redis/redis-cache.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Redis sập thì API có cache có sập theo không?\" Mặc định là có: `@Cacheable` ném exception khi Redis không trả lời, request lỗi dù database vẫn chạy. Khai báo `CacheErrorHandler` để log và gọi thẳng method, đặt `spring.data.redis.timeout` ngắn (vài trăm mili giây; không đặt thì Lettuce chờ 60 giây mỗi lệnh), và kiểm tra database có chịu được toàn bộ tải khi cache mất không. Hỏi tiếp thường là \"vậy vì sao đặt TTL ở đâu\": annotation không có TTL; đặt theo từng cache trong cấu hình của provider." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để serializer mặc định (Java serialization) cho cache Redis của ứng dụng deploy thường xuyên. Thêm field (khi không khai báo `serialVersionUID`) hay đổi package của class là lần đọc sau ném `SerializationException`, mọi request đi vào cache đó lỗi cho tới khi xoá key. Serializer JSON kiểu generic cũng ghi tên class vào giá trị nên vẫn gãy khi đổi package. Cách phòng chính là thêm phiên bản vào tên cache hoặc tiền tố key mỗi khi đổi cấu trúc, cộng `CacheErrorHandler` làm lưới an toàn." }
+  ]
+}

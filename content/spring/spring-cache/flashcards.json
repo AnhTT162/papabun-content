@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "default-key", "front": "Key mặc định của `@Cacheable`?", "back": "Một tham số: chính nó; nhiều tham số: `SimpleKey(a, b)`; không tham số: `SimpleKey.EMPTY`. Không có tên method." },
+    { "id": "condition-unless", "front": "`condition` và `unless` khác nhau thế nào?", "back": "`condition` xét trước khi gọi, chỉ dùng tham số; `unless` xét sau, dùng được `#result`." },
+    { "id": "ttl", "front": "Đặt TTL cho `@Cacheable` ở đâu?", "back": "Ở cấu hình provider (`RedisCacheConfiguration.entryTtl`, `expireAfterWrite` của Caffeine); annotation không có TTL." },
+    { "id": "by-reference", "front": "Vì sao sửa object lấy từ Caffeine là nguy hiểm?", "back": "Cache JVM lưu tham chiếu, nên sửa object là sửa bản dùng chung; giá trị cache phải bất biến." },
+    { "id": "error-handler", "front": "Redis cache lỗi thì `@Cacheable` làm gì mặc định?", "back": "Ném exception ra caller. Dùng `CacheErrorHandler` để log và đọc thẳng từ nguồn." },
+    { "id": "serializer", "front": "Serializer mặc định của `RedisCacheManager` gây bẫy gì?", "back": "Java serialization: đổi class là đọc lỗi sau deploy; nên dùng JSON." },
+    { "id": "sync", "front": "`@Cacheable(sync = true)` làm gì và giới hạn ở đâu?", "back": "Chỉ một thread trong JVM tải key đang miss; không chặn được nhiều pod cùng tải, và không dùng chung với `unless`." }
+  ]
+}

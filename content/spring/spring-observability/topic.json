@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-observability",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Micrometer & tracing",
+  "summary": "MeterRegistry và các loại meter; metric có sẵn của Boot và tag uri; percentile phía client không cộng gộp được, histogram và histogram_quantile; Observation API cho metric, trace và log cùng lúc; Micrometer Tracing, traceparent, sampling; log correlation; cardinality của tag làm phình heap và Prometheus.",
+  "level": "mid",
+  "order": 11,
+  "minutes": 15,
+  "prerequisites": ["spring-boot-autoconfig"],
+  "terms": ["micrometer", "observation-api", "metric-cardinality", "actuator", "thread-local"],
+  "references": [
+    { "title": "Micrometer Documentation: Concepts", "url": "https://docs.micrometer.io/micrometer/reference/concepts.html" },
+    { "title": "Spring Boot Reference: Metrics", "url": "https://docs.spring.io/spring-boot/reference/actuator/metrics.html" },
+    { "title": "Spring Boot Reference: Tracing", "url": "https://docs.spring.io/spring-boot/reference/actuator/tracing.html" },
+    { "title": "Prometheus: Histograms and Summaries", "url": "https://prometheus.io/docs/practices/histograms/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao không lấy trung bình p99 của các pod để có p99 của dịch vụ?\" Percentile không cộng hay lấy trung bình được: p99 của từng pod nói về phân bố của pod đó, còn p99 tổng phụ thuộc toàn bộ phân bố. Phải xuất histogram (các bucket đếm được cộng gộp) rồi tính `histogram_quantile` trên tổng bucket. Hỏi tiếp thường là \"vậy p99 từ histogram chính xác cỡ nào\": tuỳ độ rộng bucket; đặt SLO bucket quanh ngưỡng quan trọng (ví dụ 200ms, 500ms) để câu hỏi \"bao nhiêu % request dưới 500ms\" có câu trả lời đúng." },
+    { "type": "callout", "style": "warning", "markdown": "Không đặt id, email, URL thô, message lỗi hay tên file làm tag metric. Mỗi giá trị là một time series sống mãi trong heap của ứng dụng và trong Prometheus. Thông tin chi tiết theo từng request thuộc về span (`highCardinalityKeyValue`) và log có trace id, không thuộc về metric." }
+  ]
+}

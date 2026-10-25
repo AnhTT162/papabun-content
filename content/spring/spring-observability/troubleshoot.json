@@ -1,0 +1,87 @@
+{
+  "$schema": "../../../schema/troubleshoot.schema.json",
+  "title": "Heap tăng dần và Prometheus bỏ scrape",
+  "symptom": "Service tích điểm chạy 6 pod Spring Boot, heap 1GB. Một tuần sau bản deploy thêm tính năng \"tra cứu điểm\", heap sau mỗi lần GC tăng đều mỗi ngày, hai pod đã bị OOMKilled. Cùng lúc, Prometheus báo target `loyalty` lúc up lúc down vì scrape timeout (10 giây), và Prometheus server dùng RAM gấp ba tuần trước. Latency API vẫn bình thường.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn xem gì trước?",
+      "choices": [
+        {
+          "label": "Kích thước và số dòng của `/actuator/prometheus`, nhóm theo tên metric",
+          "quality": "good",
+          "feedback": "Hai triệu chứng, heap ứng dụng tăng và Prometheus quá tải, cùng trỏ về số lượng metric. Đếm series theo tên là cách nhanh nhất để thấy metric nào phình.",
+          "next": "scrape"
+        },
+        {
+          "label": "Lấy heap dump của một pod và mở bằng MAT",
+          "quality": "ok",
+          "feedback": "Sẽ tìm ra, vì dominator tree cho thấy `PrometheusMeterRegistry` giữ hàng trăm MB. Nhưng heap dump 1GB chậm và nặng; nhìn endpoint metric trước cho kết quả trong vài giây.",
+          "next": "scrape"
+        },
+        {
+          "label": "Tăng heap lên 2GB và timeout scrape lên 30 giây",
+          "quality": "poor",
+          "feedback": "Chỉ dời ngày sập. Heap tăng đều theo ngày nghĩa là có thứ tích luỹ không giới hạn; cần tìm nó trước.",
+          "next": "scrape"
+        }
+      ]
+    },
+    {
+      "id": "scrape",
+      "evidence": "$ curl -s localhost:8081/actuator/prometheus | wc -l\n1217265\n$ curl -s -o /dev/null -w '%{size_download} %{time_total}\\n' localhost:8081/actuator/prometheus\n148213904 11.42\n\n$ curl -s localhost:8081/actuator/prometheus | grep -v '^#' | sed 's/{.*//' | sort | uniq -c | sort -rn | head -4\n1155198 loyalty_lookup_seconds_bucket\n  16742 loyalty_lookup_seconds_count\n  16742 loyalty_lookup_seconds_sum\n   1312 http_server_requests_seconds_bucket\n\n$ curl -s localhost:8081/actuator/prometheus | grep loyalty_lookup_seconds_count | head -2\nloyalty_lookup_seconds_count{application=\"loyalty\",userId=\"88213\"} 3\nloyalty_lookup_seconds_count{application=\"loyalty\",userId=\"88214\"} 1",
+      "evidenceFormat": "monospace",
+      "question": "Điều gì làm số series phình?",
+      "choices": [
+        {
+          "label": "Timer `loyalty.lookup` có tag `userId`: mỗi người dùng một bộ series, nhân với số bucket của histogram",
+          "quality": "good",
+          "feedback": "Đúng. 16.742 giá trị `userId` khác nhau, mỗi giá trị có 69 dòng bucket histogram cộng `count` và `sum`. Registry giữ mọi series trong heap mãi mãi, và mỗi lần scrape phải ghi ra hơn một triệu dòng.",
+          "next": "fix"
+        },
+        {
+          "label": "Histogram có quá nhiều bucket, cần giảm số bucket",
+          "quality": "ok",
+          "feedback": "Bucket nhân số series lên khoảng 70 lần, nhưng gốc rễ là tag `userId` không giới hạn. Giảm bucket chỉ làm chậm tốc độ tăng.",
+          "next": "fix"
+        },
+        {
+          "label": "Prometheus scrape quá thường xuyên làm ứng dụng tích dữ liệu",
+          "quality": "poor",
+          "feedback": "Tần suất scrape không đổi số series. Registry giữ một bản ghi cho mỗi tổ hợp tag, dù scrape bao lâu một lần.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "@Service\nclass PointsLookup {\n    PointsView lookup(String userId) {\n        return Timer.builder(\"loyalty.lookup\")\n                .tag(\"userId\", userId)                 // để \"xem được ai chậm\"\n                .publishPercentileHistogram()\n                .register(registry)\n                .record(() -> pointsClient.fetch(userId));\n    }\n}",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào cho đúng?",
+      "choices": [
+        {
+          "label": "Bỏ tag `userId` khỏi metric; đưa nó vào span qua Observation với `highCardinalityKeyValue`",
+          "quality": "good",
+          "feedback": "Metric trả lời \"bao nhiêu, nhanh hay chậm\" theo vài chiều có ít giá trị; câu hỏi \"người dùng nào chậm\" thuộc về trace và log. Observation cho cả hai: tag ít giá trị thành metric, giá trị nhiều chỉ nằm ở span.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Thêm `MeterFilter.maximumAllowableTags(\"loyalty.lookup\", \"userId\", 100, ...)`",
+          "quality": "ok",
+          "feedback": "Là lưới an toàn tốt và nên có, nhưng chỉ 100 người dùng đầu tiên có số liệu, phần còn lại bị chặn: metric vô nghĩa. Vẫn phải bỏ tag.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tăng RAM cho Prometheus và giữ nguyên code",
+          "quality": "poor",
+          "feedback": "Heap của ứng dụng vẫn tăng theo số người dùng và pod vẫn bị OOMKilled; Prometheus chỉ là nạn nhân thứ hai.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc: tag có số giá trị không giới hạn (`userId`) trên một timer có histogram.** Mỗi người dùng mới tạo thêm 71 series (69 bucket, `count`, `sum`) trong `PrometheusMeterRegistry`. Registry giữ chúng tới khi process dừng, nên heap tăng theo số người dùng đã tra cứu, và endpoint scrape lớn tới 148MB, vượt timeout 10 giây.\n\n**Sửa**:\n- Bỏ `userId` khỏi metric. Dùng `Observation` với `lowCardinalityKeyValue(\"result\", ...)` cho metric và `highCardinalityKeyValue(\"user.id\", ...)` cho span.\n- Chỉ bật `publishPercentileHistogram` cho vài timer quan trọng.\n- Thêm `MeterFilter` giới hạn số giá trị tag làm lưới an toàn cho toàn ứng dụng.\n\n**Phòng ngừa**:\n- Review mọi `.tag(...)` mới: giá trị có giới hạn không? Id, email, URL thô, message lỗi đều không đạt.\n- Cảnh báo theo số series mỗi target (`scrape_series_added`) và kích thước scrape.\n- Đặt `sample_limit` cho job Prometheus để một ứng dụng lỗi không kéo sập cả server giám sát. Vượt giới hạn thì cả lần scrape bị bỏ và target hiện là down, nên cảnh báo sớm khi `scrape_samples_scraped` tới gần giới hạn."
+    }
+  ]
+}

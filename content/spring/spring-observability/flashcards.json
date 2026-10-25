@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "series", "front": "Một time series trong Micrometer được xác định bởi gì?", "back": "Tên meter cộng tổ hợp giá trị tag; mỗi tổ hợp mới là một series mới." },
+    { "id": "cardinality", "front": "Vì sao không đặt `userId` làm tag?", "back": "Mỗi giá trị là một series sống mãi trong heap và Prometheus; số người dùng không giới hạn." },
+    { "id": "percentile", "front": "Vì sao không gộp p99 của các pod được?", "back": "Percentile không cộng được; xuất histogram và tính `histogram_quantile` trên tổng bucket." },
+    { "id": "observation", "front": "Observation API cho gì?", "back": "Đo một lần, ra timer, span và trace id trong log; tag ít giá trị thành metric, nhiều giá trị chỉ ở span." },
+    { "id": "sampling", "front": "Sampling mặc định của tracing trong Boot?", "back": "10% (`management.tracing.sampling.probability=0.1`), quyết định ở đầu request." },
+    { "id": "uri-template", "front": "Gọi HTTP client thế nào để tag `uri` không phình?", "back": "Truyền URI template và biến (`\"/users/{id}\", id`), không nối chuỗi." },
+    { "id": "sleuth", "front": "Boot 3 dùng gì thay Spring Cloud Sleuth?", "back": "Micrometer Tracing, với bridge sang OpenTelemetry hoặc Brave." }
+  ]
+}
