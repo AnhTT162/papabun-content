@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "put-empty",
+      "front": "`put` vào bin trống của ConcurrentHashMap khoá gì?",
+      "back": "Không khoá gì: một lần CAS đặt node mới vào ô mảng."
+    },
+    {
+      "id": "put-chain",
+      "front": "`put` vào bin đã có node thì đồng bộ thế nào?",
+      "back": "`synchronized` trên node đầu bin. Hai thread chỉ chặn nhau khi trúng cùng bin."
+    },
+    {
+      "id": "get",
+      "front": "`get` của ConcurrentHashMap có khoá không?",
+      "back": "Không. Nó đọc volatile phần tử mảng và các field `val`, `next` của node, kể cả trong lúc resize."
+    },
+    {
+      "id": "java7",
+      "front": "Java 7 và Java 8 khác nhau thế nào?",
+      "back": "Java 7 chia map thành các Segment (mặc định 16, theo `concurrencyLevel`), mỗi segment một ReentrantLock. Java 8 bỏ segment, khoá theo từng bin và dùng CAS cho bin trống."
+    },
+    {
+      "id": "forwarding",
+      "front": "ForwardingNode dùng làm gì?",
+      "back": "Đánh dấu bin đã chuyển sang bảng mới khi resize (hash `-1`). `get` theo nó sang bảng mới; `put` gặp nó thì vào giúp resize."
+    },
+    {
+      "id": "help-transfer",
+      "front": "Resize của ConcurrentHashMap song song thế nào?",
+      "back": "Bảng cũ chia thành đoạn bin (ít nhất 16 bin mỗi đoạn); mỗi thread nhận một đoạn bằng CAS trên `transferIndex` và chuyển từ cuối bảng về đầu."
+    },
+    {
+      "id": "compound",
+      "front": "Vì sao `map.put(k, map.get(k) + 1)` sai trên ConcurrentHashMap?",
+      "back": "Hai lời gọi riêng, thread khác ghi chen giữa nên mất cập nhật. Dùng `merge(k, 1, Integer::sum)` hoặc `compute`."
+    },
+    {
+      "id": "recursive",
+      "front": "Gọi `computeIfAbsent` lồng trên cùng map thì sao?",
+      "back": "Key rơi cùng bin: Java 9+ ném `IllegalStateException: Recursive update`, Java 8 có thể quay vòng mãi. Khác bin cũng có thể deadlock giữa các thread."
+    },
+    {
+      "id": "null",
+      "front": "Vì sao ConcurrentHashMap cấm key và value null?",
+      "back": "Để `get` trả `null` chỉ có nghĩa là không có key; với map đồng thời không thể hỏi thêm `containsKey` mà không bị chen."
+    },
+    {
+      "id": "size",
+      "front": "`size()` của ConcurrentHashMap có chính xác không?",
+      "back": "Chỉ xấp xỉ khi đang có ghi: nó cộng `baseCount` với các ô đếm kiểu LongAdder. Số lớn dùng `mappingCount()`."
+    }
+  ]
+}

@@ -16,7 +16,7 @@
       "meaning": "Một ô trong mảng nội bộ của bảng băm (HashMap, HashSet). Các phần tử có hash rơi vào cùng ô sẽ nằm chung bucket.",
       "example": "HashMap mặc định có 16 bucket, tăng gấp đôi khi đầy quá 75%.",
       "related": ["hash-code", "hash-collision"],
-      "topics": ["equals-hashcode", "hashmap-internals"]
+      "topics": ["equals-hashcode", "hashmap-internals", "concurrent-hashmap"]
     },
     {
       "id": "hash-collision",
@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas"]
     },
     {
       "id": "dns",
@@ -350,7 +350,7 @@
       "meaning": "HashMap đổi một bucket từ danh sách liên kết sang cây đỏ-đen khi bucket có hơn 8 node và capacity ≥ 64, để lookup còn O(log n). Trở lại danh sách khi còn ít node (ví dụ ≤ 6 lúc resize).",
       "example": "Nhiều key cùng hashCode như `AaAaAaAa`, `AaAaAaBB`... trong map capacity 64 làm bucket thành `TreeNode`.",
       "related": ["red-black-tree", "separate-chaining"],
-      "topics": ["hashmap-internals"]
+      "topics": ["hashmap-internals", "concurrent-hashmap"]
     },
     {
       "id": "red-black-tree",
@@ -461,7 +461,7 @@
       "meaning": "Lệnh CPU atomic: chỉ ghi giá trị mới nếu giá trị hiện tại vẫn bằng giá trị mong đợi, nếu không thì báo thất bại để thử lại. Là nền của `AtomicInteger` và các cấu trúc lock-free.",
       "example": "`counter.compareAndSet(5, 6)` chỉ thành công nếu `counter` đang là 5.",
       "related": ["atomicity"],
-      "topics": ["synchronized-volatile", "locks-aqs"]
+      "topics": ["synchronized-volatile", "locks-aqs", "atomic-cas", "concurrent-hashmap"]
     },
     {
       "id": "reentrancy",
@@ -485,7 +485,7 @@
       "meaning": "Nhóm thread chờ nhau theo vòng tròn, mỗi thread giữ một tài nguyên mà thread kế tiếp cần, nên không thread nào chạy tiếp được.",
       "example": "Thread 1 giữ `accountA` chờ `accountB`, Thread 2 giữ `accountB` chờ `accountA`.",
       "related": ["coffman-conditions", "lock-ordering", "livelock"],
-      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics", "optimistic-pessimistic-locking", "locking-deadlock-db"]
+      "topics": ["deadlock", "transaction-isolation", "acid-transactions-basics", "optimistic-pessimistic-locking", "locking-deadlock-db", "concurrent-hashmap"]
     },
     {
       "id": "coffman-conditions",
@@ -3549,7 +3549,7 @@
       "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
       "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
       "related": ["race-condition", "atomicity"],
-      "topics": ["concurrency-basics"]
+      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap"]
     },
     {
       "id": "critical-section",
@@ -3733,7 +3733,7 @@
       "meaning": "API từ Java 9 (`java.lang.invoke.VarHandle`) để đọc ghi một field hoặc phần tử mảng với access mode chọn được: plain, opaque, acquire/release, volatile, kèm CAS. Thay cho `sun.misc.Unsafe`.",
       "example": "`VALUE.setRelease(this, next)` công bố giá trị rẻ hơn ghi volatile đầy đủ; bên đọc dùng `VALUE.getAcquire(this)`.",
       "related": ["cas", "memory-barrier", "jmm"],
-      "topics": ["java-memory-model"]
+      "topics": ["java-memory-model", "atomic-cas"]
     },
     {
       "id": "jcstress",
@@ -3782,6 +3782,62 @@
       "example": "`long s = lock.tryOptimisticRead(); double x = this.x, y = this.y; if (!lock.validate(s)) { /* lấy readLock và đọc lại */ }`.",
       "related": ["read-write-lock", "optimistic-locking"],
       "topics": ["locks-aqs"]
+    },
+    {
+      "id": "long-adder",
+      "term": "LongAdder",
+      "meaning": "Bộ đếm của `java.util.concurrent.atomic` (Java 8) chia giá trị thành một biến `base` và nhiều ô `Cell`; mỗi thread thường cộng vào ô riêng nên ít tranh chấp. `sum()` cộng dồn các ô khi đọc, không phải ảnh chụp atomic.",
+      "example": "Đếm request trên 32 core: `hits.increment()` nhanh hơn hẳn `AtomicLong.incrementAndGet()`, nhưng không dùng được để sinh mã đơn.",
+      "related": ["cas", "false-sharing"],
+      "topics": ["atomic-cas", "concurrent-hashmap"]
+    },
+    {
+      "id": "aba-problem",
+      "term": "ABA",
+      "meaning": "Lỗi của CAS khi giá trị đổi từ A sang B rồi về lại A: CAS thấy vẫn là A nên thành công, dù trạng thái đã thay đổi ở giữa. Sửa bằng cách kèm số phiên bản (`AtomicStampedReference`).",
+      "example": "T1 đọc `head = A`, T2 pop A, pop B rồi push lại chính node A; CAS của T1 thành công và đặt `head` trỏ tới B đã bị lấy đi.",
+      "related": ["cas", "lock-free"],
+      "topics": ["atomic-cas"]
+    },
+    {
+      "id": "cache-line",
+      "term": "Cache line",
+      "meaning": "Đơn vị nhỏ nhất mà cache CPU nạp và giữ nhất quán giữa các core, thường 64 byte trên x86 và 128 byte trên Apple Silicon. Ghi một byte là cả line ở core khác mất hiệu lực.",
+      "example": "Hai field `long` nằm liền nhau trong một object thường chung một cache line.",
+      "related": ["false-sharing", "memory-barrier"],
+      "topics": ["atomic-cas"]
+    },
+    {
+      "id": "false-sharing",
+      "term": "False sharing",
+      "meaning": "Hai biến độc lập nằm chung một cache line; mỗi lần một core ghi biến của nó, line ở core kia mất hiệu lực, nên các thread làm chậm nhau dù không dùng chung biến nào.",
+      "example": "Hai counter `hitsA`, `hitsB` cạnh nhau trong một object, mỗi thread cộng một cái: chạy 2 thread chậm hơn 1 thread. Đệm field bằng `@Contended` thì hết.",
+      "related": ["cache-line", "long-adder"],
+      "topics": ["atomic-cas"]
+    },
+    {
+      "id": "lock-free",
+      "term": "Lock-free",
+      "meaning": "Thuật toán đồng thời không dùng khoá, bảo đảm luôn có ít nhất một thread tiến được. Không bảo đảm từng thread đều tiến được (đó là wait-free), và không chắc nhanh hơn lock khi tranh chấp cao.",
+      "example": "Stack của Treiber: `push` và `pop` chỉ dùng vòng CAS trên `head`, không thread nào bị chặn bởi thread đang giữ khoá.",
+      "related": ["cas", "aba-problem"],
+      "topics": ["atomic-cas"]
+    },
+    {
+      "id": "forwarding-node",
+      "term": "ForwardingNode",
+      "meaning": "Node đặc biệt (hash `-1`, tức `MOVED`) mà `ConcurrentHashMap` đặt vào bin đã được chuyển sang bảng mới trong lúc resize. Nó trỏ tới bảng mới.",
+      "example": "`get` gặp `ForwardingNode` thì tìm tiếp trong `nextTable`; `put` gặp nó thì vào giúp chuyển các bin còn lại.",
+      "related": ["bucket", "rehash"],
+      "topics": ["concurrent-hashmap"]
+    },
+    {
+      "id": "weakly-consistent",
+      "term": "Weakly consistent",
+      "meaning": "Kiểu iterator của các collection đồng thời: không ném `ConcurrentModificationException`, mỗi phần tử được trả tối đa một lần, và thay đổi xảy ra trong lúc duyệt có thể thấy hoặc không.",
+      "example": "Duyệt `ConcurrentHashMap.entrySet()` trong khi thread khác `put` không lỗi, nhưng không bảo đảm thấy key vừa thêm.",
+      "related": ["fail-fast"],
+      "topics": ["concurrent-hashmap"]
     }
   ]
 }

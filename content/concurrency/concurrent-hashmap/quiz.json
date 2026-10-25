@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "get-put-race",
+      "kind": "output",
+      "prompt": "`counts` là `ConcurrentHashMap<String, Integer>`, đã có `\"login\" -> 0`. 8 thread, mỗi thread gọi `record(\"login\")` 1.000 lần. Giá trị cuối của `\"login\"`?",
+      "code": "void record(String event) {\n    Integer current = counts.get(event);\n    counts.put(event, current + 1);\n}",
+      "options": [
+        "Thường nhỏ hơn 8.000 và mỗi lần chạy ra một số khác",
+        "Luôn đúng 8.000 vì `ConcurrentHashMap` là thread-safe",
+        "Luôn đúng 8.000, nhưng chậm vì mỗi lần `put` khoá cả map",
+        "Ném `ConcurrentModificationException` khi hai thread cùng `put`"
+      ],
+      "answer": 0,
+      "explanation": "`get` và `put` mỗi cái atomic, nhưng giữa hai lời gọi thread khác có thể ghi; hai thread cùng đọc 41 rồi cùng ghi 42 là mất một lần cộng. Sửa: `counts.merge(event, 1, Integer::sum)`, chạy cả cụm đọc-cộng-ghi dưới khoá bin. Counter rất nóng thì dùng `LongAdder` làm value. `put` chỉ khoá một bin, và `ConcurrentHashMap` không ném `ConcurrentModificationException`."
+    },
+    {
+      "id": "null-value",
+      "kind": "single",
+      "prompt": "Vì sao `ConcurrentHashMap` cấm value `null` trong khi `HashMap` cho phép?",
+      "options": [
+        "Để `get` trả `null` chỉ có một nghĩa là không có key, vì không thể hỏi `containsKey` mà không bị chen",
+        "Vì giá trị `null` làm `ForwardingNode` không phân biệt được bin trống với bin đã chuyển trong lúc resize",
+        "Vì `null` không có `hashCode()` nên không thể tính được vị trí bin cho value khi lưu vào bảng",
+        "Vì `synchronized` không khoá được trên một node có value `null`, nên `put` không thể đồng bộ"
+      ],
+      "answer": 0,
+      "explanation": "Với `HashMap` một thread, `get` trả `null` thì gọi `containsKey` để phân biệt. Với map đồng thời, giữa hai lời gọi thread khác có thể thêm hoặc xoá key, nên câu trả lời không còn đáng tin. Cấm `null` làm `get` trả `null` luôn nghĩa là \"không có\". Vị trí bin tính theo key, không theo value; khoá đặt trên node chứ không trên value."
+    },
+    {
+      "id": "slow-compute",
+      "kind": "single",
+      "prompt": "Cache dùng `map.computeIfAbsent(userId, id -> userClient.fetch(id))`, `fetch` gọi HTTP mất 2 giây. Lúc cache còn lạnh, request cho cả những user **đã có** trong cache cũng chậm theo. Vì sao?",
+      "options": [
+        "Hàm chạy trong lúc giữ khoá bin, nên mọi key khác trúng bin đó phải chờ 2 giây",
+        "`computeIfAbsent` khoá cả map trong lúc chạy hàm, giống `Collections.synchronizedMap`",
+        "Mỗi lần `computeIfAbsent` đều gọi lại `fetch` dù key đã có, chỉ khác là bỏ kết quả",
+        "Thread pool của HTTP client bị dùng hết nên các lời gọi `get` cũng phải xếp hàng chờ"
+      ],
+      "answer": 0,
+      "explanation": "Hàm chạy dưới khoá của bin (hoặc giữ chỗ bằng `ReservationNode`). User khác có key rơi cùng bin phải chờ khoá khi gọi `computeIfAbsent`: trên Java 8 kể cả khi key đã có, trên Java 9+ khi key đó không nằm ở đầu bin. Map không khoá toàn bộ, và `fetch` không chạy lại khi key đã có. Sửa: cache giá trị `CompletableFuture` (hàm trả future ngay), hoặc dùng cache có tải bất đồng bộ như Caffeine `AsyncLoadingCache`."
+    },
+    {
+      "id": "iterate-while-modify",
+      "kind": "single",
+      "prompt": "Một thread duyệt `map.entrySet()` của `ConcurrentHashMap` trong khi thread khác liên tục `put` và `remove`. Điều gì được bảo đảm?",
+      "options": [
+        "Không ném lỗi; mỗi phần tử thấy tối đa một lần, thay đổi đang diễn ra có thể thấy hoặc không",
+        "Iterator chụp toàn bộ map lúc tạo, nên chỉ thấy đúng trạng thái tại thời điểm bắt đầu duyệt",
+        "Ném `ConcurrentModificationException` ở lần `next()` đầu tiên sau khi map bị sửa cấu trúc của nó",
+        "Thread duyệt bị chặn cho tới khi thread ghi xong, vì iterator giữ khoá đọc của cả map"
+      ],
+      "answer": 0,
+      "explanation": "Iterator của `ConcurrentHashMap` là weakly consistent: không bao giờ ném `ConcurrentModificationException`, phản ánh trạng thái tại hoặc sau lúc tạo, và có thể thấy hoặc không thấy thay đổi xảy ra trong lúc duyệt. Nó không chụp snapshot (đó là `CopyOnWriteArrayList`) và không khoá."
+    },
+    {
+      "id": "java7-vs-8",
+      "kind": "single",
+      "prompt": "Đồng nghiệp nói: \"Đặt `new ConcurrentHashMap<>(16, 0.75f, 64)` để tăng lên 64 segment cho nhiều thread ghi song song hơn.\" Trên Java 17 thì sao?",
+      "options": [
+        "Không còn segment; `concurrencyLevel` chỉ dùng để ước kích thước bảng",
+        "Đúng: map chia thành 64 segment, mỗi segment có một `ReentrantLock` riêng",
+        "Không có tác dụng: Java 17 luôn dùng cố định 16 segment, bỏ qua tham số",
+        "Lỗi biên dịch: constructor ba tham số đã bị xoá khỏi Java 9 trở đi"
+      ],
+      "answer": 0,
+      "explanation": "Segment là thiết kế của Java 7. Từ Java 8, độ song song bằng số bin vì khoá đặt trên từng bin; constructor ba tham số vẫn còn, `concurrencyLevel` chỉ khiến bảng ban đầu có ít nhất từng ấy bin. Muốn nhiều thread ghi song song hơn thì không cần làm gì, trừ khi có hot key."
+    }
+  ]
+}

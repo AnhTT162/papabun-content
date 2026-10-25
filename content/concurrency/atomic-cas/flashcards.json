@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cas", "front": "CAS làm gì?", "back": "Trong một thao tác atomic: nếu giá trị hiện tại bằng `expected` thì ghi giá trị mới và trả `true`, không thì trả `false` và không ghi gì." },
+    { "id": "cas-loop", "front": "Vòng CAS là gì?", "back": "Đọc giá trị, tính giá trị mới, CAS; thất bại thì đọc lại và thử lại. `updateAndGet` gói sẵn vòng này." },
+    { "id": "side-effect", "front": "Vì sao hàm truyền vào `updateAndGet` không được có side effect?", "back": "Mỗi lần CAS thất bại, hàm được gọi lại, nên dưới tranh chấp nó chạy nhiều lần cho một lần cập nhật." },
+    { "id": "increment-not-loop", "front": "`AtomicInteger.incrementAndGet()` có phải vòng CAS không?", "back": "Không. JIT dịch nó thành một lệnh cộng atomic (`lock xadd` trên x86, `ldadd` trên ARM có LSE), không bao giờ thất bại." },
+    { "id": "longadder", "front": "LongAdder nhanh hơn AtomicLong nhờ đâu?", "back": "Chia bộ đếm thành `base` và nhiều ô `Cell`, mỗi thread thường cộng vào ô riêng nên ít tranh một cache line. `sum()` cộng dồn khi đọc." },
+    { "id": "longadder-limit", "front": "Khi nào không dùng LongAdder?", "back": "Khi cần giá trị chính xác tại một thời điểm hoặc cần cấp số thứ tự: `sum()` không phải ảnh chụp atomic và `increment()` không trả giá trị." },
+    { "id": "aba", "front": "ABA là gì?", "back": "Giá trị đổi từ A sang B rồi về A; CAS thấy vẫn là A nên thành công dù trạng thái đã thay đổi. `AtomicStampedReference` kèm số phiên bản để phát hiện." },
+    { "id": "aba-gc", "front": "Vì sao ABA hiếm hơn trong Java so với C?", "back": "GC không tái dùng object khi còn tham chiếu, nên node mới luôn khác node cũ. ABA chỉ xảy ra khi tái dùng chính object cũ hoặc CAS trên giá trị." },
+    { "id": "false-sharing", "front": "False sharing là gì?", "back": "Hai biến độc lập nằm chung một cache line; mỗi lần một core ghi, line ở core kia mất hiệu lực, nên hai thread làm chậm nhau dù không chung biến." },
+    { "id": "varhandle", "front": "VarHandle thay thế gì, lợi gì?", "back": "Thay `Unsafe` và `AtomicXxxFieldUpdater` để CAS trực tiếp trên field. Không cần tạo một object `AtomicInteger` riêng cho mỗi field." }
+  ]
+}

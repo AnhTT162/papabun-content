@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Recursive update chỉ ở vài category",
+  "context": "Giảm giá theo category được kế thừa: category không có giảm giá riêng thì lấy của category cha. Kết quả được cache trong `ConcurrentHashMap`. Cây category: `root` (5%) → `electronics` → `phones`, `laptops` (10%); `root` → `books` → `comics`. Output dưới đây chạy mỗi category trên một cache mới (như ngay sau khi khởi động), JDK 27.",
+  "buggyCode": "public class DiscountResolver {\n    private final Map<String, BigDecimal> cache = new ConcurrentHashMap<>();\n    private final CategoryRepository categories;\n\n    public DiscountResolver(CategoryRepository categories) {\n        this.categories = categories;\n    }\n\n    public BigDecimal discountOf(String categoryId) {\n        return cache.computeIfAbsent(categoryId, id -> {\n            Category category = categories.find(id);\n            if (category.discount() != null) return category.discount();\n            return discountOf(category.parentId());   // kế thừa từ category cha\n        });\n    }\n}",
+  "symptom": {
+    "description": "Test với vài category đều qua. Trên production, `phones`, `laptops`, `books` trả đúng 5%, 10%, 5%, nhưng lần nào gọi `comics` lúc cache còn trống cũng lỗi. Một instance cũ còn chạy Java 8 thì có lúc treo một thread ở 100% CPU.",
+    "output": "phones  -> 0.05\nlaptops -> 0.10\nbooks   -> 0.05\ncomics  -> java.lang.IllegalStateException: Recursive update\n\tat java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1790)\n\tat DiscountResolver.discountOf(DiscountResolver.java:10)\n\tat DiscountResolver.lambda$discountOf$0(DiscountResolver.java:13)\n\tat java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1735)\n\tat DiscountResolver.discountOf(DiscountResolver.java:10)\n\tat DiscountResolver.lambda$discountOf$0(DiscountResolver.java:13)\n\tat java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1735)\n\tat DiscountResolver.discountOf(DiscountResolver.java:10)\n\t..."
+  },
+  "diagnosis": {
+    "question": "Vì sao chỉ `comics` lỗi?",
+    "options": [
+      "Hàm trong `computeIfAbsent` sửa chính map; `root` rơi vào bin đang giữ chỗ cho `comics`",
+      "Hai request cùng tính `comics` một lúc nên map phát hiện có cập nhật đồng thời và ném ra lỗi",
+      "Cây category có vòng lặp ở nhánh `comics`, nên lời gọi đệ quy không bao giờ chạm tới `root`",
+      "`ConcurrentHashMap` không nhận value `null`, và `books` có giảm giá `null` nên bị từ chối"
+    ],
+    "answer": 0,
+    "explanation": "`computeIfAbsent` giữ bin của key trong lúc chạy hàm; bin trống thì đặt một `ReservationNode` làm chỗ giữ. Hàm gọi đệ quy `computeIfAbsent` cho category cha. Với bảng 16 bin mặc định, `comics` và `root` cùng rơi vào bin 7: khi tới `root`, map thấy bin đang bị chính lần tính `comics` giữ chỗ và ném `Recursive update` (Java 9+). `phones` → `electronics` → `root` nằm ở ba bin khác nhau nên tình cờ chạy được, đó là lý do lỗi chỉ ở vài category. Lỗi xảy ra cả khi chỉ có một thread. Cây trong đề không có vòng, và stack trace chỉ có ba tầng `computeIfAbsent` (comics → books → root). Value `null` sẽ cho `NullPointerException`; ở đây `books` không lưu `null` mà lấy 5% từ `root`. Java 8 không có kiểm tra này nên quay vòng mãi (JDK-8062841)."
+  },
+  "fix": {
+    "code": "public BigDecimal discountOf(String categoryId) {\n    BigDecimal cached = cache.get(categoryId);\n    if (cached != null) return cached;\n\n    Category category = categories.find(categoryId);\n    BigDecimal discount = category.discount() != null\n            ? category.discount()\n            : discountOf(category.parentId());   // đệ quy ngoài map\n\n    BigDecimal existing = cache.putIfAbsent(categoryId, discount);\n    return existing != null ? existing : discount;\n}",
+    "explanation": "Tính giá trị **bên ngoài** map, rồi `putIfAbsent` một lần. Đổi lại, hai thread có thể cùng tính một category; chấp nhận được vì phép tính rẻ và cho cùng kết quả, và `putIfAbsent` bảo đảm mọi thread trả cùng một giá trị. Quy tắc chung: hàm trong `compute`, `computeIfAbsent`, `merge` phải ngắn và không được sửa map nào khác đang khoá, kể cả chính nó. Key cha rơi vào bin khác cũng không an toàn: đó là giữ hai khoá bin lồng nhau, và hai thread lồng theo thứ tự ngược nhau có thể deadlock. `HashMap.computeIfAbsent` từ Java 9 cũng ném `ConcurrentModificationException` trong trường hợp này."
+  }
+}

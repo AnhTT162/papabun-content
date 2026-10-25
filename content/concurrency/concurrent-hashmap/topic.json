@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "concurrent-hashmap",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "ConcurrentHashMap bên trong",
+  "summary": "ConcurrentHashMap Java 8+ đồng bộ thế nào: CAS cho bin trống, synchronized trên node đầu bin, get không khoá; Java 7 Segment khác gì; sizeCtl, ForwardingNode và resize nhiều thread cùng làm; tree bin; compute, merge, computeIfAbsent và bẫy đệ quy, hàm chậm, hot key; vì sao cấm null; size xấp xỉ và iterator weakly consistent.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 16,
+  "prerequisites": ["hashmap-internals", "atomic-cas"],
+  "terms": ["bucket", "cas", "forwarding-node", "check-then-act", "weakly-consistent", "long-adder", "treeify", "deadlock"],
+  "references": [
+    { "title": "Javadoc ConcurrentHashMap (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentHashMap.html" },
+    { "title": "java.util.concurrent: Concurrent Collections (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/package-summary.html" },
+    { "title": "JDK-8062841: ConcurrentHashMap.computeIfAbsent stuck in an endless loop", "url": "https://bugs.openjdk.org/browse/JDK-8062841" }
+  ],
+  "blocks": [
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao Java 8 khoá bằng `synchronized` mà không dùng `ReentrantLock` như Segment của Java 7?\" Khoá đặt trên node đầu bin, tức là có thể tới hàng triệu khoá; `synchronized` không tốn thêm object nào vì dùng luôn header của node, còn mỗi `ReentrantLock` là một object AQS riêng. Phần lớn bin chỉ bị một thread chạm tới, nên khoá không tranh chấp, trường hợp mà monitor của JVM rất rẻ. Hỏi tiếp có thể là \"vậy độ song song tối đa là bao nhiêu\": bằng số bin, và với hot key thì chỉ là một, vì mọi lần ghi cùng key đều nằm trên cùng một bin." },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}

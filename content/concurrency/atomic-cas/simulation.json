@@ -1,0 +1,196 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "ABA trên một lock-free stack",
+  "instructions": "Stack ban đầu `A → B → C`. T1 muốn pop: đọc `head = A`, `next = B`, rồi bị dừng trước khi CAS. Bấm `T1 đọc head`, sau đó cho T2 chen vào (`T2 pop() hai lần`, rồi `T2 push(A)` đưa chính node A vào lại), rồi thử hai kiểu CAS của T1 và so kết quả.",
+  "config": {
+    "states": [
+      {
+        "id": "start",
+        "label": "A → B → C",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "`head` trỏ tới A. Pop là: đọc `head`, đọc `head.next`, rồi `CAS(head, cũ, next)`."
+      },
+      {
+        "id": "t1-read",
+        "label": "T1 giữ A, next B",
+        "x": 0.5,
+        "y": 0.05,
+        "note": "T1 đã đọc `head = A` và `next = B` (stamp lúc đọc là 0), rồi bị hệ điều hành dừng lại trước lệnh CAS."
+      },
+      {
+        "id": "ok",
+        "label": "T1 pop xong",
+        "x": 0.9,
+        "y": 0.05,
+        "note": "T1 lấy đúng phần tử đang ở đỉnh stack và `head` trỏ tới phần tử kế tiếp thật. Stack vẫn đúng."
+      },
+      {
+        "id": "push-a",
+        "label": "A → C",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "T2 đưa **chính node A** vào lại. `head` lại là A, y hệt lúc T1 đọc, nhưng `A.next` giờ là C chứ không còn là B."
+      },
+      {
+        "id": "popped",
+        "label": "C",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "T2 đã pop A rồi pop B. `head` trỏ tới C. B đang được T2 dùng ở chỗ khác."
+      },
+      {
+        "id": "corrupt",
+        "label": "B → C (sai)",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "Stack thành `B → C`: B, node mà T2 đã lấy đi và đang dùng, quay lại đỉnh stack. Lần pop sau sẽ trả B thêm lần nữa: một phần tử bị lấy hai lần. Nếu T2 đã sửa `B.next` (ví dụ đưa B vào cấu trúc khác) thì phần còn lại của stack cũng hỏng theo. Không có exception nào, lỗi chỉ lộ ra sau đó dưới dạng dữ liệu sai."
+      },
+      {
+        "id": "fail",
+        "label": "CAS thất bại",
+        "x": 0.5,
+        "y": 0.95,
+        "note": "CAS trả `false`. T1 không ghi gì, chỉ cần đọc lại `head` và thử lại."
+      }
+    ],
+    "initial": "start",
+    "events": [
+      {
+        "id": "t1-read",
+        "label": "T1 đọc head"
+      },
+      {
+        "id": "t2-pop",
+        "label": "T2 pop() hai lần"
+      },
+      {
+        "id": "t2-push",
+        "label": "T2 push(A)"
+      },
+      {
+        "id": "cas-ref",
+        "label": "T1 CAS: AtomicReference"
+      },
+      {
+        "id": "cas-stamped",
+        "label": "T1 CAS: có stamp"
+      },
+      {
+        "id": "retry",
+        "label": "T1 thử lại"
+      }
+    ],
+    "counters": [
+      {
+        "id": "stamp",
+        "label": "stamp hiện tại",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "read",
+        "from": "start",
+        "event": "t1-read",
+        "to": "t1-read",
+        "label": "đọc A, B"
+      },
+      {
+        "id": "cas-ref-clean",
+        "from": "t1-read",
+        "event": "cas-ref",
+        "to": "ok",
+        "label": "CAS thành công",
+        "note": "Không ai chen vào nên `head` vẫn là A, CAS ghi B."
+      },
+      {
+        "id": "cas-stamped-clean",
+        "from": "t1-read",
+        "event": "cas-stamped",
+        "to": "ok",
+        "label": "CAS thành công",
+        "note": "Tham chiếu và stamp đều khớp (A, 0), CAS ghi (B, 1).",
+        "effects": [
+          {
+            "counter": "stamp",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "pop-twice",
+        "from": "t1-read",
+        "event": "t2-pop",
+        "to": "popped",
+        "label": "pop A, pop B",
+        "effects": [
+          {
+            "counter": "stamp",
+            "add": 2
+          }
+        ]
+      },
+      {
+        "id": "cas-ref-popped",
+        "from": "popped",
+        "event": "cas-ref",
+        "to": "fail",
+        "label": "head là C",
+        "note": "`head` là C, khác A, nên CAS thất bại. Đây là trường hợp CAS tự phát hiện được."
+      },
+      {
+        "id": "cas-stamped-popped",
+        "from": "popped",
+        "event": "cas-stamped",
+        "to": "fail",
+        "label": "head là C"
+      },
+      {
+        "id": "push-back",
+        "from": "popped",
+        "event": "t2-push",
+        "to": "push-a",
+        "label": "push A",
+        "effects": [
+          {
+            "counter": "stamp",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "aba",
+        "from": "push-a",
+        "event": "cas-ref",
+        "to": "corrupt",
+        "label": "head == A, CAS qua",
+        "note": "`AtomicReference` chỉ so tham chiếu: `head` đúng là A nên CAS thành công và ghi `head = B`, giá trị `next` T1 đọc từ trước khi T2 chen vào. Đây là ABA."
+      },
+      {
+        "id": "stamped-catches",
+        "from": "push-a",
+        "event": "cas-stamped",
+        "to": "fail",
+        "label": "stamp 0 ≠ 3",
+        "note": "`AtomicStampedReference.compareAndSet(A, B, 0, 1)` so cả tham chiếu lẫn stamp. Tham chiếu khớp nhưng stamp đã lên 3 sau ba thao tác của T2, nên CAS thất bại."
+      },
+      {
+        "id": "retry",
+        "from": "fail",
+        "event": "retry",
+        "to": "ok",
+        "label": "đọc lại, CAS",
+        "note": "T1 đọc lại `head`, `next` và stamp hiện tại, CAS lần này thành công. Với `AtomicStampedReference`, mỗi lần CAS thành công cũng tăng stamp thêm 1.",
+        "effects": [
+          {
+            "counter": "stamp",
+            "add": 1
+          }
+        ]
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở bước hiện tại. Thứ tự đáng thử: T1 đọc head → T2 chen vào → T1 CAS."
+  }
+}

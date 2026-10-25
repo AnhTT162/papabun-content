@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "update-side-effect",
+      "kind": "output",
+      "prompt": "8 thread cùng gọi `next()` mỗi thread 1.000 lần. Sau khi tất cả xong, `calls.get()` và `seq.get()` thế nào?",
+      "code": "AtomicLong seq = new AtomicLong();\nAtomicLong calls = new AtomicLong();\n\nlong next() {\n    return seq.updateAndGet(current -> {\n        calls.incrementAndGet();\n        return current + 1;\n    });\n}",
+      "options": [
+        "`seq` đúng 8.000; `calls` có thể lớn hơn 8.000",
+        "Cả hai luôn đúng 8.000 vì `updateAndGet` là atomic",
+        "`seq` có thể nhỏ hơn 8.000 vì lambda chạy chen nhau",
+        "`calls` luôn đúng 8.000, `seq` có thể lớn hơn 8.000"
+      ],
+      "answer": 0,
+      "explanation": "`updateAndGet` là vòng CAS: tính giá trị mới bằng hàm rồi CAS; CAS thất bại thì gọi lại hàm với giá trị mới đọc. Mỗi lần thử đều tăng `calls`, nên dưới tranh chấp `calls` lớn hơn số lần gọi `next()`. `seq` thì đúng 8.000 vì chỉ lần CAS thành công mới ghi. Javadoc yêu cầu hàm không có side effect vì lý do này."
+    },
+    {
+      "id": "longadder-for-ids",
+      "kind": "single",
+      "prompt": "Một service sinh mã đơn tăng dần trong bộ nhớ. Ai đó đổi `AtomicLong.incrementAndGet()` sang `LongAdder` (`increment()` rồi `sum()`) cho nhanh hơn. Hậu quả?",
+      "options": [
+        "Hai đơn có thể nhận cùng một mã vì `sum()` không gắn với lần `increment()` nào",
+        "Không có hậu quả gì, chỉ chậm hơn một chút vì mỗi lần `sum()` phải cộng nhiều ô",
+        "Mã luôn đúng nhưng có thể nhảy cóc, vì mỗi ô cộng dồn theo bước riêng",
+        "`sum()` ném exception nếu đang có thread khác gọi `increment()` cùng lúc"
+      ],
+      "answer": 0,
+      "explanation": "`increment()` không trả giá trị, và `sum()` đọc tổng tại một thời điểm, có thể đã gồm cả lần cộng của thread khác. Hai thread cùng `increment()` rồi cùng `sum()` có thể đọc cùng một số. `LongAdder` dành cho thống kê, không cho cấp số. Cần mã duy nhất thì giữ `AtomicLong.incrementAndGet()` (hoặc sequence của database khi chạy nhiều instance)."
+    },
+    {
+      "id": "aba-java",
+      "kind": "single",
+      "prompt": "Lock-free stack dùng `AtomicReference<Node>`, mỗi lần `push` tạo `new Node(value)`, node đã pop không bao giờ được đưa vào lại. Có cần `AtomicStampedReference` để chống ABA không?",
+      "options": [
+        "Không: GC không tái dùng node còn bị giữ tham chiếu, node mới luôn là object khác",
+        "Có: mọi CAS trên tham chiếu trong Java đều có thể dính ABA nên luôn phải kèm thêm stamp",
+        "Có: JVM có thể cấp phát node mới đúng địa chỉ node cũ, nên CAS so địa chỉ vẫn khớp",
+        "Không: Java tự kèm số phiên bản vào mọi tham chiếu nên CAS không bao giờ dính ABA"
+      ],
+      "answer": 0,
+      "explanation": "Khi T1 còn giữ tham chiếu tới node A, GC không thu hồi A, nên không object mới nào trùng A. Node mới luôn khác tham chiếu, CAS so với A sẽ thất bại đúng như mong muốn. ABA trong Java chỉ đến từ việc tái dùng chính object cũ (pool, push lại node đã pop) hoặc CAS trên giá trị như số dư. Java không tự kèm phiên bản vào tham chiếu."
+    },
+    {
+      "id": "false-sharing",
+      "kind": "single",
+      "prompt": "Hai thread, mỗi thread chỉ cộng field riêng của mình (`hitsA` và `hitsB`, đều `volatile long`, nằm cạnh nhau trong cùng một object). Không có khoá chung, nhưng chạy 2 thread chậm hơn hẳn chạy 1 thread. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Hai field chung một cache line, mỗi lần ghi làm line của core kia mất hiệu lực",
+        "`volatile long` bị xé thành hai nửa 32 bit nên mỗi lần ghi tốn gấp đôi thời gian",
+        "JVM tự chèn một monitor chung cho các field `volatile` nằm trong cùng một object",
+        "Hai thread chạy trên cùng một core nên phải chuyển ngữ cảnh mỗi lần cộng"
+      ],
+      "answer": 0,
+      "explanation": "Đây là false sharing: cache coherence làm việc theo cache line (64 byte trên x86, 128 byte trên Apple Silicon), không theo biến. Mỗi lần một core ghi, line trong cache của core kia bị mất hiệu lực và phải tải lại. Đệm field ra (`@Contended` với `-XX:-RestrictContended`, hoặc tách object) hết chậm. `volatile long` không bị xé. JVM không chèn monitor cho field volatile."
+    },
+    {
+      "id": "multi-field",
+      "kind": "single",
+      "prompt": "Cần cập nhật `min` và `max` của một khoảng giá sao cho luôn `min <= max`, nhiều thread cùng sửa. Cách nào đúng mà không dùng lock?",
+      "options": [
+        "Gói hai giá trị vào một record immutable rồi CAS record trên `AtomicReference`",
+        "Hai `AtomicLong`, cập nhật `min` trước rồi `max`, mỗi cái bằng `compareAndSet`",
+        "Hai `AtomicLong`, khai báo thêm `volatile` cho cả hai để giữ đúng thứ tự các lần ghi",
+        "Một `LongAccumulator` cho `min` và một cho `max`, đọc bằng `get()` khi cần"
+      ],
+      "answer": 0,
+      "explanation": "CAS chỉ bảo vệ một biến. Hai biến atomic riêng thì giữa hai lần cập nhật, thread khác có thể đọc cặp `min`/`max` không nhất quán, hoặc hai thread cập nhật xen nhau phá bất biến. Gói thành một object immutable rồi CAS tham chiếu biến cả cặp thành một biến. `volatile` không thêm atomicity; `LongAccumulator` cũng chỉ giữ một giá trị và đọc không atomic."
+    }
+  ]
+}

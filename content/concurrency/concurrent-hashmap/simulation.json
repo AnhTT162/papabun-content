@@ -1,0 +1,285 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Resize đồng thời của ConcurrentHashMap",
+  "instructions": "Map có 64 bin, ngưỡng resize là 48 phần tử, đang có 46. Bấm `put key mới` tới khi đạt 48 để bắt đầu resize. Trong lúc đang chuyển, thử `get` và `put` (map vẫn dùng được), cho thêm thread vào giúp bằng `put trúng bin đã chuyển`, rồi bấm `Xong một đoạn` tới khi bốn đoạn bin đều đã chuyển.",
+  "config": {
+    "states": [
+      {
+        "id": "normal",
+        "label": "64 bin",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "Bảng 64 bin, `sizeCtl = 48` (0.75 × 64) là ngưỡng resize. `get` không khoá; `put` CAS vào bin trống hoặc `synchronized` trên node đầu bin."
+      },
+      {
+        "id": "resizing",
+        "label": "1 thread chuyển",
+        "x": 0.85,
+        "y": 0.05,
+        "note": "Đã có bảng mới 128 bin (`nextTable`). `sizeCtl` âm: 16 bit cao là resize stamp, 16 bit thấp là 1 + số thread đang chuyển. Bảng 64 bin chia thành 4 đoạn, mỗi đoạn 16 bin (`max((64 >>> 3) / NCPU, 16)`), chuyển từ cuối bảng về đầu."
+      },
+      {
+        "id": "helped",
+        "label": "Nhiều thread chuyển",
+        "x": 0.85,
+        "y": 0.95,
+        "note": "Các thread `put` trúng bin đã chuyển không đứng chờ mà vào giúp: mỗi thread nhận một đoạn bin còn lại bằng CAS trên `transferIndex`. Resize nhanh hơn khi map đang bận."
+      },
+      {
+        "id": "done",
+        "label": "128 bin",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "Thread xong cuối cùng quét lại toàn bảng, rồi gán `table = nextTable` và `sizeCtl = 96` (0.75 × 128). Mọi thao tác từ giờ đi thẳng vào bảng mới."
+      }
+    ],
+    "initial": "normal",
+    "events": [
+      {
+        "id": "put",
+        "label": "put key mới"
+      },
+      {
+        "id": "get",
+        "label": "get"
+      },
+      {
+        "id": "put-moved",
+        "label": "put trúng bin đã chuyển"
+      },
+      {
+        "id": "stride",
+        "label": "Xong một đoạn"
+      }
+    ],
+    "counters": [
+      {
+        "id": "size",
+        "label": "Số phần tử",
+        "initial": 46
+      },
+      {
+        "id": "strides",
+        "label": "Đoạn đã chuyển (trên 4)",
+        "initial": 0
+      },
+      {
+        "id": "resizers",
+        "label": "Thread đang chuyển",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "n-put",
+        "from": "normal",
+        "event": "put",
+        "to": "normal",
+        "guard": {
+          "counter": "size",
+          "lt": 47
+        },
+        "effects": [
+          {
+            "counter": "size",
+            "add": 1
+          }
+        ],
+        "note": "Bin trống: một lần CAS. Bin có node: khoá node đầu bin rồi nối vào chuỗi. Sau đó cộng bộ đếm (kiểu `LongAdder`) và so với `sizeCtl`."
+      },
+      {
+        "id": "n-trigger",
+        "from": "normal",
+        "event": "put",
+        "to": "resizing",
+        "label": "size đạt 48",
+        "effects": [
+          {
+            "counter": "size",
+            "add": 1
+          },
+          {
+            "counter": "resizers",
+            "set": 1
+          }
+        ],
+        "note": "Bộ đếm đạt `sizeCtl = 48`. Thread này đổi `sizeCtl` sang giá trị âm bằng CAS, tạo `nextTable` 128 bin, rồi nhận đoạn đầu tiên (bin 48 đến 63)."
+      },
+      {
+        "id": "n-get",
+        "from": "normal",
+        "event": "get",
+        "to": "normal",
+        "note": "Đọc volatile phần tử mảng rồi duyệt chuỗi, không khoá."
+      },
+      {
+        "id": "r-put",
+        "from": "resizing",
+        "event": "put",
+        "to": "resizing",
+        "effects": [
+          {
+            "counter": "size",
+            "add": 1
+          }
+        ],
+        "note": "Key rơi vào bin **chưa chuyển**: ghi vào bảng cũ dưới khoá node đầu bin. Khi thread resize tới bin này, nó chờ khoá rồi mang cả node mới sang, nên không mất dữ liệu. Sau khi ghi, `addCount` thấy `sizeCtl` đang âm nên thread này cũng vào giúp chuyển nếu còn đoạn (mô phỏng bỏ qua bước đó cho gọn)."
+      },
+      {
+        "id": "r-get",
+        "from": "resizing",
+        "event": "get",
+        "to": "resizing",
+        "note": "Bin đã chuyển có node đầu là `ForwardingNode` (hash `-1`): `get` đi tìm trong `nextTable`. Bin chưa chuyển thì đọc ở bảng cũ. Không lần nào phải chờ."
+      },
+      {
+        "id": "r-help",
+        "from": "resizing",
+        "event": "put-moved",
+        "to": "helped",
+        "label": "helpTransfer",
+        "effects": [
+          {
+            "counter": "resizers",
+            "add": 1
+          }
+        ],
+        "note": "`put` gặp `ForwardingNode` nên gọi `helpTransfer`: tăng `sizeCtl` thêm 1 bằng CAS rồi nhận một đoạn bin để chuyển. Xong việc, nó `put` lại vào bảng mới."
+      },
+      {
+        "id": "r-stride",
+        "from": "resizing",
+        "event": "stride",
+        "to": "resizing",
+        "guard": {
+          "counter": "strides",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "strides",
+            "add": 1
+          }
+        ],
+        "note": "Mỗi bin trong đoạn: khoá node đầu, tách chuỗi thành hai danh sách theo bit `hash & 64`, đặt vào bin `i` và `i + 64` của bảng mới, rồi đặt `ForwardingNode` vào bin cũ. Thread nhận tiếp đoạn sau."
+      },
+      {
+        "id": "r-last",
+        "from": "resizing",
+        "event": "stride",
+        "to": "done",
+        "label": "đoạn cuối",
+        "effects": [
+          {
+            "counter": "strides",
+            "set": 4
+          },
+          {
+            "counter": "resizers",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "h-put",
+        "from": "helped",
+        "event": "put",
+        "to": "helped",
+        "effects": [
+          {
+            "counter": "size",
+            "add": 1
+          }
+        ],
+        "note": "Bin chưa chuyển vẫn nhận ghi ở bảng cũ dưới khoá bin."
+      },
+      {
+        "id": "h-get",
+        "from": "helped",
+        "event": "get",
+        "to": "helped",
+        "note": "`get` vẫn không khoá, đi theo `ForwardingNode` khi cần."
+      },
+      {
+        "id": "h-help",
+        "from": "helped",
+        "event": "put-moved",
+        "to": "helped",
+        "effects": [
+          {
+            "counter": "resizers",
+            "add": 1
+          }
+        ],
+        "note": "Thêm một thread vào giúp: tăng `sizeCtl` thêm 1 bằng CAS rồi nhận một đoạn bin còn lại.",
+        "guard": {
+          "counter": "resizers",
+          "lt": 4
+        }
+      },
+      {
+        "id": "h-help-late",
+        "from": "helped",
+        "event": "put-moved",
+        "to": "helped",
+        "note": "Bốn đoạn đều đã có thread nhận (`transferIndex` về 0), nên thread mới không nhận được đoạn nào và không tăng `sizeCtl`. Vì bin của nó đã chuyển xong, nó ghi thẳng vào `nextTable`."
+      },
+      {
+        "id": "h-stride",
+        "from": "helped",
+        "event": "stride",
+        "to": "helped",
+        "guard": {
+          "counter": "strides",
+          "lt": 3
+        },
+        "effects": [
+          {
+            "counter": "strides",
+            "add": 1
+          }
+        ],
+        "note": "Các thread chuyển song song từng đoạn của mình. Thread nào hết đoạn để nhận thì rời việc; thread xong cuối cùng là bên quét lại và chốt bảng mới."
+      },
+      {
+        "id": "h-last",
+        "from": "helped",
+        "event": "stride",
+        "to": "done",
+        "label": "đoạn cuối",
+        "effects": [
+          {
+            "counter": "strides",
+            "set": 4
+          },
+          {
+            "counter": "resizers",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "d-put",
+        "from": "done",
+        "event": "put",
+        "to": "done",
+        "effects": [
+          {
+            "counter": "size",
+            "add": 1
+          }
+        ],
+        "note": "Ghi thẳng vào bảng 128 bin. Lần resize tiếp theo ở 96 phần tử."
+      },
+      {
+        "id": "d-get",
+        "from": "done",
+        "event": "get",
+        "to": "done",
+        "note": "Đọc bảng mới, không khoá."
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở trạng thái hiện tại: chỉ khi đang resize mới có bin đã chuyển và đoạn bin để chuyển."
+  }
+}

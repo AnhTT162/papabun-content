@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "atomic-cas",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Atomic, CAS & LongAdder",
+  "summary": "CAS hoạt động thế nào ở CPU và trong Java (vòng CAS, updateAndGet, compareAndExchange, weak CAS); vì sao incrementAndGet không phải vòng lặp; LongAdder và LongAccumulator bên trong; ABA và AtomicStampedReference, ABA khác gì khi có GC; VarHandle và field updater; false sharing và @Contended; khi nào lock-free không đáng.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 18,
+  "prerequisites": ["synchronized-volatile", "java-memory-model"],
+  "terms": ["cas", "long-adder", "aba-problem", "cache-line", "false-sharing", "lock-free", "immutable", "var-handle", "check-then-act"],
+  "references": [
+    { "title": "java.util.concurrent.atomic package summary (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/atomic/package-summary.html" },
+    { "title": "Javadoc LongAdder (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/atomic/LongAdder.html" },
+    { "title": "Javadoc VarHandle (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/invoke/VarHandle.html" },
+    { "title": "JEP 193: Variable Handles", "url": "https://openjdk.org/jeps/193" }
+  ],
+  "blocks": [
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vậy cứ thay hết `AtomicLong` bằng `LongAdder` cho nhanh?\" Không. `LongAdder` chỉ thắng khi nhiều core cùng cộng liên tục một counter; ít tranh chấp thì nó chỉ CAS vào `base` như `AtomicLong` nhưng tốn bộ nhớ hơn khi mảng ô đã nở ra. Nó cũng mất hai thứ: `increment()` không trả giá trị mới, và `sum()` không phải ảnh chụp atomic. Vì vậy metric, đếm request thì `LongAdder`; sinh mã, hạn mức, so sánh với ngưỡng thì `AtomicLong` với vòng CAS. Hỏi tiếp có thể là \"`ConcurrentHashMap` đếm `size()` thế nào\": nó dùng chính kỹ thuật chia ô của `LongAdder`, nên `size()` cũng chỉ là xấp xỉ khi đang có ghi đồng thời." },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}

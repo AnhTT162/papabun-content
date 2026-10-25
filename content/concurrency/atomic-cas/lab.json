@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Hạn mức 1.000 lần mà vẫn vượt",
+  "context": "API đối tác miễn phí 1.000 lời gọi mỗi ngày, vượt là bị tính phí. `DailyQuota` chặn ở 1.000 bằng `AtomicInteger`. Bản dưới đây là bài test tái hiện: 16 thread, mỗi thread thử gọi 10.000 lần.",
+  "buggyCode": "public class DailyQuota {\n    private final int limit;\n    private final AtomicInteger used = new AtomicInteger();\n\n    public DailyQuota(int limit) { this.limit = limit; }\n\n    public boolean tryConsume() {\n        if (used.get() < limit) {\n            used.incrementAndGet();\n            return true;\n        }\n        return false;\n    }\n}\n\n// Test: 16 thread, mỗi thread gọi tryConsume() 10.000 lần,\n// đếm số lần được phép trong một AtomicInteger granted.",
+  "symptom": {
+    "description": "Chạy 6 lần trên máy 10 core, lần nào cũng vượt hạn mức vài lời gọi. Hoá đơn của đối tác cuối tháng cũng ghi nhận vượt hạn mức ở các ngày cao điểm.",
+    "output": "limit = 1000, granted = 1003, used = 1003\nlimit = 1000, granted = 1002, used = 1002\nlimit = 1000, granted = 1004, used = 1004\nlimit = 1000, granted = 1002, used = 1002\nlimit = 1000, granted = 1003, used = 1003\nlimit = 1000, granted = 1002, used = 1002"
+  },
+  "diagnosis": {
+    "question": "Vì sao `AtomicInteger` vẫn cho vượt 1.000?",
+    "options": [
+      "Mỗi lệnh `get()`, `incrementAndGet()` atomic, nhưng giữa hai lệnh nhiều thread cùng thấy 999",
+      "`incrementAndGet()` là vòng CAS, dưới tranh chấp cao nó có thể cộng hai lần cho một lời gọi",
+      "`limit` không phải `volatile` nên các thread có thể đọc thấy giá trị cũ của giới hạn trong cache",
+      "`AtomicInteger.get()` đọc không có ngữ nghĩa volatile nên có thể thấy `used` cũ hơn thực tế"
+    ],
+    "answer": 0,
+    "explanation": "Đây là [[check-then-act]]: thread A đọc 999, thread B cũng đọc 999 trước khi A kịp cộng, cả hai đều cộng và trả `true`. Atomic từng lời gọi không làm cả cụm \"kiểm tra rồi cộng\" thành atomic. `incrementAndGet()` không bao giờ cộng hai lần: nó là một lệnh cộng atomic, `used` luôn bằng đúng số lần được phép. `limit` là `final` và được gán trong constructor nên mọi thread thấy đúng. `get()` có ngữ nghĩa đọc volatile."
+  },
+  "fix": {
+    "code": "public boolean tryConsume() {\n    int current;\n    do {\n        current = used.get();\n        if (current >= limit) return false;\n    } while (!used.compareAndSet(current, current + 1));\n    return true;\n}\n\n// Cùng ý, gọn hơn (Java 8+). Hàm có thể chạy nhiều lần: không đặt side effect trong đó.\npublic boolean tryConsume() {\n    int before = used.getAndUpdate(n -> n < limit ? n + 1 : n);\n    return before < limit;\n}",
+    "explanation": "Vòng [[cas|CAS]] gộp kiểm tra và cộng vào một bước: chỉ cộng nếu `used` vẫn là giá trị vừa kiểm tra, không thì đọc lại và kiểm tra lại. Chạy lại bài test 3 lần đều ra `granted = 1000, used = 1000`. Lưu ý: hạn mức này chỉ đúng trong một JVM; service chạy nhiều pod thì phải đếm ở chỗ dùng chung (Redis `INCR` kèm kiểm tra, hoặc gateway). Với đường nóng hàng nghìn thread, có thể chuyển sang `Semaphore` hoặc chia hạn mức theo pod."
+  }
+}
