@@ -164,8 +164,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 7 | `synchronizers` | CountDownLatch, Semaphore, CyclicBarrier, Phaser | mid | Chọn đúng công cụ, giới hạn đồng thời | L S | ✅ |
 | 8 | `threadlocal` | ThreadLocal & ScopedValue | mid | Rò rỉ trong thread pool, MDC, context propagation | L B | ✅ |
 | 9 | `completable-future` | CompletableFuture | senior | Nối chuỗi, lỗi, executor | L D B | ✅ |
-| 10 | `java-memory-model` | Java Memory Model | senior | Happens-before, safe publication, final field, reordering, DCL | L S B | ⬜ |
-| 11 | `locks-aqs` | Lock & AQS | senior | ReentrantLock, ReadWriteLock, StampedLock, Condition, fairness, AQS | L S B | ⬜ |
+| 10 | `java-memory-model` | Java Memory Model | senior | Happens-before, safe publication, final field, reordering, DCL | L S B | ✅ |
+| 11 | `locks-aqs` | Lock & AQS | senior | ReentrantLock, ReadWriteLock, StampedLock, Condition, fairness, AQS | L S B | ✅ |
 | 12 | `atomic-cas` | Atomic, CAS & LongAdder | senior | CAS, ABA, `VarHandle`, false sharing | L S B | ⬜ |
 | 13 | `concurrent-hashmap` | ConcurrentHashMap bên trong | senior | CAS + khoá theo bin, resize đồng thời, `compute` | L S | ⬜ |
 | 14 | `virtual-threads` | Virtual Threads chuyên sâu | senior | Continuation, carrier, pinning, structured concurrency, khi nào không dùng | L D B | ⬜ |

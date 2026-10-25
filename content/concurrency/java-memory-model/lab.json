@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Field final vẫn null",
+  "context": "`OrderMetrics` đếm số đơn hàng. `EventBus` lưu listener trong `CopyOnWriteArrayList` và gọi chúng trên thread pool riêng. Field đều là `final` và được gán trong constructor, vậy mà lúc deploy vẫn có NPE.",
+  "buggyCode": "public class OrderMetrics implements OrderListener {\n    private final Counter placed;\n    private final Counter failed;\n\n    public OrderMetrics(EventBus bus, MeterRegistry registry) {\n        bus.register(this);\n        this.placed = registry.counter(\"orders.placed\");\n        this.failed = registry.counter(\"orders.failed\");\n    }\n\n    @Override\n    public void onOrder(OrderEvent event) {\n        if (event.ok()) placed.increment();\n        else failed.increment();\n    }\n}",
+  "symptom": {
+    "description": "Chỉ khi deploy lúc đang có traffic: vài giây đầu sau khi service start có lác đác NPE, sau đó hết hẳn và counter đếm đúng. Restart lúc không có traffic thì không thấy lỗi.",
+    "output": "java.lang.NullPointerException: Cannot invoke \"io.micrometer.core.instrument.Counter.increment()\" because \"this.placed\" is null\n    at OrderMetrics.onOrder(OrderMetrics.java:13)\n    at EventBus.lambda$dispatch$0(EventBus.java:88)\n    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)\n    ..."
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân gốc là gì?",
+    "options": [
+      "`this` lọt ra qua `register` trước khi gán field; `final` chỉ bảo đảm khi `this` không lọt",
+      "JIT đổi thứ tự hai lần gán field `final`; phải khai báo thêm `volatile` cho từng field đó cho chắc",
+      "Thread của EventBus còn giữ bản listener cũ trong cache CPU; phải đánh dấu `onOrder` là `synchronized`",
+      "`registry.counter()` trả `null` khi registry chưa sẵn sàng lúc start, nên field nhận giá trị null"
+    ],
+    "answer": 0,
+    "explanation": "Ngay dòng đầu constructor, `this` đã nằm trong danh sách listener. Event tới trên thread khác có thể gọi `onOrder` trước khi hai lần gán chạy, kể cả khi mọi lệnh chạy đúng thứ tự. JLS 17.5 chỉ hứa thread khác thấy đúng field `final` khi tham chiếu được công bố **sau** khi constructor xong ([[this-escape]] làm mất đảm bảo này). `final` và `volatile` không đi cùng nhau được (lỗi biên dịch). `synchronized` trên `onOrder` không giúp vì field thật sự chưa được gán. Nếu `registry.counter()` trả `null` thì lỗi sẽ kéo dài mãi, không tự hết sau vài giây."
+  },
+  "fix": {
+    "code": "public final class OrderMetrics implements OrderListener {\n    private final Counter placed;\n    private final Counter failed;\n\n    private OrderMetrics(MeterRegistry registry) {\n        this.placed = registry.counter(\"orders.placed\");\n        this.failed = registry.counter(\"orders.failed\");\n    }\n\n    public static OrderMetrics register(EventBus bus, MeterRegistry registry) {\n        OrderMetrics metrics = new OrderMetrics(registry);\n        bus.register(metrics);   // công bố sau khi constructor đã xong\n        return metrics;\n    }\n\n    @Override\n    public void onOrder(OrderEvent event) {\n        if (event.ok()) placed.increment();\n        else failed.increment();\n    }\n}",
+    "explanation": "Constructor chỉ gán field; việc đăng ký (công bố `this`) chuyển sang factory method chạy sau khi constructor trả về. Lúc đó field `final` đã được đóng băng, và `register` của EventBus lưu listener vào collection đồng thời nên thread dispatch thấy object đầy đủ ([[safe-publication]]). Cùng loại lỗi: start thread, đăng ký callback hay gọi method có thể override ngay trong constructor. Trong Spring, đăng ký trong `@PostConstruct` hoặc `SmartLifecycle.start()`."
+  }
+}

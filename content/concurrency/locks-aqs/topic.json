@@ -1,0 +1,73 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "locks-aqs",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Lock & AQS",
+  "summary": "Bên trong AbstractQueuedSynchronizer: state đổi bằng CAS, hàng đợi CLH, park/unpark, mode exclusive và shared; ReentrantLock non-fair và fair, bẫy tryLock và try/finally; Condition; ReentrantReadWriteLock không nâng cấp được và khi nào nó chậm hơn; StampedLock đọc lạc quan; chọn giữa synchronized và Lock, kể cả với virtual thread.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 18,
+  "prerequisites": [
+    "synchronized-volatile",
+    "synchronizers"
+  ],
+  "terms": [
+    "aqs",
+    "cas",
+    "lock-support-park",
+    "clh-queue",
+    "lock-fairness",
+    "starvation",
+    "reentrancy",
+    "condition-variable",
+    "spurious-wakeup",
+    "read-write-lock",
+    "stamped-lock",
+    "virtual-thread",
+    "pinning",
+    "monitor"
+  ],
+  "references": [
+    {
+      "title": "Javadoc AbstractQueuedSynchronizer (Java 21)",
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/AbstractQueuedSynchronizer.html"
+    },
+    {
+      "title": "Javadoc ReentrantLock (Java 21)",
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantLock.html"
+    },
+    {
+      "title": "Javadoc ReentrantReadWriteLock (Java 21)",
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantReadWriteLock.html"
+    },
+    {
+      "title": "Javadoc StampedLock (Java 21)",
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/StampedLock.html"
+    },
+    {
+      "title": "JEP 491: Synchronize Virtual Threads without Pinning",
+      "url": "https://openjdk.org/jeps/491"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "simulation",
+      "file": "simulation.json"
+    },
+    {
+      "type": "layered",
+      "file": "layered.md"
+    },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Vậy cứ dùng `ReentrantLock` cho chắc, bỏ hẳn `synchronized`?\" Không. Hiệu năng hai bên đã tương đương từ lâu, còn `synchronized` tự nhả khi exception và không thể quên `unlock()`. Lý do đổi là tính năng: timeout, interrupt, nhiều `Condition`, giám sát hàng đợi. Lý do thứ hai từng là virtual thread: trên Java 21–23, thread ảo block bên trong `synchronized` ghim carrier thread ([[pinning]]), nên nhiều thư viện đã đổi sang `ReentrantLock`. Từ Java 24 (JEP 491) gần như hết ghim, chỉ còn vài trường hợp như block trong class initializer (`static {}`), chờ class khác khởi tạo xong, hoặc gọi native code. Hỏi tiếp có thể là \"AQS đánh thức thread thế nào\": `LockSupport.unpark` thread đầu hàng, thread đó tự CAS lại và có thể thua thread mới tới."
+    },
+    {
+      "type": "breakLab",
+      "file": "lab.json"
+    }
+  ]
+}

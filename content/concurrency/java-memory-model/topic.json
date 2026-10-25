@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-memory-model",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Java Memory Model",
+  "summary": "JMM định nghĩa lần đọc được thấy lần ghi nào: synchronizes-with, happens-before và đảm bảo DRF-SC; reordering của JIT và CPU (store buffer, x86 TSO so với ARM); năm cách công bố an toàn; ngữ nghĩa field final và this-escape; DCL, holder idiom, data race lành tính; access mode của VarHandle và kiểm tra bằng JCStress.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 18,
+  "prerequisites": ["synchronized-volatile"],
+  "terms": ["jmm", "happens-before", "data-race", "sequential-consistency", "instruction-reordering", "store-buffer", "safe-publication", "this-escape", "immutable", "double-checked-locking", "jit", "memory-barrier", "var-handle", "jcstress"],
+  "references": [
+    { "title": "JLS chương 17: Threads and Locks (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html" },
+    { "title": "java.util.concurrent: Memory Consistency Properties (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/package-summary.html" },
+    { "title": "JSR 133 (Java Memory Model) FAQ", "url": "https://www.cs.umd.edu/~pugh/java/memoryModel/jsr-133-faq.html" },
+    { "title": "OpenJDK: The Java Concurrency Stress tests (jcstress)", "url": "https://openjdk.org/projects/code-tools/jcstress/" }
+  ],
+  "blocks": [
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "simulation", "file": "simulation-wrong-order.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`String.hashCode()` ghi field `hash` không khoá, không volatile. Đó có phải data race không, sao vẫn đúng?\" Đúng là data race, nhưng lành tính: `int` không bị xé, mọi thread tính ra cùng một giá trị từ mảng ký tự immutable, và code đọc `hash` một lần vào biến cục bộ rồi trả biến đó. Tệ nhất là vài thread tính lại hash. Hỏi tiếp thường là \"áp dụng mẫu này cho cache một object được không\": không, vì object có field thường có thể bị thấy khi chưa dựng xong; lúc đó cần `volatile` hoặc field `final`." },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "aqs-core",
+      "front": "AQS gồm những gì?",
+      "back": "Một `volatile int state` đổi bằng CAS và một hàng đợi FIFO các thread đang park. Mỗi lớp con tự định nghĩa ý nghĩa của state qua `tryAcquire`/`tryRelease`."
+    },
+    {
+      "id": "state-meaning",
+      "front": "`state` nghĩa là gì trong ReentrantLock, Semaphore, CountDownLatch?",
+      "back": "Số lần giữ lock; số permit còn lại; bộ đếm còn lại. ReentrantReadWriteLock chia state làm đôi cho read và write: 16/16 bit tới Java 24, 32/32 bit (`long`) từ Java 25."
+    },
+    {
+      "id": "nonfair",
+      "front": "Non-fair lock chen ngang thế nào, vì sao là mặc định?",
+      "back": "Thread mới thử CAS ngay, có thể lấy lock trước thread vừa được đánh thức. Không phải chờ thread kia được lập lịch nên throughput cao hơn nhiều."
+    },
+    {
+      "id": "trylock-fair",
+      "front": "`tryLock()` trên lock fair có tôn trọng hàng đợi không?",
+      "back": "Không, nó luôn chen nếu lock đang trống. Dùng `tryLock(0, TimeUnit.SECONDS)` để tôn trọng fairness."
+    },
+    {
+      "id": "lock-before-try",
+      "front": "Vì sao `lock()` phải đặt ngay trước `try`, không đặt bên trong?",
+      "back": "Nếu có lệnh ném exception trước `lock()`, `finally` gọi `unlock()` khi không giữ lock, ném `IllegalMonitorStateException` và che lỗi gốc."
+    },
+    {
+      "id": "park-permit",
+      "front": "`unpark` trước `park` thì sao?",
+      "back": "`park` trả về ngay: mỗi thread có một permit nhị phân. Khác `notify` trước `wait`, tín hiệu bị mất."
+    },
+    {
+      "id": "await",
+      "front": "`Condition.await()` làm gì với lock?",
+      "back": "Nhả hết số lần giữ, park trong hàng đợi của condition; khi được signal phải lấy lại đủ số lần giữ rồi mới trả về. Luôn gọi trong `while`."
+    },
+    {
+      "id": "rw-upgrade",
+      "front": "Giữ read lock rồi xin write lock của ReentrantReadWriteLock thì sao?",
+      "back": "Tự treo: write lock chờ mọi read lock, kể cả của chính thread đó. Hạ cấp write → read thì được."
+    },
+    {
+      "id": "stamped",
+      "front": "Đọc lạc quan của StampedLock dùng thế nào?",
+      "back": "`tryOptimisticRead()`, đọc field vào biến cục bộ, rồi `validate(stamp)`; sai thì lấy `readLock()` đọc lại. Không reentrant, không có Condition."
+    },
+    {
+      "id": "pick",
+      "front": "Khi nào chọn ReentrantLock thay vì synchronized?",
+      "back": "Khi cần `tryLock` có timeout, `lockInterruptibly`, nhiều Condition, fairness, hoặc chạy virtual thread trên Java 21–23. Hiệu năng không còn là lý do."
+    }
+  ]
+}

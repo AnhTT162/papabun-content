@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "jmm-what",
+      "front": "JMM trả lời câu hỏi gì?",
+      "back": "Một lần đọc được phép thấy lần ghi nào. Nó định nghĩa bằng happens-before, không bằng cache hay register."
+    },
+    {
+      "id": "drf-sc",
+      "front": "Đảm bảo DRF-SC là gì?",
+      "back": "Chương trình không có data race thì mọi lần chạy đều như thể tuần tự nhất quán. Có data race thì không còn đảm bảo này."
+    },
+    {
+      "id": "synchronizes-with",
+      "front": "Những cặp thao tác nào tạo cạnh synchronizes-with?",
+      "back": "Unlock và lock sau đó trên cùng monitor; ghi volatile và lần đọc thấy giá trị đó; `start()` và thread được start; thread kết thúc và `join()` trả về."
+    },
+    {
+      "id": "piggyback",
+      "front": "`ready` volatile. Ghi `data` sau `ready = true` có được công bố không?",
+      "back": "Không. Chỉ những lần ghi đứng trước lần ghi volatile mới đi nhờ cạnh happens-before của nó."
+    },
+    {
+      "id": "safe-publication",
+      "front": "Năm cách công bố an toàn một object?",
+      "back": "Static initializer; field volatile hoặc AtomicReference; field final của object dựng đúng cách; field được khoá khi ghi và đọc; collection hoặc queue của java.util.concurrent."
+    },
+    {
+      "id": "final-freeze",
+      "front": "Field `final` bảo đảm gì?",
+      "back": "Ai thấy tham chiếu tới object đều thấy giá trị final gán trong constructor, kể cả qua data race, miễn là `this` không lọt ra trong lúc dựng."
+    },
+    {
+      "id": "x86-vs-arm",
+      "front": "x86 và ARM khác nhau thế nào về reordering?",
+      "back": "x86 (TSO) chỉ cho lần đọc vượt lần ghi còn trong store buffer. ARM cho đổi cả bốn kiểu, nên lỗi data race hay lộ ra khi chuyển sang ARM."
+    },
+    {
+      "id": "sleep",
+      "front": "`Thread.sleep` có làm biến thường hiện ra với thread khác không?",
+      "back": "Không. JLS 17.3: sleep và yield không có ngữ nghĩa đồng bộ, JIT được phép đọc biến một lần."
+    },
+    {
+      "id": "string-hash",
+      "front": "Vì sao `String.hashCode()` có data race mà vẫn đúng?",
+      "back": "Field `int` không bị xé, mọi thread tính ra cùng giá trị, và code chỉ đọc field một lần vào biến cục bộ."
+    },
+    {
+      "id": "jcstress",
+      "front": "Kiểm tra code lock-free bằng gì?",
+      "back": "JCStress: chạy đoạn code hàng triệu lần với nhiều cách xen kẽ, đếm từng kết quả. Nên chạy cả trên ARM; unit test thường hầu như không bắt được."
+    }
+  ]
+}

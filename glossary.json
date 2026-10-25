@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model"]
     },
     {
       "id": "dns",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs"]
     },
     {
       "id": "pinning",
@@ -302,7 +302,7 @@
       "meaning": "Virtual thread bị dính chặt vào carrier thread khi block, nên carrier không phục vụ được virtual thread khác. Ở Java 21–23 xảy ra khi block trong `synchronized`; JEP 491 (Java 24) bỏ trường hợp này.",
       "example": "Gọi JDBC chặn bên trong khối `synchronized` trên Java 21 sẽ giữ carrier suốt thời gian chờ.",
       "related": ["virtual-thread"],
-      "topics": ["executor-thread-pool", "producer-consumer"]
+      "topics": ["executor-thread-pool", "producer-consumer", "locks-aqs"]
     },
     {
       "id": "bulkhead",
@@ -373,7 +373,7 @@
       "meaning": "Lock gắn sẵn với mọi object Java, được lấy khi vào khối `synchronized` và nhả khi ra. Mỗi lúc chỉ một thread giữ, và nó có wait set cho `wait`/`notify`.",
       "example": "`synchronized (order) { ... }` lấy monitor của object `order`; thread khác muốn vào phải BLOCKED.",
       "related": ["reentrancy", "happens-before"],
-      "topics": ["thread-lifecycle", "synchronized-volatile", "deadlock", "producer-consumer"]
+      "topics": ["thread-lifecycle", "synchronized-volatile", "deadlock", "producer-consumer", "locks-aqs"]
     },
     {
       "id": "spurious-wakeup",
@@ -381,7 +381,7 @@
       "meaning": "Thread đang `wait()` thức dậy mà không có ai `notify`, `interrupt` hay hết giờ. Spec cho phép điều này, nên điều kiện chờ phải được kiểm tra lại trong vòng `while`.",
       "example": "`while (queue.isEmpty()) { queue.wait(); }` thay vì `if (queue.isEmpty()) queue.wait();`.",
       "related": ["monitor"],
-      "topics": ["thread-lifecycle", "producer-consumer"]
+      "topics": ["thread-lifecycle", "producer-consumer", "locks-aqs"]
     },
     {
       "id": "thread-interrupt",
@@ -397,7 +397,7 @@
       "meaning": "Phần của JLS (chương 17) quy định khi nào một lần ghi của thread này chắc chắn được thread khác nhìn thấy, dựa trên quan hệ happens-before.",
       "example": "Không có `volatile` hay khoá, JMM cho phép thread đọc mãi giá trị cũ của một biến.",
       "related": ["happens-before", "visibility", "data-race"],
-      "topics": ["synchronized-volatile", "concurrency-basics"]
+      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model"]
     },
     {
       "id": "happens-before",
@@ -405,7 +405,7 @@
       "meaning": "Quan hệ thứ tự của JMM: nếu A happens-before B thì mọi thứ A ghi đều hiện ra với B. Tạo bởi program order, unlock→lock cùng monitor, ghi→đọc cùng biến volatile, `start()`, `join()`, và có tính bắc cầu.",
       "example": "Ghi `ready = true` (volatile) sau `data = 42`; thread đọc thấy `ready` là `true` thì chắc chắn thấy `data = 42`.",
       "related": ["jmm", "visibility"],
-      "topics": ["synchronized-volatile", "synchronizers"]
+      "topics": ["synchronized-volatile", "synchronizers", "java-memory-model"]
     },
     {
       "id": "visibility",
@@ -429,7 +429,7 @@
       "meaning": "Compiler, JIT và CPU được đổi thứ tự lệnh miễn là kết quả trong một thread không đổi; thread khác có thể thấy thứ tự khác nếu không có happens-before.",
       "example": "`data = 42; ready = true;` có thể hiện ra với thread khác như thể `ready` được ghi trước.",
       "related": ["happens-before", "jmm"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "java-memory-model"]
     },
     {
       "id": "data-race",
@@ -437,7 +437,7 @@
       "meaning": "Hai thread truy cập cùng một biến, ít nhất một bên ghi, mà không có happens-before giữa hai lần truy cập. Kết quả khi đó không được JMM đảm bảo.",
       "example": "Hai thread cùng `count++` trên một `int` thường không khoá.",
       "related": ["race-condition", "happens-before"],
-      "topics": ["synchronized-volatile", "concurrency-basics"]
+      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model"]
     },
     {
       "id": "lost-update",
@@ -461,7 +461,7 @@
       "meaning": "Lệnh CPU atomic: chỉ ghi giá trị mới nếu giá trị hiện tại vẫn bằng giá trị mong đợi, nếu không thì báo thất bại để thử lại. Là nền của `AtomicInteger` và các cấu trúc lock-free.",
       "example": "`counter.compareAndSet(5, 6)` chỉ thành công nếu `counter` đang là 5.",
       "related": ["atomicity"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "locks-aqs"]
     },
     {
       "id": "reentrancy",
@@ -469,7 +469,7 @@
       "meaning": "Thread đang giữ một lock có thể lấy lại chính lock đó mà không tự chặn mình; lock đếm số lần lấy và chỉ nhả khi đã nhả đủ. `synchronized` và `ReentrantLock` đều reentrant.",
       "example": "Method `synchronized` `deposit()` gọi method `synchronized` `log()` trên cùng object mà không deadlock.",
       "related": ["monitor"],
-      "topics": ["synchronized-volatile", "deadlock"]
+      "topics": ["synchronized-volatile", "deadlock", "locks-aqs"]
     },
     {
       "id": "double-checked-locking",
@@ -477,7 +477,7 @@
       "meaning": "Kiểu khởi tạo lười: kiểm tra `instance == null` ngoài khoá, rồi kiểm tra lại trong `synchronized` mới tạo object. Chỉ đúng khi field là `volatile` (Java 5+).",
       "example": "`private static volatile Config instance;` cùng hai lần kiểm tra `if (instance == null)`.",
       "related": ["happens-before", "instruction-reordering"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "java-memory-model"]
     },
     {
       "id": "deadlock",
@@ -517,7 +517,7 @@
       "meaning": "Một thread mãi không được dùng tài nguyên vì các thread khác luôn giành trước, dù hệ thống vẫn chạy.",
       "example": "Một thread nhả lock rồi lấy lại ngay trong vòng lặp dài; với lock không công bằng, thread khác đang chờ có thể hiếm khi tới lượt.",
       "related": ["livelock", "deadlock"],
-      "topics": ["deadlock"]
+      "topics": ["deadlock", "locks-aqs"]
     },
     {
       "id": "jit",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model"]
     },
     {
       "id": "memory-barrier",
@@ -533,7 +533,7 @@
       "meaning": "Lệnh ngăn CPU và compiler đổi thứ tự các thao tác bộ nhớ qua một điểm, và buộc các lần ghi trước đó hiện ra với core khác. JVM chèn barrier quanh truy cập volatile và khi lấy/nhả khoá.",
       "example": "Trên x86, ghi một biến volatile thường sinh thêm một lệnh có tiền tố `lock`, còn đọc volatile gần như không tốn thêm.",
       "related": ["happens-before", "instruction-reordering"],
-      "topics": ["synchronized-volatile"]
+      "topics": ["synchronized-volatile", "java-memory-model"]
     },
     {
       "id": "string-pool",
@@ -3613,7 +3613,7 @@
       "meaning": "Hàng chờ gắn với một lock, nơi thread chờ một điều kiện cụ thể (`await`) và được báo khi điều kiện có thể đã đúng (`signal`). Một lock có thể có nhiều `Condition`, khác với `wait`/`notify` chỉ có một hàng chờ mỗi monitor.",
       "example": "`ArrayBlockingQueue` dùng một `ReentrantLock` với hai `Condition`: `notFull` cho producer, `notEmpty` cho consumer.",
       "related": ["monitor", "spurious-wakeup"],
-      "topics": ["producer-consumer"]
+      "topics": ["producer-consumer", "locks-aqs"]
     },
     {
       "id": "count-down-latch",
@@ -3653,7 +3653,7 @@
       "meaning": "`AbstractQueuedSynchronizer`: khung dựng lock và synchronizer của `java.util.concurrent`, gồm một biến state `int` đổi bằng CAS và một hàng đợi các thread đang chờ.",
       "example": "`ReentrantLock`, `Semaphore`, `CountDownLatch` đều có lớp `Sync` nội bộ kế thừa AQS, mỗi lớp hiểu state theo cách riêng.",
       "related": ["cas", "semaphore", "count-down-latch"],
-      "topics": ["synchronizers"]
+      "topics": ["synchronizers", "locks-aqs"]
     },
     {
       "id": "scoped-value",
@@ -3694,6 +3694,94 @@
       "example": "`ThreadLocalMap` giữ key `ThreadLocal` bằng weak reference, nhưng value bằng tham chiếu mạnh.",
       "related": ["thread-local"],
       "topics": ["threadlocal"]
+    },
+    {
+      "id": "sequential-consistency",
+      "term": "Sequential consistency",
+      "meaning": "Mô hình trong đó mọi thao tác của mọi thread như thể xếp thành một hàng duy nhất, và lệnh của mỗi thread giữ đúng thứ tự trong code. Java chỉ hứa điều này cho chương trình không có data race (DRF-SC).",
+      "example": "Hai thread `x = 1; r1 = y;` và `y = 1; r2 = x;` dưới sequential consistency không thể ra `r1 == r2 == 0`; thiếu `volatile` thì Java cho phép.",
+      "related": ["jmm", "data-race", "happens-before"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "store-buffer",
+      "term": "Store buffer",
+      "meaning": "Hàng đợi nhỏ trong mỗi core CPU giữ các lần ghi chưa đưa vào cache. Lần đọc sau có thể chạy trước khi lần ghi rời store buffer, nên core khác thấy thứ tự khác với code.",
+      "example": "Trên x86, `x = 1; r1 = y;` có thể đọc `y` trong khi `x = 1` còn nằm trong store buffer; ghi volatile sinh lệnh có tiền tố `lock` để xả nó.",
+      "related": ["instruction-reordering", "memory-barrier"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "safe-publication",
+      "term": "Safe publication",
+      "meaning": "Chia sẻ một object sang thread khác qua một cạnh happens-before, để thread đó thấy object đã dựng đầy đủ. Ví dụ: field volatile, field final, static initializer, collection đồng thời.",
+      "example": "`private volatile Config current;` rồi `current = Config.load();` công bố an toàn; gán vào field thường thì thread khác có thể thấy field của `Config` vẫn mặc định.",
+      "related": ["happens-before", "immutable", "this-escape"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "this-escape",
+      "term": "This-escape",
+      "meaning": "Tham chiếu `this` lọt ra cho code khác (đăng ký listener, start thread, gọi method có thể override) khi constructor chưa chạy xong. Thread khác có thể thấy object dở dang, và đảm bảo của field final mất hiệu lực.",
+      "example": "Gọi `bus.register(this)` ở dòng đầu constructor: event tới trên thread khác thấy field `final` vẫn `null`.",
+      "related": ["safe-publication", "immutable"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "var-handle",
+      "term": "VarHandle",
+      "meaning": "API từ Java 9 (`java.lang.invoke.VarHandle`) để đọc ghi một field hoặc phần tử mảng với access mode chọn được: plain, opaque, acquire/release, volatile, kèm CAS. Thay cho `sun.misc.Unsafe`.",
+      "example": "`VALUE.setRelease(this, next)` công bố giá trị rẻ hơn ghi volatile đầy đủ; bên đọc dùng `VALUE.getAcquire(this)`.",
+      "related": ["cas", "memory-barrier", "jmm"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "jcstress",
+      "term": "JCStress",
+      "meaning": "Java Concurrency Stress tests: công cụ của OpenJDK chạy một đoạn code đồng thời hàng triệu lần và đếm từng kết quả quan sát được, để kiểm tra code có đúng với JMM không.",
+      "example": "Test hai thread `x = 1; r1 = y` / `y = 1; r2 = x` cho thấy kết quả `(0, 0)` xuất hiện trên x86, dù hiếm.",
+      "related": ["jmm", "data-race"],
+      "topics": ["java-memory-model"]
+    },
+    {
+      "id": "lock-support-park",
+      "term": "park / unpark",
+      "meaning": "`LockSupport.park()` cho thread hiện tại ngủ tới khi có permit; `unpark(thread)` cấp permit (tối đa một, không cộng dồn). Đây là cơ chế chặn và đánh thức bên dưới AQS.",
+      "example": "Gọi `unpark(t)` trước khi `t` gọi `park()` thì `park()` trả về ngay; thread dump của thread đang park hiện `WAITING (parking)`.",
+      "related": ["aqs", "thread-interrupt"],
+      "topics": ["locks-aqs"]
+    },
+    {
+      "id": "clh-queue",
+      "term": "CLH queue",
+      "meaning": "Hàng đợi khoá dạng danh sách liên kết, đặt theo tên Craig, Landin và Hagersten. Thread mới gắn vào cuối bằng một lần CAS; AQS dùng một biến thể có liên kết hai chiều và node bị huỷ.",
+      "example": "Ba thread chờ một `ReentrantLock` nằm thành ba node sau `head`; khi lock nhả, chỉ thread đứng ngay sau `head` được `unpark`.",
+      "related": ["aqs", "cas"],
+      "topics": ["locks-aqs"]
+    },
+    {
+      "id": "lock-fairness",
+      "term": "Fairness (lock)",
+      "meaning": "Lock fair trao lock cho thread chờ lâu nhất; lock non-fair (mặc định) cho thread mới tới chen ngang (barging) nếu lock vừa trống. Non-fair nhanh hơn, fair giảm starvation.",
+      "example": "`new ReentrantLock(true)` là fair; nhưng `tryLock()` không tham số vẫn chen ngang kể cả trên lock fair.",
+      "related": ["starvation", "aqs"],
+      "topics": ["locks-aqs"]
+    },
+    {
+      "id": "read-write-lock",
+      "term": "Read-write lock",
+      "meaning": "Lock có hai phần: read lock cho nhiều thread cùng giữ, write lock chỉ một thread giữ và loại trừ mọi reader. Cài đặt chính là `ReentrantReadWriteLock`.",
+      "example": "Giữ read lock rồi gọi `writeLock().lock()` trên cùng `ReentrantReadWriteLock` là tự treo, vì không hỗ trợ nâng cấp.",
+      "related": ["stamped-lock", "aqs"],
+      "topics": ["locks-aqs"]
+    },
+    {
+      "id": "stamped-lock",
+      "term": "StampedLock",
+      "meaning": "Lock từ Java 8 trả về một stamp `long` cho mỗi lần lấy, có thêm chế độ đọc lạc quan: đọc không khoá rồi `validate(stamp)`. Không reentrant, không có Condition.",
+      "example": "`long s = lock.tryOptimisticRead(); double x = this.x, y = this.y; if (!lock.validate(s)) { /* lấy readLock và đọc lại */ }`.",
+      "related": ["read-write-lock", "optimistic-locking"],
+      "topics": ["locks-aqs"]
     }
   ]
 }

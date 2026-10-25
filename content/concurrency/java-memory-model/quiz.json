@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "store-buffer",
+      "kind": "output",
+      "prompt": "`x`, `y` là field `int` thường, ban đầu bằng 0. Hai thread chạy song song rồi `main` join cả hai và in `r1`, `r2`. Kết quả nào có thể xuất hiện?",
+      "code": "// Thread A        // Thread B\nx = 1;             y = 1;\nr1 = y;            r2 = x;",
+      "options": [
+        "Cả `r1 = 0, r2 = 0`, kể cả trên CPU x86",
+        "Chỉ (0,1), (1,0), (1,1), vì mỗi thread ghi trước khi đọc",
+        "(0,0) chỉ có trên ARM; x86 giữ nguyên thứ tự mọi lệnh",
+        "(0,0) chỉ khi JIT đã biên dịch; chạy `-Xint` thì không"
+      ],
+      "answer": 0,
+      "explanation": "Không có happens-before giữa hai thread nên JMM cho phép (0,0). Trên x86, lần ghi `x = 1` có thể còn nằm trong store buffer khi `r1 = y` đã đọc bộ nhớ: TSO cho phép lần đọc vượt lần ghi trước nó. Vì đây là reordering của CPU, tắt JIT bằng `-Xint` không loại được. Khai báo `x` và `y` là `volatile` thì (0,0) bị cấm."
+    },
+    {
+      "id": "final-guarantee",
+      "kind": "single",
+      "prompt": "Class `Point` có field `final int x` và field thường `int y`, constructor gán `x = 1; y = 2;`. Thread A làm `shared = new Point(...)` với `shared` là field `static` thường. Thread B đọc `shared` và thấy khác `null`. Điều gì được bảo đảm?",
+      "options": [
+        "`x` chắc chắn là 1; `y` có thể vẫn là 0",
+        "Cả hai đều đúng vì constructor chạy xong trước khi gán `shared`",
+        "Không field nào được bảo đảm vì `shared` không volatile",
+        "Cả hai đúng trên x86, chỉ sai trên CPU ARM"
+      ],
+      "answer": 0,
+      "explanation": "JLS 17.5: thấy tham chiếu tới object đã dựng xong thì thấy đúng field `final`, kể cả khi tham chiếu đi qua data race. Field thường không có đảm bảo đó: lần ghi `y` và lần gán `shared` có thể bị nhìn thấy theo thứ tự khác. \"Chạy xong trước\" chỉ đúng trong thread A. Trên x86 hiếm gặp, nhưng spec cho phép ở mọi CPU."
+    },
+    {
+      "id": "sleep-no-hb",
+      "kind": "single",
+      "prompt": "`stop` là `boolean` thường. Thread worker chạy `while (!stop) { Thread.sleep(100); }`, thread khác gán `stop = true`. Phát biểu nào đúng theo spec?",
+      "options": [
+        "Có thể không dừng: `sleep` không tạo happens-before",
+        "Worker dừng chậm nhất sau 100 ms, vì `sleep` làm mới cache",
+        "Worker luôn dừng, vì `sleep` là native nên JIT không tối ưu qua",
+        "Worker luôn dừng, vì thread thức dậy phải đọc lại bộ nhớ chung"
+      ],
+      "answer": 0,
+      "explanation": "JLS 17.3 nói rõ `Thread.sleep` và `Thread.yield` không có ngữ nghĩa đồng bộ; compiler được phép đọc `stop` một lần rồi dùng mãi. HotSpot hiện tại thường đọc lại vì lời gọi `sleep` cản tối ưu, nhưng đó là chi tiết cài đặt. Khai báo `volatile boolean stop`, hoặc dùng interrupt."
+    },
+    {
+      "id": "unsafe-publication",
+      "kind": "single",
+      "prompt": "`Settings` có vài field thường (không `final`), được dựng xong rồi mới chia sẻ. Cách chia sẻ nào **không** bảo đảm thread khác thấy đủ các field?",
+      "options": [
+        "Gán vào field `static` thường, thread kia đọc khi khác `null`",
+        "Gán vào field `volatile`, thread kia đọc field đó",
+        "`map.put(key, settings)` vào `ConcurrentHashMap`, thread kia gọi `get`",
+        "Truyền vào lambda rồi `executor.submit(...)` cho thread pool"
+      ],
+      "answer": 0,
+      "explanation": "Field thường không tạo cạnh happens-before giữa lần gán và lần đọc, nên thread kia có thể thấy tham chiếu mà field vẫn mặc định. Field `volatile`, collection của `java.util.concurrent` và `submit` vào executor đều là cách công bố an toàn: package `java.util.concurrent` ghi rõ hành động trước khi đưa object vào happens-before hành động sau khi lấy ra."
+    },
+    {
+      "id": "arm-migration",
+      "kind": "single",
+      "prompt": "Service chuyển từ instance x86 sang ARM (Graviton). Một lỗi hiếm xuất hiện: thread đọc thấy `initialized == true` (boolean thường) nhưng `config` (gán ngay trước đó) vẫn `null`. Giải thích hợp lý nhất?",
+      "options": [
+        "ARM cho đổi thứ tự hai lần ghi; code vốn đã có data race",
+        "Cache của ARM không coherent nên mọi field chia sẻ phải volatile",
+        "JIT trên ARM có lỗi với field `boolean`; nâng JDK là hết",
+        "ARM có nhiều core hơn nên lost update xảy ra thường hơn"
+      ],
+      "answer": 0,
+      "explanation": "x86 (TSO) giữ thứ tự ghi-ghi và đọc-đọc ở mức CPU nên lỗi bị che; JIT vẫn được phép đổi thứ tự hai lần ghi thường, chỉ là tình cờ chưa làm. AArch64 cho phép thread khác thấy `initialized = true` trước `config = ...`, và bên đọc cũng có thể đọc `config` trước `initialized`. Vì vậy cả hai phía cần `volatile`: ghi cờ là release, đọc cờ là acquire. Cache ARM vẫn coherent; vấn đề là thứ tự. Đây không phải lost update (không có đọc-sửa-ghi). Sửa: khai báo `initialized` là `volatile` (ghi `config` trước), hoặc bỏ cờ và công bố `config` qua một field volatile."
+    }
+  ]
+}

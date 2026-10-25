@@ -1,0 +1,304 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "ReentrantLock non-fair bên trong AQS",
+  "instructions": "Bấm `T1 lock()` vài lần để thấy `state` đếm số lần giữ, rồi `T2 lock()` để T2 vào hàng đợi và park. Bấm `Chủ lock unlock()` tới khi `state` về 0, sau đó thử ba đường: `T2 thức dậy` lấy được lock, `T3 lock()` chen ngang trước khi T2 kịp chạy, hoặc `T1 lock()` lấy lại ngay.",
+  "config": {
+    "states": [
+      {
+        "id": "free",
+        "label": "Lock trống",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "`state = 0`, không có chủ, hàng đợi rỗng. `lock()` chỉ là một lần CAS `0 → 1`."
+      },
+      {
+        "id": "t1-holds",
+        "label": "T1 giữ",
+        "x": 0.85,
+        "y": 0.05,
+        "note": "`state` là số lần T1 đang giữ, `exclusiveOwnerThread = T1`. T1 gọi `lock()` lần nữa chỉ cộng `state`, không cần CAS vì chỉ chủ lock mới sửa."
+      },
+      {
+        "id": "t2-parked",
+        "label": "T1 giữ, T2 park",
+        "x": 0.85,
+        "y": 0.5,
+        "note": "T2 thử CAS thất bại, tạo node, gắn vào cuối hàng đợi bằng CAS rồi `LockSupport.park()`. Thread dump của T2: `WAITING (parking)`, `parking to wait for ... ReentrantLock$NonfairSync`."
+      },
+      {
+        "id": "handoff",
+        "label": "Lock trống, T2 chờ",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Chủ lock vừa nhả: `state = 0` và AQS `unpark` T2. T2 cần được lập lịch lại mới chạy, nên trong khoảnh khắc này lock trống mà hàng đợi vẫn còn T2. Lock non-fair cho thread mới chen vào đúng lúc này; lock fair bắt thread mới xếp hàng vì `hasQueuedPredecessors()` trả `true`."
+      },
+      {
+        "id": "t2-holds",
+        "label": "T2 giữ",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "T2 là chủ, `state = 1`. Nếu T2 vừa từ hàng đợi lên thì node của nó thành `head` mới và hàng đợi không còn ai chờ."
+      },
+      {
+        "id": "t3-barged",
+        "label": "T3 chen ngang",
+        "x": 0.85,
+        "y": 0.95,
+        "note": "T3 vừa tới đã CAS thành công dù T2 xếp hàng trước. Đây là barging: không phải chờ T2 thức dậy nên throughput cao hơn, đổi lại T2 có thể phải chờ rất lâu."
+      }
+    ],
+    "initial": "free",
+    "events": [
+      {
+        "id": "t1-lock",
+        "label": "T1 lock()"
+      },
+      {
+        "id": "t2-lock",
+        "label": "T2 lock()"
+      },
+      {
+        "id": "t3-lock",
+        "label": "T3 lock()"
+      },
+      {
+        "id": "unlock",
+        "label": "Chủ lock unlock()"
+      },
+      {
+        "id": "t2-wake",
+        "label": "T2 thức dậy"
+      }
+    ],
+    "counters": [
+      {
+        "id": "state",
+        "label": "state (số lần giữ)",
+        "initial": 0
+      },
+      {
+        "id": "waiting",
+        "label": "Thread trong hàng đợi",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "free-t1",
+        "from": "free",
+        "event": "t1-lock",
+        "to": "t1-holds",
+        "label": "CAS 0→1",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 1
+          }
+        ],
+        "note": "Không tranh chấp: một lần CAS thành công là xong, không đụng tới hàng đợi."
+      },
+      {
+        "id": "free-t2",
+        "from": "free",
+        "event": "t2-lock",
+        "to": "t2-holds",
+        "label": "CAS 0→1",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "t1-reenter",
+        "from": "t1-holds",
+        "event": "t1-lock",
+        "to": "t1-holds",
+        "effects": [
+          {
+            "counter": "state",
+            "add": 1
+          }
+        ],
+        "note": "Reentrant: chủ lock vào lại, `state` tăng 1."
+      },
+      {
+        "id": "t1-dec",
+        "from": "t1-holds",
+        "event": "unlock",
+        "to": "t1-holds",
+        "guard": {
+          "counter": "state",
+          "gte": 2
+        },
+        "effects": [
+          {
+            "counter": "state",
+            "add": -1
+          }
+        ],
+        "note": "`state` giảm 1. Lock chỉ thật sự nhả khi về 0, nên mỗi `lock()` cần đúng một `unlock()`."
+      },
+      {
+        "id": "t1-release",
+        "from": "t1-holds",
+        "event": "unlock",
+        "to": "free",
+        "label": "state→0",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 0
+          }
+        ],
+        "note": "Không ai chờ nên không cần `unpark`."
+      },
+      {
+        "id": "t1-contend",
+        "from": "t1-holds",
+        "event": "t2-lock",
+        "to": "t2-parked",
+        "label": "CAS lỗi, park",
+        "effects": [
+          {
+            "counter": "waiting",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "q-reenter",
+        "from": "t2-parked",
+        "event": "t1-lock",
+        "to": "t2-parked",
+        "effects": [
+          {
+            "counter": "state",
+            "add": 1
+          }
+        ],
+        "note": "T1 vào lại, T2 vẫn chờ."
+      },
+      {
+        "id": "q-dec",
+        "from": "t2-parked",
+        "event": "unlock",
+        "to": "t2-parked",
+        "guard": {
+          "counter": "state",
+          "gte": 2
+        },
+        "effects": [
+          {
+            "counter": "state",
+            "add": -1
+          }
+        ],
+        "note": "Còn giữ ít nhất một lần nên T2 vẫn park."
+      },
+      {
+        "id": "q-release",
+        "from": "t2-parked",
+        "event": "unlock",
+        "to": "handoff",
+        "label": "unpark T2",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 0
+          }
+        ],
+        "note": "`tryRelease` đưa `state` về 0, rồi AQS `unpark` thread đầu hàng."
+      },
+      {
+        "id": "q-wake",
+        "from": "t2-parked",
+        "event": "t2-wake",
+        "to": "t2-parked",
+        "note": "T2 thức dậy (bị đánh thức giả, hoặc vừa thua một lần chen ngang), thử CAS, thất bại và park lại. AQS luôn kiểm tra lại trong vòng lặp."
+      },
+      {
+        "id": "h-wake",
+        "from": "handoff",
+        "event": "t2-wake",
+        "to": "t2-holds",
+        "label": "CAS 0→1",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 1
+          },
+          {
+            "counter": "waiting",
+            "add": -1
+          }
+        ]
+      },
+      {
+        "id": "h-barge",
+        "from": "handoff",
+        "event": "t3-lock",
+        "to": "t3-barged",
+        "label": "chen ngang",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "h-t1-again",
+        "from": "handoff",
+        "event": "t1-lock",
+        "to": "t2-parked",
+        "label": "T1 lấy lại",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 1
+          }
+        ],
+        "note": "T1 chạy vòng lặp lock/unlock liên tục và lấy lại lock trước khi T2 kịp chạy. Đây là kiểu chen ngang hay gặp nhất: thread đang chạy luôn nhanh hơn thread vừa được đánh thức."
+      },
+      {
+        "id": "t2-release",
+        "from": "t2-holds",
+        "event": "unlock",
+        "to": "free",
+        "label": "state→0",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "b-wake",
+        "from": "t3-barged",
+        "event": "t2-wake",
+        "to": "t3-barged",
+        "label": "CAS lỗi",
+        "note": "T2 thức dậy, thấy `state = 1`, CAS thất bại và park lại. Với lock fair, T3 đã phải xếp hàng sau T2."
+      },
+      {
+        "id": "b-release",
+        "from": "t3-barged",
+        "event": "unlock",
+        "to": "handoff",
+        "label": "unpark T2",
+        "effects": [
+          {
+            "counter": "state",
+            "set": 0
+          }
+        ],
+        "note": "T3 nhả, AQS đánh thức T2 thêm lần nữa."
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở trạng thái hiện tại. Mô phỏng chỉ theo dõi T2 xếp hàng và T3 tới muộn; các thread khác coi như đang làm việc khác."
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "fair-trylock",
+      "kind": "single",
+      "prompt": "`lock = new ReentrantLock(true)`. T2 đang xếp hàng chờ. Đúng lúc chủ lock vừa nhả, T3 gọi `lock.tryLock()` (không tham số). Chuyện gì xảy ra?",
+      "options": [
+        "T3 lấy được lock ngay, chen trước T2",
+        "Trả `false` ngay vì lock fair không cho chen",
+        "T3 xếp hàng sau T2 rồi trả `true` khi tới lượt",
+        "Ném `IllegalStateException` vì đang có thread chờ"
+      ],
+      "answer": 0,
+      "explanation": "Javadoc của `tryLock()`: kể cả khi lock đặt fairness, lời gọi này vẫn lấy lock ngay nếu lock đang trống, bất kể thread đang chờ. Muốn tôn trọng fairness thì dùng `tryLock(0, TimeUnit.SECONDS)`. `tryLock()` không bao giờ xếp hàng: lấy được ngay hoặc trả `false`."
+    },
+    {
+      "id": "stamped-reentry",
+      "kind": "output",
+      "prompt": "Đoạn sau chạy trên một thread. Kết quả?",
+      "code": "StampedLock lock = new StampedLock();\nlong outer = lock.writeLock();\nlong inner = lock.writeLock();\nSystem.out.println(\"inner = \" + inner);",
+      "options": [
+        "Treo mãi ở lần `writeLock()` thứ hai",
+        "In một stamp khác, số lần giữ tăng lên 2",
+        "Ném `IllegalMonitorStateException` ngay",
+        "In `inner = 0` vì lock đang bị giữ"
+      ],
+      "answer": 0,
+      "explanation": "`StampedLock` không reentrant và không có khái niệm chủ: lần `writeLock()` thứ hai chờ lần đầu được nhả, mà người nhả là chính thread đang chờ. `0` là giá trị `tryWriteLock()` trả khi không lấy được; `writeLock()` thì chặn tới khi lấy được. Vì vậy Javadoc khuyên trong vùng khoá đừng gọi method lạ có thể lấy lại lock."
+    },
+    {
+      "id": "await-releases-all",
+      "kind": "single",
+      "prompt": "Thread A đã gọi `lock.lock()` hai lần (reentrant) rồi gọi `notEmpty.await()` trên một `Condition` của lock đó. Trong lúc A chờ, lock thế nào?",
+      "options": [
+        "Nhả hết hai lần giữ; A lấy lại đủ hai lần rồi `await()` mới trả về",
+        "Chỉ nhả một lần, A vẫn giữ một lần nên thread khác vẫn bị chặn",
+        "Ném `IllegalMonitorStateException` vì A giữ lock nhiều hơn một lần",
+        "A vẫn giữ lock suốt lúc chờ, và chỉ nhả lock khi có thread gọi `signal()`"
+      ],
+      "answer": 0,
+      "explanation": "`await()` lưu số lần giữ, nhả hẳn lock, park trong hàng đợi của condition. Sau `signal()`, A phải lấy lại lock với đúng số lần giữ cũ rồi `await()` mới trả về. Nếu chỉ nhả một lần thì producer không bao giờ vào được để `signal`. Exception chỉ có khi gọi `await()` mà không giữ lock."
+    },
+    {
+      "id": "lock-inside-try",
+      "kind": "output",
+      "prompt": "`validate(order)` ném `IllegalArgumentException`. Exception nào bay ra khỏi method?",
+      "code": "try {\n    validate(order);\n    lock.lock();\n    inventory.reserve(order);\n} finally {\n    lock.unlock();\n}",
+      "options": [
+        "`IllegalMonitorStateException`, lỗi gốc bị mất",
+        "`IllegalArgumentException` từ `validate`",
+        "`IllegalArgumentException`, kèm lỗi kia ở dạng suppressed",
+        "Không có gì, vì `unlock()` bỏ qua khi lock chưa bị giữ"
+      ],
+      "answer": 0,
+      "explanation": "`finally` chạy `unlock()` khi thread chưa giữ lock, `ReentrantLock` ném `IllegalMonitorStateException`, và exception ném trong `finally` thay thế exception đang bay. Cơ chế suppressed chỉ có ở try-with-resources. Sửa: `lock.lock();` đặt ngay trước `try`, và `validate` để ngoài vùng khoá."
+    },
+    {
+      "id": "rwlock-slower",
+      "kind": "single",
+      "prompt": "Một map tra cứu trong bộ nhớ, 99% là đọc, mỗi lần đọc chỉ là một `HashMap.get`. Máy 32 core. Đổi `synchronized` sang `ReentrantReadWriteLock` nhưng throughput không tăng, có lúc còn giảm. Vì sao?",
+      "options": [
+        "Mọi reader vẫn CAS cùng biến `state`, các core tranh một cache line",
+        "Read lock ở mode non-fair là exclusive nên reader vẫn chạy lần lượt",
+        "`ReentrantReadWriteLock` luôn ưu tiên writer nên reader phải chờ",
+        "JIT không inline được code của AQS nên mỗi lần lấy read lock đều rất chậm"
+      ],
+      "answer": 0,
+      "explanation": "Read lock là shared, nhưng lấy và nhả vẫn là CAS trên một `state` chung, cộng cập nhật bộ đếm trong `ThreadLocal`. Khi vùng đọc chỉ vài nano giây, chi phí này lớn hơn phần việc thật và cache line chứa `state` bị chuyền qua lại giữa các core. Writer chỉ được ưu tiên phần nào (reader mới xếp hàng khi writer đứng đầu), mà ở đây gần như không có writer. Phương án tốt hơn: `ConcurrentHashMap`, snapshot immutable qua field `volatile`, hoặc đọc lạc quan của `StampedLock`."
+    }
+  ]
+}

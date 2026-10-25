@@ -8,7 +8,7 @@
   "properties": {
     "memoryModel": {
       "enum": ["simple", "jmm"],
-      "description": "simple (mặc định): mọi đọc/ghi đi thẳng vào bộ nhớ chung. jmm: mỗi thread có cache riêng; biến không volatile chỉ được đẩy ra bộ nhớ chung khi unlock, chỉ đọc lại từ bộ nhớ chung sau lock; biến volatile luôn đọc/ghi bộ nhớ chung."
+      "description": "simple (mặc định): mọi đọc/ghi đi thẳng vào bộ nhớ chung. jmm: mỗi thread có cache riêng; biến không volatile chỉ được đẩy ra bộ nhớ chung khi unlock, chỉ đọc lại từ bộ nhớ chung sau lock; biến volatile luôn đọc/ghi bộ nhớ chung; ghi volatile đẩy cả các biến đã ghi trước đó ra bộ nhớ chung (release), đọc volatile bỏ giá trị cũ trong cache (acquire)."
     },
     "resources": {
       "type": "array",

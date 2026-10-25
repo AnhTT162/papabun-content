@@ -1,0 +1,113 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "threadTimeline",
+  "title": "Ghi data sau cờ volatile",
+  "instructions": "Cùng code nhưng Writer đặt `ready = true` **trước** `data = 42`. Lịch \"Writer chạy xong trước\" là lỗi visibility: Writer đã chạy hết mọi lệnh mà Reader vẫn thấy `data == 0`. Lịch \"Reader chen vào giữa\" là lỗi thứ tự đơn thuần: Reader đọc khi `data` còn chưa được ghi.",
+  "config": {
+    "memoryModel": "jmm",
+    "resources": [
+      {
+        "id": "data",
+        "kind": "variable",
+        "label": "data",
+        "valueType": "int",
+        "initial": 0,
+        "volatile": false
+      },
+      {
+        "id": "ready",
+        "kind": "variable",
+        "label": "ready",
+        "valueType": "boolean",
+        "initial": 0,
+        "volatile": true
+      },
+      {
+        "id": "result",
+        "kind": "variable",
+        "label": "result",
+        "valueType": "int",
+        "initial": -1,
+        "volatile": true
+      }
+    ],
+    "threads": [
+      {
+        "id": "writer",
+        "name": "Writer",
+        "steps": [
+          {
+            "op": "write",
+            "target": "ready",
+            "value": 1,
+            "code": "ready = true;   // volatile"
+          },
+          {
+            "op": "write",
+            "target": "data",
+            "value": 42,
+            "code": "data = 42;"
+          }
+        ]
+      },
+      {
+        "id": "reader",
+        "name": "Reader",
+        "steps": [
+          {
+            "op": "spinUntil",
+            "target": "ready",
+            "value": 1,
+            "code": "while (!ready) { }"
+          },
+          {
+            "op": "read",
+            "target": "data",
+            "into": "seen",
+            "code": "int seen = data;"
+          },
+          {
+            "op": "write",
+            "target": "result",
+            "from": "seen",
+            "code": "result = seen;"
+          }
+        ]
+      }
+    ],
+    "schedules": [
+      {
+        "id": "writer-done",
+        "title": "Writer chạy xong trước",
+        "order": [
+          "writer",
+          "writer",
+          "reader",
+          "reader",
+          "reader"
+        ]
+      },
+      {
+        "id": "interleaved",
+        "title": "Reader chen vào giữa",
+        "order": [
+          "writer",
+          "reader",
+          "reader",
+          "writer",
+          "reader"
+        ]
+      }
+    ],
+    "expect": [
+      {
+        "target": "result",
+        "value": 42
+      }
+    ],
+    "outcomes": {
+      "mismatch": "Lần ghi `data` nằm **sau** lần ghi volatile nên không \"đi nhờ\" được cạnh happens-before nào. JMM cho phép Reader thấy `0` mãi. Trên máy thật giá trị thường hiện ra sau một lúc, nhưng không có gì bảo đảm khi nào. Sửa: ghi mọi dữ liệu trước, ghi cờ volatile sau cùng.",
+      "success": "Lịch này tình cờ ra đúng, nhưng JMM không bảo đảm điều đó."
+    }
+  }
+}
