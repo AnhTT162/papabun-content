@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "POST /orders đi qua Spring MVC",
+  "nodes": [
+    {"id": "tomcat", "label": "Tomcat thread", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "filters", "label": "Filter chain", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "dispatcher", "label": "Dispatcher Servlet", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "mapping", "label": "Handler Mapping", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "controller", "label": "Controller", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "advice", "label": "Controller Advice", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "tomcat-filters", "from": "tomcat", "to": "filters", "label": "chạy filter"},
+    {"id": "filters-dispatcher", "from": "filters", "to": "dispatcher", "label": "chain.doFilter"},
+    {"id": "dispatcher-mapping", "from": "dispatcher", "to": "mapping", "label": "tìm handler"},
+    {"id": "dispatcher-controller", "from": "dispatcher", "to": "controller", "label": "bind, validate, gọi"},
+    {"id": "controller-advice", "from": "controller", "to": "advice", "label": "ném exception"}
+  ],
+  "steps": [
+    {"caption": "Tomcat nhận kết nối, lấy một thread trong pool (mặc định tối đa 200) và giữ thread đó cho tới khi response xong.", "show": ["tomcat"]},
+    {"caption": "Thread chạy lần lượt các filter: correlation id, Spring Security, CORS, log. Filter có thể trả response luôn (401) mà request không bao giờ tới Spring MVC.", "show": ["filters", "tomcat-filters"], "highlight": ["tomcat-filters"]},
+    {"caption": "Filter cuối gọi `DispatcherServlet`, servlet duy nhất của ứng dụng, điểm vào của Spring MVC.", "show": ["dispatcher", "filters-dispatcher"], "highlight": ["filters-dispatcher"]},
+    {"caption": "`HandlerMapping` khớp `POST /orders` với method `@PostMapping(\"/orders\")`. Không khớp thì 404, sai method HTTP thì 405.", "show": ["mapping", "dispatcher-mapping"], "highlight": ["dispatcher-mapping"]},
+    {"caption": "Interceptor chạy `preHandle`, rồi Jackson đọc JSON vào DTO và `@Valid` kiểm tra nó. Chỉ khi mọi tham số hợp lệ, controller mới được gọi; kết quả được ghi thành JSON.", "show": ["controller", "dispatcher-controller"], "highlight": ["dispatcher-controller"]},
+    {"caption": "Controller hay validation ném exception thì `@RestControllerAdvice` biến nó thành response lỗi, ví dụ `ProblemDetail` với mã 400 hay 409. Exception ném trong filter không đi đường này.", "show": ["advice", "controller-advice"], "highlight": ["controller-advice"]}
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-overview",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Spring, Spring Boot & hệ sinh thái",
+  "summary": "Spring Framework và Spring Boot khác gì; starter và BOM quản lý phiên bản; auto-configuration lùi lại khi bạn tự khai báo; server nhúng và executable jar; cặp phiên bản Boot 2/3/4 với Framework 5/6/7, javax và jakarta; khởi động chậm, AOT và native image; các project chính của hệ sinh thái.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 11,
+  "prerequisites": [],
+  "terms": ["spring-framework", "spring-boot", "spring-boot-starter", "auto-configuration", "embedded-server", "fat-jar", "bom", "application-context", "bean", "jakarta-namespace", "actuator", "native-image", "hikaricp", "virtual-thread"],
+  "references": [
+    { "title": "Spring Boot Reference: Build Systems and Starters", "url": "https://docs.spring.io/spring-boot/reference/using/build-systems.html" },
+    { "title": "Spring Boot Reference: The Executable Jar Format", "url": "https://docs.spring.io/spring-boot/specification/executable-jar/index.html" },
+    { "title": "Spring Boot: Supported Versions", "url": "https://github.com/spring-projects/spring-boot/wiki/Supported-Versions" },
+    { "title": "Spring Boot 4.0 Migration Guide", "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Không có Spring Boot thì có dùng Spring được không?\" Được: Spring Framework chạy độc lập, bạn tự khai báo `DataSource`, `TransactionManager`, `DispatcherServlet` và deploy WAR vào Tomcat. Boot chỉ làm sẵn những việc đó. Hỏi tiếp thường là \"vậy Boot có làm ứng dụng chậm không\": lúc chạy request thì không, vì bean Boot tạo cũng là bean bình thường; cái giá nằm ở thời gian khởi động và ở việc ứng dụng có những bean bạn không tự viết, nên phải biết xem báo cáo điều kiện (`--debug`) khi cần biết bean nào đến từ đâu." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tự ghi version cho từng thư viện Spring hay thư viện mà Boot đã quản lý (Jackson, Hibernate, Netty). Ghép `spring-core` 6 với Boot 4, hay Spring Cloud của release train cũ với Boot mới, vẫn build được nhưng hay chết lúc khởi động với `NoSuchMethodError`, `ClassNotFoundException` hoặc lỗi điều kiện khó đọc. Nâng Boot thì nâng cả Spring Cloud theo bảng tương thích, và chạy `mvn dependency:tree` để thấy version thực tế." }
+  ]
+}

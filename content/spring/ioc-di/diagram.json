@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Container dựng đồ thị dependency",
+  "nodes": [
+    {"id": "config", "label": "@Component, @Bean", "kind": "generic", "x": 0.1, "y": 0.05},
+    {"id": "defs", "label": "Bean Definition", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "repo", "label": "Order Repository", "kind": "database", "x": 0.1, "y": 0.5},
+    {"id": "service", "label": "Order Service", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "controller", "label": "Order Controller", "kind": "client", "x": 0.1, "y": 0.95},
+    {"id": "payment", "label": "Payment Service", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "config-defs", "from": "config", "to": "defs", "label": "đọc thành định nghĩa"},
+    {"id": "controller-service", "from": "controller", "to": "service", "label": "cần (constructor)"},
+    {"id": "service-repo", "from": "service", "to": "repo", "label": "cần"},
+    {"id": "payment-service", "from": "payment", "to": "service", "label": "cần nhau: lỗi"}
+  ],
+  "steps": [
+    {"caption": "Component scan và các class `@Configuration` cho biết có những bean nào. Chưa object nào được tạo.", "show": ["config"]},
+    {"caption": "Spring ghi mỗi bean thành một BeanDefinition: class, scope, các tham số constructor cần inject. Đây là bản thiết kế của cả đồ thị.", "show": ["defs", "config-defs"], "highlight": ["config-defs"]},
+    {"caption": "Tới lúc tạo singleton. `OrderController` cần một `OrderService` qua constructor, nên Spring phải tạo `OrderService` trước.", "show": ["controller", "service", "controller-service"], "highlight": ["controller-service"]},
+    {"caption": "`OrderService` lại cần `OrderRepository`. Spring đi xuống tới bean không cần gì, tạo nó trước, rồi tạo ngược lên: repository, service, cuối cùng là controller.", "show": ["repo", "service-repo"], "highlight": ["service-repo"]},
+    {"caption": "Nếu `OrderService` cần `PaymentService` và `PaymentService` cũng cần `OrderService` qua constructor, không bên nào tạo được trước. Khởi động dừng với `UnsatisfiedDependencyException` (gốc là `BeanCurrentlyInCreationException`) và Boot in sơ đồ vòng; sửa bằng cách tách phần dùng chung ra bean thứ ba.", "show": ["payment", "payment-service"], "highlight": ["payment-service"]}
+  ]
+}

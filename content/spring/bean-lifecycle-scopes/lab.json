@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Giỏ khuyến mãi của khách này lọt sang khách khác",
+  "context": "`DiscountCalculator` được khai báo là prototype để \"mỗi lần tính giá có một object riêng\". `CheckoutService` là singleton, chạy trên Tomcat với 200 thread.",
+  "buggyCode": "@Component\n@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)\nclass DiscountCalculator {\n    private final List<Discount> applied = new ArrayList<>();\n\n    void apply(Discount discount) { applied.add(discount); }\n    Money total(Money subtotal) {\n        Money result = subtotal;\n        for (Discount d : applied) result = d.applyTo(result);\n        return result;\n    }\n}\n\n@Service\nclass CheckoutService {\n    private final DiscountCalculator calculator;\n\n    CheckoutService(DiscountCalculator calculator) { this.calculator = calculator; }\n\n    Money checkout(Cart cart) {\n        cart.discounts().forEach(calculator::apply);\n        return calculator.total(cart.subtotal());\n    }\n}",
+  "symptom": {
+    "description": "Test thủ công từng đơn thì đúng. Lên production, giá cuối càng lúc càng thấp, có đơn âm tiền. Thỉnh thoảng có `ConcurrentModificationException`. Restart thì hết một lúc rồi lại bị.",
+    "output": "INFO  checkout cart=81723 subtotal=450000 discounts=[FREESHIP]          total=420000\nINFO  checkout cart=81724 subtotal=300000 discounts=[]                  total=270000   <- không có mã nào\nINFO  checkout cart=81725 subtotal=200000 discounts=[NEW10]             total=153000\nERROR checkout cart=81726 java.util.ConcurrentModificationException\n    at java.base/java.util.ArrayList$Itr.checkForComodification(ArrayList.java:1095)\n    at DiscountCalculator.total(DiscountCalculator.java:9)\n\n# debug: identityHashCode của calculator ở mọi request\ncalculator@5f2e1a9c  calculator@5f2e1a9c  calculator@5f2e1a9c"
+  },
+  "diagnosis": {
+    "question": "Vì sao mọi request dùng chung một `DiscountCalculator` dù nó là prototype?",
+    "options": [
+      "Prototype chỉ được tạo khi bean phụ thuộc được tạo; singleton tạo một lần nên giữ một calculator mãi",
+      "Tomcat cache object theo thread, nên 200 thread dùng chung 200 calculator xoay vòng",
+      "`@Scope` bị bỏ qua khi class không implement interface nào, nên bean thành singleton",
+      "Prototype được tạo mới mỗi request, nhưng `ArrayList` là static nên dữ liệu bị dùng chung"
+    ],
+    "answer": 0,
+    "explanation": "Scope prototype nghĩa là mỗi lần **container được hỏi** thì tạo object mới. `CheckoutService` hỏi đúng một lần, lúc constructor của nó chạy khi khởi động, và giữ object đó trong field. Mọi request sau đó dùng chung calculator ấy: danh sách `applied` cộng dồn mã giảm giá của mọi khách, và nhiều thread cùng sửa một `ArrayList`. Hash code giống nhau trong log là bằng chứng chỉ có một object."
+  },
+  "fix": {
+    "code": "// Cách 1, nên dùng: bỏ state, tính trong biến cục bộ, bean để singleton\n@Component\nclass DiscountCalculator {\n    Money total(Money subtotal, List<Discount> discounts) {\n        Money result = subtotal;\n        for (Discount d : discounts) result = d.applyTo(result);\n        return result;\n    }\n}\n// CheckoutService: return calculator.total(cart.subtotal(), cart.discounts());\n\n// Cách 2: thật sự cần object mới mỗi lần thì hỏi container mỗi lần\n@Component\n@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)\nclass StatefulDiscountCalculator { /* như bản cũ */ }\n\n@Service\nclass CheckoutService {\n    private final ObjectProvider<StatefulDiscountCalculator> calculators;\n\n    CheckoutService(ObjectProvider<StatefulDiscountCalculator> calculators) {\n        this.calculators = calculators;\n    }\n\n    Money checkout(Cart cart) {\n        var calculator = calculators.getObject();   // object mới cho lần gọi này\n        cart.discounts().forEach(calculator::apply);\n        return calculator.total(cart.subtotal());\n    }\n}",
+    "explanation": "Cách tốt nhất là không để state theo request trong bean: dữ liệu của một lần tính đi qua tham số và biến cục bộ, nên bean singleton dùng chung an toàn cho mọi thread. Nếu object thật sự phải có state riêng (ví dụ builder phức tạp), lấy nó qua `ObjectProvider.getObject()` mỗi lần cần. Nếu chỉ cần một object thường thì `new` ngay trong method cũng được, không cần làm nó thành bean. Container không gọi `@PreDestroy` cho prototype, nên object đó không được giữ tài nguyên cần đóng. Thêm một test gọi `checkout` song song từ nhiều thread để bắt lỗi kiểu này."
+  }
+}

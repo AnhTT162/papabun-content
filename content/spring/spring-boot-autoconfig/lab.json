@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã cấu hình pool 50 connection mà chỉ có 10",
+  "context": "Đội cần đọc password database từ secret manager nên tự khai báo bean `DataSource`. `application-prod.yml` vẫn giữ cấu hình pool như trước. Tải giờ cao điểm khoảng 800 request mỗi giây, mỗi request giữ connection khoảng 20ms.",
+  "buggyCode": "@Configuration\nclass DataSourceConfig {\n    @Bean\n    DataSource dataSource(DataSourceProperties props, SecretClient secrets) {\n        HikariDataSource ds = new HikariDataSource();\n        ds.setJdbcUrl(props.getUrl());\n        ds.setUsername(props.getUsername());\n        ds.setPassword(secrets.get(\"orders-db-password\"));\n        return ds;\n    }\n}\n\n# application-prod.yml\nspring:\n  datasource:\n    url: jdbc:postgresql://orders-db:5432/orders\n    username: orders_app\n    hikari:\n      maximum-pool-size: 50\n      connection-timeout: 2000",
+  "symptom": {
+    "description": "Sau khi deploy, giờ cao điểm request chậm rồi lỗi hàng loạt. Database gần như rảnh. Thời gian chờ connection là 30 giây, không phải 2 giây như cấu hình.",
+    "output": "ERROR o.h.e.j.s.SqlExceptionHelper : HikariPool-1 - Connection is not available, request timed out after 30004ms (total=10, active=10, idle=0, waiting=87)\n\n$ curl -s localhost:8081/actuator/metrics/hikaricp.connections.max\n{\"name\":\"hikaricp.connections.max\",\"measurements\":[{\"statistic\":\"VALUE\",\"value\":10.0}]}"
+  },
+  "diagnosis": {
+    "question": "Vì sao pool có 10 connection và timeout 30 giây?",
+    "options": [
+      "Bean `DataSource` tự khai báo làm auto-configuration lùi lại, và `hikari.*` không được bind vào object tự tạo",
+      "`application-prod.yml` không được nạp vì profile `prod` chỉ áp dụng cho bean có `@Profile`",
+      "HikariCP giới hạn tối đa 10 connection khi chạy với PostgreSQL",
+      "Biến môi trường mặc định của container ghi đè `maximum-pool-size` về 10"
+    ],
+    "answer": 0,
+    "explanation": "`DataSourceAutoConfiguration` tạo pool có `@ConditionalOnMissingBean(DataSource.class)`. Bạn đã có `DataSource`, nên Boot không tạo pool, và cũng không bind `spring.datasource.hikari.*` vào object bạn tự `new`. `DataSourceProperties` vẫn có (nên `url`, `username` vẫn đúng), nhưng nó không chứa các thuộc tính của Hikari. Object mới tạo dùng mặc định của HikariCP: `maximumPoolSize = 10`, `connectionTimeout = 30000`. Theo Little's Law, 800 request/giây × 20ms cần khoảng 16 connection đang dùng cùng lúc, nhiều hơn 10, nên hàng đợi dài dần, và mỗi request chờ tới 30 giây mới lỗi."
+  },
+  "fix": {
+    "code": "@Configuration\nclass DataSourceConfig {\n    @Bean\n    @ConfigurationProperties(\"spring.datasource.hikari\")   // bind hikari.* vào object trả về\n    HikariDataSource dataSource(DataSourceProperties props, SecretClient secrets) {\n        HikariDataSource ds = props.initializeDataSourceBuilder()\n                .type(HikariDataSource.class)\n                .password(secrets.get(\"orders-db-password\"))\n                .build();\n        return ds;\n    }\n}\n\n// Hoặc không khai báo bean: đưa secret vào nguồn cấu hình\n// spring.config.import: optional:configtree:/etc/secrets/\n// rồi file /etc/secrets/spring.datasource.password chứa password",
+    "explanation": "`@ConfigurationProperties` trên method `@Bean` làm Boot bind prefix đó vào object trả về, đúng như cách chính auto-configuration của Boot cấu hình Hikari. `initializeDataSourceBuilder()` mang theo url, username, driver từ `spring.datasource.*`. Cách gọn hơn là không tự tạo bean: đưa password vào một nguồn cấu hình (`configtree:` cho secret Kubernetes, hoặc tích hợp secret manager qua `spring.config.import`), để Boot vẫn tạo pool. Sau khi sửa, kiểm tra bằng metric `hikaricp.connections.max` thay vì tin vào file cấu hình."
+  }
+}

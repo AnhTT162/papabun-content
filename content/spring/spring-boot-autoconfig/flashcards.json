@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "imports-file", "front": "Boot tìm danh sách auto-configuration ở đâu?", "back": "Trong `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` của từng jar (Boot 2.7+). Boot 3.0 bỏ hẳn `spring.factories` cho auto-configuration." },
+    { "id": "user-first", "front": "Vì sao bean bạn tự khai báo thắng bean của Boot?", "back": "Boot xử lý auto-configuration sau cấu hình của bạn, và bean của nó gắn `@ConditionalOnMissingBean`." },
+    { "id": "why-bean", "front": "Làm sao biết vì sao một auto-configuration chạy hay không chạy?", "back": "Condition evaluation report: chạy với `--debug`, hoặc xem `/actuator/conditions`." },
+    { "id": "precedence", "front": "Thứ tự ưu tiên giữa dòng lệnh, biến môi trường và `application.yml`?", "back": "Dòng lệnh > system property > biến môi trường > file (file theo profile thắng file chung, ngoài jar thắng trong jar)." },
+    { "id": "env-var", "front": "Biến môi trường nào ghi đè `spring.datasource.hikari.maximum-pool-size`?", "back": "`SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE`: đổi `.` thành `_`, bỏ `-`, viết hoa." },
+    { "id": "typo", "front": "Gõ sai tên property trong `@ConfigurationProperties` có lỗi không?", "back": "Không, field lạ bị bỏ qua. Dùng configuration processor để IDE cảnh báo, `@Validated` để bắt giá trị thiếu." },
+    { "id": "heapdump", "front": "Vì sao không được mở `/actuator/heapdump` ra ngoài?", "back": "Heap dump chứa mọi thứ trong bộ nhớ: password, token, dữ liệu người dùng." },
+    { "id": "liveness", "front": "Có nên đưa health của database vào liveness probe?", "back": "Không: database chậm làm mọi pod restart cùng lúc. Liveness chỉ kiểm tra process; phụ thuộc ngoài thuộc readiness." }
+  ]
+}

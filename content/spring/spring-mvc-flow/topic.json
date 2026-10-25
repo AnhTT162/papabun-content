@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-mvc-flow",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Request đi qua Spring MVC",
+  "summary": "Thread của Tomcat, filter chain và DispatcherServlet; HandlerMapping, interceptor và HandlerAdapter; Jackson, validation và mass assignment; @ControllerAdvice và ProblemDetail; filter hay interceptor; body chỉ đọc được một lần; trailing slash ở Spring 6; giải phóng thread bằng async và virtual thread.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 16,
+  "prerequisites": ["spring-boot-autoconfig", "http-request-lifecycle"],
+  "terms": ["servlet-filter", "dispatcher-servlet", "handler-interceptor", "problem-detail", "mass-assignment", "virtual-thread", "thread-pool"],
+  "references": [
+    { "title": "Spring Framework Reference: DispatcherServlet", "url": "https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-servlet.html" },
+    { "title": "Spring Framework Reference: Validation in Spring MVC", "url": "https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-config/validation.html" },
+    { "title": "Spring Framework Reference: Error Responses", "url": "https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html" },
+    { "title": "RFC 9457: Problem Details for HTTP APIs", "url": "https://www.rfc-editor.org/rfc/rfc9457" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao lỗi 401 từ Spring Security không đi qua `@ControllerAdvice` của tôi?\" Vì Security là filter, chạy trước `DispatcherServlet`; `@ControllerAdvice` chỉ bắt exception phát sinh bên trong Spring MVC. Hỏi tiếp thường là \"vậy làm sao lỗi của toàn hệ thống cùng một định dạng\": cấu hình `AuthenticationEntryPoint` và `AccessDeniedHandler` trả cùng `ProblemDetail`, và có một handler chung cho lỗi validation, lỗi nghiệp vụ và lỗi không lường trước." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng nhận entity JPA trực tiếp qua `@RequestBody` hay trả entity ra JSON. Nhận vào thì client gửi thêm `\"role\":\"ADMIN\"` hay `\"id\":7` là ghi đè được (mass assignment). Trả ra thì lộ field nội bộ, kích hoạt lazy loading ngoài ý muốn hoặc lặp vô hạn ở quan hệ hai chiều. Mỗi API một DTO record cho request và một cho response." }
+  ]
+}

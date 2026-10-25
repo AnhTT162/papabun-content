@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "ioc-di",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "IoC & Dependency Injection",
+  "summary": "Container đọc BeanDefinition rồi dựng đồ thị dependency lúc khởi động; @Component và @Bean; constructor, setter và field injection; chọn bean theo kiểu, @Primary, @Qualifier, inject List và Map; circular dependency và vì sao Boot chặn mặc định; @Configuration full và lite; các lỗi khởi động hay gặp.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 13,
+  "prerequisites": ["spring-overview"],
+  "terms": ["ioc", "dependency-injection", "constructor-injection", "bean-definition", "component-scan", "circular-dependency", "application-context", "bean"],
+  "references": [
+    { "title": "Spring Framework Reference: The IoC Container", "url": "https://docs.spring.io/spring-framework/reference/core/beans.html" },
+    { "title": "Spring Framework Reference: Dependency Injection", "url": "https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html" },
+    { "title": "Spring Framework Reference: Basic Concepts: @Bean and @Configuration", "url": "https://docs.spring.io/spring-framework/reference/core/beans/java/basic-concepts.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao không nên dùng field injection?\" Trả lời theo hậu quả: field không `final` nên object có thể ở trạng thái thiếu dependency; dependency không hiện ở constructor nên class 12 dependency trông vẫn gọn; unit test phải dựng Spring hoặc dùng reflection. Hỏi tiếp thường là \"Spring giải circular dependency thế nào\": qua field/setter thì bằng tham chiếu sớm trong cache singleton (và Boot 2.6+ đã chặn mặc định), qua constructor thì không giải được, nên vòng tròn là lỗi thiết kế cần tách bean." },
+    { "type": "callout", "style": "warning", "markdown": "`@Bean` method trong class `@Component` (hoặc `@Configuration(proxyBeanMethods = false)`) không được proxy. Viết `new JdbcTemplate(dataSource())` ở đó là tạo thêm một `DataSource` ngoài container, kèm một connection pool thứ hai không ai đóng. Trong chế độ lite, nhận dependency qua tham số của method `@Bean` thay vì gọi method khác." }
+  ]
+}

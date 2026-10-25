@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Boot quyết định có tạo DataSource hay không",
+  "nodes": [
+    {"id": "user", "label": "Config của bạn", "kind": "generic", "x": 0.1, "y": 0.05},
+    {"id": "imports", "label": "File .imports", "kind": "generic", "x": 0.85, "y": 0.05},
+    {"id": "onclass", "label": "Có class?", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "onmissing", "label": "Chưa có bean?", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "created", "label": "HikariCP của Boot", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "report", "label": "Báo cáo điều kiện", "kind": "external", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "user-imports", "from": "user", "to": "imports", "label": "xử lý trước"},
+    {"id": "imports-onclass", "from": "imports", "to": "onclass", "label": "từng ứng viên"},
+    {"id": "onclass-onmissing", "from": "onclass", "to": "onmissing", "label": "có pool (Hikari)"},
+    {"id": "onmissing-created", "from": "onmissing", "to": "created", "label": "chưa có: tạo"},
+    {"id": "onclass-report", "from": "onclass", "to": "report", "label": "ghi khớp/không khớp"}
+  ],
+  "steps": [
+    {"caption": "Boot xử lý component scan và mọi class `@Configuration` của bạn trước. Bean bạn khai báo, kể cả một `DataSource`, đã được đăng ký lúc này.", "show": ["user"]},
+    {"caption": "Sau đó Boot đọc danh sách ứng viên trong `AutoConfiguration.imports` của mọi jar trên classpath, sắp xếp theo `before` và `after`.", "show": ["imports", "user-imports"], "highlight": ["user-imports"]},
+    {"caption": "Với `DataSourceAutoConfiguration`, điều kiện đầu là `@ConditionalOnClass`: classpath có các class của `spring-jdbc` không. Sau đó một điều kiện riêng kiểm tra có thư viện pool (HikariCP) không. Thiếu thì phần tạo pool bị bỏ qua.", "show": ["onclass", "imports-onclass"], "highlight": ["imports-onclass"]},
+    {"caption": "Có HikariCP trên classpath thì tới `@ConditionalOnMissingBean(DataSource.class)`: nếu bạn đã khai báo `DataSource` ở bước đầu, Boot dừng ở đây và không tạo gì.", "show": ["onmissing", "onclass-onmissing"], "highlight": ["onclass-onmissing"]},
+    {"caption": "Chưa có bean nào thì Boot tạo `HikariDataSource` và bind `spring.datasource.*` cùng `spring.datasource.hikari.*` vào nó. Bean bạn tự tạo không được bind tự động như vậy.", "show": ["created", "onmissing-created"], "highlight": ["onmissing-created"]},
+    {"caption": "Mọi kết quả khớp và không khớp, kèm lý do, nằm trong condition evaluation report: chạy với `--debug` hoặc xem `/actuator/conditions` khi cần biết một bean từ đâu ra.", "show": ["report", "onclass-report"], "highlight": ["onclass-report"]}
+  ]
+}

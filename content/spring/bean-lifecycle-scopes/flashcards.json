@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "order", "front": "Thứ tự các callback khởi tạo của bean?", "back": "Constructor → inject → `Aware` → `@PostConstruct` → `afterPropertiesSet` → init method → proxy AOP được tạo." },
+    { "id": "proxy-when", "front": "Proxy AOP được tạo ở bước nào?", "back": "Ở `postProcessAfterInitialization`, tức sau `@PostConstruct`; bean khác được inject proxy chứ không phải object gốc." },
+    { "id": "bfpp-bpp", "front": "BeanFactoryPostProcessor và BeanPostProcessor khác nhau thế nào?", "back": "BFPP sửa định nghĩa bean trước khi có object; BPP sửa hoặc bọc object sau khi tạo." },
+    { "id": "prototype-destroy", "front": "Container có gọi `@PreDestroy` cho bean prototype không?", "back": "Không. Container tạo rồi giao đi, không quản lý tiếp; tài nguyên của prototype phải tự đóng." },
+    { "id": "proto-in-singleton", "front": "Prototype inject vào singleton qua constructor được tạo mấy lần?", "back": "Một lần, lúc singleton được tạo. Muốn object mới mỗi lần thì dùng `ObjectProvider.getObject()` hoặc `@Lookup`." },
+    { "id": "singleton-thread-safe", "front": "Bean singleton có thread-safe không?", "back": "Không tự động: một object dùng chung cho mọi thread. An toàn khi bean stateless." },
+    { "id": "not-eligible", "front": "Log \"not eligible for getting processed by all BeanPostProcessors\" nghĩa là gì?", "back": "Bean bị tạo quá sớm (thường vì BeanPostProcessor phụ thuộc vào nó) nên có thể thiếu proxy: `@Transactional`, `@Async` trên nó không chạy." }
+  ]
+}

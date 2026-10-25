@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "boot-vs-framework",
+      "kind": "single",
+      "prompt": "Câu nào mô tả đúng quan hệ giữa Spring Boot và Spring Framework?",
+      "options": [
+        "Boot cấu hình sẵn Spring Framework; bean Boot tạo là bean bình thường và ghi đè được",
+        "Boot là bản viết lại của Spring Framework, nhanh hơn và không cần ApplicationContext",
+        "Boot thay Spring MVC bằng server nhúng, nên không còn `DispatcherServlet`",
+        "Boot chỉ dùng cho microservices; ứng dụng monolith phải dùng Spring Framework thuần"
+      ],
+      "answer": 0,
+      "explanation": "Boot chạy trên chính Spring Framework: vẫn ApplicationContext, vẫn `DispatcherServlet` nằm sau Tomcat nhúng. Boot thêm starter, auto-configuration, server nhúng và cấu hình ngoài. Monolith dùng Boot hoàn toàn bình thường."
+    },
+    {
+      "id": "user-bean-wins",
+      "kind": "single",
+      "prompt": "Ứng dụng có `spring-boot-starter-jdbc` và URL database trong `application.yml`. Bạn tự khai báo một `@Bean DataSource` trỏ tới connection pool khác. Lúc chạy có bao nhiêu `DataSource`?",
+      "options": [
+        "Một, là bean của bạn, vì auto-config chỉ tạo khi chưa có bean đó",
+        "Hai, và khởi động lỗi vì Spring không biết inject cái nào",
+        "Một, là HikariCP của Boot, vì auto-configuration luôn được ưu tiên hơn",
+        "Hai, Boot tự đánh dấu bean của Boot là `@Primary` nên không lỗi"
+      ],
+      "answer": 0,
+      "explanation": "Auto-configuration của `DataSource` gắn `@ConditionalOnMissingBean`: Boot đánh giá nó sau cấu hình của bạn, thấy đã có `DataSource` nên không tạo nữa. Đây là nguyên tắc chung: auto-configuration lùi lại khi bạn tự khai báo."
+    },
+    {
+      "id": "javax-upgrade",
+      "kind": "single",
+      "prompt": "Nâng từ Boot 2.7 lên 3.x, ứng dụng dùng một thư viện nội bộ có filter `implements javax.servlet.Filter`. Điều gì xảy ra?",
+      "options": [
+        "Filter không chạy đúng nữa; thư viện cần bản dùng `jakarta.servlet`",
+        "Boot 3 tự đổi `javax` sang `jakarta` lúc khởi động nên vẫn chạy",
+        "Chỉ có warning deprecated, filter vẫn chạy tới Boot 4",
+        "Filter chạy bình thường vì Tomcat 10 hỗ trợ cả hai namespace"
+      ],
+      "answer": 0,
+      "explanation": "Boot 3 dùng Jakarta EE 9+, interface là `jakarta.servlet.Filter`. Tomcat 10+ không biết `javax.servlet.Filter`: tuỳ cách đăng ký mà ứng dụng lỗi lúc build, lúc khởi động, hoặc filter âm thầm không chạy. Mọi thư viện dùng `javax.servlet`, `javax.persistence`, `javax.validation` phải có bản Jakarta; Boot không tự chuyển."
+    },
+    {
+      "id": "version-mismatch",
+      "kind": "single",
+      "prompt": "Ứng dụng build thành công nhưng chết lúc khởi động với `java.lang.NoSuchMethodError` bên trong một class của Spring. Nguyên nhân hay gặp nhất là gì?",
+      "options": [
+        "Một thư viện lệch version so với BOM, ví dụ Spring Cloud không khớp Boot",
+        "Thiếu `@EnableAutoConfiguration` trên class chứa `main()`",
+        "JVM thiếu bộ nhớ nên không nạp được method của Spring",
+        "Bean bị inject vòng tròn nên method chưa được tạo kịp"
+      ],
+      "answer": 0,
+      "explanation": "`NoSuchMethodError` nghĩa là code được biên dịch với một phiên bản thư viện nhưng lúc chạy gặp phiên bản khác. Với Spring, nguyên nhân thường là ghi đè version một module hoặc ghép Spring Cloud sai release train. Xem `mvn dependency:tree` hay `gradle dependencies` để tìm version thật."
+    }
+  ]
+}

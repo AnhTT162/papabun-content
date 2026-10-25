@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "filter-exception",
+      "kind": "single",
+      "prompt": "Filter kiểm tra API key ném `InvalidApiKeyException`. Ứng dụng có `@RestControllerAdvice` với `@ExceptionHandler(InvalidApiKeyException.class)` trả 401. Client nhận gì?",
+      "options": [
+        "Lỗi từ `/error` của Boot (thường 500), advice không thấy exception",
+        "401 từ `@ExceptionHandler`, vì advice bắt mọi exception trong ứng dụng",
+        "401, vì Spring tự map exception có chữ `Invalid` sang mã 401",
+        "Không có response, Tomcat đóng kết nối và client nhận lỗi mạng"
+      ],
+      "answer": 0,
+      "explanation": "`@ControllerAdvice` hoạt động bên trong `DispatcherServlet`. Exception từ filter đi ngược ra Tomcat, Tomcat chuyển sang trang lỗi `/error` của Boot, và mã thường là 500. Trong filter, hãy tự ghi response 401 (hoặc dùng cơ chế của Spring Security) thay vì ném exception."
+    },
+    {
+      "id": "interceptor-or-filter",
+      "kind": "single",
+      "prompt": "Bạn cần chặn mọi method controller có annotation `@AdminOnly` nếu user không phải admin. Chỗ nào hợp nhất?",
+      "options": [
+        "`HandlerInterceptor.preHandle`, vì nó biết method nào sắp chạy",
+        "Một servlet filter, vì filter chạy trước mọi thứ nên an toàn nhất",
+        "`ResponseBodyAdvice`, vì nó thấy kết quả trước khi ghi ra",
+        "`@ExceptionHandler`, vì nó gom lỗi quyền truy cập về một chỗ"
+      ],
+      "answer": 0,
+      "explanation": "Interceptor nhận `handler` là `HandlerMethod`, nên đọc được annotation của method. Filter chạy trước khi Spring biết request khớp method nào. `ResponseBodyAdvice` chạy sau khi method đã chạy, quá muộn để chặn. Ngoài thực tế, method security của Spring Security (`@PreAuthorize`) làm đúng việc này."
+    },
+    {
+      "id": "posthandle-header",
+      "kind": "single",
+      "prompt": "Interceptor thêm header `X-Request-Cost` trong `postHandle`. Controller là `@RestController` trả JSON. Client có thấy header không?",
+      "options": [
+        "Thường không, response đã commit trước `postHandle`",
+        "Có, vì `postHandle` chạy trước khi Jackson ghi body",
+        "Có, vì header luôn được gửi sau body trong HTTP/1.1",
+        "Không, vì interceptor không được truy cập `HttpServletResponse`"
+      ],
+      "answer": 0,
+      "explanation": "Với `@ResponseBody`, `HttpMessageConverter` ghi body ngay khi method trả về, trong `HandlerAdapter`. Khi `postHandle` chạy, header có thể đã được gửi đi. Thêm header trong `ResponseBodyAdvice.beforeBodyWrite` hoặc trong filter trước khi gọi `chain.doFilter`."
+    },
+    {
+      "id": "trailing-slash",
+      "kind": "single",
+      "prompt": "Nâng từ Boot 2.7 lên 3.x. Client cũ gọi `GET /orders/` (có dấu `/` cuối), controller khai báo `@GetMapping(\"/orders\")`. Kết quả?",
+      "options": [
+        "404, vì Spring 6 bỏ khớp trailing slash mặc định",
+        "200, vì Spring luôn bỏ qua dấu `/` cuối",
+        "301 chuyển hướng tự động sang `/orders`",
+        "405, vì `/orders/` được hiểu là method khác"
+      ],
+      "answer": 0,
+      "explanation": "Spring Framework 6 tắt trailing slash match mặc định (trước đó là bật), nên `/orders/` không khớp nữa và trả 404. Sửa bằng cách khai báo cả hai đường dẫn, chuẩn hoá URL ở gateway, hoặc dùng `UrlHandlerFilter` (Spring 6.2+) để chuyển hướng; không nên dựa vào hành vi cũ."
+    }
+  ]
+}

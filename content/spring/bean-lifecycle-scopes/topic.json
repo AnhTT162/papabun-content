@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "bean-lifecycle-scopes",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "spring",
+  "title": "Bean lifecycle & scope",
+  "summary": "Các bước từ constructor tới @PostConstruct, init method và proxy AOP; vì sao @Transactional không chạy trong @PostConstruct; BeanPostProcessor và BeanFactoryPostProcessor; singleton, prototype, request scope; prototype inject vào singleton; singleton có state và race condition; destroy, SmartLifecycle và việc nặng lúc khởi động.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": ["ioc-di"],
+  "terms": ["bean-post-processor", "bean-factory-post-processor", "bean-scope", "prototype-in-singleton", "bean", "self-invocation", "race-condition"],
+  "references": [
+    { "title": "Spring Framework Reference: Customizing the Nature of a Bean", "url": "https://docs.spring.io/spring-framework/reference/core/beans/factory-nature.html" },
+    { "title": "Spring Framework Reference: Bean Scopes", "url": "https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" },
+    { "title": "Spring Framework Reference: Container Extension Points", "url": "https://docs.spring.io/spring-framework/reference/core/beans/factory-extension.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bean singleton của Spring có thread-safe không?\" Không tự động. Spring chỉ đảm bảo một object cho mỗi bean definition, và object đó được mọi thread request dùng chung. Bean an toàn khi stateless: chỉ có field `final` trỏ tới bean khác hoặc object bất biến. Hỏi tiếp thường là \"vậy cần state theo request thì sao\": truyền qua tham số, dùng biến cục bộ, hoặc bean `@RequestScope` (là proxy, không dùng được ở thread khác)." },
+    { "type": "callout", "style": "warning", "markdown": "`@PostConstruct` không phải chỗ để gọi method `@Transactional`, `@Async` hay `@Cacheable` của chính bean đó: proxy chưa được tạo, và `this` là object gốc. Việc khởi động cần các tính năng này (nạp dữ liệu, warm cache) nên chạy trong listener `ApplicationReadyEvent`, gọi qua một bean đã inject." }
+  ]
+}

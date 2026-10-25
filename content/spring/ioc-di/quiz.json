@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lite-mode-calls",
+      "kind": "output",
+      "prompt": "Ứng dụng chạy đoạn cấu hình sau. `Clock` có constructor in ra `\"new clock\"`. Khởi động in ra mấy dòng `new clock`?",
+      "code": "@Configuration(proxyBeanMethods = false)\nclass TimeConfig {\n    @Bean Clock clock() { return new Clock(); }\n\n    @Bean Scheduler scheduler() { return new Scheduler(clock()); }\n    @Bean Auditor auditor() { return new Auditor(clock()); }\n}",
+      "options": [
+        "3 dòng: bean `clock`, cộng một object mỗi lần gọi `clock()`",
+        "1 dòng, vì `clock` là singleton nên mọi lần gọi trả cùng object",
+        "2 dòng: bean `clock` và một bản dùng chung cho hai bean còn lại",
+        "Khởi động lỗi vì `clock()` bị gọi ngoài container"
+      ],
+      "answer": 0,
+      "explanation": "Với `proxyBeanMethods = false`, class không được CGLIB bọc, nên `clock()` là lời gọi method Java bình thường: container tạo bean `clock` một lần, và mỗi lần `scheduler()` hay `auditor()` gọi `clock()` lại `new` thêm. Bỏ `proxyBeanMethods = false` thì chỉ còn 1 dòng. Cách đúng trong chế độ lite là nhận `Clock clock` qua tham số method."
+    },
+    {
+      "id": "two-gateways",
+      "kind": "single",
+      "prompt": "Có hai bean `MomoGateway` và `VnpayGateway` cùng implement `PaymentGateway`, không bean nào có `@Primary`. `CheckoutService` có constructor `CheckoutService(PaymentGateway gateway)`. Khởi động thế nào?",
+      "options": [
+        "Lỗi `NoUniqueBeanDefinitionException` vì có hai ứng viên ngang nhau",
+        "Chạy, Spring chọn bean được đăng ký trước theo thứ tự scan",
+        "Chạy, Spring inject một proxy gọi lần lượt cả hai gateway",
+        "Lỗi `BeanCurrentlyInCreationException` vì hai bean cùng kiểu"
+      ],
+      "answer": 0,
+      "explanation": "Hai ứng viên cùng kiểu mà không có `@Primary` hay `@Qualifier` thì Spring thử fallback theo tên tham số (cần biên dịch với `-parameters`); tên `gateway` không trùng bean nào nên báo `NoUniqueBeanDefinitionException`. Muốn dùng cả hai thì inject `List<PaymentGateway>` hoặc `Map<String, PaymentGateway>`."
+    },
+    {
+      "id": "field-cycle",
+      "kind": "single",
+      "prompt": "Boot 3, cấu hình mặc định. `OrderService` có `@Autowired private PaymentService payment;` và `PaymentService` có `@Autowired private OrderService orders;`. Điều gì xảy ra lúc khởi động?",
+      "options": [
+        "Lỗi: Boot 2.6+ chặn circular reference mặc định, kể cả qua field",
+        "Chạy bình thường, vì Spring giải vòng tròn qua field bằng tham chiếu sớm",
+        "Chạy, nhưng một trong hai field là `null`",
+        "Chỉ lỗi nếu một trong hai bean có `@Transactional`"
+      ],
+      "answer": 0,
+      "explanation": "Cơ chế tham chiếu sớm vẫn có trong Spring Framework, nhưng Spring Boot từ 2.6 đặt `spring.main.allow-circular-references=false`, nên mọi vòng tròn đều làm khởi động lỗi và Boot in ra chuỗi bean tạo thành vòng. Bật lại property là che lỗi thiết kế; nên tách phần dùng chung ra bean thứ ba."
+    },
+    {
+      "id": "manual-new",
+      "kind": "single",
+      "prompt": "Một method tiện ích viết `OrderService service = new OrderService(repository); service.placeOrder(cmd);`. `placeOrder` có `@Transactional`. Kết quả?",
+      "options": [
+        "Chạy không có transaction, vì object tự `new` không có proxy",
+        "Transaction vẫn chạy, vì annotation nằm ngay trên method",
+        "Lỗi biên dịch: không được `new` một class có `@Service`",
+        "Spring phát hiện và thay object bằng bean trong container"
+      ],
+      "answer": 0,
+      "explanation": "`@Transactional` hoạt động nhờ proxy mà container tạo quanh bean. Object tự `new` là object Java thường: không proxy, không transaction, field `@Autowired` cũng `null`. Phải inject `OrderService` từ container."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "precedence",
+      "kind": "output",
+      "prompt": "Ứng dụng chạy với profile `prod`. Giá trị `server.port` lúc chạy là bao nhiêu?",
+      "code": "# application.yml (trong jar)\nserver.port: 8080\n\n# application-prod.yml (trong jar)\nserver.port: 8081\n\n# biến môi trường của container\nSERVER_PORT=8082\n\n# lệnh chạy\njava -jar app.jar --spring.profiles.active=prod --server.port=8083",
+      "options": [
+        "8083: tham số dòng lệnh ưu tiên cao nhất",
+        "8082: biến môi trường thắng mọi thứ khác",
+        "8081: file theo profile thắng các nguồn còn lại",
+        "8080: file chung trong jar là nguồn gốc"
+      ],
+      "answer": 0,
+      "explanation": "Thứ tự từ cao xuống: tham số dòng lệnh, `SPRING_APPLICATION_JSON`, system property, biến môi trường, rồi mới tới file (file theo profile thắng file chung). Bỏ `--server.port` thì kết quả là 8082; bỏ cả biến môi trường thì là 8081."
+    },
+    {
+      "id": "missing-bean-order",
+      "kind": "single",
+      "prompt": "Vì sao `@ConditionalOnMissingBean` an toàn trong auto-configuration nhưng không nên dùng trong `@Configuration` của ứng dụng?",
+      "options": [
+        "Nó chỉ thấy bean đã đăng ký; auto-config luôn xét sau, còn thứ tự class của bạn không cố định",
+        "Annotation này chỉ được đọc khi class nằm trong file `AutoConfiguration.imports`",
+        "Trong `@Configuration` của ứng dụng, Spring luôn coi điều kiện này là đúng",
+        "Nó làm khởi động chậm đáng kể mỗi khi dùng ngoài auto-configuration"
+      ],
+      "answer": 0,
+      "explanation": "Điều kiện được đánh giá lúc định nghĩa bean được đăng ký. Auto-configuration chạy sau mọi cấu hình của bạn (và có `before`/`after` để sắp xếp nhau), nên \"chưa có bean\" là chắc chắn. Giữa các class `@Configuration` của ứng dụng, thứ tự phụ thuộc vào scan nên kết quả có thể đổi khi bạn đổi tên package."
+    },
+    {
+      "id": "custom-datasource",
+      "kind": "single",
+      "prompt": "Bạn tự khai báo `@Bean DataSource` bằng `new HikariDataSource()` và set url, username, password. `spring.datasource.hikari.maximum-pool-size: 40` có tác dụng không?",
+      "options": [
+        "Không: `hikari.*` chỉ bind vào pool Boot tạo hoặc bean có `@ConfigurationProperties`",
+        "Có: Boot bind mọi property `spring.datasource.*` vào bất kỳ bean `DataSource` nào",
+        "Có, vì `@Bean` của bạn được Boot xử lý như một auto-configuration",
+        "Không, và Boot báo lỗi khởi động vì property không có bean nào dùng"
+      ],
+      "answer": 0,
+      "explanation": "Binding không phải phép màu áp lên mọi bean: Boot bind prefix vào bean nó tạo, hoặc bean bạn gắn `@ConfigurationProperties`. Property thừa không gây lỗi, nên cấu hình trông đúng mà pool vẫn chạy với mặc định 10 connection."
+    },
+    {
+      "id": "liveness-db",
+      "kind": "single",
+      "prompt": "Liveness probe của Kubernetes trỏ vào `/actuator/health` (gồm cả health của database). Database chậm 2 phút. Điều gì xảy ra?",
+      "options": [
+        "Mọi pod bị restart cùng lúc, đúng lúc database còn chậm",
+        "Pod chỉ bị rút khỏi load balancer, không restart",
+        "Không có gì, vì liveness bỏ qua health của database",
+        "Chỉ pod đầu tiên phát hiện lỗi bị restart, các pod khác giữ nguyên"
+      ],
+      "answer": 0,
+      "explanation": "Liveness fail thì Kubernetes kill và tạo lại container. Database là phụ thuộc chung, nên mọi pod fail cùng lúc, mất hết cache và connection, rồi cùng khởi động dồn vào database đang yếu. Liveness chỉ nên kiểm tra process còn sống (`/actuator/health/liveness`); phụ thuộc bên ngoài, nếu có, thuộc về readiness."
+    }
+  ]
+}

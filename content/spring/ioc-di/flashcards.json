@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "ioc-vs-di", "front": "IoC và DI khác nhau thế nào?", "back": "IoC là nguyên lý: object không tự tạo dependency mà nhận từ bên ngoài. DI là một cách làm IoC: container đưa dependency vào qua constructor, setter hoặc field." },
+    { "id": "why-constructor", "front": "Vì sao nên dùng constructor injection?", "back": "Dependency `final` và bắt buộc, thiếu là lỗi lúc khởi động, test chỉ cần `new`, và constructor dài làm lộ class quá nhiều trách nhiệm." },
+    { "id": "two-candidates", "front": "Hai bean cùng kiểu thì sửa lỗi `NoUniqueBeanDefinitionException` thế nào?", "back": "`@Primary` cho bean mặc định, `@Qualifier` chỉ đích danh, hoặc inject `List`/`Map` nếu cần tất cả." },
+    { "id": "cycle-constructor", "front": "Circular dependency qua constructor có giải được không?", "back": "Không: không bên nào tạo được trước, khởi động lỗi `BeanCurrentlyInCreationException`. Từ Boot 2.6, vòng tròn qua field cũng bị chặn mặc định." },
+    { "id": "lite-mode", "front": "Gọi một method `@Bean` từ method `@Bean` khác trong chế độ lite thì sao?", "back": "Tạo object mới ngoài container, vì class không được CGLIB proxy. Nhận dependency qua tham số method." },
+    { "id": "scan-scope", "front": "Component scan của Boot tìm bean ở đâu?", "back": "Trong package của class `@SpringBootApplication` và các package con; package anh em không được quét." },
+    { "id": "parameters-flag", "front": "Vì sao nâng lên Spring 6.1 có thể làm hỏng việc chọn bean theo tên tham số?", "back": "Spring 6.1 chỉ đọc tên tham số khi code được biên dịch với `-parameters`; parent pom của Boot bật sẵn, build tự cấu hình thì không." }
+  ]
+}

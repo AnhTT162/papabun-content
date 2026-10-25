@@ -3006,6 +3006,254 @@
       "example": "41 lần rebalance trong một giờ khi API đối tác chậm.",
       "related": ["consumer-rebalance", "consumer-lag"],
       "topics": ["kafka-troubleshooting"]
+    },
+    {
+      "id": "spring-framework",
+      "term": "Spring Framework",
+      "meaning": "Framework Java gốc của hệ sinh thái Spring: container IoC quản lý bean, cộng các module AOP, transaction, Spring MVC, WebFlux, JDBC và test.",
+      "example": "Spring Framework 6 đi với Spring Boot 3, Spring Framework 7 đi với Spring Boot 4.",
+      "related": ["spring-boot", "application-context", "bean"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "spring-boot",
+      "term": "Spring Boot",
+      "meaning": "Lớp cấu hình sẵn trên Spring Framework: starter, auto-configuration, server nhúng, executable jar và cấu hình ngoài. Không thay thế Spring Framework.",
+      "example": "Thêm `spring-boot-starter-web` và một `@RestController` là có API chạy bằng `java -jar`.",
+      "related": ["spring-framework", "spring-boot-starter", "auto-configuration"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "spring-boot-starter",
+      "term": "Starter",
+      "meaning": "Dependency của Spring Boot gom sẵn một nhóm thư viện cho một mục đích, với version do BOM của Boot quản lý; bản thân starter gần như không có code.",
+      "example": "`spring-boot-starter-data-jpa` kéo Hibernate, Spring Data JPA, HikariCP và JDBC.",
+      "related": ["bom", "auto-configuration"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "auto-configuration",
+      "term": "Auto-configuration",
+      "meaning": "Các class cấu hình của Spring Boot tạo bean mặc định khi thoả điều kiện (có class trên classpath, có property, chưa có bean cùng loại). Bạn tự khai báo bean thì nó lùi lại.",
+      "example": "Có HikariCP trên classpath và có `spring.datasource.url` thì Boot tạo `DataSource`; bạn tự khai báo `DataSource` thì Boot bỏ qua.",
+      "related": ["spring-boot", "spring-boot-starter"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "embedded-server",
+      "term": "Embedded server",
+      "meaning": "Web server (Tomcat, Jetty) chạy ngay trong process của ứng dụng, thay vì deploy file WAR vào một server cài sẵn.",
+      "example": "`java -jar app.jar` tự mở port 8080 bằng Tomcat nhúng.",
+      "related": ["spring-boot", "fat-jar"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "fat-jar",
+      "term": "Fat jar",
+      "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
+      "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
+      "related": ["embedded-server", "spring-boot"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "bom",
+      "term": "BOM",
+      "meaning": "Bill of Materials: một pom chỉ khai báo version cho một nhóm thư viện, để các thư viện đó luôn đi cùng nhau đúng phiên bản và dependency không phải ghi version.",
+      "example": "Import `spring-boot-dependencies` rồi khai báo `jackson-databind` không cần `<version>`.",
+      "related": ["spring-boot-starter"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "application-context",
+      "term": "ApplicationContext",
+      "meaning": "Container IoC của Spring: đọc định nghĩa bean, tạo bean, inject dependency, quản lý vòng đời, và thêm event, cấu hình, i18n so với `BeanFactory` cơ bản.",
+      "example": "`SpringApplication.run(App.class, args)` trả về ApplicationContext chứa mọi bean của ứng dụng.",
+      "related": ["bean", "spring-framework"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "bean",
+      "term": "Bean",
+      "meaning": "Object do container của Spring tạo và quản lý vòng đời; được khai báo bằng `@Component` (và các dạng như `@Service`) hoặc method `@Bean`.",
+      "example": "`@Service class OrderService` là một bean singleton, được inject vào controller qua constructor.",
+      "related": ["application-context"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "jakarta-namespace",
+      "term": "javax → jakarta",
+      "meaning": "Từ Jakarta EE 9, package của Servlet, JPA, Validation đổi từ `javax.*` sang `jakarta.*`. Spring Boot 3 trở đi chỉ dùng `jakarta.*`.",
+      "example": "`import javax.persistence.Entity;` phải thành `import jakarta.persistence.Entity;` khi nâng lên Boot 3.",
+      "related": ["spring-boot"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "actuator",
+      "term": "Actuator",
+      "meaning": "Module của Spring Boot cung cấp endpoint vận hành: health, metric, info, thread dump, cấu hình. Chỉ `health` được expose qua HTTP mặc định.",
+      "example": "`GET /actuator/health` trả `{\"status\":\"UP\"}` cho load balancer kiểm tra.",
+      "related": ["spring-boot"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "native-image",
+      "term": "Native image",
+      "meaning": "GraalVM biên dịch ứng dụng Java trước thành file chạy native: khởi động trong vài chục mili giây và tốn ít RAM, nhưng reflection và proxy phải biết trước lúc build.",
+      "example": "Spring Boot 3+ build native image bằng `mvn -Pnative native:compile`.",
+      "related": ["jit", "spring-boot"],
+      "topics": ["spring-overview"]
+    },
+    {
+      "id": "ioc",
+      "term": "IoC",
+      "meaning": "Inversion of Control: object không tự tạo hay tìm dependency của nó; một bên ngoài (container) tạo và đưa vào, và gọi lại code của bạn khi cần.",
+      "example": "`OrderService` không `new JdbcOrderRepository()`, mà nhận `OrderRepository` qua constructor từ Spring.",
+      "related": ["dependency-injection", "application-context"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "dependency-injection",
+      "term": "Dependency Injection",
+      "meaning": "Cách làm IoC: dependency được đưa vào object qua constructor, setter hoặc field thay vì object tự tạo.",
+      "example": "`new OrderService(fakeRepository)` trong unit test là DI không cần Spring.",
+      "related": ["ioc", "constructor-injection"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "constructor-injection",
+      "term": "Constructor injection",
+      "meaning": "Inject dependency qua tham số constructor; field có thể `final`, thiếu dependency là lỗi ngay lúc tạo object. Class một constructor thì không cần `@Autowired`.",
+      "example": "`OrderService(OrderRepository repository, Clock clock)` được Spring gọi với hai bean tương ứng.",
+      "related": ["dependency-injection"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "bean-definition",
+      "term": "BeanDefinition",
+      "meaning": "Bản mô tả một bean mà container giữ trước khi tạo object: class, scope, tham số constructor, lazy, init và destroy method.",
+      "example": "`BeanFactoryPostProcessor` có thể sửa BeanDefinition trước khi bean được tạo.",
+      "related": ["bean", "application-context"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "component-scan",
+      "term": "Component scan",
+      "meaning": "Spring quét classpath trong các package chỉ định, đăng ký class có `@Component` (và `@Service`, `@Repository`, `@Controller`, `@Configuration`) thành bean.",
+      "example": "`@SpringBootApplication` ở `com.shop` quét `com.shop` và mọi package con.",
+      "related": ["bean-definition"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "circular-dependency",
+      "term": "Circular dependency",
+      "meaning": "Hai hay nhiều bean cần nhau thành vòng. Qua constructor thì không tạo được; Spring Boot 2.6+ chặn mọi vòng tròn mặc định.",
+      "example": "`OrderService` cần `PaymentService`, `PaymentService` cần `OrderService`: khởi động báo `BeanCurrentlyInCreationException`.",
+      "related": ["constructor-injection"],
+      "topics": ["ioc-di"]
+    },
+    {
+      "id": "bean-post-processor",
+      "term": "BeanPostProcessor",
+      "meaning": "Extension point của Spring chạy với mọi bean sau khi tạo object: trước khởi tạo (chạy `@PostConstruct`) và sau khởi tạo (AOP bọc proxy ở đây).",
+      "example": "`AbstractAutoProxyCreator` là một BeanPostProcessor thay bean có `@Transactional` bằng proxy.",
+      "related": ["bean-factory-post-processor", "bean"],
+      "topics": ["bean-lifecycle-scopes"]
+    },
+    {
+      "id": "bean-factory-post-processor",
+      "term": "BeanFactoryPostProcessor",
+      "meaning": "Extension point chạy trên định nghĩa bean, trước khi container tạo object nào; khai báo bằng `@Bean` thì method phải `static`.",
+      "example": "`PropertySourcesPlaceholderConfigurer` thay `${db.url}` trong định nghĩa bean bằng giá trị cấu hình.",
+      "related": ["bean-post-processor", "bean-definition"],
+      "topics": ["bean-lifecycle-scopes"]
+    },
+    {
+      "id": "bean-scope",
+      "term": "Bean scope",
+      "meaning": "Quy định container tạo bao nhiêu object cho một bean: `singleton` (mặc định, một object mỗi container), `prototype` (mỗi lần hỏi một object), `request`, `session`.",
+      "example": "`@Scope(\"prototype\")` trên `ReportBuilder` để mỗi lần `getObject()` có một builder mới.",
+      "related": ["prototype-in-singleton", "bean"],
+      "topics": ["bean-lifecycle-scopes"]
+    },
+    {
+      "id": "prototype-in-singleton",
+      "term": "Prototype trong singleton",
+      "meaning": "Bean prototype inject vào singleton chỉ được tạo một lần, lúc singleton được tạo, nên bị dùng chung như singleton. Lấy qua `ObjectProvider` hoặc `@Lookup` để có object mới mỗi lần.",
+      "example": "`CheckoutService` giữ một `DiscountCalculator` prototype trong field: mọi request dùng chung một calculator.",
+      "related": ["bean-scope"],
+      "topics": ["bean-lifecycle-scopes"]
+    },
+    {
+      "id": "conditional-annotation",
+      "term": "@Conditional",
+      "meaning": "Nhóm annotation quyết định một cấu hình hay bean có được đăng ký không, dựa trên classpath, property, bean đã có, loại ứng dụng. Nền của auto-configuration.",
+      "example": "`@ConditionalOnMissingBean(ObjectMapper.class)`: Boot chỉ tạo `ObjectMapper` khi bạn chưa có.",
+      "related": ["auto-configuration"],
+      "topics": ["spring-boot-autoconfig"]
+    },
+    {
+      "id": "configuration-properties",
+      "term": "@ConfigurationProperties",
+      "meaning": "Bind một nhóm property cùng prefix vào class hoặc record có kiểu, có relaxed binding và validation; thay cho nhiều `@Value` rời rạc.",
+      "example": "`@ConfigurationProperties(\"order.retry\") record RetryProps(int maxAttempts, Duration backoff)`.",
+      "related": ["relaxed-binding", "auto-configuration"],
+      "topics": ["spring-boot-autoconfig"]
+    },
+    {
+      "id": "spring-profile",
+      "term": "Profile",
+      "meaning": "Tên môi trường hay biến thể cấu hình; profile đang bật quyết định file `application-<profile>.yml` nào được nạp và bean `@Profile` nào được tạo.",
+      "example": "`--spring.profiles.active=prod` nạp thêm `application-prod.yml`.",
+      "related": ["configuration-properties"],
+      "topics": ["spring-boot-autoconfig"]
+    },
+    {
+      "id": "relaxed-binding",
+      "term": "Relaxed binding",
+      "meaning": "Spring Boot coi các cách viết khác nhau của cùng một property là một: kebab-case trong file, camelCase, và dạng viết hoa có gạch dưới của biến môi trường.",
+      "example": "`ORDER_RETRY_MAXATTEMPTS` và `order.retry.max-attempts` cùng bind vào field `maxAttempts`.",
+      "related": ["configuration-properties"],
+      "topics": ["spring-boot-autoconfig"]
+    },
+    {
+      "id": "servlet-filter",
+      "term": "Servlet filter",
+      "meaning": "Thành phần của Servlet API chạy quanh mọi request trước khi tới servlet; có thể sửa, bọc request/response hoặc trả response luôn. Spring Security là một chuỗi filter.",
+      "example": "Filter đặt `X-Correlation-Id` vào MDC rồi gọi `chain.doFilter`, xoá MDC trong `finally`.",
+      "related": ["dispatcher-servlet", "handler-interceptor"],
+      "topics": ["spring-mvc-flow"]
+    },
+    {
+      "id": "dispatcher-servlet",
+      "term": "DispatcherServlet",
+      "meaning": "Servlet trung tâm của Spring MVC: nhận mọi request sau filter, tìm handler, gọi interceptor, bind tham số, gọi controller và xử lý exception.",
+      "example": "Boot đăng ký `DispatcherServlet` tại `/`, nên mọi URL đi qua nó.",
+      "related": ["servlet-filter", "handler-interceptor"],
+      "topics": ["spring-mvc-flow"]
+    },
+    {
+      "id": "handler-interceptor",
+      "term": "HandlerInterceptor",
+      "meaning": "Móc của Spring MVC chạy quanh method controller (`preHandle`, `postHandle`, `afterCompletion`); biết handler sắp chạy nên đọc được annotation của method.",
+      "example": "Interceptor đọc `@RateLimited` trên method và trả 429 trong `preHandle`.",
+      "related": ["servlet-filter", "dispatcher-servlet"],
+      "topics": ["spring-mvc-flow"]
+    },
+    {
+      "id": "problem-detail",
+      "term": "ProblemDetail",
+      "meaning": "Định dạng body lỗi chuẩn cho HTTP API theo RFC 9457, gồm `type`, `title`, `status`, `detail`, `instance`; Spring 6 có class `ProblemDetail` và `ErrorResponse`.",
+      "example": "`ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, \"Đơn đã thanh toán\")`.",
+      "related": ["dispatcher-servlet"],
+      "topics": ["spring-mvc-flow"]
+    },
+    {
+      "id": "mass-assignment",
+      "term": "Mass assignment",
+      "meaning": "Lỗ hổng khi framework bind mọi field client gửi vào object, kể cả field không được phép sửa như `role` hay `id`.",
+      "example": "`PUT /users/me` nhận entity `User` trực tiếp; client gửi thêm `\"role\":\"ADMIN\"` và được lưu.",
+      "related": ["dto-projection"],
+      "topics": ["spring-mvc-flow"]
     }
   ]
 }

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "postconstruct-tx",
+      "kind": "single",
+      "prompt": "`CatalogService` có `@PostConstruct void warmUp() { loadAll(); }`, và `loadAll()` có `@Transactional(readOnly = true)` chạy nhiều query. Lúc khởi động, các query chạy thế nào?",
+      "options": [
+        "Mỗi query chạy riêng, không có transaction chung, vì proxy chưa tồn tại và lời gọi qua `this`",
+        "Chung một transaction read-only, vì `@PostConstruct` chạy sau khi context sẵn sàng",
+        "Khởi động lỗi vì không được truy cập database trong `@PostConstruct`",
+        "Chung một transaction, nhưng không read-only vì `readOnly` chỉ có hiệu lực qua HTTP"
+      ],
+      "answer": 0,
+      "explanation": "`@PostConstruct` chạy trong `postProcessBeforeInitialization`, trước khi AOP bọc proxy ở `postProcessAfterInitialization`. Hơn nữa lời gọi đi qua `this`, không qua proxy. Nên `@Transactional` bị bỏ qua: mỗi query tự chạy và tự commit, và với JPA, entity LAZY sẽ lỗi `LazyInitializationException` khi đọc ngoài transaction."
+    },
+    {
+      "id": "prototype-count",
+      "kind": "output",
+      "prompt": "`Ticket` là prototype và in `\"new ticket\"` trong constructor. Hai singleton `A` và `B` cùng inject `Ticket` qua constructor. Ứng dụng xử lý 1.000 request, mỗi request gọi `a.handle()` và `b.handle()`. Tổng cộng in ra mấy dòng?",
+      "code": "@Component @Scope(\"prototype\") class Ticket { Ticket() { System.out.println(\"new ticket\"); } }\n\n@Service class A { private final Ticket ticket; A(Ticket t) { ticket = t; } void handle() { /* dùng ticket */ } }\n@Service class B { private final Ticket ticket; B(Ticket t) { ticket = t; } void handle() { /* dùng ticket */ } }",
+      "options": [
+        "2 dòng: mỗi singleton nhận một object lúc được tạo",
+        "2.000 dòng: mỗi lần `handle()` dùng một ticket mới",
+        "1 dòng: prototype được tạo một lần rồi dùng chung",
+        "1.000 dòng: mỗi request một ticket"
+      ],
+      "answer": 0,
+      "explanation": "Prototype tạo object mới mỗi lần container được hỏi. Container chỉ được hỏi hai lần, khi tạo `A` và khi tạo `B`. Sau đó mỗi singleton giữ ticket của nó mãi. Muốn một ticket mỗi lần gọi thì inject `ObjectProvider<Ticket>` và gọi `getObject()` trong `handle()`."
+    },
+    {
+      "id": "bfpp-vs-bpp",
+      "kind": "single",
+      "prompt": "Bạn cần thay giá trị `${...}` trong định nghĩa bean trước khi bean nào được tạo. Dùng extension point nào?",
+      "options": [
+        "`BeanFactoryPostProcessor`, vì nó chạy trên định nghĩa bean trước khi có object",
+        "`BeanPostProcessor`, vì nó chạy cho mỗi bean ngay sau constructor",
+        "`@PostConstruct` trên một bean cấu hình chạy sớm",
+        "`ApplicationListener<ApplicationReadyEvent>`, chạy khi context đã sẵn sàng"
+      ],
+      "answer": 0,
+      "explanation": "`BeanFactoryPostProcessor` (như `PropertySourcesPlaceholderConfigurer`) sửa BeanDefinition trước khi container tạo bean. `BeanPostProcessor` làm việc trên object đã tạo, nên quá muộn để đổi định nghĩa. `@PostConstruct` và `ApplicationReadyEvent` còn muộn hơn."
+    },
+    {
+      "id": "request-scope-async",
+      "kind": "single",
+      "prompt": "Bean `@RequestScope RequestContext` được inject vào một service. Một method `@Async` của service đọc `requestContext.userId()`. Điều gì xảy ra?",
+      "options": [
+        "`IllegalStateException`: thread của `@Async` không gắn với request nào",
+        "Đọc được `userId` của request gốc, vì proxy giữ object của request đó",
+        "Trả về `null` vì proxy không tìm thấy object, nhưng không ném lỗi",
+        "Đọc được `userId` của request mới nhất mà Tomcat đang xử lý"
+      ],
+      "answer": 0,
+      "explanation": "Bean request scope được inject dưới dạng proxy. Mỗi lần gọi, proxy tìm object của request hiện tại qua `RequestContextHolder`, vốn gắn với thread đang xử lý request. Thread của `@Async` không có request nào nên báo `No thread-bound request found`. Truyền `userId` qua tham số của method `@Async`."
+    }
+  ]
+}

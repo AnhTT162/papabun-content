@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ main() tới request đầu tiên",
+  "nodes": [
+    {"id": "main", "label": "main()", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "context", "label": "Application Context", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "beans", "label": "Bean của bạn", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "auto", "label": "Auto-config", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "tomcat", "label": "Tomcat nhúng", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "client", "label": "Client", "kind": "external", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "main-context", "from": "main", "to": "context", "label": "SpringApplication"},
+    {"id": "context-beans", "from": "context", "to": "beans", "label": "component scan"},
+    {"id": "context-auto", "from": "context", "to": "auto", "label": "xét điều kiện"},
+    {"id": "auto-tomcat", "from": "auto", "to": "tomcat", "label": "tạo web server"},
+    {"id": "client-tomcat", "from": "client", "to": "tomcat", "label": "HTTP request"}
+  ],
+  "steps": [
+    {"caption": "`java -jar app.jar` chạy launcher của Boot, launcher nạp các jar lồng trong `BOOT-INF/lib` rồi gọi `main()` của bạn.", "show": ["main"]},
+    {"caption": "`SpringApplication.run` đọc cấu hình (`application.yml`, biến môi trường, tham số dòng lệnh) và tạo ApplicationContext, container giữ mọi bean.", "show": ["context", "main-context"], "highlight": ["main-context"]},
+    {"caption": "`@SpringBootApplication` bật component scan: class có `@Component`, `@Service`, `@Controller`, `@Configuration` trong package của nó và package con được đăng ký thành bean.", "show": ["beans", "context-beans"], "highlight": ["context-beans"]},
+    {"caption": "Sau đó Boot xét các auto-configuration theo điều kiện: có class trên classpath không, có property không, bạn đã tự khai báo bean đó chưa. Chỉ cái nào thoả điều kiện mới thêm bean.", "show": ["auto", "context-auto"], "highlight": ["context-auto"]},
+    {"caption": "Có Spring MVC và Tomcat trên classpath nên auto-configuration tạo Tomcat nhúng ngay trong process. Context tạo xong mọi singleton thì Tomcat mới mở port.", "show": ["tomcat", "auto-tomcat"], "highlight": ["auto-tomcat"]},
+    {"caption": "Request đến Tomcat, đi qua filter tới `DispatcherServlet` của Spring MVC rồi tới controller (bài Request đi qua Spring MVC). Không có server ngoài nào: ứng dụng chính là server.", "show": ["client", "client-tomcat"], "highlight": ["client-tomcat"]}
+  ]
+}

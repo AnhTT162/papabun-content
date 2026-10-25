@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "boot-is-config", "front": "Spring Boot là framework khác với Spring Framework?", "back": "Không. Boot là lớp cấu hình sẵn trên Spring Framework: starter, auto-configuration, server nhúng, cấu hình ngoài." },
+    { "id": "starter", "front": "Starter của Spring Boot chứa gì?", "back": "Gần như chỉ là danh sách dependency; version do BOM `spring-boot-dependencies` quản lý, logic nằm ở module autoconfigure." },
+    { "id": "back-off", "front": "Auto-configuration làm gì khi bạn tự khai báo bean cùng loại?", "back": "Lùi lại: phần lớn bean của Boot gắn `@ConditionalOnMissingBean`, nên bean của bạn được dùng." },
+    { "id": "version-pairs", "front": "Boot 2, 3, 4 đi với Spring Framework và Java nào?", "back": "Boot 2: Framework 5, Java 8+, `javax`. Boot 3: Framework 6, Java 17+, `jakarta`. Boot 4: Framework 7, Java 17+, Jakarta EE 11." },
+    { "id": "fat-jar", "front": "Vì sao `java -jar` chạy được fat jar của Boot dù Java không đọc jar lồng jar?", "back": "Boot đặt launcher riêng làm `Main-Class`; launcher có classloader đọc các jar trong `BOOT-INF/lib` rồi mới gọi `main()` của bạn." },
+    { "id": "override-version", "front": "Muốn đổi version một thư viện Boot quản lý thì làm thế nào?", "back": "Đặt property version của BOM (ví dụ `jackson-bom.version`), không ghi version trực tiếp vào dependency." },
+    { "id": "native-tradeoff", "front": "GraalVM native image đánh đổi gì?", "back": "Khởi động vài chục mili giây và ít RAM, đổi lại build lâu và mọi reflection, proxy phải biết trước lúc build." }
+  ]
+}

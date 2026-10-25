@@ -1,0 +1,177 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Vòng đời của bean OrderService có @Transactional",
+  "instructions": "Bấm \"Bước tiếp\" để đưa `OrderService` qua từng giai đoạn. Ở giai đoạn \"Init callback\" (lúc `@PostConstruct` chạy) và khi đã sẵn sàng, thử \"Gọi placeOrder()\" (method có `@Transactional`) và xem lần gọi nào thật sự có transaction. Cuối cùng bấm \"Đóng context\".",
+  "config": {
+    "states": [
+      {
+        "id": "defined",
+        "label": "Bean Definition",
+        "x": 0.1,
+        "y": 0.1,
+        "note": "Spring mới có bản mô tả: class `OrderService`, scope singleton, cần một `OrderRepository`. Chưa có object."
+      },
+      {
+        "id": "created",
+        "label": "Đã gọi constructor",
+        "x": 0.5,
+        "y": 0.1,
+        "note": "Object đã có. Với constructor injection, `OrderRepository` được truyền vào ngay ở bước này; field `@Autowired` thì vẫn đang `null`."
+      },
+      {
+        "id": "injected",
+        "label": "Đã inject",
+        "x": 0.9,
+        "y": 0.1,
+        "note": "Field và setter đã được inject, các callback `Aware` (`BeanNameAware`, `BeanFactoryAware`) đã chạy; `ApplicationContextAware` được gọi ngay đầu bước sau."
+      },
+      {
+        "id": "post-construct",
+        "label": "Init callback",
+        "x": 0.9,
+        "y": 0.5,
+        "note": "`postProcessBeforeInitialization` chạy `@PostConstruct`, sau đó là `afterPropertiesSet()` và init method. `this` vẫn là object gốc: **proxy chưa tồn tại**."
+      },
+      {
+        "id": "proxied",
+        "label": "Đã bọc proxy",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "`postProcessAfterInitialization`: AOP thấy `@Transactional` nên tạo proxy CGLIB bọc object gốc. Container lưu và inject **proxy** cho các bean khác."
+      },
+      {
+        "id": "ready",
+        "label": "Sẵn sàng",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Mọi singleton đã tạo xong, `ApplicationReadyEvent` đã phát. Controller gọi `orderService.placeOrder()` qua proxy."
+      },
+      {
+        "id": "destroyed",
+        "label": "Đã huỷ",
+        "x": 0.5,
+        "y": 0.9,
+        "note": "Context đóng (SIGTERM, hoặc `context.close()`): `@PreDestroy` chạy, rồi `DisposableBean.destroy()` và destroy method, theo thứ tự ngược dependency. Bean prototype không đi qua bước này."
+      }
+    ],
+    "initial": "defined",
+    "events": [
+      {
+        "id": "next",
+        "label": "Bước tiếp"
+      },
+      {
+        "id": "call",
+        "label": "Gọi placeOrder()"
+      },
+      {
+        "id": "self",
+        "label": "Gọi qua this"
+      },
+      {
+        "id": "close",
+        "label": "Đóng context"
+      }
+    ],
+    "counters": [
+      {
+        "id": "tx",
+        "label": "Lần gọi có transaction",
+        "initial": 0
+      },
+      {
+        "id": "no-tx",
+        "label": "Lần gọi không có transaction",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "instantiate",
+        "from": "defined",
+        "event": "next",
+        "to": "created",
+        "label": "new"
+      },
+      {
+        "id": "populate",
+        "from": "created",
+        "event": "next",
+        "to": "injected",
+        "label": "inject"
+      },
+      {
+        "id": "init",
+        "from": "injected",
+        "event": "next",
+        "to": "post-construct",
+        "label": "init"
+      },
+      {
+        "id": "call-in-init",
+        "from": "post-construct",
+        "event": "call",
+        "to": "post-construct",
+        "label": "gọi",
+        "effects": [
+          {
+            "counter": "no-tx",
+            "add": 1
+          }
+        ],
+        "note": "`@PostConstruct` gọi `placeOrder()` trên `this`, tức object gốc. Không có proxy nào chặn lời gọi, nên **không có transaction**: mỗi câu SQL tự commit riêng, lỗi giữa chừng để lại dữ liệu dở dang."
+      },
+      {
+        "id": "wrap",
+        "from": "post-construct",
+        "event": "next",
+        "to": "proxied",
+        "label": "proxy"
+      },
+      {
+        "id": "publish",
+        "from": "proxied",
+        "event": "next",
+        "to": "ready",
+        "label": "ready"
+      },
+      {
+        "id": "call-ready",
+        "from": "ready",
+        "event": "call",
+        "to": "ready",
+        "label": "qua proxy",
+        "effects": [
+          {
+            "counter": "tx",
+            "add": 1
+          }
+        ],
+        "note": "Controller giữ proxy. Proxy mở transaction, gọi object gốc, rồi commit (hoặc rollback khi có `RuntimeException`)."
+      },
+      {
+        "id": "self-ready",
+        "from": "ready",
+        "event": "self",
+        "to": "ready",
+        "label": "qua this",
+        "effects": [
+          {
+            "counter": "no-tx",
+            "add": 1
+          }
+        ],
+        "note": "Một method khác của `OrderService` gọi `this.placeOrder()`. Lời gọi đi thẳng vào object gốc, không qua proxy: **không có transaction**, giống hệt lúc trong `@PostConstruct` (bài AOP & proxy)."
+      },
+      {
+        "id": "shutdown",
+        "from": "ready",
+        "event": "close",
+        "to": "destroyed",
+        "label": "close"
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở giai đoạn hiện tại. Trước `@PostConstruct` chưa có code nghiệp vụ nào chạy, và ở \"Đã bọc proxy\" context chưa sẵn sàng nên chưa ai gọi bean; \"Gọi qua this\" và \"Đóng context\" chỉ có nghĩa khi bean đã sẵn sàng."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "flow", "front": "Thứ tự chính một request đi qua Spring MVC?", "back": "Thread Tomcat → filter → `DispatcherServlet` → `HandlerMapping` → interceptor `preHandle` → bind và validate → controller → ghi response." },
+    { "id": "filter-vs-interceptor", "front": "Khi nào dùng filter, khi nào dùng interceptor?", "back": "Filter cho mọi request và khi cần bọc request/response; interceptor khi cần biết method controller và annotation của nó." },
+    { "id": "advice-scope", "front": "`@ControllerAdvice` có bắt exception ném từ filter không?", "back": "Không, nó chỉ hoạt động bên trong `DispatcherServlet`." },
+    { "id": "body-once", "front": "Vì sao filter đọc body làm controller nhận body rỗng?", "back": "Body là stream, chỉ đọc được một lần. Dùng `ContentCachingRequestWrapper` và đọc sau `chain.doFilter`." },
+    { "id": "valid-error", "front": "`@Valid @RequestBody` sai thì Spring ném gì, mã nào?", "back": "`MethodArgumentNotValidException`, mặc định trả 400." },
+    { "id": "problem-detail", "front": "ProblemDetail là gì?", "back": "Định dạng body lỗi chuẩn theo RFC 9457 (`type`, `title`, `status`, `detail`, `instance`), có sẵn từ Spring 6; Boot cần `spring.mvc.problemdetails.enabled=true` mới dùng mặc định." },
+    { "id": "mass-assignment", "front": "Vì sao không nhận entity qua `@RequestBody`?", "back": "Client gửi thêm field như `role` hay `id` là ghi đè được (mass assignment); dùng DTO riêng." }
+  ]
+}

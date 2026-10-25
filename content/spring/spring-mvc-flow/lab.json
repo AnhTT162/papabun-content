@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm filter log request, mọi API POST trả 400",
+  "context": "Để điều tra lỗi tích hợp với đối tác, đội thêm filter ghi body của mọi request vào log. Test GET vẫn chạy bình thường nên filter được merge.",
+  "buggyCode": "@Component\nclass RequestBodyLoggingFilter extends OncePerRequestFilter {\n    private static final Logger log = LoggerFactory.getLogger(RequestBodyLoggingFilter.class);\n\n    @Override\n    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,\n                                    FilterChain chain) throws ServletException, IOException {\n        String body = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);\n        log.info(\"{} {} body={}\", request.getMethod(), request.getRequestURI(), body);\n        chain.doFilter(request, response);\n    }\n}\n\n@PostMapping(\"/orders\")\nResponseEntity<OrderView> create(@Valid @RequestBody CreateOrderRequest req) { ... }",
+  "symptom": {
+    "description": "Sau deploy, mọi API POST và PUT có body JSON trả 400. Log của filter vẫn in đủ body đúng như client gửi.",
+    "output": "INFO  RequestBodyLoggingFilter : POST /orders body={\"customerId\":42,\"items\":[{\"sku\":\"A-1\",\"qty\":2}]}\nWARN  DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotReadableException: Required request body is missing: public org.springframework.http.ResponseEntity<com.example.order.OrderView> com.example.order.OrderController.create(com.example.order.CreateOrderRequest)]\n\nHTTP/1.1 400\n{\"timestamp\":\"2026-10-24T09:14:02.511Z\",\"status\":400,\"error\":\"Bad Request\",\"path\":\"/orders\"}"
+  },
+  "diagnosis": {
+    "question": "Vì sao controller không nhận được body dù filter đã đọc được?",
+    "options": [
+      "Body là stream chỉ đọc được một lần; filter đọc hết nên Jackson không còn gì",
+      "`OncePerRequestFilter` chặn request có body, chỉ cho request GET đi tiếp xuống controller",
+      "Filter chạy trước Spring Security nên body bị Security xoá vì lý do bảo mật",
+      "Jackson không parse được vì filter đã đổi charset của request sang UTF-8"
+    ],
+    "answer": 0,
+    "explanation": "`getInputStream()` đọc thẳng từ kết nối. `readAllBytes()` đã đưa con trỏ tới cuối stream, nên khi `@RequestBody` gọi Jackson đọc, stream trống và Spring báo \"Required request body is missing\". Request GET không có body nên không lộ lỗi, vì vậy test GET vẫn qua."
+  },
+  "fix": {
+    "code": "@Component\nclass RequestBodyLoggingFilter extends OncePerRequestFilter {\n    private static final Logger log = LoggerFactory.getLogger(RequestBodyLoggingFilter.class);\n    private static final int MAX_LOGGED = 2_000;\n\n    @Override\n    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,\n                                    FilterChain chain) throws ServletException, IOException {\n        var wrapped = new ContentCachingRequestWrapper(request, MAX_LOGGED);\n        try {\n            chain.doFilter(wrapped, response);              // Jackson đọc qua wrapper, wrapper giữ bản sao\n        } finally {\n            byte[] body = wrapped.getContentAsByteArray();   // chỉ có sau khi đã được đọc\n            log.info(\"{} {} status={} body={}\", request.getMethod(), request.getRequestURI(),\n                     response.getStatus(), mask(new String(body, StandardCharsets.UTF_8)));\n        }\n    }\n\n    private String mask(String body) { /* che password, số thẻ... tự viết theo API */ return body; }\n}",
+    "explanation": "`ContentCachingRequestWrapper` không đọc trước body; nó giữ lại bản sao của những byte mà người khác (ở đây là Jackson) đã đọc qua nó. Vì vậy phải truyền wrapper xuống chain và chỉ log **sau** `chain.doFilter`. Tham số giới hạn số byte giữ lại để body vài chục MB không làm phình heap; vượt giới hạn thì request vẫn đi tiếp, chỉ phần được cache bị cắt (override `handleContentOverflow` nếu muốn chặn). Log body còn có rủi ro riêng: password, số thẻ, dữ liệu cá nhân nằm trong log, nên phải che (`mask`) và chỉ bật cho endpoint cần điều tra. Viết thêm test POST cho mọi filter mới."
+  }
+}
