@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-principles",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Coupling, cohesion & các nguyên tắc nền",
+  "summary": "Coupling và cohesion là thước đo gốc của thiết kế; các mức coupling và coupling ẩn; composition over inheritance và fragile base class trong JDK; DRY là về tri thức chứ không phải code giống nhau; KISS, YAGNI; Law of Demeter và khi nào không áp dụng; đo coupling bằng Ca/Ce và jdeps.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 11,
+  "prerequisites": [],
+  "terms": ["coupling", "cohesion", "composition-over-inheritance", "fragile-base-class", "dry", "kiss", "yagni", "law-of-demeter", "temporal-coupling", "afferent-coupling", "archunit", "template-method"],
+  "references": [
+    { "title": "Java SE 21 API: AbstractCollection.addAll", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/AbstractCollection.html#addAll(java.util.Collection)" },
+    { "title": "JEP 409: Sealed Classes", "url": "https://openjdk.org/jeps/409" },
+    { "title": "JDK 21 Tool Specifications: jdeps", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jdeps.html" },
+    { "title": "Spring Boot Reference: AOP auto-configuration (spring.aop.proxy-target-class)", "url": "https://docs.spring.io/spring-boot/reference/features/aop.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào kế thừa là lựa chọn đúng?\" Trả lời: khi quan hệ \"là một\" đúng ở mọi chỗ dùng (lớp con thay được lớp cha, xem Liskov trong bài SOLID) **và** lớp cha được thiết kế để kế thừa: có tài liệu nói rõ method nào gọi method nào, hoặc là abstract class dạng [[template-method|Template Method]]. Hỏi tiếp \"làm sao biết code đang coupling cao\": nhìn lịch sử commit, những file luôn đổi cùng nhau mà nằm ở các module khác nhau là dấu hiệu rõ nhất."
+    },
+    {
+      "type": "callout",
+      "style": "warning",
+      "markdown": "Class `CommonUtils`, `Helper` hay module `shared` mà mọi nơi import là điểm coupling lớn nhất của codebase: đổi một method là phải build và test lại tất cả. Đặt code theo nơi dùng nó, và chỉ đưa vào module chung những thứ thật sự ổn định."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Bộ đếm tag báo gấp đôi",
+  "context": "Dashboard hiển thị \"số tag người dùng đã thêm\" để đo mức dùng tính năng gắn tag. Để không phải sửa mọi chỗ gọi, một đồng nghiệp viết lớp con của `HashSet` đếm ở cả `add` và `addAll`. Sau một tuần, số liệu trên dashboard gấp đôi số log sự kiện từ client.",
+  "buggyCode": "class AuditedTagSet extends HashSet<String> {\n    private int addedCount = 0;\n\n    @Override\n    public boolean add(String tag) {\n        addedCount++;\n        return super.add(tag);\n    }\n\n    @Override\n    public boolean addAll(Collection<? extends String> tags) {\n        addedCount += tags.size();\n        return super.addAll(tags);\n    }\n\n    int addedCount() { return addedCount; }\n}\n\nvar tags = new AuditedTagSet();\ntags.addAll(List.of(\"java\", \"spring\", \"kafka\"));\nSystem.out.println(\"added = \" + tags.addedCount() + \", size = \" + tags.size());",
+  "symptom": {
+    "description": "Chạy thử trên JDK 21 và JDK 27 đều in ra:",
+    "output": "added = 6, size = 3"
+  },
+  "diagnosis": {
+    "question": "Vì sao đếm thành 6?",
+    "options": [
+      "`HashSet.addAll` kế thừa từ `AbstractCollection` gọi `add` cho từng phần tử, nên mỗi tag bị đếm hai lần",
+      "`List.of` trả một list bất biến, nên `addAll` phải chép list sang bản thường và duyệt nó hai lần",
+      "`HashSet` không giữ thứ tự, nên `addAll` thêm lại các phần tử bị đặt nhầm bucket lần đầu",
+      "`addedCount` không phải `volatile`, nên lần ghi trong `add` và trong `addAll` bị cộng dồn sai"
+    ],
+    "answer": 0,
+    "explanation": "`HashSet` không tự cài `addAll`; bản kế thừa từ `AbstractCollection` duyệt collection và gọi `add(e)`, và lời gọi đó đi vào `add` đã override. Lớp con phụ thuộc vào một **chi tiết cài đặt** không nằm trong hợp đồng của `Set`: đó là [[fragile-base-class|fragile base class]]. Bỏ override `addAll` thì đúng với `HashSet` hôm nay, nhưng đổi lớp cha sang `ArrayList` (mà `addAll` chép mảng, không gọi `add`) thì lại đếm thiếu. `List.of` hay thứ tự bucket không liên quan, và đoạn code chỉ chạy trên một thread."
+  },
+  "fix": {
+    "code": "final class AuditedTagSet {\n    private final Set<String> tags = new HashSet<>();\n    private int addedCount = 0;\n\n    boolean add(String tag) {\n        addedCount++;\n        return tags.add(tag);\n    }\n\n    void addAll(Collection<String> newTags) {\n        newTags.forEach(this::add);   // đếm ở đúng một chỗ, do mình kiểm soát\n    }\n\n    int addedCount() { return addedCount; }\n    Set<String> view() { return Collections.unmodifiableSet(tags); }\n}",
+    "explanation": "Dùng composition: giữ `Set` làm field và tự quyết định `addAll` đi qua `add`. Hành vi không còn phụ thuộc vào cách `HashSet` cài đặt `addAll`, và đổi sang `LinkedHashSet` hay `TreeSet` không làm sai số. Class chỉ mở ra đúng những thao tác cần, nên không ai gọi được `removeIf` hay `retainAll` vượt qua bộ đếm. Nếu cần trả về đúng kiểu `Set`, viết một lớp chuyển tiếp (forwarding) implement `Set` và gọi object bên trong cho từng method. In ra lại: `added = 3, size = 3`."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "solid",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "SOLID",
+  "summary": "Năm nguyên tắc với ví dụ vi phạm và cách sửa: SRP theo actor, Open/Closed bằng polymorphism và khi nào `sealed` + `switch` hợp hơn, Liskov và các thoả hiệp trong JDK (`List.of`, `Stream.toList()`), Interface Segregation qua Spring Data, Dependency Inversion và việc interface thuộc về module nghiệp vụ; bẫy áp SOLID máy móc.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["design-principles"],
+  "terms": ["solid", "single-responsibility", "open-closed", "liskov-substitution", "interface-segregation", "dependency-inversion", "contract-test", "polymorphism", "optional-operation", "expression-problem", "hexagonal-architecture", "archunit"],
+  "references": [
+    { "title": "Java SE 21 API: List (unmodifiable lists, optional operations)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html" },
+    { "title": "Java SE 21 API: Stream.toList", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/Stream.html#toList()" },
+    { "title": "JEP 441: Pattern Matching for switch", "url": "https://openjdk.org/jeps/441" },
+    { "title": "JEP 409: Sealed Classes", "url": "https://openjdk.org/jeps/409" },
+    { "title": "Spring Data Commons Reference: Core concepts (Repository hierarchy)", "url": "https://docs.spring.io/spring-data/commons/reference/repositories/core-concepts.html" },
+    { "title": "Java SE 21 API: java.sql.Timestamp", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Timestamp.html" },
+    { "title": "Liskov & Wing (1994): A Behavioral Notion of Subtyping", "url": "https://doi.org/10.1145/197320.197383" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Cho ví dụ bạn đã áp dụng SOLID trong dự án.\" Kể một tình huống có lực thay đổi thật, không kể định nghĩa: ví dụ thêm cổng thanh toán thứ ba mà không sửa `CheckoutService` nhờ `Map<String, PaymentGateway>` (O và D), kèm số liệu thật của bạn (ví dụ thời gian thêm một cổng trước và sau). Người phỏng vấn senior thường hỏi tiếp \"có khi nào SOLID làm code tệ hơn không\": chuẩn bị một ví dụ interface hay tầng trừu tượng thêm vào mà không bao giờ có cài đặt thứ hai."
+    },
+    {
+      "type": "callout",
+      "style": "tip",
+      "markdown": "Viết [[contract-test|contract test]] cho interface có nhiều cài đặt: một abstract class test chứa các kiểm tra của hợp đồng, mỗi cài đặt kế thừa và chỉ cung cấp cách tạo object. Cài đặt mới vi phạm Liskov sẽ đỏ ngay ở CI, không phải ở production."
+    }
+  ]
+}

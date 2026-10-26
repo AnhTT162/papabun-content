@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Refactor `toList()` làm hỏng tặng quà",
+  "context": "Đợt dọn code, IDE gợi ý thay `.collect(Collectors.toList())` bằng `.toList()` (Java 16+) và cả nhóm áp dụng hàng loạt vì \"chỉ là cú pháp ngắn hơn\". Unit test của `CartBuilder` vẫn xanh vì test đó dựng giỏ bằng `new ArrayList<>()`. Sau deploy, đơn từ 3 sản phẩm trở lên bắt đầu lỗi 500.",
+  "buggyCode": "record OrderLine(String sku, int qty) {}\n\nclass CartBuilder {\n    List<OrderLine> lines(List<CartItem> items) {\n        return items.stream()\n                .filter(item -> item.qty() > 0)\n                .map(item -> new OrderLine(item.sku(), item.qty()))\n                .toList();                       // trước đây: .collect(Collectors.toList())\n    }\n}\n\nclass PromotionService {\n    // Hợp đồng ngầm: \"nhận một List và thêm quà vào đó\"\n    void addFreeGift(List<OrderLine> lines) {\n        int total = lines.stream().mapToInt(OrderLine::qty).sum();\n        if (total >= 3) {\n            lines.add(new OrderLine(\"GIFT-BAG\", 1));\n        }\n    }\n}\n\nList<OrderLine> lines = cartBuilder.lines(cart.items());\npromotionService.addFreeGift(lines);",
+  "symptom": {
+    "description": "Log với đơn gồm 2 áo và 1 mũ (JDK 27):",
+    "output": "java.lang.UnsupportedOperationException\n\tat java.base/java.util.ImmutableCollections.uoe(ImmutableCollections.java:156)\n\tat java.base/java.util.ImmutableCollections$AbstractImmutableCollection.add(ImmutableCollections.java:161)\n\tat shop.PromotionService.addFreeGift(PromotionService.java:6)\n\tat shop.CheckoutService.checkout(CheckoutService.java:41)"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân gốc là gì?",
+    "options": [
+      "`Stream.toList()` trả list không sửa được; `addFreeGift` dựa vào việc mọi `List` đều cho `add`",
+      "`OrderLine` là record nên bất biến, vì vậy không thêm được vào list chứa record",
+      "Stream chưa được tiêu thụ hết khi `addFreeGift` chạy, nên list vẫn đang bị khoá",
+      "`Collectors.toList()` và `toList()` trả cùng kiểu, lỗi đến từ hai thread cùng sửa list"
+    ],
+    "answer": 0,
+    "explanation": "`List` khai báo `add` là [[optional-operation|optional operation]]. `Collectors.toList()` không hứa kiểu cụ thể nhưng thực tế trả `ArrayList`, còn `Stream.toList()` hứa trả list không sửa được. Cả hai đều là `List` hợp lệ, nhưng `addFreeGift` âm thầm đòi một hợp đồng mạnh hơn kiểu nó khai báo: đó là vấn đề [[liskov-substitution|Liskov]] ở phía bên dùng. Record bất biến không ngăn việc thêm record vào list; `toList()` đã tiêu thụ xong stream trước khi trả về; code chạy trên một thread."
+  },
+  "fix": {
+    "code": "class PromotionService {\n    // Không sửa tham số: trả về danh sách mới\n    List<OrderLine> withFreeGift(List<OrderLine> lines) {\n        int total = lines.stream().mapToInt(OrderLine::qty).sum();\n        if (total < 3) {\n            return List.copyOf(lines);        // không tốn gì nếu đã bất biến\n        }\n        var result = new ArrayList<>(lines);\n        result.add(new OrderLine(\"GIFT-BAG\", 1));\n        return List.copyOf(result);\n    }\n}\n\nList<OrderLine> lines = promotionService.withFreeGift(cartBuilder.lines(cart.items()));\n\n// Test dựng input bằng List.of để bắt cả trường hợp list không sửa được\n@Test\nvoid addsGiftFromThreeItems() {\n    var lines = List.of(new OrderLine(\"TSHIRT\", 2), new OrderLine(\"CAP\", 1));\n    assertThat(promotionService.withFreeGift(lines)).hasSize(3);\n}",
+    "explanation": "Method nhận `List` thì chỉ được dựa vào những gì mọi `List` đảm bảo: đọc. Muốn thay đổi thì tự tạo bản sao, hoặc trả về kết quả mới như trên. Hai nhánh đều trả list bất biến nên bên gọi luôn nhận cùng một hợp đồng. Cách này còn bỏ được side effect (thay đổi ngầm) lên tham số, nên bên gọi không bị sửa dữ liệu ngoài ý muốn. Bài học cho việc refactor hàng loạt: `toList()` không phải \"cú pháp ngắn hơn\" của `collect(Collectors.toList())`; nó còn khác ở chỗ cho phép phần tử `null` (khác `List.of`) và không sửa được. Test nên dùng `List.of` làm input để không vô tình dựa vào list sửa được."
+  }
+}

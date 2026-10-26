@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "arraylist-addall-count",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "class CountingList extends ArrayList<String> {\n    int added = 0;\n\n    @Override\n    public boolean add(String item) {\n        added++;\n        return super.add(item);\n    }\n}\n\nvar list = new CountingList();\nlist.addAll(List.of(\"a\", \"b\", \"c\"));\nlist.add(\"d\");\nSystem.out.println(list.added);",
+      "options": [
+        "1, vì `ArrayList.addAll` chép mảng trực tiếp mà không gọi `add`",
+        "4, vì `addAll` gọi `add` đã override cho từng phần tử",
+        "7, vì `addAll` đếm 3 rồi gọi `add` thêm 3 lần nữa",
+        "0, vì `added` chỉ tăng khi phần tử chưa có trong list"
+      ],
+      "answer": 0,
+      "explanation": "`ArrayList` tự cài `addAll` bằng `toArray` và `System.arraycopy`, nên không đi qua `add`. Chỉ lời gọi `add(\"d\")` được đếm. Với `HashSet`, `addAll` lại gọi `add` từng phần tử. Kết quả phụ thuộc vào chi tiết cài đặt của lớp cha: lý do nên dùng composition thay vì kế thừa class của thư viện."
+    },
+    {
+      "id": "dry-two-rules",
+      "kind": "single",
+      "prompt": "`InvoiceValidator` và `ShipmentValidator` đều có đoạn kiểm tra \"mã số thuế dài 10 hoặc 13 ký tự\". Kế toán vừa báo sắp đổi quy tắc cho hoá đơn, còn kho vận vẫn giữ quy tắc cũ cho phiếu giao. Nên làm gì?",
+      "options": [
+        "Giữ hai đoạn riêng, vì chúng là hai quy tắc thay đổi vì hai lý do khác nhau",
+        "Gộp vào một `TaxCodeValidator` dùng chung rồi thêm cờ `boolean forInvoice`",
+        "Gộp vào một method static trong `ValidationUtils` để cả hai cùng gọi",
+        "Tạo lớp cha `BaseValidator` chứa đoạn kiểm tra để hai validator kế thừa"
+      ],
+      "answer": 0,
+      "explanation": "DRY nói về tri thức. Hai đoạn giống nhau về chữ nhưng thuộc hai quy tắc của hai bên liên quan, và sắp khác nhau. Gộp chúng tạo coupling: thêm cờ `boolean` là dấu hiệu abstraction sai; đặt vào `Utils` hay lớp cha chỉ chuyển cùng vấn đề sang chỗ khác."
+    },
+    {
+      "id": "demeter-fix",
+      "kind": "single",
+      "prompt": "Trong `ShippingFeeCalculator` có dòng `if (order.getCustomer().getAddress().getProvince().isRemote()) fee += 30_000;`. Cách sửa nào thể hiện đúng tinh thần Law of Demeter?",
+      "options": [
+        "Cho `Order` trả lời câu hỏi cần thiết, ví dụ `order.shipsToRemoteArea()`",
+        "Tách thành bốn biến cục bộ, mỗi dòng một lời gọi getter",
+        "Thêm kiểm tra `null` cho từng getter để tránh `NullPointerException`",
+        "Đổi chuỗi getter thành `Optional.map` để gọi an toàn hơn"
+      ],
+      "answer": 0,
+      "explanation": "Vấn đề không nằm ở số dấu chấm mà ở chỗ bộ tính phí phụ thuộc vào cấu trúc của bốn class. Tách biến, thêm `null` check hay dùng `Optional` vẫn giữ nguyên phụ thuộc đó. Hỏi `Order` đúng điều cần biết thì cấu trúc `Customer`/`Address` đổi mà bộ tính phí không phải sửa."
+    },
+    {
+      "id": "interface-every-class",
+      "kind": "single",
+      "prompt": "Một codebase Spring có quy ước: mọi service đều có interface `XxxService` và đúng một class `XxxServiceImpl`. Nhận xét nào đúng nhất?",
+      "options": [
+        "Thừa: interface chỉ đáng thêm khi có cài đặt thứ hai hay cần đảo chiều phụ thuộc",
+        "Bắt buộc, vì Spring chỉ tạo được proxy cho `@Transactional` khi bean có interface",
+        "Bắt buộc, vì Mockito không mock được class cụ thể mà không có interface",
+        "Nên giữ, vì interface luôn làm coupling giữa các class giảm về mức thấp nhất"
+      ],
+      "answer": 0,
+      "explanation": "Spring Boot mặc định dùng proxy CGLIB cho class (`proxyTargetClass = true`), và Mockito mock được class cụ thể (từ Mockito 5, inline mock maker mặc định mock được cả class `final`). Interface có một cài đặt duy nhất không làm bên gọi biết ít hơn. Interface có giá trị khi có nhiều cài đặt, hoặc khi module cấp cao cần định nghĩa hợp đồng để module cấp thấp cài đặt (Dependency Inversion)."
+    }
+  ]
+}

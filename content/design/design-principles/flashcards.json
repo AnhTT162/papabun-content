@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "coupling-cohesion", "front": "Coupling và cohesion khác nhau thế nào?", "back": "Coupling đo mức một module phụ thuộc vào chi tiết module khác; cohesion đo mức các phần trong một module cùng phục vụ một mục đích. Nhắm tới coupling thấp, cohesion cao." },
+    { "id": "measure-coupling", "front": "Câu hỏi thực tế để đánh giá coupling là gì?", "back": "Đổi một yêu cầu thì phải sửa bao nhiêu chỗ, ở bao nhiêu module, và có phải deploy cùng nhau không." },
+    { "id": "fragile-base", "front": "Fragile base class là gì?", "back": "Lớp con hỏng khi lớp cha đổi chi tiết cài đặt, vì lớp con phụ thuộc vào cách lớp cha gọi method của chính nó, không chỉ vào hợp đồng." },
+    { "id": "dry-knowledge", "front": "DRY nói về code trùng hay về điều gì?", "back": "Về tri thức: mỗi quy tắc nghiệp vụ có đúng một nơi định nghĩa. Hai đoạn code giống nhau nhưng đổi vì hai lý do khác nhau thì không nên gộp." },
+    { "id": "yagni", "front": "YAGNI khuyên gì?", "back": "Không xây tính năng, cấu hình hay tầng trừu tượng cho nhu cầu chưa có; thêm khi cần thường rẻ hơn mang theo từ bây giờ." },
+    { "id": "demeter", "front": "Law of Demeter cho phép method gọi tới những ai?", "back": "Chính object đó, tham số, field của nó và object nó tạo ra. Không đi xuyên chuỗi `a.getB().getC().doX()` để ra quyết định." },
+    { "id": "demeter-fluent", "front": "`list.stream().filter(..).map(..)` có vi phạm Law of Demeter không?", "back": "Không. Mỗi bước trả cùng loại abstraction và bên gọi không phụ thuộc vào cấu trúc bên trong của object khác." },
+    { "id": "final-sealed", "front": "Class không thiết kế để kế thừa thì nên khai báo thế nào?", "back": "`final`; nếu cần đúng một số lớp con biết trước thì dùng `sealed` (Java 17) với `permits`." }
+  ]
+}

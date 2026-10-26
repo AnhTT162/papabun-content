@@ -313,8 +313,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `design-principles` | ✚ Coupling, cohesion & các nguyên tắc nền | foundation | Coupling và cohesion, composition, DRY/KISS/YAGNI, Law of Demeter | A L B | ⬜ |
-| 2 | `solid` | SOLID | junior | Từng nguyên tắc với ví dụ vi phạm và cách sửa | A L B | ⬜ |
+| 1 | `design-principles` | ✚ Coupling, cohesion & các nguyên tắc nền | foundation | Coupling và cohesion, composition, DRY/KISS/YAGNI, Law of Demeter | A L B | ✅ |
+| 2 | `solid` | SOLID | junior | Từng nguyên tắc với ví dụ vi phạm và cách sửa | A L B | ✅ |
 | 3 | `layered-architecture` | ✚ Kiến trúc phân lớp & tổ chức package | junior | Controller/service/repository, package-by-feature và package-by-layer, mapping DTO | A L B | ⬜ |
 | 4 | `creational-patterns` | Creational patterns | mid | Factory, Builder, Singleton (và vì sao nên tránh) | L B | ⬜ |
 | 5 | `structural-patterns` | Structural patterns | mid | Adapter, Decorator, Proxy, Facade; ví dụ trong JDK và Spring | L D B | ⬜ |

@@ -1,0 +1,29 @@
+## Quick
+
+[[solid|SOLID]] là năm nguyên tắc quản lý phụ thuộc để code đổi được mà không vỡ dây chuyền. Một class chỉ thay đổi vì **một nhóm người** yêu cầu (S), thêm hành vi bằng code mới thay vì sửa code cũ (O), lớp con thay được lớp cha mà không làm bên gọi bất ngờ (L), interface nhỏ theo nhu cầu bên dùng (I), và **module nghiệp vụ sở hữu abstraction mà hạ tầng cài đặt** (D).
+
+## Interview
+
+**S, [[single-responsibility|Single Responsibility]]**: không phải "làm một việc" mà là "chỉ một actor có lý do để đổi nó". `Employee` có `calculatePay()` (kế toán), `reportHours()` (nhân sự) và `save()` (đội DBA): ba nhóm yêu cầu cùng sửa một file, và sửa cách tính giờ cho nhân sự có thể làm sai lương. Tách theo actor: `PayCalculator`, `HourReporter`, `EmployeeRepository`.
+
+**O, [[open-closed|Open/Closed]]**: mở để mở rộng, đóng để sửa. Dấu hiệu vi phạm là cùng một `switch (paymentType)` lặp ở năm chỗ: thêm ví điện tử mới là sửa cả năm. Sửa bằng [[polymorphism]]: interface `PaymentGateway`, mỗi cổng một class, Spring inject `Map<String, PaymentGateway>`. Thêm cổng là thêm class, không chạm code cũ.
+
+**L, [[liskov-substitution|Liskov Substitution]]**: chỗ nào dùng được kiểu cha thì phải dùng được kiểu con. Cụ thể, lớp con không đòi đầu vào chặt hơn, không trả kết quả yếu hơn, giữ bất biến của lớp cha, không ném exception bên gọi không lường trước, và không cho đổi trạng thái mà lớp cha hứa không đổi (history constraint: `MutablePoint extends ImmutablePoint` là sai). `Square extends Rectangle` vi phạm: code gọi `setWidth(5); setHeight(4)` mong diện tích 20 nhưng nhận 16.
+
+**I, [[interface-segregation|Interface Segregation]]**: bên dùng không nên phụ thuộc vào method nó không gọi. `ReportService` chỉ đọc mà phụ thuộc `OrderRepository` 25 method, kể cả `deleteAll()`: đổi một method ghi cũng phải build lại, và mock cồng kềnh. Tách `OrderReader` và `OrderWriter`.
+
+**D, [[dependency-inversion|Dependency Inversion]]**: module cấp cao (nghiệp vụ) không phụ thuộc module cấp thấp (database, HTTP client); cả hai phụ thuộc abstraction. Điểm hay bị bỏ qua: **interface nằm ở package nghiệp vụ** và mang ngôn ngữ nghiệp vụ (`OrderNotifier.orderPlaced(order)`), không phải `KafkaSender` đặt cạnh code Kafka. [[dependency-injection|Dependency Injection]] chỉ là cơ chế đưa cài đặt vào; DIP quyết định chiều của mũi tên phụ thuộc.
+
+**Bẫy hay gặp**: áp SOLID máy móc sinh ra hàng chục interface một cài đặt và class ba dòng. Áp khi đã thấy, hoặc chắc chắn sắp thấy, lực thay đổi tương ứng.
+
+## Deep
+
+- **Liskov trong JDK**: `List` khai báo `add` là [[optional-operation|optional operation]], nên `List.of(...)`, `Stream.toList()` (Java 16) và `Collections.unmodifiableList` ném `UnsupportedOperationException`. Đây là thoả hiệp có ghi trong tài liệu, nhưng vẫn gây lỗi production khi đổi `collect(Collectors.toList())` sang `toList()` mà code phía sau sửa list. `Stack extends Vector` và `java.sql.Timestamp extends Date` (Javadoc ghi rõ `equals` không đối xứng với `Date`) là các thiết kế kế thừa sai được giữ lại vì tương thích ngược.
+- **Compiler kiểm một phần Liskov**: method override được trả kiểu hẹp hơn (covariant return), nhưng không được ném checked exception rộng hơn và không được giảm visibility. Compiler không kiểm được ngữ nghĩa: điều kiện đầu vào, bất biến, exception unchecked.
+- **Kiểm Liskov bằng contract test**: viết một abstract test class cho hợp đồng của interface (ví dụ `PaymentGatewayContractTest`), mỗi cài đặt có một lớp test con. Cài đặt mới phải qua cùng bộ test đó.
+- **OCP và `sealed` + pattern matching (Java 21, chi tiết ở bài Java 17 → 21)**: khi tập kiểu cố định nhưng **thao tác** hay thêm mới (tính phí, xuất báo cáo, render), `sealed interface Shipment permits Standard, Express, Pickup` cùng `switch` exhaustive lại hợp hơn polymorphism: thêm thao tác là thêm một method chứa `switch`, còn thêm kiểu mới thì compiler chỉ ra mọi `switch` chưa xử lý, **với điều kiện `switch` liệt kê đủ case và không có `default`** (hay `case Shipment s` bắt tất cả); thêm `default` là mất lợi ích này. Polymorphism hợp khi kiểu hay thêm mới. Đây là [[expression-problem|expression problem]]: không cách nào rẻ cho cả hai chiều. Trước Java 21, cách giải chiều "thêm thao tác" là Visitor (bài Behavioral patterns).
+- **SRP áp ở mức nào**: class và module. "Hàm chỉ làm một việc" là quy tắc khác, cho function. Dấu hiệu thực tế của vi phạm: một file luôn bị hai nhóm khác nhau sửa, hoặc hay có merge conflict giữa hai tính năng không liên quan.
+- **ISP và Spring Data**: interface được tách sẵn thành nhiều mức: `Repository` (marker), `CrudRepository`, rồi từ Spring Data 3 (Boot 3) thêm `ListCrudRepository` và `ListPagingAndSortingRepository` mà `JpaRepository` kế thừa (bản 2.x kế thừa `PagingAndSortingRepository`). Có thể kế thừa thẳng `Repository<Order, Long>` (hoặc dùng `@RepositoryDefinition`) rồi khai báo đúng các method cần, để repository chỉ đọc không lộ `delete`. `default` method trong interface (Java 8) cho phép thêm method mà không phá cài đặt cũ, nhưng cũng làm interface phình dần.
+- **DIP và cấu trúc module**: khi interface nằm trong module nghiệp vụ, module hạ tầng phụ thuộc vào nghiệp vụ chứ không ngược lại. Đây là nền của [[hexagonal-architecture|Hexagonal Architecture]] (port và adapter), xem bài Clean & Hexagonal. [[archunit|ArchUnit]] viết được test cho quy tắc "package `domain` không import `infrastructure`".
+- **DIP không bắt buộc interface cho mọi thứ**: phụ thuộc vào class ổn định của JDK (`String`, `BigDecimal`, `Clock`) là bình thường. Đảo chiều cần ở chỗ nghiệp vụ chạm tới thứ dễ đổi hoặc khó test: database, broker, API bên ngoài.
+- **Nguồn gốc**: Liskov (1987, chặt hơn trong bài với Wing năm 1994), Meyer nêu Open/Closed năm 1988 theo hướng kế thừa; Robert C. Martin gom năm nguyên tắc khoảng năm 2000, Michael Feathers đặt tên SOLID.

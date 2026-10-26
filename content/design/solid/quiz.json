@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "square-rectangle-area",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "class Rectangle {\n    protected int width, height;\n    void setWidth(int w)  { width = w; }\n    void setHeight(int h) { height = h; }\n    int area() { return width * height; }\n}\n\nclass Square extends Rectangle {\n    @Override void setWidth(int w)  { width = w; height = w; }\n    @Override void setHeight(int h) { width = h; height = h; }\n}\n\nstatic void resize(Rectangle r) {\n    r.setWidth(5);\n    r.setHeight(4);\n    System.out.println(r.area());\n}\n\nresize(new Rectangle());\nresize(new Square());",
+      "options": [
+        "`20` rồi `16`",
+        "`20` rồi `20`",
+        "`20` rồi `25`",
+        "Không biên dịch: `Square` không được ghi đè setter"
+      ],
+      "answer": 0,
+      "explanation": "Với `Square`, `setHeight(4)` ghi đè cả chiều rộng thành 4, nên diện tích là 16. `resize` viết đúng theo hợp đồng của `Rectangle` (đặt chiều rộng không đổi chiều cao) nhưng `Square` phá hợp đồng đó: vi phạm Liskov. Toán học nói hình vuông là hình chữ nhật, nhưng với object có setter thì không thay được."
+    },
+    {
+      "id": "srp-actor-split",
+      "kind": "single",
+      "prompt": "Class `InvoiceService` có ba method: `calculateTax()` theo quy định của kế toán, `renderPdf()` theo mẫu của phòng marketing, và `sendToTaxAuthority()` theo đặc tả API của cơ quan thuế. Nhận xét nào đúng theo SRP?",
+      "options": [
+        "Vi phạm: ba nhóm khác nhau có lý do để đổi cùng một class, nên tách theo từng nhóm",
+        "Không vi phạm, vì cả ba method đều xử lý cùng một đối tượng là hoá đơn",
+        "Không vi phạm, vì mỗi method chỉ làm một việc duy nhất",
+        "Vi phạm, nên tách mỗi method thành một microservice riêng"
+      ],
+      "answer": 0,
+      "explanation": "SRP đo theo actor, không theo đối tượng dữ liệu hay số việc mỗi method làm. Marketing đổi mẫu PDF không nên làm rủi ro cho phần tính thuế. Tách thành ba class trong cùng module là đủ; tách microservice là quyết định về triển khai, không phải điều SRP đòi."
+    },
+    {
+      "id": "dip-interface-location",
+      "kind": "single",
+      "prompt": "Module `order` cần gửi thông báo khi đơn được đặt; module `infrastructure` có code gọi Kafka. Theo Dependency Inversion, bố cục nào đúng?",
+      "options": [
+        "Interface `OrderNotifier` trong `order`; `KafkaOrderNotifier` trong `infrastructure` cài đặt nó",
+        "Interface `KafkaPublisher` trong `infrastructure`; `order` gọi nó qua Spring injection",
+        "Interface `OrderNotifier` trong `infrastructure` cạnh cài đặt Kafka để dễ tìm",
+        "Không cần interface; `order` gọi thẳng `KafkaTemplate` vì Spring đã inject"
+      ],
+      "answer": 0,
+      "explanation": "Abstraction thuộc về bên dùng (module cấp cao) và nói ngôn ngữ của nó. Khi đó `infrastructure` phụ thuộc `order`, nghiệp vụ không biết Kafka tồn tại, và thay Kafka bằng email hay RabbitMQ không đổi code nghiệp vụ. Có injection không đồng nghĩa với đảo chiều phụ thuộc: inject `KafkaPublisher` vẫn để `order` phụ thuộc vào hạ tầng."
+    },
+    {
+      "id": "ocp-sealed-choice",
+      "kind": "single",
+      "prompt": "Hệ thống có đúng ba loại giao hàng (`Standard`, `Express`, `Pickup`), hầu như không đổi. Mỗi quý lại có thao tác mới trên chúng: tính phí, ước thời gian, xuất báo cáo đối soát. Cách tổ chức nào phù hợp nhất với Java 21?",
+      "options": [
+        "`sealed interface` với ba record và `switch` exhaustive cho mỗi thao tác",
+        "Interface `Shipment` với mỗi thao tác là một method abstract mà ba class cài đặt",
+        "Một enum `ShipmentType` và `if-else` theo enum cho từng thao tác",
+        "Lớp cha abstract `BaseShipment` chứa mọi thao tác, lớp con ghi đè khi cần"
+      ],
+      "answer": 0,
+      "explanation": "Khi kiểu cố định và thao tác hay thêm, `sealed` + pattern matching cho phép thêm thao tác bằng một method mới mà không sửa ba class, và compiler báo lỗi nếu sau này có loại thứ tư chưa được xử lý (miễn là các `switch` không có `default`). Method abstract buộc sửa cả ba class mỗi khi thêm thao tác. `if-else` theo enum không được compiler kiểm đủ trường hợp. Ngược lại, nếu loại giao hàng hay thêm mới thì polymorphism lại hợp hơn."
+    }
+  ]
+}

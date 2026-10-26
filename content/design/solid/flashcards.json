@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "srp-actor", "front": "Single Responsibility nói \"một trách nhiệm\" theo nghĩa nào?", "back": "Chỉ một actor (nhóm người yêu cầu) có lý do để đổi class đó; không phải \"class chỉ có một method\"." },
+    { "id": "ocp-signal", "front": "Dấu hiệu hay gặp nhất của vi phạm Open/Closed?", "back": "Cùng một `switch` hay chuỗi `if` theo loại lặp ở nhiều nơi, nên thêm một loại mới phải sửa tất cả." },
+    { "id": "lsp-rules", "front": "Lớp con phải tuân điều gì để thay được lớp cha?", "back": "Không đòi đầu vào chặt hơn, không trả kết quả yếu hơn, và không ném exception mà bên gọi không lường trước." },
+    { "id": "lsp-invariants", "front": "Ngoài đầu vào và đầu ra, Liskov còn đòi lớp con giữ điều gì?", "back": "Bất biến của lớp cha và history constraint: không cho đổi trạng thái mà lớp cha hứa không đổi, như `MutablePoint extends ImmutablePoint`." },
+    { "id": "lsp-jdk", "front": "Ví dụ Liskov bị nới lỏng ngay trong JDK?", "back": "`List.add` là optional operation: `List.of` và `Stream.toList()` là `List` nhưng ném `UnsupportedOperationException` khi `add`." },
+    { "id": "isp", "front": "Interface Segregation chống lại điều gì?", "back": "Bên dùng phụ thuộc vào method nó không gọi, như service chỉ đọc mà phụ thuộc repository có `deleteAll()`." },
+    { "id": "dip-owner", "front": "Theo Dependency Inversion, interface `OrderNotifier` nên nằm ở đâu?", "back": "Trong package nghiệp vụ, đặt tên theo nghiệp vụ; module hạ tầng (Kafka, email) cài đặt nó và phụ thuộc vào nghiệp vụ." },
+    { "id": "di-vs-dip", "front": "Dependency Injection và Dependency Inversion khác nhau thế nào?", "back": "DI là cơ chế đưa dependency vào object; DIP là nguyên tắc về chiều phụ thuộc giữa module cấp cao và cấp thấp." },
+    { "id": "sealed-vs-poly", "front": "Khi nào `sealed` + `switch` hợp hơn polymorphism?", "back": "Khi tập kiểu cố định nhưng thao tác hay thêm mới; compiler báo `switch` chưa xử lý kiểu mới, miễn là `switch` không có `default`." }
+  ]
+}

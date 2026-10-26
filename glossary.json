@@ -3910,6 +3910,190 @@
       "example": "Test đếm từ hai thread đỏ khoảng 3% số lần chạy vì `hits++` không atomic; bật rerun chỉ che lỗi.",
       "related": ["race-condition", "jcstress"],
       "topics": ["testing-concurrency"]
+    },
+    {
+      "id": "coupling",
+      "term": "Coupling",
+      "meaning": "Mức một module phải biết về chi tiết của module khác. Coupling càng cao thì một thay đổi càng lan ra nhiều chỗ.",
+      "example": "`ShippingFeeCalculator` gọi `order.getCustomer().getAddress().getProvince()` nên phụ thuộc cấu trúc của bốn class.",
+      "related": ["cohesion", "law-of-demeter"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "cohesion",
+      "term": "Cohesion",
+      "meaning": "Mức các phần trong một module cùng phục vụ một mục đích. Cohesion cao nghĩa là thứ đổi cùng nhau nằm cùng nhau.",
+      "example": "`OrderPricing` chỉ tính giá là cohesion cao; `CommonUtils` vừa format ngày vừa gửi mail là cohesion thấp.",
+      "related": ["coupling", "single-responsibility"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "composition-over-inheritance",
+      "term": "Composition over inheritance",
+      "meaning": "Ưu tiên giữ object khác làm field và gọi nó, thay vì kế thừa, để không phụ thuộc vào chi tiết cài đặt của lớp cha.",
+      "example": "`AuditedTagSet` giữ một `Set<String>` bên trong thay vì `extends HashSet`.",
+      "related": ["fragile-base-class", "coupling"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "fragile-base-class",
+      "term": "Fragile base class",
+      "meaning": "Lớp con hỏng khi lớp cha đổi chi tiết cài đặt, vì lớp con dựa vào cách lớp cha gọi các method của chính nó.",
+      "example": "Lớp con của `HashSet` đếm ở cả `add` và `addAll` đếm gấp đôi, vì `addAll` kế thừa từ `AbstractCollection` gọi `add`.",
+      "related": ["composition-over-inheritance", "liskov-substitution"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "dry",
+      "term": "DRY",
+      "meaning": "Don't Repeat Yourself: mỗi tri thức (quy tắc nghiệp vụ) có đúng một nơi định nghĩa. Nói về tri thức, không phải mọi đoạn code trông giống nhau.",
+      "example": "Công thức tính thuế VAT nằm ở một class; hai đoạn validate giống nhau của kế toán và kho vẫn để riêng vì đổi vì hai lý do khác nhau.",
+      "related": ["kiss", "yagni"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "kiss",
+      "term": "KISS",
+      "meaning": "Keep It Simple, Stupid: chọn giải pháp đơn giản nhất đáp ứng yêu cầu hiện tại.",
+      "example": "Dùng một bảng cấu hình thay vì tự viết rule engine cho năm quy tắc giảm giá.",
+      "related": ["yagni", "dry"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "yagni",
+      "term": "YAGNI",
+      "meaning": "You Aren't Gonna Need It: không xây tính năng hay tầng trừu tượng cho nhu cầu chưa có.",
+      "example": "Không thêm interface `StorageProvider` hỗ trợ ba cloud khi hệ thống mới chỉ chạy trên một.",
+      "related": ["kiss", "dry"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "law-of-demeter",
+      "term": "Law of Demeter",
+      "meaning": "Một method chỉ nên gọi method của chính object, tham số, field và object nó tạo ra; không đi xuyên qua object khác để ra quyết định.",
+      "example": "Thay `order.getCustomer().getAddress().getCity()` bằng `order.shippingCity()`.",
+      "related": ["coupling"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "solid",
+      "term": "SOLID",
+      "meaning": "Năm nguyên tắc thiết kế hướng đối tượng: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion.",
+      "example": "Thêm cổng thanh toán mới bằng một class implement `PaymentGateway` mà không sửa `CheckoutService`.",
+      "related": ["single-responsibility", "open-closed", "liskov-substitution", "interface-segregation", "dependency-inversion"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "single-responsibility",
+      "term": "Single Responsibility",
+      "meaning": "Nguyên tắc S của SOLID: một class chỉ có một actor (nhóm người yêu cầu) có lý do để thay đổi nó.",
+      "example": "Tách `Employee` thành `PayCalculator` (kế toán), `HourReporter` (nhân sự) và `EmployeeRepository`.",
+      "related": ["solid", "cohesion"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "open-closed",
+      "term": "Open/Closed",
+      "meaning": "Nguyên tắc O của SOLID: module mở để mở rộng nhưng đóng để sửa; thêm hành vi bằng code mới thay vì sửa code đang chạy.",
+      "example": "Thêm `ZaloPayGateway` implement `PaymentGateway` thay vì thêm một `case` vào năm câu `switch`.",
+      "related": ["solid"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "liskov-substitution",
+      "term": "Liskov Substitution",
+      "meaning": "Nguyên tắc L của SOLID: chỗ nào dùng được kiểu cha thì dùng được kiểu con mà bên gọi không bất ngờ; lớp con không đòi đầu vào chặt hơn, không trả kết quả yếu hơn, giữ bất biến.",
+      "example": "`Square extends Rectangle` vi phạm: đặt rộng 5, cao 4 nhưng diện tích ra 16.",
+      "related": ["solid", "fragile-base-class", "contract-test"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "interface-segregation",
+      "term": "Interface Segregation",
+      "meaning": "Nguyên tắc I của SOLID: bên dùng không nên phụ thuộc vào method nó không gọi; tách interface lớn theo nhu cầu bên dùng.",
+      "example": "`ReportService` chỉ phụ thuộc `OrderReader`, không phụ thuộc repository có `deleteAll()`.",
+      "related": ["solid"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "dependency-inversion",
+      "term": "Dependency Inversion",
+      "meaning": "Nguyên tắc D của SOLID: module nghiệp vụ không phụ thuộc module hạ tầng; cả hai phụ thuộc abstraction do phía nghiệp vụ sở hữu.",
+      "example": "Interface `OrderNotifier` nằm trong module `order`; `KafkaOrderNotifier` ở module hạ tầng cài đặt nó.",
+      "related": ["solid", "dependency-injection", "ioc"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "contract-test",
+      "term": "Contract test",
+      "meaning": "Bộ test kiểm hợp đồng chung của một interface, chạy lại cho mọi cài đặt để đảm bảo chúng thay thế được nhau.",
+      "example": "`abstract class PaymentGatewayContractTest` có các test chung; `MomoGatewayTest` và `VnpayGatewayTest` kế thừa nó.",
+      "related": ["liskov-substitution"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "temporal-coupling",
+      "term": "Temporal coupling",
+      "meaning": "Coupling theo thời gian, có hai nghĩa: các lời gọi phải theo đúng thứ tự (gọi `init()` trước `process()`), hoặc hai service phải cùng sống một lúc vì gọi nhau đồng bộ.",
+      "example": "Service đơn hàng gọi REST đồng bộ sang service tồn kho; tồn kho chết thì đặt hàng cũng lỗi.",
+      "related": ["coupling"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "afferent-coupling",
+      "term": "Afferent/efferent coupling",
+      "meaning": "Afferent coupling (Ca) đếm số class bên ngoài phụ thuộc vào một package; efferent coupling (Ce) đếm số class bên ngoài mà package đó phụ thuộc. Instability `I = Ce / (Ca + Ce)`.",
+      "example": "Package `money` được 40 class dùng và không phụ thuộc gì (I = 0) nên phải rất ổn định.",
+      "related": ["coupling", "archunit"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "archunit",
+      "term": "ArchUnit",
+      "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
+      "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
+      "related": ["dependency-inversion", "coupling"],
+      "topics": ["design-principles", "solid"]
+    },
+    {
+      "id": "template-method",
+      "term": "Template Method",
+      "meaning": "Pattern trong đó lớp cha abstract định nghĩa khung của thuật toán, còn lớp con cài đặt một vài bước được chỉ định sẵn.",
+      "example": "`AbstractReportExporter.export()` gọi `header()`, `rows()`, `footer()`; lớp con chỉ cài `rows()`.",
+      "related": ["composition-over-inheritance"],
+      "topics": ["design-principles"]
+    },
+    {
+      "id": "polymorphism",
+      "term": "Polymorphism",
+      "meaning": "Cùng một lời gọi method chạy cài đặt khác nhau tuỳ kiểu thật của object lúc chạy (dynamic dispatch).",
+      "example": "`gateway.pay(order)` chạy `MomoGateway.pay` hay `VnpayGateway.pay` tuỳ object được inject.",
+      "related": ["open-closed", "liskov-substitution"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "optional-operation",
+      "term": "Optional operation",
+      "meaning": "Method trong interface Collections của Java mà cài đặt được phép không hỗ trợ và ném `UnsupportedOperationException`.",
+      "example": "`List.of(1, 2).add(3)` ném `UnsupportedOperationException` vì `add` là optional operation.",
+      "related": ["liskov-substitution"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "expression-problem",
+      "term": "Expression problem",
+      "meaning": "Khó khăn cố hữu khi cần vừa thêm kiểu mới vừa thêm thao tác mới mà không sửa code cũ: polymorphism dễ thêm kiểu, `switch` trên kiểu sealed (hoặc Visitor) dễ thêm thao tác.",
+      "example": "Ba loại giao hàng cố định nhưng mỗi quý thêm một báo cáo: chọn `sealed interface` cùng `switch` exhaustive.",
+      "related": ["open-closed", "polymorphism"],
+      "topics": ["solid"]
+    },
+    {
+      "id": "hexagonal-architecture",
+      "term": "Hexagonal Architecture",
+      "meaning": "Kiến trúc port và adapter: lõi nghiệp vụ định nghĩa interface (port), còn database, broker, HTTP là adapter cài đặt hoặc gọi các port đó.",
+      "example": "Port `OrderRepository` nằm trong lõi; `JpaOrderRepository` là adapter ở tầng hạ tầng.",
+      "related": ["dependency-inversion"],
+      "topics": ["solid"]
     }
   ]
 }
