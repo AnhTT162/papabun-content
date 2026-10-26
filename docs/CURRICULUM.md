@@ -342,8 +342,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 10 | `event-driven-architecture` | ✚ Event-driven architecture | senior | Event notification và event-carried state, broker, eventual consistency, thứ tự, consumer idempotent | L D Sc | ✅ |
 | 11 | `saga` | Saga | senior | Orchestration và choreography, compensation | L S Sc | ✅ |
 | 12 | `outbox-cdc` | Transactional outbox & CDC | senior | Vấn đề dual write, Debezium, thứ tự và trùng lặp | L D B | ✅ |
-| 13 | `cqrs-event-sourcing` | CQRS & Event Sourcing | senior | Read model, projection, snapshot, khi nào không dùng | L D Sc | ⬜ |
-| 14 | `distributed-transactions` | 2PC & giao dịch phân tán | senior | 2PC, XA, vì sao tránh, các lựa chọn thay thế | L S | ⬜ |
+| 13 | `cqrs-event-sourcing` | CQRS & Event Sourcing | senior | Read model, projection, snapshot, khi nào không dùng | L D Sc | ✅ |
+| 14 | `distributed-transactions` | 2PC & giao dịch phân tán | senior | 2PC, XA, vì sao tránh, các lựa chọn thay thế | L S | ✅ |
 | 15 | `consistent-hashing` | ✚ Consistent hashing & phân phối dữ liệu | senior | Vòng hash, virtual node, rebalance, replication theo quorum (N, R, W) | L S D | ⬜ |
 | 16 | `rate-limiting` | Rate limiting | senior | Token bucket, leaky bucket, sliding window; phân tán | L S Sc | ⬜ |
 | 17 | `distributed-locks` | Distributed lock & fencing token | senior | Lease, fencing, vì sao lock dựa trên thời gian nguy hiểm | L S B | ⬜ |

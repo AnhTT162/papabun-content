@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "concurrent-append",
+      "kind": "output",
+      "prompt": "Ví có event `Deposited(100)`, `Withdrawn(30)`. Hai request cùng đọc stream (được `balance=70, version=2`), rồi lần lượt gọi `append(\"wallet-1\", 2, List.of(new Withdrawn(50)))`. Event store từ chối khi `stream.size() != expectedVersion`. Sau đó `load(\"wallet-1\")` in ra gì?",
+      "options": [
+        "State[balance=20, version=3]",
+        "State[balance=-30, version=4]",
+        "State[balance=70, version=2]",
+        "State[balance=20, version=4]"
+      ],
+      "answer": 0,
+      "explanation": "Request đầu append khi stream có 2 event: thành công, stream lên 3 event, số dư 20. Request sau vẫn gửi `expectedVersion = 2` nhưng stream đã có 3 event, nên bị `ConcurrencyException` và không ghi gì. Nếu bỏ kiểm tra version thì cả hai cùng ghi và số dư là -30 ở version 4. Đây là optimistic locking theo từng stream."
+    },
+    {
+      "id": "cqrs-needs-es",
+      "kind": "single",
+      "prompt": "Nhận định nào về CQRS là đúng?",
+      "options": [
+        "Có thể dùng CQRS với một database và không có event sourcing",
+        "CQRS bắt buộc tách database ghi và database đọc",
+        "CQRS bắt buộc dùng event sourcing để đồng bộ read model",
+        "CQRS nghĩa là mọi truy vấn đều eventual consistency"
+      ],
+      "answer": 0,
+      "explanation": "CQRS chỉ là tách mô hình ghi khỏi mô hình đọc. Mức đơn giản nhất là cùng database: lệnh đi qua aggregate, truy vấn đọc thẳng ra DTO. Tách kho đọc và cập nhật bằng event là một mức cao hơn, chỉ khi đó mới có eventual consistency. Event sourcing hay đi cùng CQRS nhưng là quyết định riêng."
+    },
+    {
+      "id": "projection-side-effect",
+      "kind": "single",
+      "prompt": "Đội rebuild projection `order_history` bằng cách phát lại 20 triệu event. Sáng hôm sau hàng nghìn khách nhận email \"đơn hàng đã giao\" cho đơn từ năm ngoái. Nguyên nhân gốc là gì?",
+      "options": [
+        "Projection vừa cập nhật read model vừa gửi email, nên phát lại làm gửi lại",
+        "Event store trả về event trùng do không có khoá chính theo version",
+        "Checkpoint của projection bị đặt sai nên đọc chồng lên vị trí cũ",
+        "Email service không idempotent theo `eventId` của từng event"
+      ],
+      "answer": 0,
+      "explanation": "Rebuild phát lại toàn bộ event theo thiết kế, nên mọi side effect đặt trong projection đều chạy lại. Projection chỉ nên ghi read model; gửi email thuộc về process manager hay saga có lưu trạng thái \"đã gửi\". Khoá chính hay checkpoint không liên quan vì đây là phát lại có chủ đích. Khử trùng theo `eventId` ở email service giúp chống trùng khi retry, nhưng bảng khử trùng thường không giữ id của event từ năm ngoái."
+    },
+    {
+      "id": "unique-email",
+      "kind": "single",
+      "prompt": "Hệ thống event sourcing, mỗi user là một stream có id theo `userId` sinh ngẫu nhiên. Làm sao đảm bảo không có hai user cùng email?",
+      "options": [
+        "Bảng giữ chỗ email có unique constraint, insert trước khi append `UserRegistered`",
+        "Kiểm tra trong aggregate User khi xử lý lệnh đăng ký",
+        "Append có điều kiện theo version của stream user mới",
+        "Projection danh sách user phát hiện trùng rồi báo lỗi cho client"
+      ],
+      "answer": 0,
+      "explanation": "Aggregate User chỉ thấy stream của chính nó, không biết user khác. Version của stream chỉ chống ghi đồng thời vào cùng một stream; hai user mới là hai stream khác nhau. Projection chạy sau khi đã ghi, nên chỉ phát hiện được trùng chứ không chặn. Cần một nơi có ràng buộc toàn cục: bảng giữ chỗ với unique constraint."
+    },
+    {
+      "id": "kafka-event-store",
+      "kind": "single",
+      "prompt": "Vì sao Kafka không hợp làm event store cho các aggregate?",
+      "options": [
+        "Không có append có điều kiện theo version của từng aggregate",
+        "Kafka không giữ được thứ tự message trong một partition",
+        "Kafka luôn xoá message sau khi consumer đã đọc xong",
+        "Kafka không lưu được message lớn hơn một kilobyte"
+      ],
+      "answer": 0,
+      "explanation": "Event sourcing cần phát hiện ghi đồng thời trên một aggregate, tức append \"chỉ khi stream đang ở version 7\"; Kafka không có thao tác này. Đọc lại một aggregate cũng phải quét cả partition. Kafka giữ thứ tự trong partition, giữ message theo retention chứ không xoá khi đã đọc, và giới hạn mặc định khoảng 1 MB, nên các lựa chọn kia là hiểu nhầm."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường ghi và đường đọc của CQRS với event sourcing",
+  "nodes": [
+    {"id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "command", "label": "Command handler", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "projection", "label": "Projection", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "store", "label": "Event store", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "readdb", "label": "Read model", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "query", "label": "Query API", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "client-command", "from": "client", "to": "command", "label": "Withdraw 50"},
+    {"id": "command-store", "from": "command", "to": "store", "label": "append nếu v = 7"},
+    {"id": "store-projection", "from": "store", "to": "projection", "label": "từ checkpoint"},
+    {"id": "projection-readdb", "from": "projection", "to": "readdb", "label": "upsert idempotent"},
+    {"id": "query-readdb", "from": "query", "to": "readdb", "label": "SELECT"},
+    {"id": "client-query", "from": "client", "to": "query", "label": "xem lịch sử"}
+  ],
+  "steps": [
+    {"caption": "Client gửi lệnh rút 50 khỏi ví. Lệnh có thể bị từ chối; event thì không.", "show": ["client", "command", "client-command"], "highlight": ["client-command"]},
+    {"caption": "Command handler đọc stream `wallet-42`, phát lại để có số dư và version 7, kiểm tra đủ tiền, rồi append `Withdrawn(50)` với điều kiện stream vẫn ở version 7.", "show": ["store", "command-store"], "highlight": ["command-store"]},
+    {"caption": "Một request khác đã append trước thì version đã là 8: append bị từ chối, handler đọc lại và kiểm tra lại. Đây là optimistic locking theo từng stream.", "show": [], "highlight": ["command-store"]},
+    {"caption": "Projection đọc event mới kể từ checkpoint, theo thứ tự. Nó chạy bất đồng bộ, nên read model trễ hơn event store một khoảng.", "show": ["projection", "store-projection"], "highlight": ["store-projection"]},
+    {"caption": "Projection cập nhật read model và checkpoint. Gặp lại event sau crash thì upsert theo version, không cộng hai lần.", "show": ["readdb", "projection-readdb"], "highlight": ["projection-readdb"]},
+    {"caption": "Query API chỉ đọc read model đã dàn sẵn cho màn hình, không chạm event store.", "show": ["query", "query-readdb"], "highlight": ["query-readdb"]},
+    {"caption": "Client đọc ngay sau khi ghi có thể thấy dữ liệu cũ. Trả version mới trong response của lệnh, và trang đọc chờ projection đạt version đó.", "show": ["client-query"], "highlight": ["client-query"]}
+  ]
+}

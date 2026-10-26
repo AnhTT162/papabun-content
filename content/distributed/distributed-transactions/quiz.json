@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "in-doubt-behavior",
+      "kind": "single",
+      "prompt": "Participant B đã trả lời YES ở pha prepare, rồi mất liên lạc với coordinator 10 phút. B nên làm gì?",
+      "options": [
+        "Giữ khoá và chờ coordinator, vì tự quyết theo hướng nào cũng có thể sai",
+        "Tự rollback sau timeout, vì chưa nhận được lệnh COMMIT nào",
+        "Tự commit sau timeout, vì đã hứa YES thì kết quả gần như chắc chắn commit",
+        "Hỏi participant A: A đã commit thì B commit, chưa thì B rollback"
+      ],
+      "answer": 0,
+      "explanation": "Đã YES là trao quyền quyết cho coordinator. Tự rollback sai nếu coordinator đã ghi COMMIT; tự commit sai nếu bên khác đã NO. Hỏi A chỉ giúp khi A đã nhận được quyết định; nếu A cũng đang chờ thì không ai biết. Đó chính là tính blocking của 2PC."
+    },
+    {
+      "id": "commit-point",
+      "kind": "single",
+      "prompt": "Trong 2PC, thời điểm nào transaction được coi là chắc chắn commit?",
+      "options": [
+        "Khi coordinator ghi quyết định COMMIT vào log bền của nó",
+        "Khi participant đầu tiên trả lời YES ở pha prepare",
+        "Khi coordinator gửi lệnh COMMIT tới participant đầu tiên",
+        "Khi mọi participant đã trả lời ACK ở pha thứ hai"
+      ],
+      "answer": 0,
+      "explanation": "Ghi log là điểm commit: crash ngay sau đó thì lúc khởi động lại coordinator vẫn đọc được COMMIT và gửi tiếp. Một phiếu YES chưa đủ vì bên khác có thể NO. Gửi lệnh mà chưa ghi log thì crash xong không biết mình đã quyết gì. ACK chỉ là lúc kết thúc, không phải lúc quyết."
+    },
+    {
+      "id": "postgres-prepared",
+      "kind": "single",
+      "prompt": "Trên PostgreSQL, một transaction đã `PREPARE TRANSACTION` bị bỏ quên 3 ngày vì coordinator đã bị gỡ. Hậu quả đáng lo nhất là gì?",
+      "options": [
+        "Giữ khoá và chặn VACUUM dọn dòng chết, bảng phình và có nguy cơ wraparound",
+        "PostgreSQL tự rollback nó sau `idle_in_transaction_session_timeout`",
+        "Nó biến mất ở lần restart tiếp theo và các thay đổi bị mất",
+        "Nó chỉ chiếm một slot của `max_connections` cho tới khi được xử lý"
+      ],
+      "answer": 0,
+      "explanation": "Prepared transaction không gắn với session nào nên timeout của session không áp dụng, và nó sống qua restart. Nó vẫn giữ khoá và giữ mốc xmin, nên VACUUM không dọn được dòng chết sau mốc đó; để lâu thì bảng phình và có thể tiến tới bảo vệ wraparound. Cần cảnh báo dựa trên `pg_prepared_xacts`."
+    },
+    {
+      "id": "why-avoid",
+      "kind": "single",
+      "prompt": "Order service (PostgreSQL) cần giữ hàng ở Inventory service (REST API) và trừ tiền ở cổng thanh toán. Vì sao 2PC không phải lựa chọn ở đây?",
+      "options": [
+        "REST API và cổng thanh toán không tham gia được giao thức prepare/commit",
+        "2PC chỉ hoạt động khi mọi database cùng là PostgreSQL",
+        "2PC chỉ chạy được khi các bên nằm trong cùng một data center",
+        "JTA đã bị loại khỏi Jakarta EE nên Java không còn hỗ trợ XA"
+      ],
+      "answer": 0,
+      "explanation": "2PC cần mọi bên là resource có prepare, commit, rollback và recover; một REST API hay cổng thanh toán bên ngoài không có. XA chạy được giữa các database khác loại và ở khác vị trí (chỉ chậm hơn), và Jakarta Transactions vẫn là một phần của Jakarta EE. Ở đây dùng saga với bù trừ."
+    },
+    {
+      "id": "2pc-vs-consensus",
+      "kind": "single",
+      "prompt": "Khác biệt cốt lõi giữa 2PC và consensus (Raft) là gì?",
+      "options": [
+        "2PC cần mọi bên đồng ý; Raft chỉ cần đa số và chịu được thiểu số chết",
+        "Cả hai cần mọi node đồng ý, nhưng Raft có thêm cơ chế bầu leader",
+        "2PC tự chọn coordinator mới khi coordinator chết, giống Raft bầu leader",
+        "Raft đảm bảo atomic commit giữa các database khác nhau, 2PC thì không"
+      ],
+      "answer": 0,
+      "explanation": "2PC giải bài toán atomic commit: một bên NO là huỷ, và block khi coordinator chết vì không có cơ chế chọn coordinator mới. Raft giải bài toán đồng thuận về một chuỗi lệnh trong một nhóm nhân bản: đa số đồng ý là đủ, leader chết thì bầu leader mới. Raft không điều phối commit giữa các database độc lập. Spanner kết hợp hai thứ: 2PC giữa các nhóm, mỗi nhóm nhân bản bằng Paxos."
+    }
+  ]
+}

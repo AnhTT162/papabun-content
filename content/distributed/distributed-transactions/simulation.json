@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Một transaction 2PC qua hai database A và B",
+  "instructions": "Đi đường thành công trước: gửi PREPARE, hai phiếu YES, đủ ACK. Sau đó cho coordinator chết ở lúc chờ phiếu và lúc đang commit rồi cho nó dậy, để thấy log quyết định thế nào. Thử thêm \"DBA rollback tay\" khi đang in-doubt.",
+  "config": {
+    "states": [
+      { "id": "working", "label": "Đang thực thi", "x": 0.1, "y": 0.05, "note": "Ứng dụng đã chạy `UPDATE` trên A và B trong cùng một transaction toàn cục (Xid). Mỗi database giữ khoá dòng nhưng chưa hứa gì: lúc này bất kỳ bên nào cũng có thể tự rollback." },
+      { "id": "preparing", "label": "Chờ phiếu", "x": 0.5, "y": 0.05, "note": "Coordinator đã gửi PREPARE cho A và B. Bên nào trả lời YES đã ghi đủ dữ liệu xuống đĩa và **mất quyền tự quyết**: từ giờ chỉ coordinator được bảo nó commit hay rollback." },
+      { "id": "committing", "label": "Đang commit", "x": 0.9, "y": 0.05, "note": "Đủ hai phiếu YES. Coordinator **ghi COMMIT vào log của nó trước**, rồi mới gửi COMMIT cho A và B. Lần ghi log đó là điểm commit: từ đây transaction chắc chắn commit, chỉ còn chuyện bao giờ." },
+      { "id": "aborting", "label": "Đang rollback", "x": 0.1, "y": 0.5, "note": "Coordinator gửi ROLLBACK cho mọi bên, kể cả bên đã YES, và retry tới khi đủ ACK. Với presumed abort, quyết định ABORT không cần ghi log." },
+      { "id": "indoubt", "label": "In-doubt", "x": 0.5, "y": 0.5, "note": "Coordinator chết. Bên đã YES không biết kết quả: tự commit có thể sai, tự rollback cũng có thể sai. Nó **giữ khoá** trên các dòng đã sửa, chặn mọi transaction khác, và ở PostgreSQL còn chặn VACUUM. `pg_prepared_xacts` hoặc `XA RECOVER` liệt kê các transaction này." },
+      { "id": "aborted", "label": "Đã rollback", "x": 0.1, "y": 0.95, "note": "Không bên nào commit. Khoá được nhả. Dữ liệu nhất quán." },
+      { "id": "broken", "label": "Lệch dữ liệu", "x": 0.5, "y": 0.95, "note": "Heuristic mixed: A đã commit theo quyết định của coordinator, B bị DBA rollback tay. Không giao thức nào tự sửa được nữa; phải đối soát và sửa dữ liệu bằng tay. JTA báo `HeuristicMixedException`." },
+      { "id": "committed", "label": "Đã commit", "x": 0.9, "y": 0.95, "note": "Cả A và B đã commit, khoá được nhả. Coordinator có thể xoá bản ghi log của transaction này." }
+    ],
+    "initial": "working",
+    "events": [
+      { "id": "prepare", "label": "Gửi PREPARE" },
+      { "id": "vote-yes", "label": "Phiếu YES" },
+      { "id": "vote-no", "label": "Phiếu NO" },
+      { "id": "participant-crash", "label": "B chết" },
+      { "id": "coord-crash", "label": "Coordinator chết" },
+      { "id": "coord-recover", "label": "Coordinator dậy" },
+      { "id": "dba-rollback", "label": "DBA rollback tay" },
+      { "id": "acks", "label": "Đủ ACK" }
+    ],
+    "counters": [
+      { "id": "votes", "label": "Phiếu YES", "initial": 0 },
+      { "id": "decision", "label": "COMMIT trong log", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "send-prepare", "from": "working", "event": "prepare", "to": "preparing", "label": "pha 1", "effects": [ { "counter": "votes", "set": 0 }, { "counter": "decision", "set": 0 } ], "note": "Ứng dụng gọi commit; transaction manager bắt đầu pha 1 và gửi `prepare(xid)` cho từng `XAResource`." },
+      { "id": "crash-before-prepare", "from": "working", "event": "coord-crash", "to": "aborted", "label": "chưa ai hứa", "note": "Chưa bên nào prepare nên chưa ai bị trói buộc. Kết nối đứt, mỗi database tự rollback transaction cục bộ của nó." },
+      { "id": "first-yes", "from": "preparing", "event": "vote-yes", "to": "preparing", "label": "1/2 YES", "guard": { "counter": "votes", "lt": 1 }, "effects": [ { "counter": "votes", "add": 1 } ], "note": "A đã prepare: dữ liệu đã nằm trên đĩa, khoá vẫn giữ. Coordinator chờ phiếu của B." },
+      { "id": "second-yes", "from": "preparing", "event": "vote-yes", "to": "committing", "label": "ghi COMMIT", "effects": [ { "counter": "votes", "add": 1 }, { "counter": "decision", "set": 1 } ], "note": "Đủ YES. Coordinator ghi quyết định COMMIT xuống log bền rồi mới bắt đầu pha 2." },
+      { "id": "got-no", "from": "preparing", "event": "vote-no", "to": "aborting", "label": "một NO là huỷ", "note": "Chỉ cần một bên NO (vi phạm constraint, hết chỗ đĩa, deadlock) là cả transaction huỷ. Đây là khác biệt với consensus, nơi chỉ cần đa số." },
+      { "id": "no-vote", "from": "preparing", "event": "participant-crash", "to": "aborting", "label": "hết giờ chờ phiếu", "note": "B chết trước khi trả lời. Chưa có quyết định nào nên coordinator được phép huỷ sau timeout. B dậy mà chưa prepare thì tự rollback phần của mình." },
+      { "id": "crash-while-voting", "from": "preparing", "event": "coord-crash", "to": "indoubt", "label": "chết khi chờ phiếu", "note": "Bên nào đã YES giờ bị kẹt. Coordinator chưa ghi quyết định nào vào log." },
+      { "id": "crash-while-committing", "from": "committing", "event": "coord-crash", "to": "indoubt", "label": "chết sau khi ghi log", "note": "COMMIT đã nằm trong log, có thể đã gửi tới A nhưng chưa tới B. B vẫn đang chờ, giữ khoá." },
+      { "id": "recover-commit", "from": "indoubt", "event": "coord-recover", "to": "committing", "label": "log: COMMIT", "guard": { "counter": "decision", "eq": 1 }, "note": "Coordinator khởi động lại, gọi `recover()` để lấy các Xid đang prepared, thấy COMMIT trong log nên gửi COMMIT tiếp. Bên đã commit nhận lại lệnh thì trả lời OK." },
+      { "id": "recover-abort", "from": "indoubt", "event": "coord-recover", "to": "aborting", "label": "presumed abort", "note": "Không có quyết định trong log: coi là ABORT và gửi ROLLBACK cho các Xid đang prepared. Đúng vì chắc chắn chưa bên nào được bảo commit." },
+      { "id": "dba-wrong", "from": "indoubt", "event": "dba-rollback", "to": "broken", "label": "heuristic sai", "guard": { "counter": "decision", "eq": 1 }, "note": "DBA chạy `ROLLBACK PREPARED` cho B mà không xem log, trong khi coordinator đã quyết COMMIT và A đã commit. Dữ liệu giữa A và B lệch vĩnh viễn." },
+      { "id": "dba-lucky", "from": "indoubt", "event": "dba-rollback", "to": "aborting", "label": "heuristic may", "note": "Lần này coordinator chưa quyết gì nên rollback tay trùng với presumed abort. May mắn, không phải quy trình: luôn đọc log của coordinator trước khi quyết tay." },
+      { "id": "commit-retry", "from": "committing", "event": "participant-crash", "to": "committing", "label": "retry COMMIT", "note": "B chết sau khi đã YES. Quyết định không đổi: transaction đã prepare sống qua restart, B dậy thì coordinator gửi lại COMMIT. Không được rollback A vì B đang chết." },
+      { "id": "commit-done", "from": "committing", "event": "acks", "to": "committed", "label": "pha 2 xong", "note": "A và B xác nhận đã commit. Khoá được nhả." },
+      { "id": "abort-done", "from": "aborting", "event": "acks", "to": "aborted", "label": "rollback xong", "note": "Mọi bên đã rollback, kể cả bên đã YES." }
+    ],
+    "invalidNote": "Sự kiện này không xảy ra ở trạng thái hiện tại, hoặc coordinator bỏ qua nó."
+  }
+}

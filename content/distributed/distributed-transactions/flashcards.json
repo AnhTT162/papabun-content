@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Two-phase commit là gì?", "back": "Giao thức để nhiều resource cùng commit hoặc cùng rollback: pha 1 hỏi mọi bên prepare và bỏ phiếu, pha 2 gửi quyết định chung." },
+    { "id": "yes-vote", "front": "Participant trả lời YES ở pha prepare nghĩa là gì?", "back": "Đã ghi đủ dữ liệu xuống đĩa để commit được kể cả khi crash, vẫn giữ khoá, và từ bỏ quyền tự commit hay rollback." },
+    { "id": "commit-point", "front": "Điểm commit của 2PC nằm ở đâu?", "back": "Lúc coordinator ghi quyết định COMMIT vào log bền của nó, trước khi gửi pha 2." },
+    { "id": "blocking", "front": "Vì sao 2PC được gọi là giao thức blocking?", "back": "Coordinator chết sau khi participant đã YES thì participant ở trạng thái in-doubt, giữ khoá chờ coordinator hồi phục." },
+    { "id": "presumed-abort", "front": "Presumed abort là gì?", "back": "Quy ước khi recovery: không tìm thấy quyết định trong log của coordinator thì coi transaction là ABORT." },
+    { "id": "pg-prepared", "front": "Prepared transaction bị bỏ quên trên PostgreSQL gây hại gì?", "back": "Giữ khoá, sống qua restart và chặn VACUUM dọn dòng chết; theo dõi bằng `pg_prepared_xacts`." },
+    { "id": "heuristic", "front": "Heuristic mixed là gì?", "back": "Có bên commit, có bên rollback vì người hoặc resource tự quyết khi in-doubt; dữ liệu lệch và phải sửa tay." },
+    { "id": "why-avoid", "front": "Vì sao tránh 2PC giữa các microservice?", "back": "Mọi bên phải sống cùng lúc, khoá giữ suốt hai pha, REST và Kafka không phải XA resource, in-doubt cần xử lý tay." },
+    { "id": "alternatives", "front": "Thay 2PC bằng gì giữa các service?", "back": "Vẽ lại ranh giới về một database nếu được; outbox cho ghi và phát event; saga hoặc TCC cho nhiều bước; đối soát làm lưới an toàn." }
+  ]
+}

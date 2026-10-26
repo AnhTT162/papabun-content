@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Ví điểm thưởng: có nên dùng event sourcing?",
+  "prompt": "Một chuỗi bán lẻ làm ví điểm thưởng cho 5 triệu khách. Điểm được cộng khi mua hàng, trừ khi đổi quà, hết hạn sau 12 tháng theo từng lô điểm. Lúc cao điểm khoảng 2.000 lệnh mỗi giây, mỗi ví thường chỉ vài lệnh mỗi ngày. Yêu cầu: không bao giờ âm điểm; bộ phận chăm sóc khách hàng phải trả lời được \"vì sao số điểm của tôi ngày 15/3 là 820\"; app hiện số dư và 50 giao dịch gần nhất trong 200 ms; phòng marketing muốn báo cáo theo cửa hàng, theo chiến dịch và sẽ thêm báo cáo mới mỗi quý; khách có quyền yêu cầu xoá dữ liệu cá nhân. Đội 6 người, đã quen Spring và PostgreSQL, chưa dùng event store bao giờ. Tech lead đề xuất event sourcing + CQRS cho toàn bộ hệ thống. Bạn quyết định thế nào và thiết kế ra sao?",
+  "hints": [
+    "Yêu cầu nào thật sự cần lịch sử đầy đủ, yêu cầu nào chỉ cần đọc nhanh?",
+    "Một bảng sổ cái append-only khác event sourcing ở điểm nào? Thiếu gì so với nó?",
+    "Hai lệnh đổi quà cùng lúc trên một ví: chặn âm điểm bằng gì?",
+    "Báo cáo mới mỗi quý cần dữ liệu từ năm ngoái: lấy từ đâu?"
+  ],
+  "solution": "**Phạm vi**: chỉ ví điểm cần lịch sử; danh mục quà, cấu hình chiến dịch là CRUD, giữ CRUD. Không áp event sourcing cho cả hệ thống.\n\n**Lựa chọn khuyến nghị cho đội này: sổ cái append-only trên PostgreSQL**, gần với event sourcing nhưng ít bộ phận hơn:\n- Bảng `point_entries(wallet_id, seq, type, points, lot_id, campaign_id, store_id, created_at)` chỉ insert, khoá chính `(wallet_id, seq)`. Mỗi dòng là một event nghiệp vụ: `PointsEarned`, `PointsRedeemed`, `PointsExpired`.\n- Bảng `wallets(wallet_id, balance, last_seq)` cập nhật **trong cùng transaction**: `UPDATE wallets SET balance = balance - :p, last_seq = last_seq + 1 WHERE wallet_id = :id AND balance >= :p`. Sửa 0 dòng là không đủ điểm. Ở READ COMMITTED (mặc định của PostgreSQL), hai lệnh đổi quà cùng lúc bị xếp hàng bởi khoá dòng và lệnh sau đánh giá lại điều kiện trên số dư mới, không thể âm; ở REPEATABLE READ thì lệnh sau báo lỗi serialization và phải retry.\n- \"Vì sao 820 ngày 15/3\": cộng các dòng tới mốc đó, liệt kê từng dòng kèm chiến dịch và cửa hàng.\n- Số dư và 50 giao dịch gần nhất: đọc thẳng `wallets` và index `(wallet_id, seq DESC)`: hai truy vấn theo khoá chính và index, dư sức trong 200 ms, dữ liệu không trễ, không cần projection.\n\n**CQRS chỉ ở phía báo cáo**: [[cdc|CDC]] (hoặc outbox) đẩy dòng mới của `point_entries` ra Kafka; projection nạp vào kho phân tích (bảng tổng hợp hoặc kho dữ liệu cột). Báo cáo mới mỗi quý: viết projection mới và nạp lại từ `point_entries`, vì sổ cái giữ đủ lịch sử. Báo cáo trễ vài phút là chấp nhận được.\n\n**Hết hạn theo lô**: bảng `point_lots(lot_id, wallet_id, expires_at, remaining)`; đổi quà trừ `remaining` của lô sắp hết hạn trước (FIFO theo hạn) trong cùng transaction, mỗi lô bị trừ ghi một dòng sổ cái. Job hằng đêm tìm lô hết hạn còn `remaining > 0`, ghi `PointsExpired` và trừ số dư trong cùng transaction. Idempotent theo `lot_id`: chạy lại không trừ hai lần.\n\n**Xoá dữ liệu cá nhân**: sổ cái chỉ chứa `wallet_id`, không chứa tên, số điện thoại. Thông tin cá nhân nằm ở bảng khách hàng, xoá được. Nếu bắt buộc lưu dữ liệu cá nhân trong event thì dùng crypto-shredding.\n\n**Khi nào lên event sourcing đầy đủ**: khi trạng thái ví phức tạp hơn một con số (nhiều lô, nhiều quy tắc), cần dựng lại trạng thái theo logic mới từ event cũ, hoặc nhiều bất biến phải kiểm tra trên trạng thái phát lại. Lúc đó mỗi ví là một stream, append có điều kiện theo version, snapshot theo năm khi stream dài, và đội cần thời gian học vận hành.\n\n**Trả lời tech lead**: mục tiêu (lịch sử, audit, báo cáo mới) đạt được bằng sổ cái + CDC, với đường đọc chính không có độ trễ eventual consistency. Event sourcing toàn hệ thống thêm event store, projection, upcaster, rebuild mà không yêu cầu nào đòi hỏi.",
+  "tradeoffs": [
+    {
+      "option": "Sổ cái append-only + số dư cùng transaction, CDC cho báo cáo",
+      "pros": [
+        "Đội đã quen PostgreSQL, truy vấn bằng SQL",
+        "Số dư đọc ngay sau khi ghi, không trễ",
+        "Đủ lịch sử để audit và nạp lại báo cáo"
+      ],
+      "cons": [
+        "Đổi logic tính số dư không tự áp lại cho quá khứ",
+        "Hai nguồn (sổ cái, bảng số dư) phải giữ khớp, cần đối soát"
+      ]
+    },
+    {
+      "option": "Event sourcing + CQRS cho ví điểm",
+      "pros": [
+        "Event là nguồn sự thật duy nhất, dựng lại mọi trạng thái",
+        "Thêm read model mới bằng cách phát lại"
+      ],
+      "cons": [
+        "Read model trễ, phải xử lý read your writes",
+        "Event store, projection, upcaster, rebuild là việc vận hành mới",
+        "Đội chưa có kinh nghiệm"
+      ]
+    },
+    {
+      "option": "CRUD + bảng audit bằng trigger",
+      "pros": [
+        "Đơn giản nhất",
+        "Không đổi code ghi hiện có"
+      ],
+      "cons": [
+        "Audit ghi \"cột nào đổi\", không ghi ý nghĩa nghiệp vụ",
+        "Khó trả lời \"vì sao 820\" theo chiến dịch, theo lô"
+      ]
+    }
+  ]
+}

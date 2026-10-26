@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cqrs-event-sourcing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "CQRS & Event Sourcing",
+  "summary": "Ba mức CQRS; event sourcing: stream theo aggregate, phát lại, append có điều kiện theo version; projection, checkpoint, rebuild; snapshot; read your writes; event store trên PostgreSQL và lỗi global position; vì sao Kafka không phải event store; bất biến giữa nhiều aggregate; side effect khi phát lại; upcasting; crypto-shredding; sổ cái append-only làm phương án nhẹ; khi nào không dùng.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 16,
+  "prerequisites": ["event-driven-architecture", "ddd-tactical", "outbox-cdc"],
+  "terms": ["cqrs", "event-sourcing", "projection", "read-model", "event-store", "es-snapshot", "aggregate-root", "upcasting", "crypto-shredding", "optimistic-locking", "eventual-consistency", "cdc", "idempotency", "bounded-context", "saga"],
+  "references": [
+    { "title": "Martin Fowler: CQRS", "url": "https://martinfowler.com/bliki/CQRS.html" },
+    { "title": "Microsoft Learn: Event Sourcing pattern", "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing" },
+    { "title": "microservices.io: Pattern: Event sourcing", "url": "https://microservices.io/patterns/data/event-sourcing.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đổi cấu trúc event đã lưu ba năm thì làm sao?\" Event không sửa: thêm phiên bản mới, viết upcaster chuyển bản cũ sang mới lúc đọc, projection chỉ xử lý dạng mới. Đổi lớn thì sao chép sang stream mới (copy-and-transform) và chuyển hẳn. Người phỏng vấn hay hỏi tiếp \"vậy sao không dùng bảng audit\": nếu chỉ cần biết ai sửa gì lúc nào thì bảng audit đủ; event sourcing đáng giá khi cần dựng lại trạng thái hoặc read model mới từ lịch sử." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng đặt gửi email, gọi thanh toán hay publish ra service khác trong projection. Ngày bạn rebuild projection bằng cách phát lại toàn bộ event, mọi side effect đó chạy lại cho mọi khách hàng." }
+  ]
+}

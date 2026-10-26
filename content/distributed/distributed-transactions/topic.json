@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "distributed-transactions",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "2PC & giao dịch phân tán",
+  "summary": "Hai pha prepare và commit, điểm commit trong log của coordinator, blocking và trạng thái in-doubt; XA và JTA, `XAResource.recover`; presumed abort; prepared transaction trên PostgreSQL và XA trên MySQL; heuristic decision; tối ưu một pha và last resource commit; 3PC; 2PC khác consensus; 2PC trên nền Paxos/Raft trong Spanner, CockroachDB; Kafka transaction; vì sao tránh giữa các service và các lựa chọn thay thế.",
+  "level": "senior",
+  "order": 14,
+  "minutes": 15,
+  "prerequisites": ["data-consistency-services", "saga", "transaction-isolation"],
+  "terms": ["two-phase-commit", "in-doubt-transaction", "xa", "jta", "presumed-abort", "heuristic-decision", "consensus", "tcc", "xid-wraparound", "outbox", "saga", "reconciliation", "vacuum"],
+  "references": [
+    { "title": "PostgreSQL: PREPARE TRANSACTION", "url": "https://www.postgresql.org/docs/current/sql-prepare-transaction.html" },
+    { "title": "MySQL 8.4 Reference Manual: XA Transactions", "url": "https://dev.mysql.com/doc/refman/8.4/en/xa.html" },
+    { "title": "Jakarta Transactions specification", "url": "https://jakarta.ee/specifications/transactions/" },
+    { "title": "Apache Kafka KIP-98: Exactly Once Delivery and Transactional Messaging", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-98+-+Exactly+Once+Delivery+and+Transactional+Messaging" },
+    { "title": "Corbett et al.: Spanner, Google's Globally-Distributed Database (OSDI 2012)", "url": "https://research.google/pubs/spanner-googles-globally-distributed-database-2/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Coordinator chết giữa chừng thì sao?\" Trả lời theo thời điểm: chết trước khi ai YES thì mọi bên tự rollback; chết sau khi có bên YES thì bên đó in-doubt, giữ khoá chờ; coordinator dậy đọc log, có COMMIT thì gửi tiếp, không có thì presumed abort. Người phỏng vấn hay hỏi tiếp \"vậy Spanner dùng 2PC sao không bị block\": vì coordinator và participant đều là nhóm Paxos nhân bản, một máy chết thì máy khác trong nhóm tiếp quản log." },
+    { "type": "callout", "style": "warning", "markdown": "Bật `max_prepared_transactions` trên PostgreSQL mà không có transaction manager thật sự dọn dẹp là tự đặt bẫy: một prepared transaction bị quên giữ khoá và chặn VACUUM mãi mãi, kể cả qua restart. Có cảnh báo trên `pg_prepared_xacts` trước khi bật." }
+  ]
+}

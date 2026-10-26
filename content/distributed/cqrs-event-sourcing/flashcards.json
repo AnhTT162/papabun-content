@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cqrs-definition", "front": "CQRS là gì?", "back": "Tách mô hình ghi (nhận lệnh, giữ bất biến) khỏi mô hình đọc (dữ liệu dàn sẵn cho truy vấn). Không bắt buộc hai database hay event sourcing." },
+    { "id": "es-definition", "front": "Event sourcing là gì?", "back": "Lưu chuỗi event bất biến làm nguồn sự thật; trạng thái hiện tại có được bằng cách phát lại event của aggregate." },
+    { "id": "expected-version", "front": "Event store chống hai lệnh ghi đồng thời vào một aggregate thế nào?", "back": "Append có điều kiện theo version mong đợi của stream; stream đã đổi version thì append bị từ chối và lệnh phải đọc lại, kiểm tra lại." },
+    { "id": "command-retry", "front": "Expected version có chặn được client retry lệnh sau timeout không?", "back": "Không: lần retry đọc version mới và ghi lần hai. Cần commandId lưu cùng event hoặc bảng khử trùng trong cùng transaction với append." },
+    { "id": "projection", "front": "Projection là gì và phải có tính chất gì?", "back": "Thành phần đọc event theo thứ tự để cập nhật read model và lưu checkpoint. Phải idempotent và không gây side effect, vì sẽ được phát lại." },
+    { "id": "snapshot", "front": "Snapshot trong event sourcing dùng để làm gì?", "back": "Lưu trạng thái ở version N để chỉ phát lại event sau N. Nó là cache: xoá đi vẫn dựng lại được từ event." },
+    { "id": "read-your-writes", "front": "Người dùng ghi xong tải lại không thấy thay đổi. Vì sao và sửa thế nào?", "back": "Projection chưa xử lý tới event mới. Trả version mới trong response và chờ read model đạt version đó, hoặc cập nhật giao diện từ dữ liệu vừa gửi." },
+    { "id": "when-not", "front": "Khi nào không nên dùng event sourcing?", "back": "CRUD đơn giản, chỉ cần audit, đội chưa vận hành được, hoặc dữ liệu cá nhân phải xoá được. Sổ cái append-only thường đủ." },
+    { "id": "cross-aggregate", "front": "Bất biến trên nhiều aggregate (email không trùng) kiểm tra ở đâu?", "back": "Không trong aggregate: dùng bảng giữ chỗ có unique constraint ghi trước khi append event, hoặc phát hiện và bù trừ." },
+    { "id": "gdpr", "front": "Xoá dữ liệu cá nhân trong event store bất biến thế nào?", "back": "Crypto-shredding: mã hoá trường cá nhân bằng khoá riêng mỗi người, xoá khoá khi có yêu cầu; hoặc không đưa dữ liệu cá nhân vào event." }
+  ]
+}

@@ -917,7 +917,7 @@
       "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
       "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
       "related": ["pessimistic-locking", "lost-update"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns", "ddd-tactical"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns", "ddd-tactical", "cqrs-event-sourcing"]
     },
     {
       "id": "serialization-failure",
@@ -1405,7 +1405,7 @@
       "meaning": "Khái niệm của Domain-Driven Design: một cụm entity luôn được thay đổi cùng nhau như một đơn vị nhất quán, và mọi thay đổi đi qua entity gốc (root).",
       "example": "`Order` là root của các `OrderLine`; sửa một dòng hàng cũng tính là sửa đơn hàng.",
       "related": ["optimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking", "ddd-tactical", "event-driven-architecture"]
+      "topics": ["optimistic-pessimistic-locking", "ddd-tactical", "event-driven-architecture", "cqrs-event-sourcing"]
     },
     {
       "id": "advisory-lock",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions"]
     },
     {
       "id": "replication-slot",
@@ -1949,7 +1949,7 @@
       "meaning": "Lệnh bảo trì của PostgreSQL: dọn dòng chết (phiên bản cũ không ai còn thấy) để chỗ của chúng được dùng lại, cập nhật visibility map và freeze dòng cũ. Không chặn đọc ghi.",
       "example": "`VACUUM (VERBOSE) orders;` in ra số dòng chết đã dọn và số dòng chưa được phép dọn.",
       "related": ["autovacuum", "mvcc", "table-bloat"],
-      "topics": ["mvcc-vacuum", "postgres-vs-mysql"]
+      "topics": ["mvcc-vacuum", "postgres-vs-mysql", "distributed-transactions"]
     },
     {
       "id": "autovacuum",
@@ -2005,7 +2005,7 @@
       "meaning": "XID của PostgreSQL chỉ 32 bit, quay vòng sau khoảng 4 tỉ transaction. Tuple chưa được freeze có thể bị coi là \"ở tương lai\" và biến mất, nên PostgreSQL ngừng nhận transaction ghi trước khi tới đó.",
       "example": "Log (PostgreSQL 14+): `WARNING: database \"shop\" must be vacuumed within 39985967 transactions`.",
       "related": ["tuple-freezing", "autovacuum"],
-      "topics": ["mvcc-vacuum", "postgres-vs-mysql"]
+      "topics": ["mvcc-vacuum", "postgres-vs-mysql", "distributed-transactions"]
     },
     {
       "id": "tuple-freezing",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "cqrs-event-sourcing"]
     },
     {
       "id": "ubiquitous-language",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services", "event-driven-architecture"]
+      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services", "event-driven-architecture", "cqrs-event-sourcing"]
     },
     {
       "id": "event-publication-registry",
@@ -4589,7 +4589,7 @@
       "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
       "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
       "related": ["eventual-consistency", "outbox"],
-      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "saga"]
+      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "saga", "distributed-transactions", "cqrs-event-sourcing"]
     },
     {
       "id": "jpms",
@@ -4813,7 +4813,7 @@
       "meaning": "Tính chất của thao tác mà làm nhiều lần cho cùng trạng thái hệ thống như làm một lần; điều kiện để retry an toàn.",
       "example": "`UPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING'` chạy hai lần vẫn chỉ đổi một lần.",
       "related": ["idempotency-key", "idempotent-consumer"],
-      "topics": ["idempotency"]
+      "topics": ["idempotency", "cqrs-event-sourcing"]
     },
     {
       "id": "reconciliation",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions"]
     },
     {
       "id": "jitter",
@@ -4981,7 +4981,7 @@
       "meaning": "Lưu trạng thái của aggregate dưới dạng chuỗi event đã xảy ra; trạng thái hiện tại có được bằng cách phát lại các event.",
       "example": "Tài khoản lưu `Deposited 100`, `Withdrawn 30` thay vì cột `balance = 70`.",
       "related": ["cqrs", "domain-event"],
-      "topics": ["event-driven-architecture"]
+      "topics": ["event-driven-architecture", "cqrs-event-sourcing"]
     },
     {
       "id": "cqrs",
@@ -4989,7 +4989,7 @@
       "meaning": "Command Query Responsibility Segregation: tách mô hình ghi (xử lý lệnh) và mô hình đọc (phục vụ truy vấn), thường đồng bộ với nhau bằng event.",
       "example": "Ghi đơn vào bảng chuẩn hoá; một projection cập nhật bảng `order_summary` để màn hình danh sách đọc nhanh.",
       "related": ["event-sourcing"],
-      "topics": ["event-driven-architecture"]
+      "topics": ["event-driven-architecture", "cqrs-event-sourcing"]
     },
     {
       "id": "choreography",
@@ -5110,6 +5110,118 @@
       "example": "`wal_level = logical` rồi tạo slot cho Debezium.",
       "related": ["wal", "replication-slot", "cdc"],
       "topics": ["outbox-cdc"]
+    },
+    {
+      "id": "projection",
+      "term": "Projection",
+      "meaning": "Thành phần đọc event theo thứ tự để dựng và cập nhật một read model, lưu lại vị trí đã xử lý (checkpoint). Phải idempotent và phát lại được từ đầu.",
+      "example": "Projection `OrderSummaryProjection` nghe `OrderPlaced`, `OrderShipped` và upsert bảng `order_summary` cho màn hình danh sách đơn.",
+      "related": ["read-model", "event-sourcing", "cqrs"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "read-model",
+      "term": "Read model",
+      "meaning": "Dữ liệu được dàn sẵn theo đúng nhu cầu của một màn hình hay truy vấn, tách khỏi mô hình ghi; thường cập nhật bất đồng bộ nên có thể trễ.",
+      "example": "Bảng `wallet_statement(wallet_id, seq, description, amount, balance_after)` chỉ để hiện sao kê, không ai ghi trực tiếp vào nó.",
+      "related": ["projection", "cqrs"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "event-store",
+      "term": "Event store",
+      "meaning": "Kho lưu event append-only, chia theo stream (mỗi aggregate một stream), hỗ trợ append có điều kiện theo version và đọc lại một stream hoặc toàn bộ theo thứ tự.",
+      "example": "EventStoreDB (nay là KurrentDB), Axon Server, hoặc bảng PostgreSQL với khoá chính `(stream_id, version)`.",
+      "related": ["event-sourcing", "optimistic-locking"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "es-snapshot",
+      "term": "Snapshot (event sourcing)",
+      "meaning": "Trạng thái của aggregate được lưu tại một version để lần nạp sau chỉ phát lại các event sau version đó. Là cache, xoá đi vẫn dựng lại được.",
+      "example": "Lưu snapshot của ví ở version 5.000; nạp ví thì đọc snapshot rồi phát lại 12 event sau đó thay vì 5.012 event.",
+      "related": ["event-sourcing", "event-store"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "upcasting",
+      "term": "Upcasting",
+      "meaning": "Chuyển event phiên bản cũ sang cấu trúc phiên bản mới ngay lúc đọc, vì event đã lưu không được sửa.",
+      "example": "Upcaster đổi `CustomerRegistered` v1 có trường `name` thành v2 có `firstName`, `lastName` trước khi đưa cho aggregate.",
+      "related": ["event-sourcing", "schema-compatibility"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "crypto-shredding",
+      "term": "Crypto-shredding",
+      "meaning": "Mã hoá dữ liệu cá nhân bằng khoá riêng của từng người; khi cần xoá thì xoá khoá, dữ liệu còn đó nhưng không đọc được nữa.",
+      "example": "Event lưu email đã mã hoá bằng khoá của user 42 trong kho khoá; user yêu cầu xoá thì xoá khoá đó.",
+      "related": ["event-sourcing"],
+      "topics": ["cqrs-event-sourcing"]
+    },
+    {
+      "id": "two-phase-commit",
+      "term": "2PC",
+      "meaning": "Two-phase commit: giao thức để nhiều resource cùng commit hoặc cùng rollback. Pha 1 coordinator hỏi mọi bên prepare và bỏ phiếu; pha 2 gửi quyết định chung.",
+      "example": "Chuyển tiền giữa hai database: cả hai prepare và trả lời YES, coordinator ghi COMMIT vào log rồi gửi COMMIT cho cả hai.",
+      "related": ["xa", "in-doubt-transaction", "saga"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "in-doubt-transaction",
+      "term": "In-doubt transaction",
+      "meaning": "Transaction mà participant đã prepare (trả lời YES) nhưng chưa nhận được quyết định của coordinator; nó giữ khoá và không được tự quyết.",
+      "example": "Coordinator chết sau pha 1; `SELECT * FROM pg_prepared_xacts` trên PostgreSQL vẫn thấy transaction đó sau nhiều giờ.",
+      "related": ["two-phase-commit", "presumed-abort"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "xa",
+      "term": "XA",
+      "meaning": "Chuẩn X/Open cho giao dịch phân tán: transaction manager điều phối nhiều resource manager (database, message broker) qua các thao tác start, end, prepare, commit, rollback, recover.",
+      "example": "MySQL: `XA START 't1'; ... XA END 't1'; XA PREPARE 't1'; XA COMMIT 't1';`.",
+      "related": ["two-phase-commit", "jta"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "jta",
+      "term": "JTA",
+      "meaning": "Jakarta Transactions (trước là Java Transaction API): API Java cho giao dịch phân tán theo XA, gồm `UserTransaction`, `TransactionManager` và `XAResource`.",
+      "example": "Spring dùng `JtaTransactionManager` với Narayana hoặc Atomikos để một method `@Transactional` ghi hai database trong cùng transaction XA.",
+      "related": ["xa", "two-phase-commit"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "presumed-abort",
+      "term": "Presumed abort",
+      "meaning": "Quy ước của 2PC: khi recovery không tìm thấy quyết định cho một transaction trong log của coordinator thì coi nó là ABORT, nên không cần ghi log cho transaction bị huỷ.",
+      "example": "Coordinator dậy, `recover()` trả về Xid 17 đang prepared nhưng log không có Xid 17, nên gửi ROLLBACK.",
+      "related": ["two-phase-commit", "in-doubt-transaction"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "heuristic-decision",
+      "term": "Heuristic decision",
+      "meaning": "Quyết định commit hoặc rollback mà một resource (hoặc DBA) tự đưa ra cho transaction in-doubt, không chờ coordinator; nếu ngược với quyết định thật thì dữ liệu lệch.",
+      "example": "DBA chạy `ROLLBACK PREPARED` trong khi coordinator đã ghi COMMIT; JTA báo `HeuristicMixedException`.",
+      "related": ["in-doubt-transaction", "two-phase-commit"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "consensus",
+      "term": "Consensus",
+      "meaning": "Bài toán để nhiều node thống nhất một giá trị (hoặc một chuỗi lệnh) dù một số node chết; các giao thức như Paxos, Raft chỉ cần đa số đồng ý.",
+      "example": "Cụm etcd 3 node vẫn ghi được khi một node chết, vì 2 trên 3 là đa số.",
+      "related": ["quorum", "two-phase-commit"],
+      "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "tcc",
+      "term": "TCC",
+      "meaning": "Try-Confirm-Cancel: mỗi bên tham gia có bước giữ chỗ tạm có hạn (Try), sau đó xác nhận (Confirm) hoặc huỷ phần giữ chỗ (Cancel).",
+      "example": "Thẻ tín dụng: pre-authorization giữ tiền (Try), capture trừ thật (Confirm), void huỷ phần giữ (Cancel).",
+      "related": ["saga", "two-phase-commit"],
+      "topics": ["distributed-transactions"]
     }
   ]
 }
