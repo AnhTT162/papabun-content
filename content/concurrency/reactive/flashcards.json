@@ -1,15 +1,55 @@
 {
   "$schema": "../../../schema/flashcards.schema.json",
   "cards": [
-    { "id": "four-interfaces", "front": "Bốn interface của Reactive Streams?", "back": "`Publisher`, `Subscriber`, `Subscription` (`request(n)`, `cancel()`), `Processor`. Java 9 có bản tương ứng trong `java.util.concurrent.Flow`." },
-    { "id": "signals", "front": "Thứ tự tín hiệu của một chuỗi?", "back": "`onSubscribe`, rồi tối đa n lần `onNext` theo số đã `request`, rồi đúng một `onComplete` hoặc `onError`. Tín hiệu không bao giờ đồng thời." },
-    { "id": "lazy", "front": "Vì sao tạo `Mono` mà không gì xảy ra?", "back": "Chuỗi chỉ là mô tả; công việc bắt đầu khi có `subscribe` (thường do framework làm khi bạn trả `Mono`/`Flux`)." },
-    { "id": "just-eager", "front": "`Mono.just(load())` khác `Mono.fromCallable(this::load)` thế nào?", "back": "`just` gọi `load()` ngay lúc dựng chuỗi, trên thread hiện tại. `fromCallable` chỉ gọi khi có subscribe." },
-    { "id": "flatmap", "front": "`flatMap`, `concatMap`, `flatMapSequential` khác nhau ra sao?", "back": "`flatMap`: đồng thời (mặc định 256), không giữ thứ tự. `concatMap`: tuần tự, giữ thứ tự. `flatMapSequential`: đồng thời nhưng trả theo thứ tự gốc." },
-    { "id": "publish-subscribe-on", "front": "`publishOn` và `subscribeOn` khác nhau thế nào?", "back": "`publishOn` chuyển các bước phía sau sang scheduler. `subscribeOn` chọn thread lúc subscribe (nguồn), đặt ở đâu cũng vậy, lần gần nguồn nhất thắng." },
-    { "id": "schedulers", "front": "Chọn scheduler nào cho việc gì?", "back": "`parallel()` cho việc CPU (số core); `boundedElastic()` cho code blocking bắt buộc phải gọi; `single()` cho một thread dùng chung." },
-    { "id": "cold-hot", "front": "Cold và hot publisher khác nhau thế nào?", "back": "Cold chạy lại từ đầu cho mỗi subscriber (mỗi lần là một lời gọi HTTP). Hot phát bất kể có ai nghe; `share()`, `cache()`, `Sinks` tạo hành vi dùng chung." },
-    { "id": "subscribe-inside", "front": "Vì sao không gọi `subscribe()` bên trong `map`?", "back": "Lời gọi thành fire-and-forget: lỗi bị nuốt, không backpressure, không bị huỷ theo chuỗi, mất Context. Dùng `flatMap` hoặc `then`." },
-    { "id": "context", "front": "Reactor Context thay `ThreadLocal` thế nào?", "back": "Gắn với subscription, ghi bằng `contextWrite` ở cuối chuỗi, truyền ngược lên nguồn. Không mất khi chuỗi đổi thread." }
+    {
+      "id": "four-interfaces",
+      "front": "Bốn interface của Reactive Streams?",
+      "back": "`Publisher`, `Subscriber`, `Subscription` (`request(n)`, `cancel()`), `Processor`. Java 9 có bản tương ứng trong `java.util.concurrent.Flow`."
+    },
+    {
+      "id": "signals",
+      "front": "Thứ tự tín hiệu của một chuỗi?",
+      "back": "`onSubscribe`, rồi tối đa n lần `onNext` theo số đã `request`, rồi tối đa một `onComplete` hoặc `onError` (stream vô hạn hay bị huỷ thì không có). Tín hiệu không bao giờ đồng thời."
+    },
+    {
+      "id": "lazy",
+      "front": "Vì sao tạo `Mono` mà không gì xảy ra?",
+      "back": "Chuỗi chỉ là mô tả; công việc bắt đầu khi có `subscribe` (thường do framework làm khi bạn trả `Mono`/`Flux`)."
+    },
+    {
+      "id": "just-eager",
+      "front": "`Mono.just(load())` khác `Mono.fromCallable(this::load)` thế nào?",
+      "back": "`just` gọi `load()` ngay lúc dựng chuỗi, trên thread hiện tại. `fromCallable` chỉ gọi khi có subscribe."
+    },
+    {
+      "id": "flatmap",
+      "front": "`flatMap`, `concatMap`, `flatMapSequential` khác nhau ra sao?",
+      "back": "`flatMap`: đồng thời (mặc định 256), không giữ thứ tự. `concatMap`: tuần tự, giữ thứ tự. `flatMapSequential`: đồng thời nhưng trả theo thứ tự gốc."
+    },
+    {
+      "id": "publish-subscribe-on",
+      "front": "`publishOn` và `subscribeOn` khác nhau thế nào?",
+      "back": "`publishOn` chuyển các bước phía sau sang scheduler. `subscribeOn` chọn thread lúc subscribe (nguồn), đặt ở đâu cũng vậy, lần gần nguồn nhất thắng."
+    },
+    {
+      "id": "schedulers",
+      "front": "Chọn scheduler nào cho việc gì?",
+      "back": "`parallel()` cho việc CPU (số core); `boundedElastic()` cho code blocking bắt buộc phải gọi; `single()` cho một thread dùng chung."
+    },
+    {
+      "id": "cold-hot",
+      "front": "Cold và hot publisher khác nhau thế nào?",
+      "back": "Cold chạy lại từ đầu cho mỗi subscriber (mỗi lần là một lời gọi HTTP). Hot phát bất kể có ai nghe; `share()`, `cache()`, `Sinks` tạo hành vi dùng chung."
+    },
+    {
+      "id": "subscribe-inside",
+      "front": "Vì sao không gọi `subscribe()` bên trong `map`?",
+      "back": "Lời gọi thành fire-and-forget: lỗi bị nuốt, không backpressure, không bị huỷ theo chuỗi, mất Context. Dùng `flatMap` hoặc `then`."
+    },
+    {
+      "id": "context",
+      "front": "Reactor Context thay `ThreadLocal` thế nào?",
+      "back": "Gắn với subscription, ghi bằng `contextWrite` ở cuối chuỗi, truyền ngược lên nguồn. Không mất khi chuỗi đổi thread."
+    }
   ]
 }

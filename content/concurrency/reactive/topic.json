@@ -9,17 +9,49 @@
   "level": "senior",
   "order": 16,
   "minutes": 18,
-  "prerequisites": ["completable-future", "virtual-threads"],
-  "terms": ["reactive-streams", "backpressure", "mono", "flux", "reactor-scheduler", "virtual-thread"],
+  "prerequisites": [
+    "completable-future",
+    "virtual-threads"
+  ],
+  "terms": [
+    "reactive-streams",
+    "backpressure",
+    "mono",
+    "flux",
+    "reactor-scheduler",
+    "virtual-thread"
+  ],
   "references": [
-    { "title": "Reactor 3 Reference Guide", "url": "https://projectreactor.io/docs/core/release/reference/" },
-    { "title": "Reactive Streams Specification for the JVM", "url": "https://github.com/reactive-streams/reactive-streams-jvm/blob/master/README.md" },
-    { "title": "Javadoc java.util.concurrent.Flow (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.html" }
+    {
+      "title": "Reactor 3 Reference Guide",
+      "url": "https://projectreactor.io/docs/core/release/reference/"
+    },
+    {
+      "title": "Reactive Streams Specification for the JVM",
+      "url": "https://github.com/reactive-streams/reactive-streams-jvm/blob/master/README.md"
+    },
+    {
+      "title": "Javadoc java.util.concurrent.Flow (Java 21)",
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.html"
+    }
   ],
   "blocks": [
-    { "type": "diagram", "file": "diagram.json" },
-    { "type": "layered", "file": "layered.md" },
-    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Backpressure thật sự hoạt động thế nào, nếu nguồn là database hay Kafka?\" Subscriber đòi n phần tử qua `request(n)`, và mỗi operator chuyển yêu cầu đó lên trên; nguồn chỉ phát đúng từng ấy. Với R2DBC, driver kéo thêm dòng từ cursor khi được đòi; với reactor-kafka, consumer chỉ poll khi downstream còn đòi, nên event dư nằm lại trong topic thay vì trong heap. Backpressure mất tác dụng ở chỗ nào có hàng đợi không giới hạn chen vào: `Flux.create` mặc định, `onBackpressureBuffer()` không tham số, hay một lời gọi `subscribe()` lồng bên trong. Hỏi tiếp có thể là \"HTTP có backpressure không\": giữa client và server chỉ có flow control của TCP/HTTP/2, nên khi stream dài qua mạng, backpressure dựa vào việc server ngừng đọc socket." },
-    { "type": "scenario", "file": "scenario.json" }
+    {
+      "type": "diagram",
+      "file": "diagram.json"
+    },
+    {
+      "type": "layered",
+      "file": "layered.md"
+    },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Backpressure thật sự hoạt động thế nào, nếu nguồn là database hay Kafka?\" Subscriber đòi n phần tử qua `request(n)`, và mỗi operator chuyển yêu cầu đó lên trên; nguồn chỉ phát đúng từng ấy. Với R2DBC thì tuỳ driver: có driver kéo theo lô bằng cursor/`fetchSize`, có driver dựa vào flow control của TCP. Với reactor-kafka, consumer tạm dừng (pause) các partition khi downstream hết đòi, nên event dư nằm lại trong topic thay vì trong heap. Backpressure mất tác dụng ở chỗ nào có hàng đợi không giới hạn chen vào: `Flux.create` mặc định, `onBackpressureBuffer()` không tham số, hay một lời gọi `subscribe()` lồng bên trong. Hỏi tiếp có thể là \"HTTP có backpressure không\": giữa client và server chỉ có flow control của TCP/HTTP/2, nên khi stream dài qua mạng, backpressure dựa vào việc server ngừng đọc socket."
+    },
+    {
+      "type": "scenario",
+      "file": "scenario.json"
+    }
   ]
 }

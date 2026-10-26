@@ -7,7 +7,7 @@
       "prompt": "`process()` có bug nên `assertEquals` bên dưới sai. Test này kết thúc thế nào trong JUnit 5?",
       "code": "@Test\nvoid processesInBackground() throws Exception {\n    Thread worker = new Thread(() -> {\n        Result r = service.process(input);\n        assertEquals(Status.DONE, r.status());\n    });\n    worker.start();\n    worker.join();\n}",
       "options": [
-        "Xanh; `AssertionError` chỉ được in ra stderr của `worker`",
+        "Xanh; `AssertionError` chỉ được in ra `System.err`",
         "Đỏ, vì JUnit bắt mọi `AssertionError` trong mọi thread",
         "Đỏ, vì `join()` ném lại exception của thread đã kết thúc",
         "Treo mãi, vì thread `worker` chết trước khi `join()` trả về"
@@ -59,13 +59,13 @@
       "kind": "single",
       "prompt": "Một test đồng thời chỉ đỏ trên CI (container 2 vCPU), chưa từng đỏ trên laptop 10 core. Bước đầu tiên hợp lý để tái hiện ở máy local?",
       "options": [
-        "Chạy lặp test với `-XX:ActiveProcessorCount=2` để JVM xếp lịch giống CI hơn",
+        "Chạy lặp với `-XX:ActiveProcessorCount=2` để pool mặc định giống CI",
         "Bật `rerunFailingTestsCount` để xác nhận test có tự xanh lại sau vài lần chạy",
         "Nâng CI lên 10 vCPU để giống laptop, vì máy yếu luôn cho kết quả kém tin cậy",
         "Xoá `.m2` và build lại từ đầu, vì CI có thể dùng thư viện khác bản trên laptop"
       ],
       "answer": 0,
-      "explanation": "Số core ảnh hưởng tới số thread chạy thật sự song song, kích thước pool mặc định (common pool, scheduler của virtual thread) và cách hệ điều hành xếp lịch. Ép JVM thấy 2 core rồi chạy lặp là cách rẻ nhất để đưa điều kiện của CI về máy mình. Rerun chỉ che lỗi; nâng CI làm lỗi khó lộ hơn chứ không hết; thư viện khác bản là nghi vấn hợp lý nhưng không giải thích được lỗi chỉ thỉnh thoảng xảy ra."
+      "explanation": "Cờ này đổi kết quả `availableProcessors()`, nên common pool, scheduler của virtual thread và các pool tính theo số core có cùng kích thước như CI; đây là bước rẻ nhất. Nó không làm thread bớt chạy song song, vì hệ điều hành vẫn xếp lịch trên đủ 10 core; muốn giới hạn CPU thật thì chạy trong container `docker run --cpus=2` hoặc `taskset -c 0,1` trên Linux. Rerun chỉ che lỗi; nâng CI làm lỗi khó lộ hơn chứ không hết; thư viện khác bản là nghi vấn hợp lý nhưng không giải thích được lỗi chỉ thỉnh thoảng xảy ra."
     }
   ]
 }
