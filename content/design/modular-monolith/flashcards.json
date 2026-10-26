@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Modular monolith là gì?", "back": "Một đơn vị deploy chia thành các module có API công khai, phần nội bộ bị che, dữ liệu riêng, và giao tiếp qua API hoặc event trong process." },
+    { "id": "good-module", "front": "Bốn đặc điểm của một module tốt?", "back": "Ranh giới theo bounded context, API công khai nhỏ, sở hữu dữ liệu riêng (không join hay khoá ngoại chéo), không có phụ thuộc vòng." },
+    { "id": "enforce", "front": "Kiểm tra ranh giới module bằng cách nào?", "back": "Build nhiều Maven/Gradle module (compiler chặn), hoặc một build với test Spring Modulith `verify()` hay ArchUnit trong CI." },
+    { "id": "modulith-module", "front": "Spring Modulith xác định module thế nào?", "back": "Mỗi package con trực tiếp của package gốc ứng dụng là một module; package gốc của module là API, package con là nội bộ trừ khi có `@NamedInterface`." },
+    { "id": "module-listener", "front": "`@ApplicationModuleListener` gồm những gì?", "back": "`@Async`, `@Transactional(REQUIRES_NEW)` và `@TransactionalEventListener` (`AFTER_COMMIT`)." },
+    { "id": "registry", "front": "Event publication registry của Spring Modulith làm gì?", "back": "Khi có starter lưu trữ (JPA, JDBC, MongoDB), lưu mỗi lần phát event cho listener transactional vào bảng, đánh dấu hoàn thành khi listener xong, và cho phép gửi lại lần chưa hoàn thành." },
+    { "id": "when-extract", "front": "Khi nào nên tách một module thành service?", "back": "Khi có lý do đo được: cần scale riêng, nhịp release khác, công nghệ khác, hoặc cần cô lập lỗi." },
+    { "id": "limits", "front": "Giới hạn chính của modular monolith?", "back": "Chung một lần deploy và một JVM: không scale riêng từng module, và một module rò bộ nhớ có thể làm sập cả ứng dụng." }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "SaaS đặt lịch spa: 7 microservices hay một monolith có module",
+  "prompt": "Startup làm SaaS đặt lịch cho chuỗi spa: đặt lịch, quản lý nhân viên và ca, thanh toán (qua cổng thanh toán), tích điểm, thông báo SMS/email, báo cáo doanh thu. Đội 8 kỹ sư (2 người có kinh nghiệm vận hành Kubernetes), ra mắt sau 5 tháng với 50 cơ sở, kỳ vọng 2.000 cơ sở sau 2 năm. Tải dự kiến năm đầu: cao điểm khoảng 30 request mỗi giây. CTO đề xuất 7 microservices ngay từ đầu \"để sau này khỏi phải tách\". Bạn được hỏi ý kiến. Đề xuất kiến trúc, cách giữ ranh giới, và tiêu chí để tách service sau này.",
+  "hints": [
+    "Ước lượng chi phí vận hành của 7 service (pipeline, giám sát, transaction phân tán) so với năng lực của 8 người trong 5 tháng.",
+    "Nghiệp vụ nào có thể còn đổi nhiều trong năm đầu? Nếu ranh giới sai thì sửa ở đâu rẻ hơn?",
+    "Làm sao để \"sau này dễ tách\" là sự thật chứ không phải lời hứa?",
+    "Tiêu chí đo được nào cho biết đã tới lúc tách một module?"
+  ],
+  "solution": "**Đề xuất**: một Spring Boot 3 modular monolith, 6 module theo bounded context: `booking` (lịch, giữ khung giờ), `staff` (nhân viên, ca làm), `payment` (ACL với cổng thanh toán), `loyalty` (tích điểm), `notification` (SMS, email), `reporting` (read model doanh thu). Một PostgreSQL, mỗi module một schema.\n\n**Lý do**: 30 request mỗi giây là tải nhỏ cho một ứng dụng chạy 2–3 instance. Với 8 người và 5 tháng, chi phí của 7 pipeline, tracing phân tán và saga cho luồng đặt lịch–thanh toán sẽ lấy mất thời gian làm tính năng. Năm đầu nghiệp vụ còn đổi nhiều (gói dịch vụ, chính sách huỷ lịch), và ranh giới sai thì sửa trong một repo rẻ hơn nhiều.\n\n**Giữ ranh giới bằng kiểm tra tự động, ngay từ ngày đầu**:\n- `ApplicationModules.of(SpaApplication.class).verify()` trong test; mỗi module chỉ lộ package gốc (service interface, DTO, event).\n- Không join, không khoá ngoại sang schema của module khác; user database của từng module chỉ có quyền trên schema của nó.\n- `@ApplicationModuleTest` cho từng module.\n- `CODEOWNERS` theo module.\n\n**Giao tiếp**: `booking` gọi `payment` đồng bộ qua interface khi cần kết quả thanh toán; `BookingConfirmed` là event mà `loyalty`, `notification`, `reporting` nghe bằng `@ApplicationModuleListener`, có event publication registry để gửi lại khi lỗi và listener idempotent theo `bookingId`.\n\n**Tiêu chí tách sau này** (theo dõi bằng số liệu):\n- `notification` gửi hàng trăm nghìn tin vào giờ cao điểm, tiêu tốn tài nguyên khác hẳn phần còn lại: tách đầu tiên, đưa event ra Kafka bằng `@Externalized`.\n- `reporting` cần database phân tích riêng khi dữ liệu lớn.\n- Một module cần release nhiều lần mỗi ngày trong khi phần còn lại thì không.\n\n**Trả lời CTO**: \"sau này khỏi phải tách\" đúng một phần, nhưng đổi lại phải trả chi phí phân tán ngay bây giờ và chốt ranh giới khi còn hiểu nghiệp vụ ít nhất. Modular monolith có kiểm tra tự động làm cho việc tách sau này thành một bước cơ học.",
+  "tradeoffs": [
+    {
+      "option": "Modular monolith, 6 module, ranh giới kiểm tra bằng Spring Modulith",
+      "pros": [
+        "Một pipeline, một ứng dụng để vận hành; tập trung làm tính năng",
+        "Dời ranh giới chỉ là refactor; đường tách service đã chuẩn bị sẵn"
+      ],
+      "cons": [
+        "Không scale hay deploy riêng từng phần",
+        "Một module lỗi bộ nhớ có thể làm sập cả ứng dụng"
+      ]
+    },
+    {
+      "option": "7 microservices ngay từ đầu",
+      "pros": [
+        "Deploy, scale và cô lập lỗi độc lập ngay",
+        "Ranh giới bị ép cứng bởi mạng"
+      ],
+      "cons": [
+        "Chi phí vận hành và saga lớn so với 8 người, 5 tháng",
+        "Ranh giới chốt sớm khi nghiệp vụ còn đổi; sửa sai rất đắt"
+      ]
+    },
+    {
+      "option": "Monolith không có module, tách sau khi cần",
+      "pros": [
+        "Nhanh nhất trong vài tháng đầu"
+      ],
+      "cons": [
+        "Không có ranh giới thì sau 1–2 năm thành big ball of mud",
+        "\"Tách sau\" trở thành dự án viết lại"
+      ]
+    }
+  ]
+}

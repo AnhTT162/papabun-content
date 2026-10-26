@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đơn đã thanh toán nhưng không ai nhận được email",
+  "context": "Đơn hàng dùng domain event theo kiểu Spring Data: `Order` kế thừa `AbstractAggregateRoot` và đăng ký event trong method nghiệp vụ. Luồng đặt hàng (`placeOrder`) vẫn gửi email \"đã nhận đơn\" bình thường. Tuần này thêm luồng xác nhận thanh toán từ webhook của cổng thanh toán. Spring Boot 3, Spring Data JPA.",
+  "buggyCode": "@Entity\nclass Order extends AbstractAggregateRoot<Order> {\n    @Id private UUID id;\n    @Version private Long version;\n    @Enumerated(EnumType.STRING) private OrderStatus status;\n\n    void markPaid(PaymentReference reference) {\n        if (status != OrderStatus.PENDING_PAYMENT) {\n            throw new IllegalOrderStateException(id, status);\n        }\n        status = OrderStatus.PAID;\n        registerEvent(new OrderPaid(id, reference));\n    }\n}\n\n@Service\nclass PaymentConfirmationService {\n    private final OrderRepository orders;\n\n    @Transactional\n    void confirm(UUID orderId, PaymentReference reference) {\n        Order order = orders.findById(orderId).orElseThrow();\n        order.markPaid(reference);\n        // không cần save: dirty checking sẽ ghi khi commit\n    }\n}\n\n@Component\nclass PaymentMailer {\n    @TransactionalEventListener\n    void on(OrderPaid event) { mail.sendReceipt(event.orderId()); }\n}",
+  "symptom": {
+    "description": "Sau deploy, trạng thái đơn trong database chuyển sang `PAID` đúng, nhưng khách không nhận được biên lai. Không có lỗi nào trong log. Log SQL và log của listener cho một đơn:",
+    "output": "select o1_0.id,o1_0.status from orders o1_0 where o1_0.id=?\nupdate orders set status=? where id=?\n-- không có dòng \"PaymentMailer: sending receipt\" nào"
+  },
+  "diagnosis": {
+    "question": "Vì sao `PaymentMailer` không chạy?",
+    "options": [
+      "Spring Data chỉ phát event đã đăng ký khi gọi `save`/`delete` của repository; dirty checking không kích hoạt nó",
+      "`@TransactionalEventListener` mặc định chạy `BEFORE_COMMIT`, nên chạy trước khi trạng thái được ghi rồi bị bỏ",
+      "`OrderPaid` phải kế thừa `ApplicationEvent` thì Spring mới coi là event và gửi cho listener",
+      "Listener cần `@Async`, vì gửi mail trong cùng thread với transaction bị Spring chặn lại"
+    ],
+    "answer": 0,
+    "explanation": "`AbstractAggregateRoot` chỉ giữ event trong một danh sách. Spring Data đọc danh sách đó (qua `@DomainEvents`) và phát event **khi một method của repository như `save`, `saveAll`, `delete` được gọi** với aggregate. Luồng `placeOrder` có gọi `save` cho đơn mới nên chạy được; luồng mới dựa vào dirty checking nên trạng thái vẫn được ghi, nhưng event không bao giờ được phát. Mặc định `@TransactionalEventListener` là `AFTER_COMMIT`. Từ Spring 4.2, event không cần kế thừa `ApplicationEvent`. Gửi mail cùng thread không bị chặn, chỉ làm chậm request."
+  },
+  "fix": {
+    "code": "@Service\nclass PaymentConfirmationService {\n    private final OrderRepository orders;\n\n    @Transactional\n    void confirm(UUID orderId, PaymentReference reference) {\n        Order order = orders.findById(orderId).orElseThrow();\n        order.markPaid(reference);\n        orders.save(order);   // cần gọi để Spring Data phát các domain event đã đăng ký\n    }\n}\n\n@Component\nclass PaymentMailer {\n    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)\n    @Async\n    void on(OrderPaid event) { mail.sendReceipt(event.orderId()); }\n}\n\n// Test chặn lỗi tái diễn (class test có @SpringBootTest và @RecordApplicationEvents)\n@Test\nvoid publishesOrderPaidWhenPaymentConfirmed(@Autowired ApplicationEvents events) {\n    confirmationService.confirm(orderId, reference);\n    assertThat(events.stream(OrderPaid.class)).hasSize(1);\n}",
+    "explanation": "Gọi `save` tường minh sau khi đổi trạng thái của aggregate, như một quy ước của nhóm: với entity đang được quản lý, `save` chỉ là `merge` vào chính nó và không sinh thêm câu SQL, nhưng nó là điểm Spring Data phát domain event. Listener ghi rõ `AFTER_COMMIT` và chạy `@Async` (cần `@EnableAsync`) để không chặn webhook; khi đó lỗi gửi mail không còn đi về request, nên cần log và cảnh báo riêng. Test dùng `@RecordApplicationEvents` cùng `ApplicationEvents` để kiểm tra event được phát ở mọi luồng đổi trạng thái. Nếu email không được phép mất (pod chết ngay sau commit), chuyển sang outbox."
+  }
+}

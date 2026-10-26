@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "ddd-tactical",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "DDD chiến thuật",
+  "summary": "Entity, value object (record, scale của `BigDecimal`), aggregate và bốn quy tắc thiết kế, domain event, domain service và application service; map aggregate bằng JPA, `@Version` trên root, `equals` của entity; phát event với `AbstractAggregateRoot` và vì sao cần gọi `save`; đọc qua projection; chia aggregate theo bất biến và tranh chấp.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 16,
+  "prerequisites": ["ddd-strategic", "optimistic-pessimistic-locking"],
+  "terms": ["ddd-entity", "value-object", "aggregate-root", "invariant", "domain-event", "eventual-consistency", "optimistic-locking", "outbox", "bounded-context", "anemic-domain-model", "dirty-checking", "saga"],
+  "references": [
+    { "title": "Spring Data Commons Reference: Publishing Events from Aggregate Roots", "url": "https://docs.spring.io/spring-data/commons/reference/repositories/core-domain-events.html" },
+    { "title": "Vaughn Vernon: Effective Aggregate Design (DDD Community)", "url": "https://www.dddcommunity.org/library/vernon_2011/" },
+    { "title": "Java SE 21 API: BigDecimal.equals", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/math/BigDecimal.html#equals(java.lang.Object)" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao biết một aggregate quá lớn?\" Dấu hiệu đo được: `OptimisticLockException` tăng theo tải trên cùng một root, thời gian tải aggregate tăng theo dữ liệu lịch sử, và nhiều use case chỉ dùng một phần nhỏ của nó. Cách sửa: tách theo bất biến thật sự cần nhất quán ngay, tham chiếu bằng id, phối hợp bằng event. Hỏi tiếp \"vậy nhất quán dữ liệu thế nào\": nêu trạng thái trung gian, luồng bù trừ, outbox và handler idempotent." },
+    { "type": "callout", "style": "warning", "markdown": "Entity JPA có setter công khai cho mọi trường thì không aggregate nào giữ được bất biến: bất kỳ service nào cũng `order.setStatus(SHIPPED)` được mà không qua kiểm tra. Bỏ setter, mở method nghiệp vụ (`ship()`, `cancel()`), và để constructor không tham số ở `protected` chỉ cho JPA." }
+  ]
+}

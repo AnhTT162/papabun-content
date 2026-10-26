@@ -917,7 +917,7 @@
       "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
       "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
       "related": ["pessimistic-locking", "lost-update"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns", "ddd-tactical"]
     },
     {
       "id": "serialization-failure",
@@ -1357,7 +1357,7 @@
       "meaning": "Hibernate so sánh trạng thái entity lúc flush với bản chụp lúc tải; field nào đổi thì tự sinh `UPDATE`, không cần gọi `save`.",
       "example": "Trong `@Transactional`, `order.setStatus(PAID)` tự được ghi khi commit.",
       "related": ["persistence-context"],
-      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking", "layered-architecture", "clean-hexagonal"]
+      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking", "layered-architecture", "clean-hexagonal", "ddd-tactical"]
     },
     {
       "id": "dual-write",
@@ -1405,7 +1405,7 @@
       "meaning": "Khái niệm của Domain-Driven Design: một cụm entity luôn được thay đổi cùng nhau như một đơn vị nhất quán, và mọi thay đổi đi qua entity gốc (root).",
       "example": "`Order` là root của các `OrderLine`; sửa một dòng hàng cũng tính là sửa đơn hàng.",
       "related": ["optimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking"]
+      "topics": ["optimistic-pessimistic-locking", "ddd-tactical"]
     },
     {
       "id": "advisory-lock",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith"]
     },
     {
       "id": "replication-slot",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith"]
     },
     {
       "id": "dead-letter-queue",
@@ -4053,7 +4053,7 @@
       "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
       "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
       "related": ["dependency-inversion", "coupling"],
-      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal"]
+      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal", "modular-monolith"]
     },
     {
       "id": "template-method",
@@ -4133,7 +4133,7 @@
       "meaning": "Mô hình mà entity chỉ có getter/setter còn mọi quy tắc nghiệp vụ nằm trong service; quy tắc dễ bị lặp và entity dễ rơi vào trạng thái sai.",
       "example": "Mọi service đều tự kiểm tra `order.getStatus() == PAID` trước khi huỷ, thay vì gọi `order.cancel()`.",
       "related": ["layered-architecture"],
-      "topics": ["layered-architecture", "clean-hexagonal"]
+      "topics": ["layered-architecture", "clean-hexagonal", "ddd-tactical"]
     },
     {
       "id": "mapstruct",
@@ -4237,7 +4237,7 @@
       "meaning": "Dự án Spring hỗ trợ modular monolith: coi mỗi package con trực tiếp của package gốc là một module, kiểm tra trong test rằng module khác chỉ dùng API công khai của nó, và hỗ trợ event giữa các module.",
       "example": "`ApplicationModules.of(ShopApplication.class).verify()` làm test đỏ khi `payment` gọi `shop.order.internal.OrderPricing`.",
       "related": ["modular-monolith", "archunit"],
-      "topics": ["layered-architecture", "ddd-strategic"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith"]
     },
     {
       "id": "modular-monolith",
@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture", "ddd-strategic"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith"]
     },
     {
       "id": "adapter-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4453,7 +4453,7 @@
       "meaning": "Object nhỏ, bất biến, được so sánh bằng giá trị thay vì danh tính, và tự kiểm tra tính hợp lệ khi tạo.",
       "example": "`record Money(BigDecimal amount, Currency currency)` hai đối tượng cùng số tiền và tiền tệ là bằng nhau.",
       "related": ["primitive-obsession"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "ddd-tactical"]
     },
     {
       "id": "feature-flag",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical"]
     },
     {
       "id": "ubiquitous-language",
@@ -4542,6 +4542,78 @@
       "example": "Ba đội cùng sửa một module thì ranh giới trong module đó dần bị trộn lẫn.",
       "related": ["bounded-context"],
       "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "ddd-entity",
+      "term": "Entity (DDD)",
+      "meaning": "Object có danh tính riêng tồn tại qua thời gian; hai entity cùng thuộc tính vẫn là hai đối tượng khác nhau nếu khác id.",
+      "example": "Hai đơn hàng cùng sản phẩm và cùng tổng tiền vẫn là hai `Order` có `OrderId` khác nhau.",
+      "related": ["value-object", "aggregate-root"],
+      "topics": ["ddd-tactical"]
+    },
+    {
+      "id": "invariant",
+      "term": "Invariant",
+      "meaning": "Bất biến: điều kiện nghiệp vụ phải luôn đúng với một object hay aggregate sau mỗi thao tác.",
+      "example": "Tổng tiền đơn không vượt hạn mức; đơn đã giao thì không thêm dòng được.",
+      "related": ["aggregate-root"],
+      "topics": ["ddd-tactical"]
+    },
+    {
+      "id": "domain-event",
+      "term": "Domain event",
+      "meaning": "Sự kiện nghiệp vụ đã xảy ra, đặt tên ở thì quá khứ, dùng để báo cho các phần khác của hệ thống và phối hợp giữa các aggregate.",
+      "example": "`OrderPaid(orderId, paymentReference)` được phát khi đơn chuyển sang trạng thái đã thanh toán.",
+      "related": ["aggregate-root", "eventual-consistency", "outbox"],
+      "topics": ["ddd-tactical"]
+    },
+    {
+      "id": "eventual-consistency",
+      "term": "Eventual consistency",
+      "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
+      "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
+      "related": ["domain-event"],
+      "topics": ["ddd-tactical"]
+    },
+    {
+      "id": "event-publication-registry",
+      "term": "Event publication registry",
+      "meaning": "Cơ chế của Spring Modulith lưu mỗi lần phát event cho listener transactional vào bảng, đánh dấu hoàn thành khi listener chạy xong, để gửi lại các lần chưa hoàn thành.",
+      "example": "Listener của module `loyalty` lỗi; lần phát `BookingConfirmed` nằm lại bảng `event_publication` và được gửi lại khi khởi động.",
+      "related": ["spring-modulith", "outbox"],
+      "topics": ["modular-monolith"]
+    },
+    {
+      "id": "saga",
+      "term": "Saga",
+      "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
+      "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
+      "related": ["eventual-consistency", "outbox"],
+      "topics": ["modular-monolith", "ddd-tactical"]
+    },
+    {
+      "id": "jpms",
+      "term": "JPMS",
+      "meaning": "Java Platform Module System (Java 9+): khai báo module bằng `module-info.java` với `requires` và `exports`, chặn truy cập package không được export ở cả lúc biên dịch lẫn lúc chạy.",
+      "example": "`module shop.payment { exports shop.payment.api; }` thì `shop.payment.internal` không dùng được từ module khác.",
+      "related": ["modular-monolith"],
+      "topics": ["modular-monolith"]
+    },
+    {
+      "id": "big-ball-of-mud",
+      "term": "Big ball of mud",
+      "meaning": "Hệ thống không có ranh giới rõ ràng, mọi phần phụ thuộc lẫn nhau, nên mỗi thay đổi đều rủi ro và khó dự đoán.",
+      "example": "Mọi service import entity của nhau và đọc ghi chung một bảng `products` 80 cột.",
+      "related": ["modular-monolith", "bounded-context"],
+      "topics": ["modular-monolith"]
+    },
+    {
+      "id": "distributed-monolith",
+      "term": "Distributed monolith",
+      "meaning": "Hệ thống tách thành nhiều service nhưng vẫn phải deploy và thay đổi cùng nhau vì ranh giới sai; mang chi phí của hệ phân tán mà không có lợi ích độc lập.",
+      "example": "Đổi một trường trong service đơn hàng buộc năm service khác cùng release.",
+      "related": ["modular-monolith"],
+      "topics": ["modular-monolith"]
     }
   ]
 }

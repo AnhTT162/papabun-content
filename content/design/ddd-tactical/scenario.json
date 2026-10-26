@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chia aggregate cho đặt hàng, tồn kho và hạn mức công nợ",
+  "prompt": "Hệ thống bán sỉ B2B: khách doanh nghiệp đặt đơn tới 200 dòng; mỗi khách có hạn mức công nợ (tổng tiền các đơn chưa thanh toán không vượt hạn mức); mỗi sản phẩm có tồn kho ở 3 kho. Thiết kế hiện tại có một aggregate `Customer` chứa danh sách `Order`, mỗi `Order` chứa `OrderLine` có `@ManyToOne Product`, và khi đặt đơn thì một transaction sửa `Customer`, `Order` và trừ `Product.stock`. Sự cố: giờ cao điểm 300 đơn mỗi phút, lỗi `OptimisticLockException` hàng loạt trên vài sản phẩm bán chạy; khách lớn có 20 người đặt cùng lúc thì liên tục lỗi; tải một khách lớn mất 4 giây vì kéo theo hàng nghìn đơn cũ. Thiết kế lại các aggregate và cách chúng phối hợp.",
+  "hints": [
+    "Liệt kê từng bất biến. Bất biến nào phải đúng ngay trong cùng transaction, bất biến nào chấp nhận đúng sau vài giây?",
+    "`Customer` có thật sự cần chứa các `Order` để giữ bất biến hạn mức không?",
+    "Tranh chấp xảy ra trên object nào? Thu nhỏ phần bị khoá thế nào?",
+    "Nếu giữ hàng thất bại sau khi đơn đã được tạo thì đơn chuyển sang trạng thái gì?"
+  ],
+  "solution": "**Bất biến và ranh giới**:\n- *Trong một đơn* (tối đa 200 dòng, không sửa sau khi xác nhận, tổng tiền tính đúng): aggregate `Order` với các `OrderLine` con. `OrderLine` lưu `productId`, đơn giá và tên tại thời điểm đặt, không giữ `@ManyToOne Product`.\n- *Hạn mức công nợ*: aggregate `CreditAccount` (một cho mỗi khách) chỉ giữ hạn mức và tổng đang nợ, không chứa danh sách đơn. Method `reserve(orderId, amount)` từ chối khi vượt hạn mức.\n- *Tồn kho*: aggregate `StockItem` cho mỗi cặp (sản phẩm, kho), không phải một `Product.stock` duy nhất. `reserve(orderId, qty)` và `release(orderId)`.\n- `Customer` chỉ còn thông tin hồ sơ; không chứa đơn.\n\n**Phối hợp bằng domain event** (mỗi transaction một aggregate):\n1. `PlaceOrder` tạo `Order` ở trạng thái `PENDING`, phát `OrderPlaced`.\n2. Handler giữ hạn mức trên `CreditAccount`, phát `CreditReserved` hoặc `CreditRejected`.\n3. Handler giữ hàng trên từng `StockItem`, phát `StockReserved` hoặc `StockUnavailable`.\n4. `Order` chuyển `CONFIRMED` khi đủ cả hai, hoặc `REJECTED` kèm lý do; khi đó các phần đã giữ được nhả ra (bù trừ). Đây là một [[saga]] điều phối bằng event; dùng outbox để event không mất và handler idempotent theo `orderId`.\n\n**Tranh chấp**: khoá giờ nằm trên từng `StockItem` theo kho và trên `CreditAccount` của từng khách, không còn trên `Customer` chứa mọi đơn. Sản phẩm bán chạy vẫn là điểm nóng: có thể giữ hàng bằng câu `update stock_items set reserved = reserved + :qty where id = :id and available - reserved >= :qty` (atomic, không cần đọc rồi ghi), hoặc chia tồn kho thành nhiều \"ngăn\" nhỏ.\n\n**Hiệu năng**: tải `Order` chỉ tải các dòng của nó; danh sách đơn của khách là query projection riêng, không dựng aggregate.\n\n**Trải nghiệm**: API trả `202 Accepted` với trạng thái `PENDING`, và trong đa số trường hợp đơn được xác nhận trong vòng một giây; UI hỏi lại hoặc nhận thông báo. Nếu nghiệp vụ bắt buộc trả kết quả đồng bộ, có thể chạy bước giữ hạn mức và giữ hàng ngay trong request (vẫn là các transaction riêng) rồi mới trả lời, chấp nhận độ trễ cao hơn.",
+  "tradeoffs": [
+    {
+      "option": "Aggregate nhỏ (`Order`, `CreditAccount`, `StockItem`), phối hợp bằng event",
+      "pros": [
+        "Tranh chấp khoá chỉ trên phần thật sự cần nhất quán",
+        "Tải nhanh, scale theo từng loại aggregate"
+      ],
+      "cons": [
+        "Có trạng thái trung gian `PENDING` và luồng bù trừ phải thiết kế",
+        "Cần outbox, handler idempotent và giám sát đơn bị kẹt"
+      ]
+    },
+    {
+      "option": "Giữ một transaction sửa cả đơn, hạn mức và tồn kho, nhưng bỏ danh sách đơn khỏi `Customer`",
+      "pros": [
+        "Kết quả đồng bộ, không có trạng thái trung gian",
+        "Ít thay đổi so với hiện tại"
+      ],
+      "cons": [
+        "Vẫn khoá cùng lúc nhiều aggregate, deadlock và lỗi tranh chấp giờ cao điểm",
+        "Khó tách tồn kho thành service riêng sau này"
+      ]
+    },
+    {
+      "option": "Bỏ kiểm tra hạn mức lúc đặt, đối soát cuối ngày",
+      "pros": [
+        "Đặt hàng nhanh và đơn giản nhất"
+      ],
+      "cons": [
+        "Khách có thể vượt hạn mức nhiều lần trong ngày",
+        "Đẩy rủi ro tài chính sang bộ phận công nợ"
+      ]
+    }
+  ]
+}

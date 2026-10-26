@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "entity-vs-vo", "front": "Entity khác value object thế nào?", "back": "Entity có danh tính và trạng thái đổi theo thời gian; value object bất biến, không có danh tính, bằng nhau khi giá trị bằng nhau." },
+    { "id": "aggregate", "front": "Aggregate là gì?", "back": "Cụm entity và value object giữ một nhóm bất biến, chỉ được thay đổi qua root và được lưu trong một transaction." },
+    { "id": "aggregate-rules", "front": "Bốn quy tắc thiết kế aggregate?", "back": "Chỉ gom thứ phải nhất quán ngay; giữ nhỏ; tham chiếu aggregate khác bằng id; ngoài ranh giới dùng eventual consistency." },
+    { "id": "one-tx", "front": "Một transaction nên sửa bao nhiêu aggregate?", "back": "Một. Phối hợp nhiều aggregate qua domain event và transaction riêng, kèm bù trừ khi thất bại." },
+    { "id": "domain-event", "front": "Domain event được đặt tên thế nào?", "back": "Ở thì quá khứ, theo ngôn ngữ nghiệp vụ, như `OrderPlaced`, `PaymentFailed`; mang id và dữ liệu cần thiết." },
+    { "id": "domain-vs-app-service", "front": "Domain service khác application service thế nào?", "back": "Domain service chứa quy tắc nghiệp vụ không thuộc riêng aggregate nào; application service điều phối use case và transaction, không chứa quy tắc." },
+    { "id": "abstract-aggregate-root", "front": "Event đăng ký qua `AbstractAggregateRoot` được phát khi nào?", "back": "Khi gọi `save`, `saveAll`, `delete` (và các biến thể `deleteAll`) của repository; dirty checking và `deleteById` không phát event." },
+    { "id": "money-scale", "front": "Vì sao record `Money(BigDecimal amount, ...)` cần chuẩn hoá scale?", "back": "`BigDecimal.equals` so cả scale, nên `10.0` và `10` khác nhau; chuẩn hoá theo số chữ số thập phân của tiền tệ trong compact constructor." }
+  ]
+}

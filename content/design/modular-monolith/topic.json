@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "modular-monolith",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Modular monolith",
+  "summary": "Một đơn vị deploy, nhiều module có ranh giới; vì sao chưa cần microservices; module tốt và sở hữu dữ liệu; kiểm tra ranh giới bằng build nhiều module, Spring Modulith hoặc ArchUnit; giao tiếp đồng bộ và event, `@ApplicationModuleListener`, event publication registry, `@Externalized`; schema riêng, không transaction xuyên module; tiêu chí tách service và giới hạn.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 14,
+  "prerequisites": ["ddd-strategic", "ddd-tactical"],
+  "terms": ["modular-monolith", "spring-modulith", "archunit", "event-publication-registry", "bounded-context", "outbox", "saga", "idempotent-consumer", "strangler-fig", "jpms", "big-ball-of-mud", "distributed-monolith"],
+  "references": [
+    { "title": "Spring Modulith Reference: Fundamentals", "url": "https://docs.spring.io/spring-modulith/reference/fundamentals.html" },
+    { "title": "Spring Modulith Reference: Working with Application Events", "url": "https://docs.spring.io/spring-modulith/reference/events.html" },
+    { "title": "Martin Fowler: MonolithFirst", "url": "https://martinfowler.com/bliki/MonolithFirst.html" },
+    { "title": "Spring Modulith Reference: Integration Testing Application Modules", "url": "https://docs.spring.io/spring-modulith/reference/testing.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Monolith không phải là lỗi thời sao?\" Tách hai khái niệm: monolith là đơn vị deploy, còn big ball of mud là thiếu ranh giới. Microservices không tự tạo ra ranh giới tốt; ranh giới sai giữa các service cho ra một [[distributed-monolith|distributed monolith]], tệ hơn cả hai. Trả lời bằng tiêu chí: quy mô đội, tải, mức thay đổi của nghiệp vụ, năng lực vận hành, và nêu rõ điều kiện nào sẽ khiến bạn tách." },
+    { "type": "callout", "style": "warning", "markdown": "Module `shared` hay `common` mà mọi module phụ thuộc là nơi ranh giới bị phá âm thầm: entity, repository, util dần dồn vào đó \"cho tiện\". Giữ nó chỉ chứa thứ nhỏ, ổn định, không có nghiệp vụ (value object `Money`, kiểu id), và để test kiến trúc cấm module khác đặt class nghiệp vụ vào." }
+  ]
+}

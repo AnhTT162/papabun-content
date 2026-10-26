@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "money-record-scale",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "record Money(BigDecimal amount, String currency) {}\n\nvar price = new Money(new BigDecimal(\"10.0\"), \"VND\");\nvar paid  = new Money(new BigDecimal(\"10\"), \"VND\");\n\nSystem.out.println(price.equals(paid) + \" \"\n        + (price.amount().compareTo(paid.amount()) == 0));",
+      "options": [
+        "`false true`",
+        "`true true`",
+        "`false false`",
+        "`true false`"
+      ],
+      "answer": 0,
+      "explanation": "`equals` sinh cho record so từng thành phần bằng `equals` của nó, và `BigDecimal.equals` so cả giá trị lẫn scale: `10.0` (scale 1) khác `10` (scale 0). `compareTo` chỉ so giá trị nên trả 0. Value object tiền tệ nên chuẩn hoá scale trong compact constructor, ví dụ `amount = amount.setScale(Currency.getInstance(currency).getDefaultFractionDigits(), RoundingMode.UNNECESSARY)` (VND có 0 chữ số thập phân), để hai số tiền bằng nhau theo nghĩa nghiệp vụ thì cũng `equals`."
+    },
+    {
+      "id": "reference-by-id",
+      "kind": "single",
+      "prompt": "`Order` cần biết khách hàng nào đặt. Cách mô hình nào đúng với nguyên tắc thiết kế aggregate?",
+      "options": [
+        "`Order` giữ `CustomerId customerId`, cần thông tin khách thì tải `Customer` qua repository riêng",
+        "`Order` giữ `@ManyToOne Customer customer` để truy cập thông tin khách tiện hơn",
+        "`Customer` giữ `List<Order>` và mọi thao tác trên đơn đi qua `Customer`",
+        "`Order` sao chép toàn bộ thông tin khách hàng vào các cột của bảng đơn"
+      ],
+      "answer": 0,
+      "explanation": "Tham chiếu bằng id giữ ranh giới rõ: tải `Order` không kéo theo `Customer`, và không ai vô tình sửa `Customer` trong transaction của đơn. `@ManyToOne` làm mờ ranh giới. `Customer` chứa mọi đơn tạo ra aggregate khổng lồ và tranh chấp khoá. Sao chép những trường cần giữ lịch sử (địa chỉ giao hàng lúc đặt) là hợp lý, nhưng sao chép toàn bộ hồ sơ thì không."
+    },
+    {
+      "id": "two-aggregates-one-tx",
+      "kind": "single",
+      "prompt": "Khi đặt hàng cần tạo `Order` và giữ hàng trên `StockItem`. Theo DDD chiến thuật, cách nào được khuyến nghị?",
+      "options": [
+        "Tạo `Order` trong một transaction, phát `OrderPlaced`; handler giữ hàng trong transaction riêng",
+        "Sửa cả hai aggregate trong cùng một transaction để đảm bảo nhất quán tuyệt đối",
+        "Gộp `StockItem` vào aggregate `Order` để chúng luôn được lưu cùng nhau",
+        "Để `Order` gọi thẳng `stockItem.reserve()` rồi để cascade lưu cả hai"
+      ],
+      "answer": 0,
+      "explanation": "Một transaction một aggregate giữ khoá nhỏ và ranh giới rõ; phối hợp giữa các aggregate qua domain event và eventual consistency, kèm luồng bù trừ khi giữ hàng thất bại. Sửa nhiều aggregate cùng lúc làm tăng tranh chấp và deadlock giờ cao điểm. Gộp `StockItem` vào `Order` vô nghĩa vì cùng một tồn kho phục vụ nhiều đơn. Đây là khuyến nghị mặc định, không phải luật tuyệt đối: nếu nghiệp vụ thật sự đòi nhất quán ngay và tải thấp, một transaction vẫn có thể chấp nhận được."
+    },
+    {
+      "id": "entity-hashcode",
+      "kind": "single",
+      "prompt": "Entity `OrderLine` có `@Id @GeneratedValue Long id` và `equals`/`hashCode` dựa trên `id`. Code thêm một dòng mới vào `HashSet<OrderLine>`, lưu đơn, rồi gọi `lines.contains(line)`. Kết quả hay gặp là gì?",
+      "options": [
+        "Thường trả `false`, vì `hashCode` đổi khi `id` được gán lúc lưu",
+        "Luôn `true`, vì `HashSet` so bằng tham chiếu trước khi so `hashCode`",
+        "Ném `IllegalStateException`, vì Hibernate cấm entity chưa có id trong `Set`",
+        "Luôn `true`, vì Hibernate cập nhật lại bucket của `HashSet` sau khi lưu"
+      ],
+      "answer": 0,
+      "explanation": "Lúc thêm vào set, `id` là `null` nên phần tử nằm ở bucket theo `hashCode` của `null`. Sau khi lưu, `id` có giá trị nên `hashCode` đổi; `contains` tìm ở bucket khác và thường không thấy. `HashSet` tìm theo bucket của `hashCode` trước, nên không kịp so tham chiếu. Gán id trong constructor (UUID) hoặc dùng `hashCode` cố định cho entity là các cách tránh."
+    }
+  ]
+}

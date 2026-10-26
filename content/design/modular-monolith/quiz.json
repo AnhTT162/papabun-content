@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "module-listener-failure",
+      "kind": "single",
+      "prompt": "Module `booking` phát `BookingConfirmed` trong một transaction. Module `loyalty` nghe bằng `@ApplicationModuleListener` và ném exception vì database của nó đang lỗi. Điều gì xảy ra với lịch hẹn?",
+      "options": [
+        "Lịch hẹn vẫn được lưu; lần phát event nằm lại ở trạng thái chưa hoàn thành để gửi lại",
+        "Lịch hẹn bị rollback, vì listener chạy trong cùng transaction với `booking`",
+        "Lịch hẹn được lưu và event bị mất hoàn toàn, không có cách nào gửi lại",
+        "Spring Modulith tự thử lại listener ngay lập tức cho tới khi thành công"
+      ],
+      "answer": 0,
+      "explanation": "`@ApplicationModuleListener` chạy sau khi bên phát commit (`AFTER_COMMIT`), bất đồng bộ và trong transaction mới, nên lỗi của nó không ảnh hưởng `booking`. Event publication registry (khi có starter lưu trữ như `spring-modulith-starter-jpa`) đã lưu lần phát này và chỉ đánh dấu hoàn thành khi listener chạy xong; lần lỗi nằm lại chưa hoàn thành, gửi lại khi khởi động hoặc qua `IncompleteEventPublications`. Spring Modulith không tự thử lại ngay. Vì có gửi lại, listener phải idempotent."
+    },
+    {
+      "id": "cross-module-report",
+      "kind": "single",
+      "prompt": "Module `reporting` cần báo cáo doanh thu theo nhân viên, dữ liệu nằm ở `booking`, `payment` và `staff`, mỗi module một schema. Cách nào giữ đúng ranh giới module?",
+      "options": [
+        "Dựng read model riêng trong `reporting` từ các event mà ba module phát ra",
+        "Viết một câu SQL join thẳng ba schema, vì chúng cùng một database",
+        "Thêm khoá ngoại từ bảng của `reporting` tới bảng của ba module kia",
+        "Cho `reporting` inject repository của ba module để tự truy vấn"
+      ],
+      "answer": 0,
+      "explanation": "Join hay khoá ngoại chéo schema, hoặc dùng repository của module khác, đều làm `reporting` phụ thuộc vào cấu trúc bảng nội bộ của module khác: đổi schema ở đó là hỏng báo cáo, và không tách service được. Read model dựng từ event chỉ phụ thuộc vào hợp đồng công khai. Nếu báo cáo nhỏ và cần số liệu tức thời, gọi API công khai của từng module rồi ghép cũng giữ được ranh giới."
+    },
+    {
+      "id": "enforce-boundary",
+      "kind": "single",
+      "prompt": "Nhóm thống nhất \"module `payment` chỉ được dùng package `com.spa.payment`, không đụng vào `com.spa.payment.internal`\". Cách nào giữ quy ước này lâu dài?",
+      "options": [
+        "Test `ApplicationModules.of(...).verify()` (hoặc quy tắc ArchUnit) chạy trong CI",
+        "Ghi quy ước vào wiki và nhắc trong buổi onboarding",
+        "Đặt tên class nội bộ có hậu tố `Internal` để mọi người tự tránh",
+        "Review kỹ từng pull request có import tới package của `payment`"
+      ],
+      "answer": 0,
+      "explanation": "Quy ước không được kiểm tra tự động sẽ bị phá khi có áp lực tiến độ, và review bằng mắt dễ bỏ sót. Test kiến trúc trong CI làm build đỏ ngay khi có import vào package nội bộ. Mạnh hơn nữa là tách `payment` thành Maven/Gradle module riêng để compiler chặn, hoặc để class nội bộ ở mức package-private."
+    },
+    {
+      "id": "when-extract",
+      "kind": "single",
+      "prompt": "Lý do nào là tín hiệu tốt nhất để tách module `notification` ra thành service riêng?",
+      "options": [
+        "Đợt gửi tin cao điểm làm CPU tăng vọt và làm chậm luồng đặt lịch trong cùng ứng dụng",
+        "Module đã có hơn 50 class, quá lớn cho một package",
+        "Một kỹ sư mới muốn viết lại module bằng ngôn ngữ khác cho thú vị",
+        "Kiến trúc microservices là xu hướng nên tách càng sớm càng tốt"
+      ],
+      "answer": 0,
+      "explanation": "Tách service đáng chi phí khi có lý do đo được: tài nguyên khác hẳn, cần scale riêng, cần cô lập lỗi, hoặc nhịp release khác. Ở đây tải của `notification` ảnh hưởng trực tiếp tới luồng chính. Số class không phải lý do; module lớn có thể chia nhỏ bên trong. Sở thích công nghệ và xu hướng không bù được chi phí vận hành thêm một service."
+    }
+  ]
+}
