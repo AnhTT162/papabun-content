@@ -166,7 +166,7 @@
       "meaning": "Giai đoạn JVM dừng tất cả thread ứng dụng để làm việc nội bộ như GC, ứng dụng không xử lý được request nào.",
       "example": "Young GC của G1 dừng ứng dụng khoảng 10ms mỗi lần.",
       "related": ["full-gc"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "distributed-locks"]
     },
     {
       "id": "sampling-profiler",
@@ -917,7 +917,7 @@
       "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
       "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
       "related": ["pessimistic-locking", "lost-update"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns", "ddd-tactical", "cqrs-event-sourcing"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns", "ddd-tactical", "cqrs-event-sourcing", "distributed-locks"]
     },
     {
       "id": "serialization-failure",
@@ -1389,7 +1389,7 @@
       "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
       "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
       "related": ["pessimistic-locking", "lock-timeout"],
-      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc"]
+      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc", "distributed-locks"]
     },
     {
       "id": "lock-timeout",
@@ -1413,7 +1413,7 @@
       "meaning": "Khoá do ứng dụng đặt tên (một số hoặc chuỗi) và database quản lý, không gắn với dòng hay bảng nào. Database không tự dùng nó; ứng dụng tự quy ước.",
       "example": "PostgreSQL `SELECT pg_advisory_xact_lock(42)`: chỉ một transaction giữ được khoá 42, tự nhả khi commit.",
       "related": ["pessimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking", "connection-pool", "locking-deadlock-db", "outbox-cdc"]
+      "topics": ["optimistic-pessimistic-locking", "connection-pool", "locking-deadlock-db", "outbox-cdc", "distributed-locks"]
     },
     {
       "id": "max-connections",
@@ -1725,7 +1725,7 @@
       "meaning": "Phiên bản UUID theo RFC 9562 (2024): 48 bit đầu là thời gian Unix tính bằng mili giây, phần còn lại là bit ngẫu nhiên (có thể dùng một phần làm bộ đếm). Id mới gần như tăng dần nên hợp làm khoá trong B-tree.",
       "example": "`0192b3a4-5c6d-7e8f-9a0b-1c2d3e4f5a6b`: chữ số đầu của nhóm thứ ba là `7`.",
       "related": ["surrogate-key", "clustered-index"],
-      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql", "event-schema-evolution"]
+      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql", "event-schema-evolution", "clocks-ids"]
     },
     {
       "id": "soft-delete",
@@ -2141,7 +2141,7 @@
       "meaning": "Hai node cùng nghĩ mình là primary và cùng nhận ghi, thường do cô lập mạng; dữ liệu rẽ thành hai nhánh khó gộp lại.",
       "example": "Primary cũ bị cô lập vẫn nhận đơn hàng từ vài pod trong khi replica đã được promote.",
       "related": ["fencing", "failover"],
-      "topics": ["replication-ha", "redis-ha-cluster", "distributed-fundamentals"]
+      "topics": ["replication-ha", "redis-ha-cluster", "distributed-fundamentals", "distributed-locks"]
     },
     {
       "id": "fencing",
@@ -2149,7 +2149,7 @@
       "meaning": "Cơ chế chắc chắn node cũ không thể ghi nữa trước khi node mới nhận vai: lease tự hết hạn, watchdog khởi động lại máy, hoặc STONITH tắt nguồn node cũ.",
       "example": "Patroni hạ primary xuống read-only khi không gia hạn được khoá leader trong etcd; watchdog khởi động lại máy nếu chính Patroni treo.",
       "related": ["split-brain", "patroni"],
-      "topics": ["replication-ha", "distributed-fundamentals"]
+      "topics": ["replication-ha", "distributed-fundamentals", "distributed-locks"]
     },
     {
       "id": "patroni",
@@ -2901,7 +2901,7 @@
       "meaning": "Đoạn Lua chạy trên server Redis như một bước nguyên tử: không lệnh nào khác chen vào giữa. Dùng để gộp đọc rồi ghi; script chạy lâu chặn cả instance.",
       "example": "Script `INCR` rồi `EXPIRE` khi giá trị bằng 1 cho rate limiter.",
       "related": ["sorted-set"],
-      "topics": ["redis-use-cases", "rate-limiting"]
+      "topics": ["redis-use-cases", "rate-limiting", "distributed-locks"]
     },
     {
       "id": "sorted-set",
@@ -3549,7 +3549,7 @@
       "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
       "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
       "related": ["race-condition", "atomicity"],
-      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview", "idempotency"]
+      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview", "idempotency", "distributed-locks"]
     },
     {
       "id": "critical-section",
@@ -4797,7 +4797,7 @@
       "meaning": "Cách giải quyết xung đột giữ bản ghi có timestamp lớn nhất và bỏ các bản còn lại; đơn giản nhưng âm thầm mất lần ghi khi đồng hồ các máy lệch nhau.",
       "example": "Hai region cùng sửa địa chỉ giao hàng; bản có timestamp lớn hơn thắng, bản kia biến mất không báo lỗi.",
       "related": ["crdt", "eventual-consistency"],
-      "topics": ["consistency-cap"]
+      "topics": ["consistency-cap", "clocks-ids"]
     },
     {
       "id": "crdt",
@@ -4805,7 +4805,7 @@
       "meaning": "Conflict-free replicated data type: kiểu dữ liệu có phép gộp được chứng minh luôn hội tụ, nên các bản sao sửa độc lập vẫn gộp được mà không mất dữ liệu.",
       "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
       "related": ["last-write-wins", "eventual-consistency"],
-      "topics": ["consistency-cap"]
+      "topics": ["consistency-cap", "clocks-ids"]
     },
     {
       "id": "idempotency",
@@ -5213,7 +5213,7 @@
       "meaning": "Bài toán để nhiều node thống nhất một giá trị (hoặc một chuỗi lệnh) dù một số node chết; các giao thức như Paxos, Raft chỉ cần đa số đồng ý.",
       "example": "Cụm etcd 3 node vẫn ghi được khi một node chết, vì 2 trên 3 là đa số.",
       "related": ["quorum", "two-phase-commit"],
-      "topics": ["distributed-transactions"]
+      "topics": ["distributed-transactions", "distributed-locks"]
     },
     {
       "id": "tcc",
@@ -5318,6 +5318,150 @@
       "example": "Mô-đun `redis-cell`: `CL.THROTTLE user42 15 30 60` cho 30 request mỗi 60 giây; `max_burst` 15 nghĩa là dồn được 16 request (15 cộng 1).",
       "related": ["leaky-bucket", "token-bucket"],
       "topics": ["rate-limiting"]
+    },
+    {
+      "id": "distributed-lock",
+      "term": "Distributed lock",
+      "meaning": "Khoá dùng chung cho nhiều process trên nhiều máy, để tại một thời điểm chỉ một process làm một việc. Luôn cần thời hạn (lease), nên người giữ có thể mất khoá mà không biết.",
+      "example": "Ba pod cùng chạy job gửi email nhắc; chỉ pod nào `SET lock:payment-reminder <token> NX PX 60000` thành công mới gửi.",
+      "related": ["lease", "fencing-token", "redlock"],
+      "topics": ["distributed-locks"]
+    },
+    {
+      "id": "lease",
+      "term": "Lease",
+      "meaning": "Quyền (giữ khoá, làm leader) có thời hạn: hết hạn mà không gia hạn thì tự mất, nên người giữ chết không làm hệ thống kẹt mãi.",
+      "example": "Lease etcd TTL 10 giây, client gửi keepalive mỗi 3 giây; process treo thì sau 10 giây khoá tự nhả.",
+      "related": ["distributed-lock", "fencing"],
+      "topics": ["distributed-locks", "clocks-ids"]
+    },
+    {
+      "id": "fencing-token",
+      "term": "Fencing token",
+      "meaning": "Số tăng dần được cấp kèm mỗi lần lấy khoá. Client gửi nó cùng mỗi lần ghi; storage nhớ token lớn nhất đã thấy và từ chối token nhỏ hơn, chặn người giữ khoá cũ đã hết hạn.",
+      "example": "A giữ token 33 bị GC pause, B lấy khoá với token 34 và ghi; lần ghi muộn của A mang 33 bị storage từ chối.",
+      "related": ["fencing", "distributed-lock", "lease"],
+      "topics": ["distributed-locks"]
+    },
+    {
+      "id": "redlock",
+      "term": "Redlock",
+      "meaning": "Thuật toán lấy khoá trên đa số trong N master Redis độc lập (thường 5) trong thời gian ngắn hơn TTL. Bị phê phán vì dựa vào giả định thời gian và không cấp fencing token.",
+      "example": "Lấy được khoá trên 3/5 node trong 40 ms với TTL 10 giây thì coi như giữ khoá khoảng 9,9 giây.",
+      "related": ["distributed-lock", "fencing-token"],
+      "topics": ["distributed-locks"]
+    },
+    {
+      "id": "ephemeral-node",
+      "term": "Ephemeral node",
+      "meaning": "Znode của ZooKeeper tồn tại theo session của client tạo ra nó: session hết hạn (client chết, mất kết nối quá lâu) thì node tự bị xoá. Nền của lock và leader election trên ZooKeeper.",
+      "example": "Client tạo `/locks/job/lock-0000000042` kiểu ephemeral sequential; node có số nhỏ nhất đang giữ khoá.",
+      "related": ["lease", "distributed-lock"],
+      "topics": ["distributed-locks"]
+    },
+    {
+      "id": "clock-skew",
+      "term": "Clock skew",
+      "meaning": "Độ lệch giữa đồng hồ của các máy tại cùng một thời điểm. NTP giữ nó nhỏ nhưng không bằng 0, và có thể lớn đột ngột khi NTP hỏng.",
+      "example": "Máy A chỉ 10:00:05 trong khi máy B chỉ 10:00:03: skew 2 giây, đủ để last-write-wins chọn sai.",
+      "related": ["ntp", "wall-clock", "last-write-wins"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "wall-clock",
+      "term": "Wall clock",
+      "meaning": "Đồng hồ cho biết giờ thực (giây từ 1970), có thể bị chỉnh tới hoặc lùi. Trong Java: `System.currentTimeMillis()`, `Instant.now()`.",
+      "example": "NTP step lùi 300 ms làm `currentTimeMillis()` trả giá trị nhỏ hơn lần gọi trước.",
+      "related": ["monotonic-clock", "ntp", "clock-skew"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "monotonic-clock",
+      "term": "Monotonic clock",
+      "meaning": "Đồng hồ chỉ tăng, không bị NTP kéo lùi, dùng để đo khoảng thời gian. Giá trị không mang nghĩa giờ thực và chỉ so được trong một process.",
+      "example": "`long start = System.nanoTime(); ... long elapsedMs = (System.nanoTime() - start) / 1_000_000;`",
+      "related": ["wall-clock"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "ntp",
+      "term": "NTP",
+      "meaning": "Network Time Protocol: giao thức đồng bộ đồng hồ máy với máy chủ thời gian. Chỉnh bằng slew (chạy nhanh/chậm dần) hoặc step (nhảy thẳng, có thể lùi).",
+      "example": "chrony trên mỗi node đồng bộ với máy chủ thời gian của cloud, giữ lệch ở mức mili giây hoặc thấp hơn.",
+      "related": ["clock-skew", "wall-clock"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "lamport-clock",
+      "term": "Lamport clock",
+      "meaning": "Logical clock là một bộ đếm: mỗi sự kiện tăng 1, gửi kèm message, bên nhận đặt max(của mình, nhận được) + 1. Nếu a xảy ra trước b thì L(a) < L(b), nhưng không có chiều ngược lại.",
+      "example": "B đang ở 3, nhận message mang 2 nên thành 4.",
+      "related": ["vector-clock", "hybrid-logical-clock", "happens-before"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "vector-clock",
+      "term": "Vector clock",
+      "meaning": "Mỗi node giữ một mảng bộ đếm, một phần tử cho mỗi node. So hai vector cho biết một phiên bản kế thừa phiên bản kia hay hai phiên bản đồng thời (xung đột).",
+      "example": "[A:2, B:1] và [A:1, B:2]: không vector nào lớn hơn hoặc bằng vector kia ở mọi phần tử, nên hai lần ghi đồng thời, cần gộp.",
+      "related": ["lamport-clock", "crdt"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "hybrid-logical-clock",
+      "term": "Hybrid logical clock",
+      "meaning": "HLC: timestamp ghép giờ vật lý với một bộ đếm logic, nên gần giờ thật mà vẫn giữ thứ tự nhân quả khi đồng hồ lệch.",
+      "example": "CockroachDB gán HLC cho mỗi transaction; MongoDB dùng cluster time cùng ý tưởng cho causal consistency.",
+      "related": ["lamport-clock", "wall-clock"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "uuid-v4",
+      "term": "UUID v4",
+      "meaning": "UUID 128 bit với 122 bit ngẫu nhiên. Sinh ở đâu cũng không trùng, nhưng không có thứ tự nên làm index B-tree phân mảnh khi dùng làm khoá chính.",
+      "example": "`UUID.randomUUID()` trong Java; chữ số đầu của nhóm thứ ba là `4`.",
+      "related": ["uuid-v7", "snowflake-id"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "snowflake-id",
+      "term": "Snowflake ID",
+      "meaning": "ID 64 bit gồm mili giây từ một epoch tự chọn (41 bit), id của máy sinh (10 bit) và sequence trong mili giây (12 bit). Tăng theo thời gian, vừa kiểu `bigint`.",
+      "example": "Worker 7 sinh 4096 ID mỗi mili giây; 41 bit thời gian đủ khoảng 69 năm.",
+      "related": ["uuid-v7", "clock-skew"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "ulid",
+      "term": "ULID",
+      "meaning": "Universally Unique Lexicographically Sortable Identifier: 48 bit mili giây cộng 80 bit ngẫu nhiên, viết thành 26 ký tự base32 sắp xếp được theo chữ. Không phải chuẩn RFC.",
+      "example": "`01JFZ3K8Q4V7X2M9N5T6R8W1YB`: các ULID tạo sau đứng sau khi sắp xếp chuỗi.",
+      "related": ["uuid-v7", "snowflake-id"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "truetime",
+      "term": "TrueTime",
+      "meaning": "API đồng hồ của Google Spanner trả về khoảng [earliest, latest] chắc chắn chứa giờ thật. Spanner chờ hết độ bất định trước khi báo commit (commit wait), nên thứ tự timestamp khớp thứ tự thật.",
+      "example": "Độ bất định 4 ms thì transaction chờ khoảng 4 ms trước khi trả lời client.",
+      "related": ["clock-skew", "hybrid-logical-clock"],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "idor",
+      "term": "IDOR",
+      "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
+      "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
+      "related": [],
+      "topics": ["clocks-ids"]
+    },
+    {
+      "id": "leap-second",
+      "term": "Leap second",
+      "meaning": "Giây nhuận thêm vào UTC để khớp với vòng quay Trái Đất. Hệ thống thường rải giây này ra nhiều giờ (smear) thay vì có phút 61 giây.",
+      "example": "Phút có 23:59:60 làm vài hệ thống cũ treo hoặc tính sai thời lượng.",
+      "related": ["ntp", "wall-clock"],
+      "topics": ["clocks-ids"]
     }
   ]
 }

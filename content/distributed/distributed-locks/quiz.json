@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "fenced-storage-output",
+      "kind": "output",
+      "prompt": "Storage dưới đây kiểm tra fencing token. Bốn lần ghi đến theo thứ tự: A với token 33, B với 34, lần ghi muộn của A với 33, rồi B với 34. Chương trình in gì?",
+      "options": [
+        "true true false true value=B2",
+        "true true true true value=B2",
+        "true true false false value=B1",
+        "true false false true value=B2"
+      ],
+      "answer": 0,
+      "explanation": "33 được nhận (0 < 33), 34 được nhận. Lần ghi muộn của A mang 33 < 34 nên bị từ chối: đây là tác dụng của fencing. B ghi tiếp với 34: điều kiện là `token < highestToken`, 34 không nhỏ hơn 34 nên được nhận, giá trị cuối là `B2`. Nếu so `<=` thì người đang giữ lock không ghi được lần thứ hai, sai ý đồ. Không có fencing thì cả bốn lần đều `true`.",
+      "code": "class FencedStorage {\n    private long highestToken = 0;\n    String value = \"\";\n\n    synchronized boolean write(long token, String newValue) {\n        if (token < highestToken) return false;\n        highestToken = token;\n        value = newValue;\n        return true;\n    }\n}\n\nvar storage = new FencedStorage();\nSystem.out.println(storage.write(33, \"A1\") + \" \" + storage.write(34, \"B1\") + \" \"\n        + storage.write(33, \"A2\") + \" \" + storage.write(34, \"B2\") + \" value=\" + storage.value);"
+    },
+    {
+      "id": "check-before-write",
+      "kind": "single",
+      "prompt": "Đồng nghiệp đề xuất: trước mỗi lần ghi, client gọi `lock.isHeldByCurrentThread()` và chỉ ghi khi còn giữ lock. Như vậy có bỏ được fencing token không?",
+      "options": [
+        "Không, vì pause có thể rơi đúng giữa lần kiểm tra và lần ghi",
+        "Có, vì kiểm tra ngay trước khi ghi thì không còn khoảng hở",
+        "Có, nếu thêm watchdog gia hạn lock mỗi 10 giây",
+        "Không, vì `isHeldByCurrentThread` luôn trả về sai trên Redis"
+      ],
+      "answer": 0,
+      "explanation": "Đây là check-then-act: GC pause hay mạng chậm có thể xảy ra sau khi kiểm tra trả về \"còn giữ\" và trước khi lần ghi tới storage. Watchdog không giúp vì GC pause dừng cả thread watchdog. Chỉ có kiểm tra phía storage (fencing token hoặc ghi có điều kiện) mới đóng được khoảng hở này."
+    },
+    {
+      "id": "tool-choice",
+      "kind": "single",
+      "prompt": "Job dựng báo cáo thống kê chạy mỗi giờ trên 4 pod, mỗi lần mất vài phút CPU và đọc nặng database. Chạy trùng không làm sai dữ liệu (kết quả ghi đè giống nhau), chỉ tốn tài nguyên. Chọn cách nào?",
+      "options": [
+        "Một Redis `SET NX PX` với token, hoặc ShedLock, là đủ",
+        "Redlock trên 5 master Redis để chắc chắn không trùng",
+        "Cụm etcd riêng kèm fencing token cho mỗi lần ghi báo cáo",
+        "Không cần lock, cứ để cả 4 pod chạy song song mỗi giờ"
+      ],
+      "answer": 0,
+      "explanation": "Đây là lock cho mục đích hiệu quả: thỉnh thoảng trùng cũng không sai dữ liệu. Một Redis hay ShedLock là đủ và rẻ. Redlock tốn 5 Redis mà vẫn không đảm bảo tuyệt đối, nên không đáng. etcd cộng fencing dành cho trường hợp trùng là hỏng dữ liệu. Không lock thì mỗi giờ tốn gấp 4 lần CPU và tải đọc database, đúng thứ lock để hiệu quả sinh ra để tránh."
+    },
+    {
+      "id": "ttl-delete",
+      "kind": "single",
+      "prompt": "Lock Redis đặt giá trị là tên pod, nhả bằng `redis.delete(key)` trong `finally`. Job đôi khi chạy lâu hơn TTL. Ngoài việc hai pod cùng chạy, còn hậu quả gì?",
+      "options": [
+        "Pod chạy chậm xoá mất lock của pod đến sau, nên pod thứ ba cũng vào được",
+        "Redis báo lỗi khi xoá key đã hết hạn, làm job bị đánh dấu thất bại",
+        "Lock bị giữ mãi vì `delete` không chạy được trên key đã hết hạn",
+        "Không có hậu quả gì thêm, vì key đã hết hạn thì `delete` không làm gì"
+      ],
+      "answer": 0,
+      "explanation": "Khi pod chậm xong việc, key đang mang lock của pod khác (lấy sau khi TTL hết). `DEL` không so giá trị nên xoá luôn lock đó, mở đường cho pod thứ ba. Xoá key không tồn tại thì Redis chỉ trả 0, không báo lỗi. Cách sửa: giá trị là token ngẫu nhiên và nhả bằng Lua script so token."
+    }
+  ]
+}

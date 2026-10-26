@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "clocks-ids",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Đồng hồ, thứ tự & sinh ID",
+  "summary": "Wall clock và monotonic clock; clock skew, NTP slew và step, leap second smear; vì sao last-write-wins theo giờ máy mất ghi; Lamport clock, vector clock, hybrid logical clock; TrueTime và commit wait; sinh ID: sequence và lỗ, UUID v4, UUID v7 (`UUID.ofEpochMillis` từ JDK 26, `uuidv7()` PostgreSQL 18), ULID, Snowflake và cấp worker id, đồng hồ lùi, ID 64 bit trong JavaScript; ID lộ thông tin; thứ tự từ một bên xếp hàng duy nhất.",
+  "level": "senior",
+  "order": 18,
+  "minutes": 15,
+  "prerequisites": ["distributed-fundamentals", "consistency-cap", "data-modeling"],
+  "terms": ["clock-skew", "wall-clock", "monotonic-clock", "ntp", "last-write-wins", "lamport-clock", "vector-clock", "hybrid-logical-clock", "uuid-v4", "uuid-v7", "snowflake-id", "lease", "crdt", "ulid", "idor", "leap-second", "truetime"],
+  "references": [
+    { "title": "Leslie Lamport: Time, Clocks, and the Ordering of Events in a Distributed System (1978)", "url": "https://lamport.azurewebsites.net/pubs/time-clocks.pdf" },
+    { "title": "RFC 9562: Universally Unique IDentifiers (UUIDs)", "url": "https://www.rfc-editor.org/rfc/rfc9562" },
+    { "title": "Kulkarni et al.: Logical Physical Clocks and Consistent Snapshots (HLC, 2014)", "url": "https://cse.buffalo.edu/tech-reports/2014-04.pdf" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Snowflake gặp đồng hồ chạy lùi thì làm gì?\" Trả lời: nhớ mốc mili giây lớn nhất đã dùng; lùi ít thì tiếp tục dùng mốc cũ (tăng sequence) hoặc chờ đồng hồ đuổi kịp; lùi nhiều thì từ chối sinh ID và cảnh báo, không bao giờ sinh ID với mốc nhỏ hơn. Hỏi tiếp \"process restart khi đồng hồ vừa lùi\": mốc cũ nằm trong bộ nhớ đã mất, nên lưu mốc định kỳ hoặc chờ một khoảng an toàn lúc khởi động." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng sắp xếp event từ nhiều service theo `createdAt` do mỗi service tự gán rồi kết luận cái nào xảy ra trước. Lệch vài chục mili giây là đủ đảo thứ tự hai event sát nhau. Thứ tự cần đúng thì cho đi qua một nơi cấp số thứ tự (partition Kafka, version của aggregate)." }
+  ]
+}

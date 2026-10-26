@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "nanotime", "front": "Đo timeout dùng `currentTimeMillis()` hay `nanoTime()`?", "back": "`nanoTime()`: monotonic, không bị NTP kéo lùi. Nhưng giá trị chỉ so được trong cùng một process." },
+    { "id": "lww-skew", "front": "Last-write-wins theo giờ máy nguy hiểm thế nào?", "back": "Máy có đồng hồ nhanh luôn thắng, nên lần ghi xảy ra sau có thể bị mất mà không có lỗi nào." },
+    { "id": "lamport-rule", "front": "Quy tắc của Lamport clock?", "back": "Mỗi sự kiện tăng bộ đếm 1, gửi kèm message; bên nhận đặt `max(của mình, nhận được) + 1`." },
+    { "id": "lamport-limit", "front": "Lamport clock không làm được gì?", "back": "Không phát hiện được hai sự kiện đồng thời: `L(a) < L(b)` không có nghĩa a xảy ra trước b." },
+    { "id": "vector-clock", "front": "Vector clock dùng để làm gì?", "back": "Phát hiện hai phiên bản là đồng thời (xung đột cần gộp) hay một bản kế thừa bản kia; giá là kích thước tăng theo số node." },
+    { "id": "snowflake-layout", "front": "Bố cục 64 bit của Snowflake?", "back": "1 bit dấu, 41 bit mili giây từ epoch tự chọn (khoảng 69 năm), 10 bit worker, 12 bit sequence (4096 ID mỗi mili giây mỗi worker)." },
+    { "id": "snowflake-js", "front": "Vì sao ID Snowflake nên trả dạng chuỗi trong JSON?", "back": "`Number` của JavaScript chỉ chính xác tới 2^53; ID Snowflake vượt mốc đó nên bị làm tròn khi parse." },
+    { "id": "uuidv7-java", "front": "`UUID.ofEpochMillis` (JDK 26) có tăng dần trong cùng một mili giây không?", "back": "Không: 74 bit còn lại là ngẫu nhiên. Cần tăng dần tuyệt đối thì dùng bộ đếm theo RFC 9562 (thư viện) hoặc Snowflake." },
+    { "id": "sequence-gaps", "front": "Vì sao ID từ sequence có lỗ?", "back": "Sequence không quay lại khi rollback, và Hibernate lấy trước theo `allocationSize` (mặc định 50) cho mỗi instance." }
+  ]
+}

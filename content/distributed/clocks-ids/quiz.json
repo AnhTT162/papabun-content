@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lamport-output",
+      "kind": "output",
+      "prompt": "Ba process A, B, C, mỗi process một `LamportClock` bắt đầu từ 0. A có một sự kiện cục bộ rồi gửi message cho B. B đã có ba sự kiện cục bộ trước khi nhận, sau khi nhận thì gửi tiếp cho C. Chương trình in gì?",
+      "options": [
+        "aSend=2 bRecv=4 bSend=5 cRecv=6",
+        "aSend=2 bRecv=3 bSend=4 cRecv=5",
+        "aSend=2 bRecv=6 bSend=7 cRecv=8",
+        "aSend=1 bRecv=4 bSend=5 cRecv=6"
+      ],
+      "answer": 0,
+      "explanation": "A: sự kiện cục bộ là 1, gửi là 2. B sau ba sự kiện là 3; nhận message mang 2 nên `max(3, 2) + 1 = 4`. B gửi là 5. C đang ở 0, nhận 5 nên `max(0, 5) + 1 = 6`. Lấy giá trị nhận được cộng 1 mà quên so với bộ đếm của mình thì ra 3; cộng dồn hai bộ đếm thì ra 6.",
+      "code": "final class LamportClock {\n    private long time = 0;\n    synchronized long tick() { return ++time; }   // sự kiện cục bộ hoặc gửi\n    synchronized long onReceive(long remote) {\n        time = Math.max(time, remote) + 1;\n        return time;\n    }\n}\n\nvar A = new LamportClock(); var B = new LamportClock(); var C = new LamportClock();\nA.tick();                       // sự kiện cục bộ của A\nlong aSend = A.tick();          // A gửi cho B\nB.tick(); B.tick(); B.tick();   // ba sự kiện cục bộ của B\nlong bRecv = B.onReceive(aSend);\nlong bSend = B.tick();          // B gửi cho C\nlong cRecv = C.onReceive(bSend);\nSystem.out.println(\"aSend=\" + aSend + \" bRecv=\" + bRecv + \" bSend=\" + bSend + \" cRecv=\" + cRecv);"
+    },
+    {
+      "id": "timeout-clock",
+      "kind": "single",
+      "prompt": "Code tính timeout cho lời gọi bằng `System.currentTimeMillis() - start > 5000`. Thỉnh thoảng một lời gọi chờ mãi không timeout. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "NTP chỉnh đồng hồ hệ thống lùi lại, nên hiệu số nhỏ đi hoặc âm",
+        "`currentTimeMillis` chỉ chính xác tới 10 ms nên phép so bị sai",
+        "JIT tối ưu bỏ vòng lặp vì biến `start` không phải volatile",
+        "`currentTimeMillis` tràn số sau 24 ngày chạy liên tục"
+      ],
+      "answer": 0,
+      "explanation": "Wall clock có thể bị step lùi (NTP, người vận hành chỉnh giờ, VM được khôi phục), làm hiệu số ngừng tăng một thời gian. Đo khoảng thời gian phải dùng `System.nanoTime()`. Độ phân giải thô chỉ làm lệch vài mili giây, không làm chờ mãi; `long` mili giây không tràn trong hàng trăm triệu năm (tràn sau 24 ngày là chuyện của bộ đếm 32 bit)."
+    },
+    {
+      "id": "id-choice",
+      "kind": "single",
+      "prompt": "Bảng đơn hàng PostgreSQL, 20 instance ứng dụng, cần sinh ID ở ứng dụng trước khi insert (để gửi event ngay), ID dùng làm khoá chính và sắp xếp gần theo thời gian. Không muốn quản lý worker id. Chọn gì?",
+      "options": [
+        "UUID v7 sinh ở ứng dụng, lưu kiểu `uuid`",
+        "UUID v4 sinh ở ứng dụng, lưu kiểu `uuid`",
+        "Snowflake 64 bit với worker id cấu hình tay",
+        "`bigserial` của PostgreSQL lấy sau khi insert"
+      ],
+      "answer": 0,
+      "explanation": "UUID v7 sinh được ở bất kỳ instance nào không cần phối hợp, gần tăng dần nên index B-tree không phân mảnh. UUID v4 ngẫu nhiên làm dòng mới chèn rải khắp index. Snowflake gọn hơn (8 byte) nhưng đòi cấp worker id không trùng, điều đề bài muốn tránh. `bigserial` chỉ có sau khi insert, trái yêu cầu sinh trước. Sinh v7 trong Java: `UUID.ofEpochMillis` từ JDK 26 (tự đảm bảo timestamp không lùi), hoặc thư viện trên JDK cũ hơn."
+    },
+    {
+      "id": "lamport-concurrent",
+      "kind": "single",
+      "prompt": "Hai lần ghi có Lamport timestamp 7 và 9. Kết luận nào đúng?",
+      "options": [
+        "Lần ghi 9 không thể xảy ra trước lần ghi 7, nhưng hai lần có thể đồng thời",
+        "Lần ghi 7 chắc chắn xảy ra trước, và lần ghi 9 đã thấy nó",
+        "Hai lần ghi chắc chắn đồng thời vì hai số không liên tiếp",
+        "Không kết luận được gì vì Lamport chỉ dùng trong một process"
+      ],
+      "answer": 0,
+      "explanation": "Lamport đảm bảo một chiều: a xảy ra trước b thì `L(a) < L(b)`. Lấy phản đảo: `L(b) > L(a)` nên b không thể xảy ra trước a. Nhưng 7 < 9 không chứng minh lần ghi 7 xảy ra trước; hai node không trao đổi gì vẫn có thể ra 7 và 9. Phân biệt \"xảy ra trước\" với \"đồng thời\" cần vector clock."
+    }
+  ]
+}

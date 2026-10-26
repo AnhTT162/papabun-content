@@ -346,8 +346,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 14 | `distributed-transactions` | 2PC & giao dịch phân tán | senior | 2PC, XA, vì sao tránh, các lựa chọn thay thế | L S | ✅ |
 | 15 | `consistent-hashing` | ✚ Consistent hashing & phân phối dữ liệu | senior | Vòng hash, virtual node, rebalance, replication theo quorum (N, R, W) | L S D | ✅ |
 | 16 | `rate-limiting` | Rate limiting | senior | Token bucket, leaky bucket, sliding window; phân tán | L S Sc | ✅ |
-| 17 | `distributed-locks` | Distributed lock & fencing token | senior | Lease, fencing, vì sao lock dựa trên thời gian nguy hiểm | L S B | ⬜ |
-| 18 | `clocks-ids` | Đồng hồ, thứ tự & sinh ID | senior | Lệch đồng hồ, Lamport/vector clock, snowflake, UUID v7 | L D | ⬜ |
+| 17 | `distributed-locks` | Distributed lock & fencing token | senior | Lease, fencing, vì sao lock dựa trên thời gian nguy hiểm | L S B | ✅ |
+| 18 | `clocks-ids` | Đồng hồ, thứ tự & sinh ID | senior | Lệch đồng hồ, Lamport/vector clock, snowflake, UUID v7 | L D | ✅ |
 | 19 | `consensus` | Consensus & leader election | architect | Raft, quorum, split brain, etcd/ZooKeeper | L S D | ⬜ |
 | 20 | `multi-region-active-active` | ✚ Multi-region & active-active | architect | Replication giữa region, giải quyết xung đột (LWW, CRDT), định tuyến người dùng, chi phí | L D Sc | ⬜ |
 

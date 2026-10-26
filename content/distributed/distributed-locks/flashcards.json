@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-lease", "front": "Vì sao distributed lock phải có thời hạn (lease)?", "back": "Người giữ có thể chết hoặc mất mạng mà không nhả; không có thời hạn thì lock bị giữ mãi." },
+    { "id": "lease-danger", "front": "Lease gây ra nguy hiểm gì?", "back": "Người giữ có thể bị pause (GC, VM) quá thời hạn, mất lock mà không biết, rồi tỉnh dậy ghi tiếp trong khi người khác đã giữ lock." },
+    { "id": "fencing-token", "front": "Fencing token hoạt động thế nào?", "back": "Mỗi lần cấp lock kèm một số tăng dần; storage nhớ token lớn nhất đã thấy và từ chối mọi lần ghi mang token nhỏ hơn." },
+    { "id": "who-checks", "front": "Ai phải kiểm tra fencing token?", "back": "Tài nguyên được bảo vệ (storage), không phải client: client đang bị pause không thể tự biết mình đã mất lock." },
+    { "id": "two-purposes", "front": "Hai mục đích của distributed lock?", "back": "Hiệu quả (tránh làm trùng, thỉnh thoảng trùng vẫn chấp nhận được) và tính đúng (trùng là hỏng dữ liệu). Mục đích thứ hai cần fencing." },
+    { "id": "release", "front": "Nhả Redis lock thế nào cho đúng?", "back": "Xoá chỉ khi giá trị vẫn là token của mình, trong một Lua script (hoặc `DELEX ... IFEQ` từ Redis 8.4), không dùng `DEL` trần." },
+    { "id": "redlock", "front": "Redlock có giải quyết được vấn đề GC pause không?", "back": "Không: nó vẫn dựa vào giả định thời gian và không cấp fencing token. Cần đúng tuyệt đối thì dùng hệ đồng thuận cộng fencing." },
+    { "id": "zk-recipe", "front": "Lock trên ZooKeeper tránh herd effect thế nào?", "back": "Mỗi client tạo ephemeral sequential znode và chỉ watch node ngay trước mình, nên khi lock được nhả chỉ một client thức dậy." },
+    { "id": "no-lock", "front": "Khi nào không cần distributed lock?", "back": "Khi tài nguyên là database: unique constraint, `UPDATE ... WHERE` có điều kiện hoặc optimistic locking đã là cơ chế kiểm tra ở storage." }
+  ]
+}

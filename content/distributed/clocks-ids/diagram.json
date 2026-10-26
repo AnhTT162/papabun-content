@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Last-write-wins theo giờ máy làm mất lần ghi sau",
+  "nodes": [
+    {"id": "a", "label": "Node A ghi x=1", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "b", "label": "Node B ghi x=2", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "c", "label": "C so giờ máy", "kind": "database", "x": 0.1, "y": 0.5},
+    {"id": "d", "label": "C so Lamport", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "c-result", "label": "Giữ x=1 (sai)", "kind": "generic", "x": 0.1, "y": 0.95},
+    {"id": "d-result", "label": "Giữ x=2 (đúng)", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "a-b", "from": "a", "to": "b", "label": "sao chép, L=1"},
+    {"id": "a-c", "from": "a", "to": "c", "label": "x=1 @10:00:05"},
+    {"id": "b-c", "from": "b", "to": "c", "label": "x=2 @10:00:04"},
+    {"id": "c-out", "from": "c", "to": "c-result", "label": "10:00:05 lớn hơn"},
+    {"id": "a-d", "from": "a", "to": "d", "label": "x=1, L=1"},
+    {"id": "b-d", "from": "b", "to": "d", "label": "x=2, L=3"},
+    {"id": "d-out", "from": "d", "to": "d-result", "label": "3 lớn hơn 1"}
+  ],
+  "steps": [
+    {"caption": "Đồng hồ của A chạy nhanh 2 giây. A ghi `x = 1` lúc 10:00:05 theo giờ A (giờ thật 10:00:03); Lamport clock của A là 1.", "show": ["a"], "highlight": ["a"]},
+    {"caption": "B nhận bản sao `x = 1`: Lamport của B thành `max(0, 1) + 1 = 2`. Người dùng thấy `x = 1` rồi sửa thành `x = 2` lúc 10:00:04 (B đúng giờ), Lamport 3. Lần ghi của B xảy ra **sau** về nhân quả.", "show": ["b", "a-b"], "highlight": ["a-b"]},
+    {"caption": "Node C gộp hai lần ghi bằng last-write-wins theo timestamp của máy ghi.", "show": ["c", "a-c", "b-c"], "highlight": ["a-c", "b-c"]},
+    {"caption": "10:00:05 lớn hơn 10:00:04 nên `x = 1` thắng. Lần sửa của người dùng biến mất, không lỗi, không log: đây là cách clock skew làm mất dữ liệu.", "show": ["c-result", "c-out"], "highlight": ["c-out"]},
+    {"caption": "Nếu C so Lamport timestamp: 3 lớn hơn 1 nên `x = 2` thắng, đúng thứ tự nhân quả, bất kể đồng hồ máy lệch bao nhiêu.", "show": ["d", "a-d", "b-d", "d-result", "d-out"], "highlight": ["d-out"]},
+    {"caption": "Giới hạn: nếu A và B ghi đồng thời (không ai thấy lần ghi của ai), Lamport vẫn xếp một bên thắng tuỳ theo con số, và lần ghi kia mất. Muốn phát hiện xung đột đó để gộp thì cần vector clock hoặc CRDT.", "show": [], "highlight": ["a", "b"]}
+  ]
+}

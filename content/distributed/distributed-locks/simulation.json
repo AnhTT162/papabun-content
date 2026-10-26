@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Lease hết hạn khi client A đang bị GC pause",
+  "instructions": "Chạy một lần với fencing tắt: A lấy lock, bị pause, lease hết, B lấy lock và ghi, rồi A tỉnh dậy ghi. Bấm \"Làm lại\", bật fencing ở trạng thái lock trống rồi chạy lại đúng thứ tự đó.",
+  "config": {
+    "states": [
+      { "id": "free", "label": "Lock trống", "x": 0.1, "y": 0.05, "note": "Chưa ai giữ lock. Bật hoặc tắt fencing ở đây trước khi chạy kịch bản." },
+      { "id": "a-holds", "label": "A giữ #33", "x": 0.5, "y": 0.05, "note": "A lấy được lock với lease 10 giây; dịch vụ lock cấp token 33. A có thể ghi rồi nhả lock (đường bình thường), hoặc bị pause giữa chừng." },
+      { "id": "a-paused", "label": "A bị pause", "x": 0.9, "y": 0.05, "note": "A dừng hẳn vì stop-the-world GC (hoặc VM bị migrate, container bị throttle CPU). Mọi thread của A đứng yên, kể cả thread gia hạn lease. A vẫn tin mình đang giữ lock." },
+      { "id": "expired", "label": "Lease hết", "x": 0.9, "y": 0.5, "note": "Dịch vụ lock thấy lease của A hết hạn và coi lock là trống. A không hề được báo: nó vẫn đang ngủ." },
+      { "id": "b-holds", "label": "B giữ #34", "x": 0.5, "y": 0.5, "note": "B lấy lock hợp lệ, token 34. Lúc này về mặt logic có hai người tin mình giữ lock." },
+      { "id": "b-wrote", "label": "B đã ghi", "x": 0.1, "y": 0.5, "note": "Storage nhận lần ghi của B và (nếu có fencing) nhớ token lớn nhất là 34. A sắp tỉnh dậy." },
+      { "id": "rejected", "label": "Chặn ghi #33", "x": 0.1, "y": 0.95, "note": "Storage so token: 33 < 34 nên từ chối. A nhận lỗi, biết mình đã mất lock và dừng. Dữ liệu của B được giữ nguyên." },
+      { "id": "corrupted", "label": "Ghi đè hỏng", "x": 0.5, "y": 0.95, "note": "Không có fencing, storage nhận cả lần ghi muộn của A và đè lên dữ liệu của B. Không ai báo lỗi; chỉ phát hiện khi đối soát." }
+    ],
+    "initial": "free",
+    "events": [
+      { "id": "fence-on", "label": "Bật fencing" },
+      { "id": "fence-off", "label": "Tắt fencing" },
+      { "id": "a-acquire", "label": "A lấy lock" },
+      { "id": "gc", "label": "A bị GC pause 15s" },
+      { "id": "expire", "label": "Hết 10s lease" },
+      { "id": "b-acquire", "label": "B lấy lock" },
+      { "id": "b-write", "label": "B ghi (token 34)" },
+      { "id": "a-write", "label": "A ghi (token 33)" },
+      { "id": "reset", "label": "Làm lại" }
+    ],
+    "counters": [
+      { "id": "fencing", "label": "Fencing bật (1 = có)", "initial": 0 },
+      { "id": "highest", "label": "Token lớn nhất storage đã nhận", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "on", "from": "free", "event": "fence-on", "to": "free", "effects": [ { "counter": "fencing", "set": 1 } ], "note": "Storage bắt đầu kiểm tra: ghi kèm token nhỏ hơn token lớn nhất đã thấy thì bị từ chối." },
+      { "id": "off", "from": "free", "event": "fence-off", "to": "free", "effects": [ { "counter": "fencing", "set": 0 } ], "note": "Storage nhận mọi lần ghi, chỉ tin vào việc client có giữ lock." },
+      { "id": "acquire-a", "from": "free", "event": "a-acquire", "to": "a-holds", "label": "lấy, token 33" },
+      { "id": "a-normal-write", "from": "a-holds", "event": "a-write", "to": "free", "label": "ghi rồi nhả", "effects": [ { "counter": "highest", "set": 33 } ], "note": "Đường bình thường: A ghi xong trong thời hạn lease rồi nhả lock. Hầu hết thời gian lock chạy đúng như vậy, nên lỗi bên dưới hiếm và khó tái hiện." },
+      { "id": "pause", "from": "a-holds", "event": "gc", "to": "a-paused", "label": "GC pause" },
+      { "id": "a-wakes-early", "from": "a-paused", "event": "a-write", "to": "free", "label": "tỉnh kịp", "effects": [ { "counter": "highest", "set": 33 } ], "note": "Pause ngắn hơn lease: A tỉnh dậy khi lock vẫn còn, ghi rồi nhả. Không có gì sai." },
+      { "id": "lease-ends", "from": "a-paused", "event": "expire", "to": "expired", "label": "lease hết" },
+      { "id": "acquire-b", "from": "expired", "event": "b-acquire", "to": "b-holds", "label": "lấy, token 34" },
+      { "id": "write-b", "from": "b-holds", "event": "b-write", "to": "b-wrote", "label": "ghi #34", "effects": [ { "counter": "highest", "set": 34 } ] },
+      { "id": "late-fenced", "from": "b-wrote", "event": "a-write", "to": "rejected", "label": "33 < 34: chặn", "guard": { "counter": "fencing", "eq": 1 }, "note": "Fencing hoạt động: người kiểm tra là storage, nên A không cần biết mình đã mất lock." },
+      { "id": "late-unfenced", "from": "b-wrote", "event": "a-write", "to": "corrupted", "label": "ghi đè", "guard": { "counter": "fencing", "eq": 0 }, "note": "A ghi với niềm tin cũ. Kiểm tra `isLocked()` trước khi ghi cũng vô ích: pause có thể rơi giữa kiểm tra và ghi." },
+      { "id": "reset-rejected", "from": "rejected", "event": "reset", "to": "free", "effects": [ { "counter": "highest", "set": 0 } ] },
+      { "id": "reset-corrupted", "from": "corrupted", "event": "reset", "to": "free", "effects": [ { "counter": "highest", "set": 0 } ] },
+      { "id": "reset-free", "from": "free", "event": "reset", "to": "free", "effects": [ { "counter": "highest", "set": 0 } ] }
+    ],
+    "invalidNote": "Sự kiện này không xảy ra ở trạng thái hiện tại. Thứ tự gợi ý: A lấy lock → A bị GC pause → Hết lease → B lấy lock → B ghi → A ghi."
+  }
+}

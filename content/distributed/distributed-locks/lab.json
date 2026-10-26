@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Có Redis lock mà khách vẫn nhận hai email nhắc thanh toán",
+  "context": "Service hoá đơn chạy 3 pod. Job `@Scheduled` mỗi 10 giây trên mọi pod: ai lấy được Redis lock thì gửi email nhắc cho các hoá đơn `PENDING`, rồi đánh dấu `SENT` cả lô ở cuối. Bình thường một lần chạy mất khoảng 20 giây.",
+  "buggyCode": "private static final String LOCK_KEY = \"lock:payment-reminder\";\n\n@Scheduled(fixedDelay = 10_000)\nvoid sendReminders() {\n    Boolean acquired = redis.opsForValue()\n            .setIfAbsent(LOCK_KEY, podName, Duration.ofSeconds(30));\n    if (!Boolean.TRUE.equals(acquired)) {\n        return;\n    }\n    try {\n        List<Reminder> pending = reminderRepository.findByStatus(PENDING);\n        log.info(\"acquired {}, {} reminders pending\", LOCK_KEY, pending.size());\n        for (Reminder reminder : pending) {\n            mailClient.send(reminder.toEmail());\n        }\n        reminderRepository.markSent(pending);\n    } finally {\n        redis.delete(LOCK_KEY);\n    }\n}",
+  "symptom": {
+    "description": "Sau đợt chốt hoá đơn cuối tháng, khách phản ánh nhận hai email nhắc giống hệt nhau. Nhà cung cấp SMTP chậm hơn thường lệ hôm đó. Log (lược bớt):",
+    "output": "02:00:00.012 [pod-a] acquired lock:payment-reminder, 1200 reminders pending\n02:00:31.020 [pod-b] acquired lock:payment-reminder, 1200 reminders pending\n02:00:51.447 [pod-a] marked 1200 reminders SENT, lock released\n02:00:52.031 [pod-c] acquired lock:payment-reminder, 0 reminders pending\n02:01:11.873 [pod-b] marked 1200 reminders SENT, lock released\n\nmetric mail_sent_total{job=\"payment-reminder\"} tăng 2400 trong 02:00–02:02"
+  },
+  "diagnosis": {
+    "question": "Vì sao lock không ngăn được hai pod cùng gửi?",
+    "options": [
+      "Lock hết hạn sau 30 giây khi pod-a còn chạy, nên pod-b lấy được; rồi `delete` của pod-a xoá luôn lock của pod-b",
+      "`setIfAbsent` gửi `SETNX` rồi `EXPIRE` thành hai lệnh, nên hai pod cùng đặt được khoá",
+      "Đồng hồ ba pod lệch nhau nên mỗi pod tính TTL 30 giây theo giờ khác nhau",
+      "Redis failover trong lúc chạy nên key lock trên master cũ bị mất"
+    ],
+    "answer": 0,
+    "explanation": "pod-a chạy 51 giây vì SMTP chậm, dài hơn TTL 30 giây. Lúc 02:00:30 Redis xoá key, pod-b lấy lock lúc 02:00:31 và đọc lại đúng 1200 hoá đơn chưa được đánh dấu (pod-a chỉ đánh dấu ở cuối). Lúc 02:00:51 pod-a xong và `delete` xoá key, lúc này đang là lock của pod-b, nên pod-c vào được ngay khi pod-b vẫn chạy (may là pod-c thấy 0 hoá đơn). TTL do Redis tính trên đồng hồ của chính nó, không phụ thuộc giờ các pod. `setIfAbsent` có `Duration` gửi một lệnh `SET ... NX PX` nguyên tử. Log không có dấu hiệu failover."
+  },
+  "fix": {
+    "code": "@Scheduled(fixedDelay = 10_000)\nvoid sendReminders() {\n    String token = UUID.randomUUID().toString();     // mỗi lần lấy lock một token riêng\n    Boolean acquired = redis.opsForValue().setIfAbsent(LOCK_KEY, token, Duration.ofSeconds(60));\n    if (!Boolean.TRUE.equals(acquired)) {\n        return;\n    }\n    try {\n        for (Reminder reminder : reminderRepository.findPending(200)) {   // lô nhỏ, chạy xong trong TTL\n            // Lock chỉ để giảm việc trùng. Chặn trùng thật là lần ghi có điều kiện này.\n            int claimed = jdbc.update(\"\"\"\n                    update reminders set status = 'SENDING', claimed_at = now()\n                    where id = ? and status = 'PENDING'\"\"\", reminder.id());\n            if (claimed == 0) {\n                continue;                                          // pod khác đã nhận hoá đơn này\n            }\n            mailClient.send(reminder.toEmail(), \"reminder-\" + reminder.id()); // idempotency key cho nhà cung cấp\n            reminderRepository.markSent(reminder.id());\n        }\n    } finally {\n        redis.execute(RELEASE_SCRIPT, List.of(LOCK_KEY), token);  // chỉ xoá nếu vẫn là lock của mình\n    }\n}\n\nprivate static final RedisScript<Long> RELEASE_SCRIPT = RedisScript.of(\"\"\"\n        if redis.call('get', KEYS[1]) == ARGV[1] then\n            return redis.call('del', KEYS[1])\n        end\n        return 0\"\"\", Long.class);",
+    "explanation": "Ba thay đổi. (1) Giá trị lock là token ngẫu nhiên của lần lấy, và nhả bằng Lua script so token, nên không bao giờ xoá lock của pod khác. (2) Làm theo lô nhỏ và TTL rộng hơn lần chạy dài nhất, để lock hiếm khi hết hạn giữa chừng. (3) Quan trọng nhất: mỗi hoá đơn được \"nhận\" bằng `UPDATE ... WHERE status = 'PENDING'` và kiểm tra số dòng đổi. Đây là kiểm tra ở storage, đóng vai fencing: dù lock hết hạn và hai pod cùng chạy, mỗi hoá đơn chỉ một pod nhận được. Truyền idempotency key cho nhà cung cấp email để lần gửi lại (sau khi pod chết) không thành email thứ hai, và có job trả các dòng `SENDING` quá hạn về `PENDING`."
+  }
+}
