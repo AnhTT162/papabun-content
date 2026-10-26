@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "forkjoin",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "ForkJoinPool & work stealing",
+  "summary": "ForkJoinPool chia việc đệ quy và work stealing (deque LIFO cho chủ, FIFO cho kẻ steal); join không làm worker ngủ; common pool dùng chung cả JVM và ai dùng nó; parallel stream: spliterator, N × Q, thao tác phá song song, khi nào chậm hơn tuần tự; bẫy block I/O, biến dùng chung, container ít core; managedBlock, asyncMode, chạy stream trên pool riêng.",
+  "level": "senior",
+  "order": 15,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool", "completable-future"],
+  "terms": ["work-stealing", "parallel-stream", "common-pool", "spliterator", "virtual-thread"],
+  "references": [
+    { "title": "Javadoc ForkJoinPool (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ForkJoinPool.html" },
+    { "title": "Javadoc ForkJoinTask (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ForkJoinTask.html" },
+    { "title": "java.util.stream: Parallelism (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/package-summary.html#Parallelism" }
+  ],
+  "blocks": [
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"ForkJoinPool khác `ThreadPoolExecutor` ở đâu, sao không dùng luôn một pool cố định?\" `ThreadPoolExecutor` có một hàng đợi chung, mọi worker tranh nhau lấy, và một task chờ task con trong cùng pool có thể làm pool tự deadlock khi hết thread. `ForkJoinPool` cho mỗi worker một deque, task con đẩy vào deque của chính worker, và `join()` để worker làm việc khác thay vì chặn, nên chia đệ quy sâu không cạn thread. Đổi lại nó chỉ hợp với việc CPU ngắn, không block. Hỏi tiếp có thể là \"virtual thread dùng ForkJoinPool làm gì\": làm scheduler, ở mode FIFO, vì mỗi lần mount là một task ngắn không bao giờ `join`." }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "virtual-threads",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Virtual Threads chuyên sâu",
+  "summary": "Virtual thread chạy thế nào: continuation, mount và unmount, scheduler ForkJoinPool riêng, poller; vì sao tăng throughput cho I/O theo Little's law; pinning ở Java 21–23 và sau JEP 491; không có time slicing nên việc CPU làm nghẽn carrier; tham số scheduler, quan sát bằng jcmd và JFR; bẫy khi chuyển đổi; structured concurrency và ScopedValue; khi nào không dùng.",
+  "level": "senior",
+  "order": 14,
+  "minutes": 18,
+  "prerequisites": [
+    "executor-thread-pool",
+    "thread-lifecycle"
+  ],
+  "terms": [
+    "virtual-thread",
+    "carrier-thread",
+    "continuation",
+    "littles-law",
+    "pinning",
+    "structured-concurrency",
+    "scoped-value"
+  ],
+  "references": [
+    {
+      "title": "JEP 444: Virtual Threads",
+      "url": "https://openjdk.org/jeps/444"
+    },
+    {
+      "title": "JEP 491: Synchronize Virtual Threads without Pinning",
+      "url": "https://openjdk.org/jeps/491"
+    },
+    {
+      "title": "JEP 505: Structured Concurrency (Fifth Preview)",
+      "url": "https://openjdk.org/jeps/505"
+    },
+    {
+      "title": "Oracle Java 21 docs: Virtual Threads",
+      "url": "https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html"
+    },
+    {
+      "title": "Javadoc StructuredTaskScope (JDK 27, preview)",
+      "url": "https://docs.oracle.com/en/java/javase/27/docs/api/java.base/java/util/concurrent/StructuredTaskScope.html"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "diagram",
+      "file": "diagram.json"
+    },
+    {
+      "type": "layered",
+      "file": "layered.md"
+    },
+    {
+      "type": "callout",
+      "style": "interview",
+      "markdown": "Câu hỏi nối tiếp hay gặp: \"Có virtual thread rồi thì còn cần WebFlux/reactive không?\" Với service CRUD gọi database và HTTP, phần lớn lý do chọn reactive (không giữ thread trong lúc chờ I/O) đã được virtual thread giải quyết, mà code vẫn tuần tự, stack trace và debug như thường. Reactive vẫn hợp khi cần backpressure qua cả chuỗi xử lý, streaming dữ liệu dài (SSE, WebSocket), hoặc hệ thống đã dựng sẵn trên Reactor. Hỏi tiếp thường là \"chuyển sang virtual thread thì cái gì hỏng trước\": giới hạn đồng thời ngầm của thread pool biến mất nên pool connection và downstream bị dồn, `ThreadLocal` cache phình ra, và trên Java 21–23 là pinning trong thư viện dùng `synchronized`."
+    },
+    {
+      "type": "breakLab",
+      "file": "lab.json"
+    }
+  ]
+}

@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads"]
     },
     {
       "id": "virtual-thread",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin"]
     },
     {
       "id": "pinning",
@@ -302,7 +302,7 @@
       "meaning": "Virtual thread bị dính chặt vào carrier thread khi block, nên carrier không phục vụ được virtual thread khác. Ở Java 21–23 xảy ra khi block trong `synchronized`; JEP 491 (Java 24) bỏ trường hợp này.",
       "example": "Gọi JDBC chặn bên trong khối `synchronized` trên Java 21 sẽ giữ carrier suốt thời gian chờ.",
       "related": ["virtual-thread"],
-      "topics": ["executor-thread-pool", "producer-consumer", "locks-aqs"]
+      "topics": ["executor-thread-pool", "producer-consumer", "locks-aqs", "virtual-threads"]
     },
     {
       "id": "bulkhead",
@@ -693,7 +693,7 @@
       "meaning": "`ForkJoinPool.commonPool()`: pool dùng chung cho cả JVM, khoảng số core − 1 thread, chạy parallel stream và `CompletableFuture.*Async` khi không truyền executor.",
       "example": "Máy 8 core: common pool có 7 thread dùng chung cho mọi parallel stream.",
       "related": ["thread-pool"],
-      "topics": ["completable-future"]
+      "topics": ["completable-future", "forkjoin"]
     },
     {
       "id": "completion-exception",
@@ -709,7 +709,7 @@
       "meaning": "Mô hình (`StructuredTaskScope`, preview từ Java 21, API còn thay đổi giữa các bản) coi các task con là một khối: chờ cùng nhau, một task lỗi thì huỷ các task còn lại.",
       "example": "Gọi song song user và orders; orders lỗi thì user tự bị huỷ.",
       "related": ["virtual-thread"],
-      "topics": ["completable-future", "synchronizers", "threadlocal"]
+      "topics": ["completable-future", "synchronizers", "threadlocal", "virtual-threads"]
     },
     {
       "id": "b-tree",
@@ -3661,7 +3661,7 @@
       "meaning": "Giá trị bất biến gắn vào một phạm vi thực thi (`ScopedValue.where(K, v).run(...)`), đọc được trong phạm vi đó và trong task con của `StructuredTaskScope` (vẫn preview ở JDK 25), tự hết khi ra khỏi phạm vi. Chính thức từ JDK 25.",
       "example": "`ScopedValue.where(TENANT, \"t-42\").run(() -> handle(request));`",
       "related": ["thread-local", "structured-concurrency"],
-      "topics": ["threadlocal"]
+      "topics": ["threadlocal", "virtual-threads"]
     },
     {
       "id": "mdc",
@@ -3838,6 +3838,46 @@
       "example": "Duyệt `ConcurrentHashMap.entrySet()` trong khi thread khác `put` không lỗi, nhưng không bảo đảm thấy key vừa thêm.",
       "related": ["fail-fast"],
       "topics": ["concurrent-hashmap"]
+    },
+    {
+      "id": "carrier-thread",
+      "term": "Carrier thread",
+      "meaning": "Platform thread mà scheduler của JVM dùng để chạy virtual thread. Một virtual thread được mount lên carrier khi chạy và unmount khi block, nên vài carrier phục vụ được rất nhiều virtual thread.",
+      "example": "Máy 8 core mặc định có 8 carrier, tên `ForkJoinPool-1-worker-*` trong `jstack`, chạy hàng nghìn virtual thread xử lý request.",
+      "related": ["virtual-thread", "pinning"],
+      "topics": ["virtual-threads"]
+    },
+    {
+      "id": "continuation",
+      "term": "Continuation",
+      "meaning": "Đoạn tính toán tạm dừng được rồi chạy tiếp từ đúng chỗ dừng. Mỗi virtual thread bọc một continuation; khi block, các frame của nó được cất lên heap để chạy tiếp sau, có thể trên thread khác.",
+      "example": "Virtual thread gọi `socket.read()` chưa có dữ liệu: continuation yield, carrier rảnh; dữ liệu tới thì continuation chạy tiếp ngay sau lệnh `read()`.",
+      "related": ["virtual-thread", "carrier-thread"],
+      "topics": ["virtual-threads"]
+    },
+    {
+      "id": "work-stealing",
+      "term": "Work stealing",
+      "meaning": "Cách chia việc trong `ForkJoinPool`: mỗi worker có một deque riêng, tự lấy việc ở đầu deque của mình; hết việc thì lấy task ở đáy deque của worker khác.",
+      "example": "Worker 2 rảnh lấy task lớn nhất ở đáy deque của Worker 1, tiếp tục chia nhỏ trong deque của mình, nên tải tự cân bằng giữa các worker.",
+      "related": ["common-pool", "parallel-stream"],
+      "topics": ["forkjoin"]
+    },
+    {
+      "id": "parallel-stream",
+      "term": "Parallel stream",
+      "meaning": "Stream chạy song song (`parallelStream()` hoặc `.parallel()`): nguồn được chia bằng spliterator, các phần chạy trên common pool của `ForkJoinPool` rồi được ghép lại.",
+      "example": "`IntStream.range(0, n).parallel().map(this::cost).sum()` chia dãy thành các đoạn cho từng worker, kể cả thread gọi.",
+      "related": ["common-pool", "spliterator", "work-stealing"],
+      "topics": ["forkjoin"]
+    },
+    {
+      "id": "spliterator",
+      "term": "Spliterator",
+      "meaning": "Iterator có thể tự tách đôi (`trySplit`), là cách stream chia nguồn dữ liệu thành các phần cho parallel stream. Nguồn chia đều và rẻ thì song song hiệu quả.",
+      "example": "Spliterator của `ArrayList` tách đôi theo chỉ số trong O(1); của `LinkedList` phải duyệt và chép từng lô ra mảng.",
+      "related": ["parallel-stream"],
+      "topics": ["forkjoin"]
     }
   ]
 }

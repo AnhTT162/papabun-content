@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "shared-list",
+      "kind": "output",
+      "prompt": "Kết quả `names.size()` thường là gì?",
+      "code": "List<String> names = new ArrayList<>();\nIntStream.range(0, 100_000).parallel()\n        .forEach(i -> names.add(\"user-\" + i));\nSystem.out.println(names.size());",
+      "options": [
+        "Nhỏ hơn 100.000, đôi khi ném `ArrayIndexOutOfBoundsException`",
+        "Luôn 100.000, vì `forEach` của stream gom kết quả an toàn",
+        "Luôn 100.000 nhưng thứ tự phần tử bị xáo trộn ngẫu nhiên",
+        "Ném `ConcurrentModificationException` ngay ở lần `add` thứ hai"
+      ],
+      "answer": 0,
+      "explanation": "`ArrayList.add` không thread-safe: nhiều worker cùng ghi đè ô và `size`, nên mất phần tử, và khi mảng nội bộ đang nới rộng có thể ném `ArrayIndexOutOfBoundsException`. `add` không kiểm tra `modCount`; `ConcurrentModificationException` chỉ xuất hiện khi đang duyệt danh sách (iterator, `forEach`) mà nó bị sửa. Chạy thử 5 lần trên JDK 27 ra 18.149, một lần `ArrayIndexOutOfBoundsException`, 21.005, 8.851, 10.016. Cách đúng: `IntStream.range(...).parallel().mapToObj(i -> \"user-\" + i).toList()`, để stream tự gom từng phần rồi ghép."
+    },
+    {
+      "id": "who-runs",
+      "kind": "single",
+      "prompt": "Máy 10 core, không chỉnh gì. Trong lúc `list.parallelStream().map(this::score).toList()` chạy (gọi từ thread `main`), những thread nào chạy `score`?",
+      "options": [
+        "Worker của common pool (9 thread) và cả thread `main`",
+        "Chỉ 10 worker của common pool, `main` đứng chờ kết quả",
+        "Một `ForkJoinPool` mới tạo riêng cho mỗi lần gọi stream",
+        "Chỉ thread `main`, vì stream không truyền executor nào"
+      ],
+      "answer": 0,
+      "explanation": "Common pool có `số core − 1` worker vì thread gọi cũng tham gia làm việc. Chạy thử trên JDK 27, máy 10 core: `getCommonPoolParallelism()` là 9, và tên thread thấy được là `ForkJoinPool.commonPool-worker-*` cùng `main`. Stream không tạo pool mới cho mỗi lần gọi."
+    },
+    {
+      "id": "linked-list",
+      "kind": "single",
+      "prompt": "Parallel stream trên `LinkedList` 1 triệu phần tử, mỗi phần tử chỉ cộng vài số, chạy chậm hơn bản tuần tự. Lý do chính?",
+      "options": [
+        "`LinkedList` chia kém: phải duyệt để tách, và phần việc mỗi phần tử quá nhỏ",
+        "`LinkedList` không thread-safe nên stream tự khoá cả danh sách khi chạy song song",
+        "Parallel stream luôn chạy tuần tự khi nguồn dữ liệu không phải là một mảng",
+        "Common pool chỉ có một worker khi danh sách vượt quá 1 triệu phần tử"
+      ],
+      "answer": 0,
+      "explanation": "Spliterator của `LinkedList` không chia đôi được trong O(1): nó phải duyệt và chép từng lô vào mảng, và các node nằm rải rác trên heap. Cộng vài số mỗi phần tử thì N × Q quá nhỏ, chi phí chia và ghép lớn hơn phần việc. Stream không khoá nguồn, và vẫn chạy song song với nguồn không phải mảng, chỉ là chia kém hiệu quả. `ArrayList` hoặc mảng nguyên thủy chia tốt hơn nhiều."
+    },
+    {
+      "id": "blocking-common",
+      "kind": "single",
+      "prompt": "Máy 8 core. Một service gọi `CompletableFuture.supplyAsync(() -> httpClient.send(...))` không truyền executor, và ở chỗ khác có parallel stream tính toán. Dưới tải, cả hai đều chậm hẳn. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Lời gọi HTTP chiếm worker của common pool, stream không còn worker",
+        "`supplyAsync` tạo một thread mới cho mỗi lời gọi nên CPU bị quá tải",
+        "Parallel stream và `CompletableFuture` khoá chung một lock trong JDK",
+        "Common pool tự giảm số worker khi phát hiện có task block quá lâu"
+      ],
+      "answer": 0,
+      "explanation": "Cả hai mặc định chạy trên common pool chỉ có `số core − 1` worker. Socket I/O không báo trước cho pool nên pool không bù thread; worker ngồi chờ HTTP thì việc tính toán xếp hàng. Truyền executor riêng cho I/O (hoặc dùng virtual thread) để tách hai loại việc. Trên máy 8 core, `supplyAsync` không tạo thread mỗi lần (chỉ trên Java 21–24 với máy 1–2 CPU nó mới tạo thread cho mỗi task), và không có lock chung."
+    },
+    {
+      "id": "fork-order",
+      "kind": "single",
+      "prompt": "Trong `compute()` của một `RecursiveTask<Long>` chia hai nửa `left` và `right`, cách nào tận dụng worker hiện tại tốt nhất?",
+      "options": [
+        "`left.fork(); long r = right.compute(); return left.join() + r;`",
+        "`left.fork(); right.fork(); return left.join() + right.join();`",
+        "`return left.invoke() + right.invoke();` gọi lần lượt từng nửa",
+        "`left.fork(); right.fork(); return right.get() + left.get();` chờ cả hai"
+      ],
+      "answer": 0,
+      "explanation": "Worker hiện tại tự làm một nửa thay vì chỉ ngồi chờ. Fork cả hai rồi join thì nó tốn thêm một lần đẩy và lấy task, và phải chờ cả hai. `invoke()` lần lượt chạy tuần tự cả hai nửa trên cùng thread nên mất song song. `get()` còn bọc lỗi trong `ExecutionException` và không nên dùng bên trong task; `invokeAll(left, right)` là cách viết gọn đúng."
+    }
+  ]
+}

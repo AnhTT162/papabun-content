@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hundred-thousand",
+      "kind": "output",
+      "prompt": "Máy chạy JDK 27, scheduler để mặc định. Đoạn sau in ra khoảng bao nhiêu?",
+      "code": "long start = System.nanoTime();\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    IntStream.range(0, 100_000).forEach(i -> executor.submit(() -> {\n        Thread.sleep(1_000);\n        return i;\n    }));\n}\nSystem.out.println((System.nanoTime() - start) / 1_000_000 + \" ms\");",
+      "options": [
+        "Khoảng 1.000 ms cộng thêm vài trăm ms tạo thread",
+        "Khoảng 100.000 / số core giây, vì mỗi carrier ngủ lần lượt",
+        "Gần 0 ms, vì main không chờ các virtual thread chạy xong",
+        "Ném `OutOfMemoryError` vì không tạo được 100.000 thread"
+      ],
+      "answer": 0,
+      "explanation": "`Thread.sleep` trên virtual thread unmount nó khỏi carrier, nên 100.000 lần ngủ diễn ra đồng thời. Chạy thử trên JDK 27 ra khoảng 1.350 ms, kể cả khi chỉ cho 2 carrier. `close()` ở cuối khối `try` chờ mọi task xong, nên main không thoát sớm. 100.000 virtual thread nhàn rỗi chỉ tốn vài chục MB heap; với platform thread thì đây mới là chỗ dễ hết bộ nhớ hoặc chạm giới hạn của hệ điều hành."
+    },
+    {
+      "id": "pin-java21",
+      "kind": "single",
+      "prompt": "Java 21, máy 8 core. Một client cũ bọc lời gọi HTTP (mất 2 giây) trong `synchronized`. 8 request chạy trên virtual thread cùng vào khối đó. Request thứ 9, không dùng client này, thế nào?",
+      "options": [
+        "Chờ: cả 8 carrier bị ghim trong lúc chờ HTTP, không còn carrier nào chạy nó",
+        "Chạy ngay, vì virtual thread luôn unmount khi chờ I/O, kể cả trong `synchronized`",
+        "Chạy ngay, vì JVM tự tạo thêm carrier mỗi khi có virtual thread bị ghim",
+        "Ném `IllegalStateException`, vì virtual thread không được vào khối `synchronized`"
+      ],
+      "answer": 0,
+      "explanation": "Ở Java 21–23, block trong `synchronized` ghim virtual thread vào carrier. Một request đang chờ HTTP bên trong khối, bảy request còn lại bị ghim khi chờ vào monitor (chờ monitor cũng ghim ở các bản này), nên cả tám carrier đều bận và mọi virtual thread khác phải đợi. JVM không bù carrier cho pinning do `synchronized`; nó chỉ bù cho vài thao tác như `Object.wait()` hay đọc file (đọc file chỉ tới Java 22). Java 24 (JEP 491) cho phép unmount trong `synchronized` nên tình huống này hết. `synchronized` vẫn hợp lệ trên virtual thread."
+    },
+    {
+      "id": "cpu-bound",
+      "kind": "single",
+      "prompt": "Cần tính checksum cho 10.000 file ảnh đã nằm sẵn trong bộ nhớ, máy 8 core. Cách nào hợp lý nhất?",
+      "options": [
+        "Pool platform thread cố định 8 thread, hoặc parallel stream",
+        "Một virtual thread mỗi file, vì tạo 10.000 virtual thread rất rẻ",
+        "Một virtual thread mỗi file và thêm `Semaphore(8)` để không quá tải",
+        "Pool cố định 10.000 thread để mỗi file có một thread riêng"
+      ],
+      "answer": 0,
+      "explanation": "Việc thuần CPU không có chỗ chờ để unmount, nên virtual thread không thêm song song: vẫn chỉ 8 carrier làm việc, cộng chi phí lập lịch, và chúng chiếm hết carrier của các việc I/O khác. Pool bằng số core (hoặc `ForkJoinPool` qua parallel stream) là đúng loại công cụ. `Semaphore(8)` giới hạn đúng số lượng nhưng vẫn chiếm carrier; 10.000 platform thread chỉ thêm chuyển ngữ cảnh."
+    },
+    {
+      "id": "see-virtual",
+      "kind": "single",
+      "prompt": "Ứng dụng chạy 50.000 virtual thread và có dấu hiệu treo. `jstack <pid>` chỉ cho thấy khoảng chục thread `ForkJoinPool-1-worker-*`. Muốn xem stack của từng virtual thread thì làm gì?",
+      "options": [
+        "`jcmd <pid> Thread.dump_to_file -format=json dump.json`",
+        "`jstack -l <pid>`, vì cờ `-l` liệt kê thêm virtual thread",
+        "`kill -3 <pid>` để JVM in đủ mọi thread ra stdout",
+        "Bật `-XX:+PrintVirtualThreads` rồi khởi động lại ứng dụng"
+      ],
+      "answer": 0,
+      "explanation": "`jstack` và `kill -3` in thread dump kiểu cũ, chỉ có platform thread (các carrier). JEP 444 thêm định dạng dump mới qua `jcmd ... Thread.dump_to_file`, gồm cả virtual thread và nhóm theo container (executor, `StructuredTaskScope`). `-l` chỉ thêm thông tin lock. Không có cờ `-XX:+PrintVirtualThreads`."
+    },
+    {
+      "id": "structured-status",
+      "kind": "single",
+      "prompt": "Team muốn dùng `StructuredTaskScope` trên JDK 25 cho code production. Điều gì cần biết?",
+      "options": [
+        "Vẫn là preview: phải bật `--enable-preview`, API có thể đổi ở bản sau",
+        "Đã chính thức từ Java 21 cùng virtual thread, dùng được như mọi API khác",
+        "Đã chính thức từ JDK 25 cùng với `ScopedValue`, không cần cờ gì thêm",
+        "Đã bị gỡ khỏi JDK, thay bằng `CompletableFuture.allOf` có huỷ task"
+      ],
+      "answer": 0,
+      "explanation": "`StructuredTaskScope` là preview từ JDK 21 và tới JDK 27 vẫn chưa chính thức; API đổi lớn ở JDK 25 (JEP 505: `StructuredTaskScope.open` với `Joiner`). Code dùng nó phải biên dịch và chạy với `--enable-preview`, và có thể phải sửa khi nâng JDK. `ScopedValue` thì đã chính thức từ JDK 25."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Health check trễ khi xuất báo cáo",
+  "context": "Service Spring Boot bật `spring.threads.virtual.enabled=true`, chạy trên pod 2 vCPU, liveness probe timeout 1 giây. Endpoint xuất báo cáo tính toán khoảng 1,5 giây CPU, không gọi I/O. Từ khi có hai người cùng xuất báo cáo, Kubernetes thỉnh thoảng restart pod vì liveness probe thất bại. Bản tái hiện dưới đây chạy trên JDK 27 với 2 carrier.",
+  "buggyCode": "// java -Djdk.virtualThreadScheduler.parallelism=2 Starve.java\ntry (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    executor.submit(() -> {                        // giả lập health check mỗi 200 ms\n        for (int i = 0; i < 15; i++) {\n            long before = System.nanoTime();\n            Thread.sleep(200);\n            long late = (System.nanoTime() - before) / 1_000_000 - 200;\n            System.out.printf(\"t=%4d ms  health check trễ %d ms%n\", elapsedMillis(), late);\n        }\n        return null;\n    });\n    Thread.sleep(500);\n    for (int i = 0; i < 2; i++) {\n        executor.submit(() -> renderReport());     // 1,5 giây CPU, không I/O\n    }\n}",
+  "symptom": {
+    "description": "Health check đều đặn trễ vài mili giây, trừ một lần trễ gần 1,4 giây ngay khi hai báo cáo chạy. Trên pod thật, lần trễ đó vượt timeout của liveness probe. Không có log GC dài, CPU của pod lên 100% đúng lúc đó.",
+    "output": "t= 209 ms  health check trễ 6 ms\nt= 431 ms  health check trễ 5 ms\nt=2009 ms  health check trễ 1377 ms\nt=2215 ms  health check trễ 5 ms\nt=2416 ms  health check trễ 1 ms\nt=2620 ms  health check trễ 2 ms\n..."
+  },
+  "diagnosis": {
+    "question": "Vì sao health check phải chờ gần 1,4 giây?",
+    "options": [
+      "Virtual thread không bị ngắt theo thời gian; hai job CPU chiếm cả hai carrier",
+      "Hai job giữ chung một khoá `synchronized`, nên virtual thread của health check bị pin",
+      "GC dừng cả ứng dụng (stop-the-world) vì job xuất báo cáo cấp phát quá nhiều object",
+      "`Thread.sleep` của virtual thread chạy trên common pool, và common pool đang bận hết"
+    ],
+    "answer": 0,
+    "explanation": "Scheduler của virtual thread không chia thời gian: một virtual thread chỉ nhả [[carrier-thread|carrier]] khi block. Hai job tính toán chiếm hai carrier khoảng 1,5 giây, health check thức dậy sau `sleep` nhưng không còn carrier nào để chạy, nên trễ đúng tới khi một job xong (khoảng t=2000 ms). Code không có khoá nào, nên không phải pinning. Log GC không có pause dài, và độ trễ trùng khớp thời gian của job chứ không ngẫu nhiên. Scheduler của virtual thread là một `ForkJoinPool` riêng, không phải common pool."
+  },
+  "fix": {
+    "code": "// Việc CPU-bound chạy trên pool platform thread có giới hạn\nprivate final ExecutorService cpuPool =\n        Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());\n\n@GetMapping(\"/reports/{id}\")\nReport export(@PathVariable long id) throws Exception {\n    // request vẫn chạy trên virtual thread, chỉ chờ kết quả\n    return cpuPool.submit(() -> renderReport(id)).get(30, TimeUnit.SECONDS);\n}",
+    "explanation": "Virtual thread của request chỉ chờ `get()`, tức là block và nhả carrier; phần tính toán chạy trên platform thread, nơi hệ điều hành chia thời gian, nên health check vẫn có lượt chạy. Pool cố định cũng giới hạn số báo cáo tính cùng lúc, và có thể thêm hàng đợi giới hạn để từ chối khi quá tải. Chạy lại bản tái hiện với `cpuPool` thì health check chỉ trễ tối đa 5 ms (máy thử có 10 core nên platform thread còn chạy được trên core khác; trên pod 2 vCPU, hệ điều hành chia thời gian giữa chúng). Chèn `Thread.yield()` vào vòng tính toán cũng nhả carrier, nhưng là vá tạm và dễ quên."
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một virtual thread chờ socket",
+  "nodes": [
+    {
+      "id": "vt",
+      "label": "Virtual thread",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "c1",
+      "label": "Carrier 1",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "heap",
+      "label": "Heap (stack chunk)",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "poller",
+      "label": "Poller (epoll)",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "c2",
+      "label": "Carrier 2",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "vt-c1",
+      "from": "vt",
+      "to": "c1",
+      "label": "mount"
+    },
+    {
+      "id": "c1-poller",
+      "from": "c1",
+      "to": "poller",
+      "label": "chờ đọc socket"
+    },
+    {
+      "id": "c1-heap",
+      "from": "c1",
+      "to": "heap",
+      "label": "unmount: chép stack"
+    },
+    {
+      "id": "poller-heap",
+      "from": "poller",
+      "to": "heap",
+      "label": "có dữ liệu: unpark"
+    },
+    {
+      "id": "heap-c2",
+      "from": "heap",
+      "to": "c2",
+      "label": "mount lại"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Request mới chạy trên một virtual thread. Nó được đưa vào hàng đợi của scheduler, một `ForkJoinPool` riêng có số carrier bằng số core.",
+      "show": [
+        "vt"
+      ]
+    },
+    {
+      "caption": "Một carrier (platform thread) lấy nó ra và chạy: các frame của virtual thread nằm trên stack của carrier.",
+      "show": [
+        "c1",
+        "vt-c1"
+      ],
+      "highlight": [
+        "vt-c1"
+      ]
+    },
+    {
+      "caption": "Code gọi `inputStream.read()` mà socket chưa có dữ liệu. JDK đặt socket ở chế độ non-blocking và đăng ký nó với poller thay vì chặn thread hệ điều hành.",
+      "show": [
+        "poller",
+        "c1-poller"
+      ],
+      "highlight": [
+        "c1-poller"
+      ]
+    },
+    {
+      "caption": "Virtual thread unmount: các frame được chép thành một object trên heap. Carrier 1 rảnh và đi chạy virtual thread khác ngay.",
+      "show": [
+        "heap",
+        "c1-heap"
+      ],
+      "highlight": [
+        "c1-heap"
+      ]
+    },
+    {
+      "caption": "Dữ liệu tới, poller unpark virtual thread, nó quay lại hàng đợi của scheduler. Trong lúc chờ nó không giữ thread hệ điều hành nào.",
+      "show": [
+        "poller-heap"
+      ],
+      "highlight": [
+        "poller-heap"
+      ]
+    },
+    {
+      "caption": "Carrier nào rảnh trước thì mount nó lại, ở đây là Carrier 2. `read()` trả về và code chạy tiếp như một lời gọi blocking bình thường.",
+      "show": [
+        "c2",
+        "heap-c2"
+      ],
+      "highlight": [
+        "heap-c2"
+      ]
+    },
+    {
+      "caption": "Nếu không unmount được (pinning), bước chép ra heap không xảy ra: carrier tự chờ socket cùng virtual thread, không qua poller. Ví dụ block trong `synchronized` ở Java 21–23, trong native code, hay trong `static {}`.",
+      "show": [],
+      "highlight": [
+        "c1",
+        "c1-poller"
+      ]
+    }
+  ]
+}

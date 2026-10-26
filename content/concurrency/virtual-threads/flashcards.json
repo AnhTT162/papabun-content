@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "what", "front": "Virtual thread khác platform thread ở đâu?", "back": "Platform thread gắn 1–1 với thread hệ điều hành. Virtual thread do JVM lập lịch trên vài carrier thread và nhả carrier khi block." },
+    { "id": "unmount", "front": "Unmount là gì?", "back": "Virtual thread block ở chỗ JDK hỗ trợ: các frame được chép ra heap, carrier rảnh đi chạy virtual thread khác; khi sẵn sàng nó mount lại, có thể trên carrier khác." },
+    { "id": "scheduler", "front": "Scheduler mặc định của virtual thread là gì?", "back": "Một ForkJoinPool riêng (không phải common pool), chạy FIFO, số carrier bằng số core; chỉnh bằng `jdk.virtualThreadScheduler.parallelism`." },
+    { "id": "no-timeslice", "front": "Virtual thread có bị ngắt theo thời gian không?", "back": "Không. Nó chỉ nhả carrier khi block, nên vòng tính toán dài giữ carrier tới khi xong và có thể làm virtual thread khác chờ." },
+    { "id": "pinning", "front": "Pinning xảy ra khi nào?", "back": "Block mà không unmount được: trong `synchronized`/`Object.wait()` ở Java 21–23, trong native code, trong class initializer. Phát hiện bằng JFR `jdk.VirtualThreadPinned`." },
+    { "id": "jep491", "front": "JEP 491 (Java 24) thay đổi gì?", "back": "Virtual thread unmount được cả khi block trong `synchronized` và `Object.wait()`, nên không còn phải đổi sang `ReentrantLock` chỉ vì pinning." },
+    { "id": "not-limiter", "front": "Vì sao không gom virtual thread vào pool?", "back": "Chúng rẻ nên tạo mới cho mỗi task. Giới hạn đặt ở tài nguyên khan hiếm bằng `Semaphore` hoặc pool connection, không phải ở số thread." },
+    { "id": "cpu", "front": "Virtual thread có làm việc CPU-bound nhanh hơn không?", "back": "Không. Số carrier bằng số core; việc CPU nên chạy trên pool platform thread có giới hạn." },
+    { "id": "dump", "front": "Xem stack của virtual thread bằng gì?", "back": "`jcmd <pid> Thread.dump_to_file -format=json file`. `jstack` chỉ thấy carrier thread." },
+    { "id": "littles", "front": "Vì sao virtual thread tăng throughput cho việc I/O?", "back": "Little's law: throughput = số việc đồng thời / thời gian mỗi việc. Việc chờ I/O lâu cần rất nhiều thread đồng thời, và virtual thread rẻ." }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "stealing", "front": "Work stealing hoạt động thế nào?", "back": "Mỗi worker có deque riêng, tự lấy việc ở đầu (LIFO). Worker rảnh lấy ở đáy deque của worker khác (FIFO), tức task lớn nhất, nên ít đụng độ." },
+    { "id": "join", "front": "`join()` trong ForkJoinPool có làm worker ngủ không?", "back": "Không ngay: worker chạy task khác (kể cả chính task đó nếu chưa ai lấy) trong lúc chờ kết quả." },
+    { "id": "common-size", "front": "Common pool có bao nhiêu worker?", "back": "Số core trừ một (tối thiểu 1), vì thread gọi parallel stream cũng tham gia. Trong container, số core theo CPU limit." },
+    { "id": "common-users", "front": "Ai dùng common pool?", "back": "Parallel stream, `CompletableFuture.*Async` không truyền executor, `Arrays.parallelSort`, bulk operation của ConcurrentHashMap." },
+    { "id": "no-blocking", "front": "Vì sao không gọi I/O trong parallel stream?", "back": "Worker của common pool ngồi chờ I/O mà pool không bù thread, nên mọi parallel stream và CompletableFuture mặc định của cả JVM chậm theo." },
+    { "id": "nq", "front": "Khi nào parallel stream đáng dùng?", "back": "Khi N × Q lớn (nhiều phần tử, mỗi phần tử tốn CPU), nguồn chia đều được (mảng, ArrayList, range) và không cần giữ thứ tự." },
+    { "id": "split-bad", "front": "Nguồn nào chia kém cho parallel stream?", "back": "`LinkedList`, `Stream.iterate`, `BufferedReader.lines()`: không chia đôi nhanh được, phải duyệt và chép từng lô." },
+    { "id": "fork-pattern", "front": "Mẫu fork/join chuẩn?", "back": "`left.fork(); r = right.compute(); return left.join() + r;` hoặc `invokeAll(left, right)`; đừng fork cả hai rồi chỉ ngồi chờ." },
+    { "id": "threshold", "front": "Chọn ngưỡng chia task thế nào?", "back": "Mỗi task khoảng 100–10.000 bước tính cơ bản (Javadoc ForkJoinTask). Nhỏ quá thì chi phí quản lý task lấn át, lớn quá thì worker khác không có gì để steal." },
+    { "id": "custom-pool", "front": "Chạy parallel stream trên pool riêng thế nào?", "back": "`pool.submit(() -> list.parallelStream()...).get()`; task của stream chạy trong `pool`. Đây là hành vi cài đặt, không phải hợp đồng của spec." }
+  ]
+}

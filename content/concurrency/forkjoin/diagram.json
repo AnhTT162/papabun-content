@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Work stealing trong ForkJoinPool",
+  "nodes": [
+    {
+      "id": "task",
+      "label": "Task: tổng 1..N",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "w1",
+      "label": "Worker 1 + deque",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "result",
+      "label": "Kết quả",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "w2",
+      "label": "Worker 2 + deque",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "other",
+      "label": "Async khác",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "io",
+      "label": "HTTP chậm",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "task-w1",
+      "from": "task",
+      "to": "w1",
+      "label": "submit"
+    },
+    {
+      "id": "w2-w1",
+      "from": "w2",
+      "to": "w1",
+      "label": "steal từ đáy"
+    },
+    {
+      "id": "w1-result",
+      "from": "w1",
+      "to": "result",
+      "label": "join hai nửa"
+    },
+    {
+      "id": "w2-io",
+      "from": "w2",
+      "to": "io",
+      "label": "block trong task"
+    },
+    {
+      "id": "other-w2",
+      "from": "other",
+      "to": "w2",
+      "label": "chờ worker rảnh"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Một task tính tổng cả dãy được nộp vào pool, ví dụ từ `IntStream.rangeClosed(1, n).parallel().sum()`.",
+      "show": [
+        "task"
+      ]
+    },
+    {
+      "caption": "Worker 1 nhận task, thấy lớn hơn ngưỡng nên chia đôi: `fork()` nửa trái vào đầu deque của mình, tự tính nửa phải. Lặp lại như vậy, task cũ nhất (lớn nhất) dồn xuống đáy deque.",
+      "show": [
+        "w1",
+        "task-w1"
+      ],
+      "highlight": [
+        "task-w1"
+      ]
+    },
+    {
+      "caption": "Worker 2 đang rảnh nên steal từ **đáy** deque của Worker 1: lấy task lớn nhất, ít đụng độ với Worker 1 đang làm ở đầu. Nó tiếp tục chia task đó trong deque của chính mình.",
+      "show": [
+        "w2",
+        "w2-w1"
+      ],
+      "highlight": [
+        "w2-w1"
+      ]
+    },
+    {
+      "caption": "Worker 1 làm xong phần của mình rồi `join()` nửa đã bị lấy; chưa xong thì nó tìm việc khác để làm thay vì chặn ngay. Hai nửa gộp lại thành kết quả.",
+      "show": [
+        "result",
+        "w1-result"
+      ],
+      "highlight": [
+        "w1-result"
+      ]
+    },
+    {
+      "caption": "Nếu task gọi HTTP hay database, worker ngồi chờ I/O suốt thời gian đó: không chia, không steal, không làm việc khác. `Thread.sleep` và socket I/O không báo cho pool nên pool không bù thêm worker.",
+      "show": [
+        "io",
+        "w2-io"
+      ],
+      "highlight": [
+        "w2-io"
+      ]
+    },
+    {
+      "caption": "Đây là common pool dùng chung cả JVM: `CompletableFuture.supplyAsync` của request khác, parallel stream khác đều phải chờ worker rảnh. Một chỗ block làm chậm những phần không liên quan.",
+      "show": [
+        "other",
+        "other-w2"
+      ],
+      "highlight": [
+        "other-w2"
+      ]
+    }
+  ]
+}
