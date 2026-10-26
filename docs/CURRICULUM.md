@@ -319,8 +319,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `creational-patterns` | Creational patterns | mid | Factory, Builder, Singleton (và vì sao nên tránh) | L B | ✅ |
 | 5 | `structural-patterns` | Structural patterns | mid | Adapter, Decorator, Proxy, Facade; ví dụ trong JDK và Spring | L D B | ✅ |
 | 6 | `behavioral-patterns` | Behavioral patterns | mid | Strategy, Template Method, Observer, Chain of Responsibility, State | L B | ✅ |
-| 7 | `lld-ood-interview` | ✚ Low-level design (OOD) khi phỏng vấn | mid | Parking lot, LRU cache, elevator: mô hình lớp, áp dụng pattern, xử lý đồng thời | L B Sc | ⬜ |
-| 8 | `refactoring-tech-debt` | Refactoring & nợ kỹ thuật | mid | Code smell, refactor an toàn, đo và trả nợ | L B | ⬜ |
+| 7 | `lld-ood-interview` | ✚ Low-level design (OOD) khi phỏng vấn | mid | Parking lot, LRU cache, elevator: mô hình lớp, áp dụng pattern, xử lý đồng thời | L B Sc | ✅ |
+| 8 | `refactoring-tech-debt` | Refactoring & nợ kỹ thuật | mid | Code smell, refactor an toàn, đo và trả nợ | L B | ✅ |
 | 9 | `clean-hexagonal` | Clean & Hexagonal Architecture | senior | Port/adapter, quy tắc phụ thuộc, khi nào quá tay | A L D Sc | ⬜ |
 | 10 | `ddd-strategic` | DDD chiến lược | senior | Bounded context, context map, ubiquitous language | A L D Sc | ⬜ |
 | 11 | `ddd-tactical` | DDD chiến thuật | senior | Aggregate, entity, value object, domain event, kích thước aggregate | L B Sc | ⬜ |

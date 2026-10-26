@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thiết kế hệ thống bãi đỗ xe nhiều cổng",
+  "prompt": "Thiết kế phần lõi (class, interface, luồng chính) cho phần mềm quản lý bãi đỗ xe của một trung tâm thương mại. Ràng buộc: 4 tầng, mỗi tầng khoảng 300 chỗ chia ba loại (xe máy, ô tô, ô tô có trạm sạc); 6 cổng vào và 4 cổng ra hoạt động đồng thời, giờ cao điểm khoảng 20 xe vào mỗi phút; giá theo giờ, khác nhau giữa ngày thường và cuối tuần, và phòng marketing muốn thêm \"miễn phí 2 giờ khi có hoá đơn\" vào quý sau; bảng điện tử ở lối vào hiện số chỗ trống từng tầng. Ban đầu chạy một instance, năm sau có thể chạy nhiều instance.",
+  "hints": [
+    "Liệt kê thực thể trước: những danh từ nào cần là class, cái nào chỉ là thuộc tính (loại xe có hành vi riêng không)?",
+    "Chỗ nào sẽ thay đổi theo yêu cầu kinh doanh? Đặt interface đúng ở đó và không ở đâu khác.",
+    "Hai cổng cùng lúc chọn chỗ trống cuối cùng của tầng 2. Code của bạn đảm bảo chỉ một xe nhận được chỗ thế nào?",
+    "Khi chạy nhiều instance, bảo đảm ở trên còn đúng không? Nguồn sự thật chuyển về đâu?"
+  ],
+  "solution": "**Thực thể**: `ParkingLot` (gom các tầng, điểm vào của use case), `Floor`, `Spot` (`id`, `SpotType`, `floor`), `Ticket` (`id`, `plate`, `spotId`, `entryTime`), `Payment`. `Vehicle` chỉ cần `plate` và `VehicleType`; không có cây kế thừa vì các loại xe không khác hành vi. Quy tắc \"xe nào đỗ được loại chỗ nào\" nằm trong `enum VehicleType` (ô tô điện đỗ được cả chỗ ô tô thường khi hết chỗ sạc).\n\n**Interface ở chỗ thay đổi**:\n- `PricingPolicy { Money priceFor(Ticket ticket, Instant exit) }`: ngày thường và cuối tuần là hai cài đặt; \"miễn phí 2 giờ khi có hoá đơn\" là một decorator bọc policy hiện có, nhận thêm thông tin hoá đơn. Thêm khuyến mãi không sửa class cũ.\n- `SpotAllocator { Optional<Spot> allocate(VehicleType type) }`: chiến lược chọn chỗ (gần thang máy, lấp đầy tầng thấp trước).\n\n**Luồng chính**: `ParkingLot.enter(plate, type, gate)` gọi allocator, tạo `Ticket`, giảm bộ đếm chỗ trống; `ParkingLot.exit(ticketId, gate)` tính tiền qua `PricingPolicy` với `Clock` được inject, nhận thanh toán, trả chỗ. Trả vé hai lần phải bị từ chối, và vì có 4 cổng ra chạy đồng thời nên việc chuyển trạng thái phải atomic: `AtomicReference<TicketStatus>.compareAndSet(ACTIVE, PAID)` trong một instance, hoặc `update tickets set status = 'PAID' where id = ? and status = 'ACTIVE'` rồi kiểm tra số dòng đổi khi có nhiều instance; chỉ \"kiểm tra trạng thái rồi ghi\" là check-then-act.\n\n**Đồng thời (một instance)**: mỗi `SpotType` trên mỗi tầng có một `ConcurrentLinkedQueue<Spot>` chỗ trống. `poll()` là atomic nên hai cổng không bao giờ nhận cùng một chỗ, không cần khoá chung. Bộ đếm cho bảng điện tử là một `AtomicInteger` (hoặc `LongAdder`) cập nhật cùng lúc với `poll`/`offer`; không suy ra từ `size()` của hàng đợi, vì `ConcurrentLinkedQueue.size()` phải duyệt cả hàng đợi và có thể không chính xác khi đang có thay đổi đồng thời.\n\n**Nhiều instance**: bộ nhớ của từng instance không còn là nguồn sự thật. Chuyển việc cấp chỗ về database: `update spots set ticket_id = :ticket where id = (select id from spots where type = :type and ticket_id is null limit 1 for update skip locked) returning id` (PostgreSQL), hoặc mỗi loại chỗ một Redis set với `SPOP`. 20 xe mỗi phút là tải rất nhỏ, nên database đủ dùng; không cần thêm thành phần phân tán.\n\n**Tiền**: `Money` bọc `BigDecimal` (hoặc `long` đồng), làm tròn lên theo block 30 phút đúng quy định của bãi. **Test chính**: hết chỗ loại xe, xe điện tràn sang chỗ thường, qua nửa đêm từ thứ sáu sang thứ bảy, trả vé hai lần, hai thread cùng lấy chỗ cuối cùng.",
+  "tradeoffs": [
+    {
+      "option": "Hàng đợi chỗ trống trong bộ nhớ (`ConcurrentLinkedQueue` mỗi loại)",
+      "pros": [
+        "Đơn giản, nhanh, không có khoá chung",
+        "Dễ viết test đồng thời"
+      ],
+      "cons": [
+        "Mất trạng thái khi restart, phải dựng lại từ database",
+        "Không đúng khi chạy nhiều instance"
+      ]
+    },
+    {
+      "option": "Cấp chỗ bằng câu `update` có điều kiện trong database",
+      "pros": [
+        "Đúng với nhiều instance, database là nguồn sự thật duy nhất",
+        "Sống sót qua restart"
+      ],
+      "cons": [
+        "Mỗi lần xe vào là một round-trip tới database",
+        "Cần index đúng và `skip locked` để các cổng không chờ nhau"
+      ]
+    },
+    {
+      "option": "Cây kế thừa `Car`, `Motorbike`, `ElectricCar extends Vehicle`",
+      "pros": [
+        "Trông \"hướng đối tượng\" trên sơ đồ lớp"
+      ],
+      "cons": [
+        "Không có hành vi khác nhau để override, chỉ thêm class",
+        "Thêm loại xe phải thêm class và sửa chỗ kiểm tra `instanceof`"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "refactor-definition", "front": "Refactoring khác \"sửa code\" ở điểm nào?", "back": "Chỉ đổi cấu trúc, không đổi hành vi quan sát được, làm từng bước nhỏ có test bảo vệ." },
+    { "id": "characterization", "front": "Characterization test là gì?", "back": "Test ghi lại hành vi hiện tại của code cũ (kể cả chỗ trông như bug) để làm lưới an toàn trước khi refactor." },
+    { "id": "separate-commits", "front": "Vì sao tách commit refactor khỏi commit đổi hành vi?", "back": "Review dễ hơn, và có sự cố thì biết ngay thay đổi nào gây ra, revert được riêng." },
+    { "id": "hotspot", "front": "Ưu tiên trả nợ kỹ thuật ở đâu?", "back": "Hotspot: code vừa phức tạp vừa bị sửa nhiều; code phức tạp mà không ai đụng chưa tốn lãi." },
+    { "id": "feature-envy", "front": "Feature envy là gì và sửa thế nào?", "back": "Method dùng dữ liệu của class khác nhiều hơn của chính nó; chuyển method về class có dữ liệu." },
+    { "id": "primitive-obsession", "front": "Primitive obsession sửa thế nào?", "back": "Thay `String`, `long` mang ý nghĩa nghiệp vụ bằng value object có validate, như `PhoneNumber`, `Money`." },
+    { "id": "strangler", "front": "Strangler fig là gì?", "back": "Thay hệ thống cũ dần dần: một lớp định tuyến đưa từng luồng sang code mới cho tới khi code cũ không còn được gọi." },
+    { "id": "branch-abstraction", "front": "Branch by abstraction là gì?", "back": "Đặt interface trước cài đặt cũ, viết cài đặt mới trên nhánh chính, chuyển dần bằng feature flag, rồi xoá bản cũ." },
+    { "id": "tomap-duplicate", "front": "Thay vòng lặp `map.put` bằng `Collectors.toMap(k, v)` có rủi ro gì?", "back": "`toMap` hai tham số ném `IllegalStateException` khi key trùng, còn vòng lặp cũ để giá trị sau ghi đè." }
+  ]
+}

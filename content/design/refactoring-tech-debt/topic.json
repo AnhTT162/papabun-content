@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "refactoring-tech-debt",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Refactoring & nợ kỹ thuật",
+  "summary": "Refactor là đổi cấu trúc không đổi hành vi; code smell và cách sửa; characterization test cho code cũ, refactoring tự động của IDE, tách commit; strangler fig, branch by abstraction, expand-contract; refactor ngầm đổi hành vi (`toMap`, `Set`, `toList()`); hotspot từ git, phân loại nợ, mutation testing, OpenRewrite; thuyết phục trả nợ bằng số đo.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 14,
+  "prerequisites": ["solid", "design-principles"],
+  "terms": ["refactoring", "technical-debt", "primitive-obsession", "characterization-test", "strangler-fig", "branch-by-abstraction", "expand-contract", "hotspot", "mutation-testing", "code-smell", "value-object", "feature-flag", "dora-metrics"],
+  "references": [
+    { "title": "Java SE 21 API: Collectors.toMap (duplicate keys)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/Collectors.html#toMap(java.util.function.Function,java.util.function.Function)" },
+    { "title": "Martin Fowler: Technical Debt Quadrant", "url": "https://martinfowler.com/bliki/TechnicalDebtQuadrant.html" },
+    { "title": "Martin Fowler: Branch By Abstraction", "url": "https://martinfowler.com/bliki/BranchByAbstraction.html" },
+    { "title": "OpenRewrite: Migrate to Spring Boot 3", "url": "https://docs.openrewrite.org/running-recipes/popular-recipe-guides/migrate-to-spring-3" },
+    { "title": "Martin Fowler: Strangler Fig Application", "url": "https://martinfowler.com/bliki/StranglerFigApplication.html" },
+    { "title": "PIT Mutation Testing", "url": "https://pitest.org/" },
+    { "title": "JEP 277: Enhanced Deprecation", "url": "https://openjdk.org/jeps/277" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kể một lần bạn trả nợ kỹ thuật, và bạn thuyết phục quản lý thế nào?\" Cấu trúc câu trả lời: chỗ nào đau (đo bằng số: mỗi thay đổi ở module giá mất trung bình bao nhiêu ngày, bao nhiêu sự cố mỗi quý), bạn chọn phạm vi thế nào (hotspot, gắn với tính năng sắp làm), làm an toàn ra sao (characterization test, branch by abstraction, feature flag), và kết quả đo lại sau đó. Dùng số liệu thật của bạn; người phỏng vấn senior sẽ hỏi tiếp \"nếu được làm lại, bạn làm khác gì\"." },
+    { "type": "callout", "style": "warning", "markdown": "PR ghi \"refactor, không đổi hành vi\" mà đổi kiểu collection, đổi vòng lặp sang Stream, hay đổi thứ tự gọi method thì cần reviewer đọc kỹ như một thay đổi hành vi. Những thay đổi \"cho gọn\" này là nguồn sự cố hay gặp, vì test thường dùng dữ liệu sạch hơn dữ liệu thật." }
+  ]
+}

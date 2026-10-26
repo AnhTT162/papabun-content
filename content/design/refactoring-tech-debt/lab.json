@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Refactor \"chỉ cho gọn\" làm job đồng bộ sản phẩm chết",
+  "context": "Một PR dọn code thay vòng lặp dựng map sản phẩm bằng Stream. PR ghi \"refactor, không đổi hành vi\"; unit test xanh vì dữ liệu test có mã sản phẩm không trùng. File CSV thật từ nhà cung cấp đôi khi có cùng một SKU hai lần khi họ sửa tên sản phẩm trong ngày (dòng sau là bản mới).",
+  "buggyCode": "// Trước refactor\nMap<String, Product> bySku = new HashMap<>();\nfor (Product product : supplierFeed.read()) {\n    bySku.put(product.sku(), product);\n}\n\n// Sau refactor\nMap<String, Product> bySku = supplierFeed.read().stream()\n        .collect(Collectors.toMap(Product::sku, product -> product));",
+  "symptom": {
+    "description": "Từ hôm deploy, job đồng bộ lúc 2 giờ sáng thất bại khoảng hai đêm mỗi tuần, và sản phẩm không được cập nhật giá. Log (JDK 27):",
+    "output": "java.lang.IllegalStateException: Duplicate key SKU-1 (attempted merging values Product[sku=SKU-1, name=Áo] and Product[sku=SKU-1, name=Áo (mới)])\n\tat java.base/java.util.stream.Collectors.duplicateKeyException(Collectors.java:137)\n\tat java.base/java.util.stream.Collectors.lambda$uniqKeysMapAccumulator$0(Collectors.java:184)\n\t...\n\tat shop.catalog.SupplierSync.run(SupplierSync.java:31)"
+  },
+  "diagnosis": {
+    "question": "Kết luận đúng là gì?",
+    "options": [
+      "Refactor đã đổi hành vi: `toMap` ném exception khi key trùng, còn vòng lặp cũ âm thầm lấy dòng sau",
+      "File CSV của nhà cung cấp bị lỗi, cần yêu cầu họ không gửi SKU trùng nữa",
+      "`HashMap` cũ không an toàn đa luồng, `toMap` phát hiện ra race condition có từ trước",
+      "`Collectors.toMap` không hỗ trợ record làm value, cần đổi `Product` thành class thường"
+    ],
+    "answer": 0,
+    "explanation": "Vòng lặp cũ có một quy tắc nghiệp vụ ngầm: SKU trùng thì dòng sau thắng. `Collectors.toMap` hai tham số coi key trùng là lỗi và ném `IllegalStateException`. Cấu trúc đổi và hành vi cũng đổi theo, nên đây không còn là refactor. Test không bắt được vì dữ liệu test \"sạch\" hơn dữ liệu thật. Dữ liệu trùng là hành vi đã có từ lâu của nhà cung cấp, không phải lỗi mới; job chạy một thread; record dùng làm value bình thường."
+  },
+  "fix": {
+    "code": "Map<String, Product> bySku = supplierFeed.read().stream()\n        .collect(Collectors.toMap(\n                Product::sku,\n                product -> product,\n                (earlier, later) -> later));    // giữ đúng quy tắc cũ: dòng sau thắng\n\n// Characterization test khoá hành vi trước khi refactor\n@Test\nvoid laterRowWinsWhenSkuRepeats() {\n    var feed = feedOf(\n            new Product(\"SKU-1\", \"Áo\"),\n            new Product(\"SKU-2\", \"Mũ\"),\n            new Product(\"SKU-1\", \"Áo (mới)\"));\n\n    assertThat(sync.buildIndex(feed).get(\"SKU-1\").name()).isEqualTo(\"Áo (mới)\");\n}",
+    "explanation": "Hàm merge `(earlier, later) -> later` giữ đúng ngữ nghĩa \"dòng sau thắng\" của vòng lặp cũ. Quan trọng hơn là quy trình: trước khi refactor, viết characterization test ghi lại hành vi hiện tại với dữ liệu giống thật (có SKU trùng, có dòng rỗng), rồi mới đổi code. Nếu nhóm thật sự muốn đổi quy tắc (ví dụ báo lỗi khi trùng), đó là thay đổi hành vi: làm trong commit riêng, ghi rõ trong PR, và hỏi bên nghiệp vụ trước."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "access-order-iteration",
+      "kind": "output",
+      "prompt": "Đoạn code sau cho kết quả gì?",
+      "code": "Map<String, Integer> views = new LinkedHashMap<>(16, 0.75f, true);\nviews.put(\"home\", 10);\nviews.put(\"cart\", 3);\n\nint total = 0;\nfor (String page : views.keySet()) {\n    total += views.get(page);\n}\nSystem.out.println(total);",
+      "options": [
+        "Ném `ConcurrentModificationException`",
+        "In `13`",
+        "In `10`, vì `get` đã chuyển `home` xuống cuối và vòng lặp dừng sớm",
+        "Lặp vô hạn, vì mỗi `get` chuyển entry xuống cuối danh sách"
+      ],
+      "answer": 0,
+      "explanation": "Với `accessOrder = true`, `get` chuyển entry về cuối danh sách liên kết, tức là một thay đổi cấu trúc làm tăng `modCount`. Iterator của `keySet()` phát hiện điều đó ở lần `next()` kế tiếp và ném `ConcurrentModificationException`. Duyệt `entrySet()` và dùng `entry.getValue()` thì không có vấn đề. Đây cũng là lý do `get` của LRU dựa trên `LinkedHashMap` cần khoá ghi, không phải khoá đọc."
+    },
+    {
+      "id": "first-step",
+      "kind": "single",
+      "prompt": "Đề bài: \"Thiết kế hệ thống đặt vé xem phim.\" Việc nên làm trong 5 phút đầu là gì?",
+      "options": [
+        "Hỏi phạm vi: chọn ghế cụ thể không, giữ ghế bao lâu, nhiều người cùng chọn một ghế xử lý thế nào",
+        "Vẽ ngay sơ đồ class với `Movie`, `Show`, `Seat`, `Booking` và các quan hệ",
+        "Chọn pattern sẽ dùng (Factory, Strategy, Observer) để khung thiết kế rõ ràng",
+        "Viết code `BookingService.book()` trước để có phần chạy được sớm"
+      ],
+      "answer": 0,
+      "explanation": "Phần đánh giá đầu tiên là bạn có biến yêu cầu mơ hồ thành phạm vi rõ không. Giữ ghế có thời hạn và tranh chấp ghế quyết định thiết kế đồng thời; bỏ qua chúng thì sơ đồ class đẹp cũng sai. Chọn pattern trước khi biết lực thay đổi là đặt giải pháp trước vấn đề."
+    },
+    {
+      "id": "vehicle-hierarchy",
+      "kind": "single",
+      "prompt": "Bãi đỗ xe có xe máy, ô tô, xe tải. Ba loại chỉ khác nhau ở loại chỗ đỗ được và giá. Mô hình nào hợp lý nhất?",
+      "options": [
+        "`enum VehicleType` mang thuộc tính kích thước, giá do `PricingPolicy` tính theo loại",
+        "Abstract class `Vehicle` với ba lớp con override `getSize()` và `getPrice()`",
+        "Interface `Vehicle` và ba class implement, mỗi class một file riêng",
+        "Một class `Vehicle` với ba cờ `boolean isCar`, `isTruck`, `isBike`"
+      ],
+      "answer": 0,
+      "explanation": "Khi các loại chỉ khác dữ liệu chứ không khác hành vi, `enum` gọn và thêm loại mới chỉ là thêm một hằng. Đưa giá vào lớp con trộn hai lý do thay đổi (loại xe và chính sách giá của marketing) vào một chỗ. Ba cờ `boolean` cho phép trạng thái vô nghĩa như vừa là ô tô vừa là xe tải."
+    },
+    {
+      "id": "spot-race",
+      "kind": "single",
+      "prompt": "Một instance, nhiều cổng. Code cấp chỗ: `Spot spot = freeSpots.peek(); if (spot != null) { freeSpots.remove(spot); return spot; }` với `freeSpots` là `ConcurrentLinkedQueue`. Có vấn đề gì?",
+      "options": [
+        "Hai cổng có thể cùng `peek` ra một chỗ rồi cùng trả về nó; dùng `poll()` để lấy atomic",
+        "Không có vấn đề, vì `ConcurrentLinkedQueue` đã an toàn đa luồng",
+        "`peek` chặn thread cho tới khi có chỗ trống, nên cổng bị treo giờ cao điểm",
+        "`remove` ném exception nếu chỗ đã bị cổng khác lấy, nên chỉ cần bắt exception"
+      ],
+      "answer": 0,
+      "explanation": "Từng method của `ConcurrentLinkedQueue` an toàn, nhưng `peek` rồi `remove` là check-then-act gồm hai bước: cả hai cổng cùng thấy một chỗ, một cổng `remove` được còn cổng kia `remove` trả `false`, nhưng code bỏ qua kết quả và vẫn trả chỗ đó. `poll()` lấy và xoá trong một thao tác atomic. `peek` không chặn, và `remove` trả `boolean` chứ không ném exception."
+    }
+  ]
+}

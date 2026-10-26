@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "LRU cache đá mất đúng key nóng nhất",
+  "context": "Trong vòng LLD, ứng viên viết LRU cache dung lượng 2 bằng `LinkedHashMap` và `removeEldestEntry`. Người phỏng vấn đưa ra kịch bản: thêm A, thêm B, đọc A (A vừa được dùng), thêm C. Theo LRU, key bị đá phải là B.",
+  "buggyCode": "class LruCache<K, V> extends LinkedHashMap<K, V> {\n    private final int capacity;\n\n    LruCache(int capacity) {\n        super(16, 0.75f);\n        this.capacity = capacity;\n    }\n\n    @Override\n    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {\n        return size() > capacity;\n    }\n}\n\nvar cache = new LruCache<String, String>(2);\ncache.put(\"A\", \"a\");\ncache.put(\"B\", \"b\");\ncache.get(\"A\");\ncache.put(\"C\", \"c\");\nSystem.out.println(cache.keySet());",
+  "symptom": {
+    "description": "Chạy trên JDK 27 in ra:",
+    "output": "[B, C]"
+  },
+  "diagnosis": {
+    "question": "Vì sao A bị đá dù vừa được đọc?",
+    "options": [
+      "Constructor `LinkedHashMap(int, float)` giữ thứ tự chèn, nên `get` không đổi thứ tự và A vẫn là entry cũ nhất",
+      "`removeEldestEntry` chạy trước khi entry mới được thêm, nên `size()` lệch đi một",
+      "`LinkedHashMap` chỉ cập nhật thứ tự khi gọi `getOrDefault`, còn `get` thì không",
+      "Capacity ban đầu 16 lớn hơn 2, nên map bỏ qua `removeEldestEntry` cho tới lần resize đầu"
+    ],
+    "answer": 0,
+    "explanation": "`LinkedHashMap` có hai chế độ: thứ tự chèn (mặc định) và thứ tự truy cập (tham số thứ ba `accessOrder = true`). Ở thứ tự chèn, `get(\"A\")` không di chuyển A, nên khi thêm C, entry cũ nhất vẫn là A và bị đá. Code trông như LRU nhưng thật ra là FIFO. `removeEldestEntry` được gọi **sau** khi chèn (nên `size() > capacity` là đúng); `get` và `getOrDefault` đều cập nhật thứ tự khi bật chế độ truy cập; capacity ban đầu chỉ là kích thước mảng bucket, không liên quan đến việc đá entry."
+  },
+  "fix": {
+    "code": "final class LruCache<K, V> {\n    private final Map<K, V> map;\n\n    LruCache(int capacity) {\n        this.map = new LinkedHashMap<>(16, 0.75f, true) {   // true: thứ tự truy cập\n            @Override\n            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {\n                return size() > capacity;\n            }\n        };\n    }\n\n    // get cũng đổi cấu trúc ở chế độ truy cập, nên cần cùng một khoá với put\n    synchronized V get(K key)             { return map.get(key); }\n    synchronized void put(K key, V value) { map.put(key, value); }\n    synchronized Set<K> keys()            { return Set.copyOf(map.keySet()); }\n}",
+    "explanation": "Bật `accessOrder = true` thì kịch bản trên in ra `[A, C]` (thứ tự bản sao `Set.copyOf` không đảm bảo, nhưng B đã bị đá). Bản sửa còn dùng composition thay vì kế thừa: bản kế thừa phơi ra toàn bộ API của `Map` (`entrySet`, `keySet`, `compute`...) mà không có khoá, nên bên ngoài có thể truy cập không đồng bộ hoặc duyệt `keySet()` trong lúc gọi `get` và gặp `ConcurrentModificationException`. Composition chỉ mở đúng các method đã được khoá. Câu hỏi nối tiếp chắc chắn có: thread-safety. Ở chế độ truy cập, `get` là một thay đổi cấu trúc, nên read lock của `ReadWriteLock` không đủ; ở đây khoá cả hai method. Trên production, dùng Caffeine thay vì tự viết."
+  }
+}

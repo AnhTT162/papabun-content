@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "lld-steps", "front": "Các bước của một vòng LLD 45 phút?", "back": "Làm rõ yêu cầu, tìm thực thể và trách nhiệm, vẽ class và interface, code phần lõi, rồi bàn mở rộng và đồng thời." },
+    { "id": "where-interface", "front": "Trong bài LLD, nên đặt interface ở đâu?", "back": "Ở 1–2 chỗ đã biết sẽ thay đổi (giá, chiến lược chọn chỗ), không phải cho mọi class." },
+    { "id": "lru-linkedhashmap", "front": "Viết LRU bằng `LinkedHashMap` cần hai điều gì?", "back": "Constructor với `accessOrder = true` và override `removeEldestEntry` trả `size() > capacity`." },
+    { "id": "lru-get-lock", "front": "Vì sao `get` của LRU dựa trên `LinkedHashMap` không dùng được read lock?", "back": "Ở chế độ thứ tự truy cập, `get` chuyển entry về cuối danh sách, tức là thay đổi cấu trúc, nên cần cùng khoá với `put`." },
+    { "id": "spot-atomic", "front": "Cấp chỗ đỗ atomic trong một JVM thế nào?", "back": "Mỗi loại chỗ một hàng đợi đồng thời và lấy bằng `poll()`, hoặc `compareAndSet` trên chỗ đó; không dùng `peek` rồi `remove`." },
+    { "id": "spot-multi-instance", "front": "Nhiều instance thì cấp chỗ đỗ dựa vào đâu?", "back": "Database (update có điều kiện, `for update skip locked`) hoặc Redis (`SPOP`, `SET NX`) làm nguồn sự thật duy nhất." },
+    { "id": "enum-vs-subclass", "front": "Khi nào dùng `enum` thay cho cây kế thừa cho các loại thực thể?", "back": "Khi các loại chỉ khác dữ liệu, không khác hành vi cần override." },
+    { "id": "elevator-patterns", "front": "Bài elevator thường dùng pattern nào ở đâu?", "back": "State cho trạng thái thang; Strategy cho thuật toán chọn thang và thứ tự phục vụ (SCAN/LOOK)." }
+  ]
+}

@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency"]
+      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency", "lld-ood-interview"]
     },
     {
       "id": "cas",
@@ -461,7 +461,7 @@
       "meaning": "Lệnh CPU atomic: chỉ ghi giá trị mới nếu giá trị hiện tại vẫn bằng giá trị mong đợi, nếu không thì báo thất bại để thử lại. Là nền của `AtomicInteger` và các cấu trúc lock-free.",
       "example": "`counter.compareAndSet(5, 6)` chỉ thành công nếu `counter` đang là 5.",
       "related": ["atomicity"],
-      "topics": ["synchronized-volatile", "locks-aqs", "atomic-cas", "concurrent-hashmap"]
+      "topics": ["synchronized-volatile", "locks-aqs", "atomic-cas", "concurrent-hashmap", "lld-ood-interview"]
     },
     {
       "id": "reentrancy",
@@ -517,7 +517,7 @@
       "meaning": "Một thread mãi không được dùng tài nguyên vì các thread khác luôn giành trước, dù hệ thống vẫn chạy.",
       "example": "Một thread nhả lock rồi lấy lại ngay trong vòng lặp dài; với lock không công bằng, thread khác đang chờ có thể hiếm khi tới lượt.",
       "related": ["livelock", "deadlock"],
-      "topics": ["deadlock", "locks-aqs"]
+      "topics": ["deadlock", "locks-aqs", "lld-ood-interview"]
     },
     {
       "id": "jit",
@@ -1389,7 +1389,7 @@
       "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
       "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
       "related": ["pessimistic-locking", "lock-timeout"],
-      "topics": ["optimistic-pessimistic-locking"]
+      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview"]
     },
     {
       "id": "lock-timeout",
@@ -2229,7 +2229,7 @@
       "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
       "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
       "related": ["schema-migration", "backfill", "rolling-deployment"],
-      "topics": ["schema-migration"]
+      "topics": ["schema-migration", "refactoring-tech-debt"]
     },
     {
       "id": "rolling-deployment",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview"]
     },
     {
       "id": "cache-eviction",
@@ -2389,7 +2389,7 @@
       "meaning": "Least Recently Used: chính sách eviction bỏ mục lâu nhất chưa được dùng.",
       "example": "Đọc lần lượt 2 triệu sản phẩm một lần đẩy hết các mục nóng ra khỏi cache LRU.",
       "related": ["lfu", "cache-eviction"],
-      "topics": ["caching-basics", "redis-internals"]
+      "topics": ["caching-basics", "redis-internals", "lld-ood-interview"]
     },
     {
       "id": "lfu",
@@ -3549,7 +3549,7 @@
       "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
       "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
       "related": ["race-condition", "atomicity"],
-      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap"]
+      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview"]
     },
     {
       "id": "critical-section",
@@ -4358,6 +4358,118 @@
       "example": "`Integer.valueOf(100)` trả cùng một object từ cache -128..127.",
       "related": ["static-factory-method"],
       "topics": ["structural-patterns"]
+    },
+    {
+      "id": "low-level-design",
+      "term": "Low-level design",
+      "meaning": "Thiết kế ở mức class, interface, quan hệ và xử lý đồng thời bên trong một service; vòng phỏng vấn OOD/LLD kiểm tra kỹ năng này.",
+      "example": "Thiết kế bãi đỗ xe: `ParkingLot`, `Spot`, `Ticket`, `PricingPolicy`, cấp chỗ atomic giữa nhiều cổng.",
+      "related": ["lru"],
+      "topics": ["lld-ood-interview"]
+    },
+    {
+      "id": "caffeine",
+      "term": "Caffeine",
+      "meaning": "Thư viện cache trong bộ nhớ cho Java, an toàn đa luồng, có TTL và giới hạn kích thước, dùng chính sách W-TinyLFU cho hit rate cao.",
+      "example": "`Caffeine.newBuilder().maximumSize(10_000).expireAfterWrite(Duration.ofMinutes(5)).build()`.",
+      "related": ["lru"],
+      "topics": ["lld-ood-interview"]
+    },
+    {
+      "id": "refactoring",
+      "term": "Refactoring",
+      "meaning": "Thay đổi cấu trúc code mà không đổi hành vi quan sát được, làm từng bước nhỏ có test bảo vệ.",
+      "example": "Extract Method một đoạn tính thuế 40 dòng thành `calculateVat(order)`; test vẫn xanh.",
+      "related": ["characterization-test", "technical-debt"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "technical-debt",
+      "term": "Technical debt",
+      "meaning": "Chi phí thay đổi tăng thêm do thiết kế hay code hiện tại; như tiền lãi, chỉ phải trả khi code đó bị sửa.",
+      "example": "Mỗi lần thêm loại giảm giá phải sửa sáu câu `switch` ở sáu file.",
+      "related": ["hotspot", "refactoring"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "primitive-obsession",
+      "term": "Primitive obsession",
+      "meaning": "Code smell dùng kiểu nguyên thuỷ (`String`, `long`) cho khái niệm nghiệp vụ, khiến validate và quy tắc bị rải khắp nơi.",
+      "example": "Thay `String phone` bằng `record PhoneNumber(String value)` có validate trong constructor.",
+      "related": ["refactoring"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "characterization-test",
+      "term": "Characterization test",
+      "meaning": "Test ghi lại hành vi hiện tại của code cũ, kể cả chỗ trông như bug, để làm lưới an toàn trước khi refactor.",
+      "example": "Chạy hàm tính phí cũ với 200 đơn hàng thật, lưu kết quả làm giá trị mong đợi.",
+      "related": ["refactoring"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "strangler-fig",
+      "term": "Strangler fig",
+      "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
+      "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
+      "related": ["branch-by-abstraction"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "branch-by-abstraction",
+      "term": "Branch by abstraction",
+      "meaning": "Kỹ thuật thay một phần lớn trên nhánh chính: đặt interface trước cài đặt cũ, viết cài đặt mới, chuyển dần bằng feature flag rồi xoá bản cũ.",
+      "example": "Interface `PriceEngine` có `LegacyPriceEngine` và `NewPriceEngine`; flag bật bản mới cho 5% đơn.",
+      "related": ["strangler-fig"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "hotspot",
+      "term": "Hotspot",
+      "meaning": "Phần code vừa phức tạp vừa bị thay đổi nhiều; nơi trả nợ kỹ thuật mang lại lợi ích lớn nhất.",
+      "example": "`PricingService.java` sửa 87 lần trong năm và có cognitive complexity cao nhất repo.",
+      "related": ["technical-debt"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "mutation-testing",
+      "term": "Mutation testing",
+      "meaning": "Kỹ thuật kiểm tra chất lượng test bằng cách cố tình sửa code (mutant) và xem test có đỏ không; công cụ Java phổ biến là PIT.",
+      "example": "PIT đổi `amount > 0` thành `amount >= 0`, test vẫn xanh: thiếu test cho giá trị 0.",
+      "related": ["characterization-test"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "code-smell",
+      "term": "Code smell",
+      "meaning": "Dấu hiệu bề mặt trong code thường chỉ ra vấn đề thiết kế sâu hơn; không phải bug, nhưng làm code khó đổi.",
+      "example": "Method 300 dòng, class 40 field, cùng một `switch` theo loại lặp ở sáu chỗ.",
+      "related": ["refactoring", "technical-debt"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "value-object",
+      "term": "Value object",
+      "meaning": "Object nhỏ, bất biến, được so sánh bằng giá trị thay vì danh tính, và tự kiểm tra tính hợp lệ khi tạo.",
+      "example": "`record Money(BigDecimal amount, Currency currency)` hai đối tượng cùng số tiền và tiền tệ là bằng nhau.",
+      "related": ["primitive-obsession"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "feature-flag",
+      "term": "Feature flag",
+      "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
+      "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
+      "related": ["branch-by-abstraction"],
+      "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "dora-metrics",
+      "term": "DORA metrics",
+      "meaning": "Bốn chỉ số đo năng lực giao phần mềm của nhóm: lead time cho thay đổi, tần suất deploy, tỉ lệ deploy gây lỗi, thời gian khôi phục sau deploy lỗi.",
+      "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
+      "related": ["technical-debt"],
+      "topics": ["refactoring-tech-debt"]
     }
   ]
 }

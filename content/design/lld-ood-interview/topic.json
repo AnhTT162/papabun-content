@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "lld-ood-interview",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Low-level design (OOD) khi phỏng vấn",
+  "summary": "Khung trả lời 45 phút; parking lot, LRU cache và elevator: thực thể, interface ở chỗ thay đổi, pattern có lý do; enum hay kế thừa; cấp chỗ atomic trong một JVM và khi chạy nhiều instance; `LinkedHashMap` thứ tự truy cập, vì sao `get` cần khoá ghi, Caffeine; tiền, `Clock` và các edge case nên nêu.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 16,
+  "prerequisites": ["behavioral-patterns", "concurrent-hashmap"],
+  "terms": ["low-level-design", "lru", "check-then-act", "race-condition", "caffeine", "ttl", "cas", "starvation", "skip-locked"],
+  "references": [
+    { "title": "Java SE 21 API: LinkedHashMap (access-order, removeEldestEntry)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/LinkedHashMap.html" },
+    { "title": "Java SE 21 API: ConcurrentLinkedQueue", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html" },
+    { "title": "Caffeine: Efficiency (W-TinyLFU)", "url": "https://github.com/ben-manes/caffeine/wiki/Efficiency" },
+    { "title": "PostgreSQL: SELECT ... FOR UPDATE SKIP LOCKED", "url": "https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE" },
+    { "title": "Java SE 21 API: ConcurrentLinkedQueue.size()", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html#size()" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Giờ hệ thống chạy trên ba server thì sao?\" Đừng vội thêm Kafka hay distributed lock. Chỉ ra phần nào của thiết kế còn đúng (class, interface, giá) và phần nào không (trạng thái chỗ trống trong bộ nhớ), rồi chuyển đúng phần đó về một nguồn sự thật dùng chung (database có update có điều kiện). Ước lượng tải trước: 20 xe mỗi phút thì một bảng PostgreSQL là thừa sức." },
+    { "type": "callout", "style": "tip", "markdown": "Nói to suy nghĩ trong lúc thiết kế: \"tôi chọn `enum` vì các loại xe không khác hành vi\", \"tôi đặt interface ở giá vì marketing sẽ đổi nó\". Người phỏng vấn chấm lý do của từng quyết định, không chỉ sơ đồ cuối cùng." }
+  ]
+}

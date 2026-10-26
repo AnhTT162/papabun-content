@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "list-to-set-refactor",
+      "kind": "output",
+      "prompt": "Một PR \"refactor\" đổi `List` sang `Set` vì \"tra cứu nhanh hơn\". Đoạn code sau in ra gì?",
+      "code": "List<String> scannedItems = List.of(\"SKU-1\", \"SKU-2\", \"SKU-1\");\n\nSet<String> afterRefactor = new HashSet<>(scannedItems);\n\nSystem.out.println(scannedItems.size() + \" \" + afterRefactor.size());",
+      "options": [
+        "`3 2`",
+        "`3 3`",
+        "`2 2`",
+        "Ném `IllegalArgumentException` vì `List.of` có phần tử trùng"
+      ],
+      "answer": 0,
+      "explanation": "`Set` bỏ phần tử trùng, nên nếu `scannedItems` là các lần quét mã vạch (khách mua hai áo `SKU-1`), đổi sang `Set` làm mất một món. `List.of` cho phép phần tử trùng; chỉ `Set.of` và `Map.of` mới ném `IllegalArgumentException` khi trùng. Đổi kiểu collection là đổi ngữ nghĩa, không phải refactor thuần."
+    },
+    {
+      "id": "legacy-no-tests",
+      "kind": "single",
+      "prompt": "Bạn cần sửa một class tính phí vận chuyển 1.500 dòng, chưa có test, logic rất khó hiểu. Bước đầu tiên nên làm là gì?",
+      "options": [
+        "Viết characterization test ghi lại output hiện tại với nhiều bộ dữ liệu giống thật",
+        "Viết lại class từ đầu theo đặc tả, vì code cũ quá khó đọc để sửa an toàn",
+        "Refactor cho dễ đọc trước, rồi viết test cho phiên bản mới",
+        "Đọc hết code và viết tài liệu mô tả logic trước khi đụng vào"
+      ],
+      "answer": 0,
+      "explanation": "Không có test thì không biết refactor có đổi hành vi không. Characterization test ghi lại hành vi thật (kể cả chỗ trông như bug, vì có thể có khách hàng đang dựa vào nó), làm lưới an toàn cho mọi bước sau. Viết lại từ đầu dễ đánh mất quy tắc không có trong đặc tả; refactor trước rồi mới test là không có gì bảo vệ; viết tài liệu không bảo vệ được hành vi."
+    },
+    {
+      "id": "prioritize-debt",
+      "kind": "single",
+      "prompt": "Nhóm có thời gian trả nợ kỹ thuật một sprint. Module nào nên ưu tiên?",
+      "options": [
+        "Module độ phức tạp cao và bị sửa nhiều nhất trong 12 tháng qua",
+        "Module phức tạp nhất theo SonarQube, dù đã ổn định nhiều năm",
+        "Module cũ nhất trong codebase, vì nợ tích luỹ lâu nhất",
+        "Module có coverage thấp nhất, vì thiếu test là nợ lớn nhất"
+      ],
+      "answer": 0,
+      "explanation": "Nợ kỹ thuật chỉ tốn lãi khi phải đổi code. Hotspot (phức tạp × tần suất thay đổi) là nơi mỗi giờ đầu tư giảm chi phí cho nhiều thay đổi sắp tới nhất. Code phức tạp nhưng không ai đụng, code cũ, hay code ít test mà ổn định thì chưa gây chi phí hằng ngày."
+    },
+    {
+      "id": "replace-module-safely",
+      "kind": "single",
+      "prompt": "Cần thay module tính giá cũ bằng module mới viết lại, trong khi hệ thống vẫn chạy và nhóm khác vẫn thêm tính năng. Cách nào ít rủi ro nhất?",
+      "options": [
+        "Đặt interface trước module cũ, chuyển dần sang bản mới bằng feature flag",
+        "Tạo nhánh git dài hạn, viết lại toàn bộ trong 3 tháng rồi merge một lần",
+        "Dừng nhận tính năng mới ở module này cho tới khi bản viết lại xong",
+        "Viết module mới, deploy thay thế toàn bộ cùng lúc vào một đêm ít tải"
+      ],
+      "answer": 0,
+      "explanation": "Branch by abstraction giữ mọi thứ trên nhánh chính: cả hai cài đặt cùng tồn tại sau một interface, flag quyết định luồng nào dùng bản mới, có thể so kết quả hai bản song song rồi tắt bản cũ khi tin cậy. Nhánh dài hạn gặp merge conflict khổng lồ; dừng nhận tính năng hiếm khi được chấp nhận; chuyển một lần không có đường lui."
+    }
+  ]
+}
