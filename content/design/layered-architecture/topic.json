@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "layered-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Kiến trúc phân lớp & tổ chức package",
+  "summary": "Trách nhiệm của controller, service, repository và chiều phụ thuộc; vì sao không dùng entity làm request/response (mass assignment, `merge` ghi `null`, lazy loading); đặt `@Transactional` và validate ở đâu; Open Session in View; map DTO bằng MapStruct; package-by-feature và package-private; architecture sinkhole, anemic domain model, kiểm tra tầng bằng ArchUnit.",
+  "level": "junior",
+  "order": 3,
+  "minutes": 12,
+  "prerequisites": ["design-principles", "spring-mvc-flow", "transactional-basics"],
+  "terms": ["layered-architecture", "dto", "package-by-feature", "architecture-sinkhole", "anemic-domain-model", "mapstruct", "mass-assignment", "open-session-in-view", "lazy-loading", "spring-modulith", "modular-monolith", "archunit", "dirty-checking"],
+  "references": [
+    { "title": "Spring Boot Reference: Data Access, JPA and Spring Data (spring.jpa.open-in-view)", "url": "https://docs.spring.io/spring-boot/reference/data/sql.html#data.sql.jpa-and-spring-data.open-entity-manager-in-view" },
+    { "title": "Spring Data JPA Reference: Persisting Entities (save và merge)", "url": "https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" },
+    { "title": "OWASP API Security Top 10 2023: API3 Broken Object Property Level Authorization", "url": "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Dự án nhỏ có cần DTO riêng cho mọi API không, map qua lại có tốn công không?\" Trả lời theo rủi ro: request luôn nên là DTO, vì đó là chỗ chặn mass assignment và mất dữ liệu; response có thể đơn giản hơn, nhưng vẫn cần quyết định rõ field nào được trả. Chi phí mapping thấp với record và MapStruct, còn chi phí đổi API khi đã dính vào schema thì cao. Hỏi tiếp \"package theo tầng hay theo tính năng\": theo tính năng khi codebase lớn dần, vì đó là bước đầu tới [[modular-monolith|modular monolith]]." },
+    { "type": "callout", "style": "warning", "markdown": "`BeanUtils.copyProperties(request, entity)` chép mọi property trùng tên, kể cả `null` và cả field bạn quên rằng request có. Nó che đúng lỗi mà DTO sinh ra để chặn. Viết method rõ ràng trên entity (`changeProfile(...)`) hoặc dùng MapStruct với `unmappedTargetPolicy = ERROR`." }
+  ]
+}

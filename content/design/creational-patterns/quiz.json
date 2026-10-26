@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lombok-builder-default",
+      "kind": "output",
+      "prompt": "Dùng Lombok. Đoạn code sau in ra gì?",
+      "code": "@Builder\n@Getter\nclass RetryPolicy {\n    private int maxAttempts = 3;\n    private Duration backoff = Duration.ofMillis(200);\n}\n\nRetryPolicy policy = RetryPolicy.builder().build();\nSystem.out.println(policy.getMaxAttempts() + \" \" + policy.getBackoff());",
+      "options": [
+        "`0 null`",
+        "`3 PT0.2S`",
+        "`0 PT0.2S`",
+        "Không biên dịch: thiếu `@Builder.Default`"
+      ],
+      "answer": 0,
+      "explanation": "`@Builder` sinh một constructor nhận mọi field và builder truyền vào giá trị nó đang giữ; field chưa được gọi setter của builder thì là giá trị mặc định của Java (`0`, `null`), còn biểu thức khởi tạo bị bỏ qua. Lombok chỉ in cảnh báo lúc biên dịch. Thêm `@Builder.Default` trên từng field thì mới in `3 PT0.2S`. Lỗi kiểu này làm client không retry và gây `NullPointerException` ở chỗ dùng `backoff`."
+    },
+    {
+      "id": "dcl-volatile",
+      "kind": "single",
+      "prompt": "Double-checked locking cho Singleton khởi tạo lười, field `instance` **không** `volatile`. Rủi ro là gì?",
+      "options": [
+        "Thread khác có thể thấy `instance` khác `null` nhưng object chưa khởi tạo xong",
+        "Hai thread có thể cùng vào khối `synchronized` và tạo hai instance",
+        "Deadlock khi hai thread cùng gọi `getInstance()` lần đầu",
+        "Không có rủi ro, vì `synchronized` đã đảm bảo mọi thread thấy giá trị mới"
+      ],
+      "answer": 0,
+      "explanation": "Lần kiểm tra đầu nằm ngoài khoá, nên không có quan hệ [[happens-before]] với lần ghi trong khoá. Phép gán tham chiếu có thể được thấy trước các lần ghi field trong constructor, và thread đọc dùng object dở dang. `synchronized` chỉ đảm bảo cho thread cũng vào khối đó; khoá chặn việc tạo hai instance. `volatile` (Java 5+) hoặc holder idiom sửa được lỗi này."
+    },
+    {
+      "id": "spring-singleton-scope",
+      "kind": "single",
+      "prompt": "Bean `PriceConverter` scope mặc định trong Spring. Câu nào đúng?",
+      "options": [
+        "Một object cho mỗi `ApplicationContext`, và class vẫn tạo được bằng `new` trong test",
+        "Một object cho cả JVM, Spring đảm bảo bằng constructor `private` sinh tự động",
+        "Một object cho mỗi thread xử lý request, nên field có trạng thái là an toàn",
+        "Một object cho mỗi lần inject, vì Spring tạo bean mới cho từng nơi dùng"
+      ],
+      "answer": 0,
+      "explanation": "Scope singleton của Spring do container quản lý: mỗi context một object. Class là class bình thường, không có `getInstance()` hay constructor `private`, nên test tạo bằng `new` với dependency giả. Object đó dùng chung giữa mọi thread, nên field có trạng thái thay đổi được là lỗi đồng thời. Mỗi lần hỏi một object mới là scope `prototype`."
+    },
+    {
+      "id": "enum-singleton",
+      "kind": "single",
+      "prompt": "Vì sao `enum` một phần tử được coi là cách viết Singleton an toàn nhất trong Java?",
+      "options": [
+        "JVM cấm tạo enum bằng reflection, và deserialization trả về đúng hằng đã có",
+        "Enum được khởi tạo lười ở lần gọi đầu nên không tốn bộ nhớ khi chưa dùng",
+        "Enum không có trạng thái nên không thể gây lỗi giữa các thread",
+        "Enum được nạp bởi bootstrap classloader nên chỉ có một bản trong mọi ứng dụng"
+      ],
+      "answer": 0,
+      "explanation": "`Constructor.newInstance` ném `IllegalArgumentException` với enum, và serialization của enum chỉ lưu tên hằng rồi tra lại bằng `valueOf`. Enum vẫn có thể có field thay đổi được, nên không tự an toàn giữa các thread. Enum được khởi tạo khi class được khởi tạo, cũng lười như holder idiom, nhưng đó không phải lý do chính. Enum của ứng dụng do classloader của ứng dụng nạp, không phải bootstrap."
+    }
+  ]
+}

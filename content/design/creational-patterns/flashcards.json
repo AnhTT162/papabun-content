@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "static-factory-pros", "front": "Static factory method hơn constructor public ở điểm nào?", "back": "Có tên nói rõ ý, không bắt buộc tạo object mới (cache), và trả được kiểu con ẩn sau interface." },
+    { "id": "simple-vs-factory-method", "front": "Simple factory khác Factory Method (GoF) thế nào?", "back": "Simple factory là một method chọn class theo tham số; Factory Method là method abstract trong lớp cha mà lớp con override để quyết định tạo gì." },
+    { "id": "abstract-factory", "front": "Abstract Factory khác Factory Method thế nào?", "back": "Factory Method dựa trên kế thừa: lớp con override một method để tạo một object. Abstract Factory là một object factory được inject, tạo cả một họ object đi cùng nhau." },
+    { "id": "builder-when", "front": "Khi nào dùng Builder?", "back": "Khi object có nhiều tham số, nhất là tham số tuỳ chọn hay cùng kiểu dễ truyền nhầm; kiểm bất biến một lần trong `build()`." },
+    { "id": "lombok-default", "front": "Field `int retries = 3` trong class `@Builder` của Lombok nhận giá trị gì khi không gọi `.retries(..)`?", "back": "`0`: builder bỏ qua biểu thức khởi tạo nếu thiếu `@Builder.Default`." },
+    { "id": "singleton-why-avoid", "front": "Vì sao nên tránh Singleton tự quản lý (`getInstance()`)?", "back": "Trạng thái toàn cục rò giữa các test, dependency bị ẩn khỏi constructor, và khó thay bằng bản giả." },
+    { "id": "holder-idiom", "front": "Holder idiom khởi tạo lười Singleton thế nào mà không cần khoá?", "back": "Instance nằm trong class lồng `static`; JVM chỉ khởi tạo class đó ở lần truy cập đầu, đúng một lần và an toàn giữa các thread." },
+    { "id": "break-singleton", "front": "Ba cách phá một Singleton viết bằng class thường?", "back": "Reflection gọi constructor `private`, deserialization không có `readResolve`, và `clone()`. `enum` chặn cả ba." },
+    { "id": "spring-vs-gof", "front": "Singleton của Spring khác GoF Singleton thế nào?", "back": "Spring: một object mỗi `ApplicationContext`, class vẫn bình thường và test được. GoF: class tự đảm bảo một instance mỗi classloader." }
+  ]
+}

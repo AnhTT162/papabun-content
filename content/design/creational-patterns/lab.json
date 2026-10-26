@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Test tỉ giá xanh khi chạy riêng, đỏ trên CI",
+  "context": "Tỉ giá được giữ trong một Singleton tự quản lý. Để test hoàn tiền với tỉ giá khác, một đồng nghiệp thêm method `override` \"chỉ dùng cho test\". Maven Surefire cấu hình mặc định (`forkCount=1`, `reuseForks=true`): mọi class test chạy trong cùng một JVM.",
+  "buggyCode": "public final class ExchangeRates {\n    private static final ExchangeRates INSTANCE = new ExchangeRates();\n    private final Map<String, BigDecimal> rates =\n            new ConcurrentHashMap<>(Map.of(\"USD\", new BigDecimal(\"25400\")));\n\n    private ExchangeRates() {}\n\n    public static ExchangeRates getInstance() { return INSTANCE; }\n    public BigDecimal rate(String currency) { return rates.get(currency); }\n    public void override(String currency, BigDecimal rate) { rates.put(currency, rate); } // chỉ dùng cho test\n}\n\nclass PriceConverter {\n    BigDecimal toVnd(BigDecimal usd) {\n        return usd.multiply(ExchangeRates.getInstance().rate(\"USD\"));\n    }\n}\n\nclass RefundCalculatorTest {\n    @Test\n    void refundsAtRateOfPurchaseDay() {\n        ExchangeRates.getInstance().override(\"USD\", new BigDecimal(\"24000\"));\n        // ... assert trên số tiền hoàn\n    }\n}\n\nclass PriceConverterTest {\n    @Test\n    void convertsUsdToVnd() {\n        assertEquals(new BigDecimal(\"254000\"), new PriceConverter().toVnd(new BigDecimal(\"10\")));\n    }\n}",
+  "symptom": {
+    "description": "Chạy riêng `PriceConverterTest` trong IDE: xanh. Chạy `mvn test` trên laptop: xanh. Trên CI, sau khi thêm vài class test mới, `PriceConverterTest` đỏ ở mọi build:",
+    "output": "[ERROR] PriceConverterTest.convertsUsdToVnd:9 expected: <254000> but was: <240000>\n[INFO] Tests run: 214, Failures: 1, Errors: 0, Skipped: 0"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "`RefundCalculatorTest` sửa Singleton dùng chung, và trên CI nó chạy trước `PriceConverterTest` trong cùng JVM",
+      "`BigDecimal.equals` so cả scale, nên `254000` và kết quả của `multiply` không bằng nhau",
+      "Hai class test chạy song song trên hai thread, và `ConcurrentHashMap` trả giá trị cũ",
+      "CI dùng múi giờ khác, nên `ExchangeRates` nạp tỉ giá của một ngày khác"
+    ],
+    "answer": 0,
+    "explanation": "`INSTANCE` là trạng thái toàn cục sống suốt JVM. `RefundCalculatorTest` đổi tỉ giá thành 24.000 và không trả lại; class test nào chạy sau trong cùng JVM đều thấy 24.000. Kết quả phụ thuộc thứ tự chạy class, và thứ tự đó khác nhau giữa IDE, laptop và CI (thêm file test mới cũng có thể đổi thứ tự). Scale không phải vấn đề: `10 × 25400` có scale 0, bằng `254000`; và giá trị thực tế là 240.000, tức 10 × 24.000. JUnit không chạy song song trừ khi bật `junit.jupiter.execution.parallel.enabled`. Tỉ giá là hằng số trong code, không phụ thuộc múi giờ."
+  },
+  "fix": {
+    "code": "public interface ExchangeRateProvider {\n    BigDecimal rate(String currency);\n}\n\n@Component\nclass ConfiguredExchangeRates implements ExchangeRateProvider {\n    private final Map<String, BigDecimal> rates;\n\n    ConfiguredExchangeRates(RateProperties properties) {\n        this.rates = Map.copyOf(properties.rates());      // bất biến, không có override\n    }\n\n    public BigDecimal rate(String currency) { return rates.get(currency); }\n}\n\n@Component\nclass PriceConverter {\n    private final ExchangeRateProvider rates;\n\n    PriceConverter(ExchangeRateProvider rates) { this.rates = rates; }\n\n    BigDecimal toVnd(BigDecimal usd) { return usd.multiply(rates.rate(\"USD\")); }\n}\n\nclass PriceConverterTest {\n    @Test\n    void convertsUsdToVnd() {\n        ExchangeRateProvider fixed = currency -> new BigDecimal(\"25400\");\n        assertEquals(new BigDecimal(\"254000\"), new PriceConverter(fixed).toVnd(new BigDecimal(\"10\")));\n    }\n}",
+    "explanation": "Dependency hiện ra ở constructor, nên mỗi test tự đưa vào tỉ giá của nó bằng một lambda, không có trạng thái dùng chung. Spring tạo đúng một bean `ConfiguredExchangeRates` (scope singleton), nên production vẫn chỉ có một instance mà không cần `getInstance()`. Bỏ hẳn method `override`: code \"chỉ dùng cho test\" trong class production là dấu hiệu thiết kế khó test. Muốn tìm sớm loại lỗi này, cấu hình Surefire `runOrder=random` để thứ tự class test thay đổi giữa các lần chạy."
+  }
+}

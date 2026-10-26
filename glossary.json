@@ -405,7 +405,7 @@
       "meaning": "Quan hệ thứ tự của JMM: nếu A happens-before B thì mọi thứ A ghi đều hiện ra với B. Tạo bởi program order, unlock→lock cùng monitor, ghi→đọc cùng biến volatile, `start()`, `join()`, và có tính bắc cầu.",
       "example": "Ghi `ready = true` (volatile) sau `data = 42`; thread đọc thấy `ready` là `true` thì chắc chắn thấy `data = 42`.",
       "related": ["jmm", "visibility"],
-      "topics": ["synchronized-volatile", "synchronizers", "java-memory-model"]
+      "topics": ["synchronized-volatile", "synchronizers", "java-memory-model", "creational-patterns"]
     },
     {
       "id": "visibility",
@@ -477,7 +477,7 @@
       "meaning": "Kiểu khởi tạo lười: kiểm tra `instance == null` ngoài khoá, rồi kiểm tra lại trong `synchronized` mới tạo object. Chỉ đúng khi field là `volatile` (Java 5+).",
       "example": "`private static volatile Config instance;` cùng hai lần kiểm tra `if (instance == null)`.",
       "related": ["happens-before", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "java-memory-model"]
+      "topics": ["synchronized-volatile", "java-memory-model", "creational-patterns"]
     },
     {
       "id": "deadlock",
@@ -989,7 +989,7 @@
       "meaning": "Dữ liệu liên quan chỉ được tải khi code truy cập lần đầu; trước đó ORM giữ một proxy thay thế.",
       "example": "`order.getItems()` trả proxy; gọi `.size()` mới chạy `SELECT ... FROM order_item WHERE order_id = ?`.",
       "related": ["eager-loading", "n-plus-one"],
-      "topics": ["n-plus-one"]
+      "topics": ["n-plus-one", "layered-architecture"]
     },
     {
       "id": "eager-loading",
@@ -1045,7 +1045,7 @@
       "meaning": "Cơ chế giữ session của ORM mở tới khi response được render, để quan hệ lazy vẫn tải được ở tầng web. Spring Boot bật mặc định (`spring.jpa.open-in-view`).",
       "example": "Jackson serialize entity `Order` và âm thầm chạy query lấy `customer` sau khi service đã xong.",
       "related": ["lazy-loading", "n-plus-one"],
-      "topics": ["n-plus-one", "connection-pool"]
+      "topics": ["n-plus-one", "connection-pool", "layered-architecture"]
     },
     {
       "id": "cartesian-product",
@@ -1357,7 +1357,7 @@
       "meaning": "Hibernate so sánh trạng thái entity lúc flush với bản chụp lúc tải; field nào đổi thì tự sinh `UPDATE`, không cần gọi `save`.",
       "example": "Trong `@Transactional`, `order.setStatus(PAID)` tự được ghi khi commit.",
       "related": ["persistence-context"],
-      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking"]
+      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking", "layered-architecture"]
     },
     {
       "id": "dual-write",
@@ -3173,7 +3173,7 @@
       "meaning": "Quy định container tạo bao nhiêu object cho một bean: `singleton` (mặc định, một object mỗi container), `prototype` (mỗi lần hỏi một object), `request`, `session`.",
       "example": "`@Scope(\"prototype\")` trên `ReportBuilder` để mỗi lần `getObject()` có một builder mới.",
       "related": ["prototype-in-singleton", "bean"],
-      "topics": ["bean-lifecycle-scopes", "concurrency-basics"]
+      "topics": ["bean-lifecycle-scopes", "concurrency-basics", "creational-patterns"]
     },
     {
       "id": "prototype-in-singleton",
@@ -3253,7 +3253,7 @@
       "meaning": "Lỗ hổng khi framework bind mọi field client gửi vào object, kể cả field không được phép sửa như `role` hay `id`.",
       "example": "`PUT /users/me` nhận entity `User` trực tiếp; client gửi thêm `\"role\":\"ADMIN\"` và được lưu.",
       "related": ["dto-projection"],
-      "topics": ["spring-mvc-flow"]
+      "topics": ["spring-mvc-flow", "layered-architecture"]
     },
     {
       "id": "jpa",
@@ -4053,7 +4053,7 @@
       "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
       "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
       "related": ["dependency-inversion", "coupling"],
-      "topics": ["design-principles", "solid"]
+      "topics": ["design-principles", "solid", "layered-architecture"]
     },
     {
       "id": "template-method",
@@ -4094,6 +4094,158 @@
       "example": "Port `OrderRepository` nằm trong lõi; `JpaOrderRepository` là adapter ở tầng hạ tầng.",
       "related": ["dependency-inversion"],
       "topics": ["solid"]
+    },
+    {
+      "id": "layered-architecture",
+      "term": "Layered architecture",
+      "meaning": "Kiến trúc chia ứng dụng thành các tầng (controller, service, repository), mỗi tầng một trách nhiệm và chỉ phụ thuộc vào tầng bên dưới.",
+      "example": "`OrderController` gọi `OrderService`, `OrderService` gọi `OrderRepository`; repository không biết controller tồn tại.",
+      "related": ["dto", "package-by-feature"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "dto",
+      "term": "DTO",
+      "meaning": "Data Transfer Object: object chỉ chở dữ liệu qua một ranh giới (API, message), tách khỏi entity để hợp đồng bên ngoài không dính vào schema.",
+      "example": "`record UpdateProfileRequest(String displayName, String email)` chỉ có hai field client được phép sửa.",
+      "related": ["layered-architecture", "mass-assignment", "mapstruct"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "package-by-feature",
+      "term": "Package-by-feature",
+      "meaning": "Tổ chức package theo tính năng (`order/`, `payment/`) thay vì theo tầng (`controller/`, `service/`), để thứ đổi cùng nhau nằm cùng nhau và class nội bộ được để package-private.",
+      "example": "`shop.order.OrderPricing` không `public`, nên `shop.payment` không gọi tắt vào được.",
+      "related": ["layered-architecture", "cohesion"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "architecture-sinkhole",
+      "term": "Architecture sinkhole",
+      "meaning": "Anti-pattern của kiến trúc phân lớp: phần lớn request đi qua các tầng mà không tầng nào xử lý gì, chỉ chuyển tiếp xuống dưới.",
+      "example": "`ProductService.findById` chỉ gọi `productRepository.findById` và trả về.",
+      "related": ["layered-architecture"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "anemic-domain-model",
+      "term": "Anemic domain model",
+      "meaning": "Mô hình mà entity chỉ có getter/setter còn mọi quy tắc nghiệp vụ nằm trong service; quy tắc dễ bị lặp và entity dễ rơi vào trạng thái sai.",
+      "example": "Mọi service đều tự kiểm tra `order.getStatus() == PAID` trước khi huỷ, thay vì gọi `order.cancel()`.",
+      "related": ["layered-architecture"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "mapstruct",
+      "term": "MapStruct",
+      "meaning": "Thư viện sinh code mapping giữa object (entity sang DTO) lúc biên dịch, không dùng reflection, và báo lỗi được khi có field chưa map.",
+      "example": "`@Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR) interface OrderMapper { OrderResponse toResponse(Order order); }`.",
+      "related": ["dto"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "static-factory-method",
+      "term": "Static factory method",
+      "meaning": "Method `static` trả về instance thay cho constructor public; có tên, có thể trả object có sẵn (cache) hoặc kiểu con ẩn.",
+      "example": "`Integer.valueOf(127)`, `List.of(...)`, `Money.ofVnd(50_000)`.",
+      "related": ["factory-method"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "factory-method",
+      "term": "Factory Method",
+      "meaning": "Pattern để một method (thường ở lớp con hay một strategy) quyết định tạo class cụ thể nào, bên gọi chỉ biết interface.",
+      "example": "`NotificationSenderFactory.forChannel(SMS)` trả `SmsSender`, bên gọi chỉ thấy `NotificationSender`.",
+      "related": ["abstract-factory", "static-factory-method"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "abstract-factory",
+      "term": "Abstract Factory",
+      "meaning": "Pattern tạo cả một họ object liên quan phải đi cùng nhau mà không chỉ rõ class cụ thể.",
+      "example": "`PaymentProviderFactory` tạo API client, bộ kiểm chữ ký và bộ đọc webhook của cùng một cổng thanh toán.",
+      "related": ["factory-method"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "builder-pattern",
+      "term": "Builder",
+      "meaning": "Pattern tạo object nhiều tham số qua từng bước có tên rồi `build()`, thường kiểm bất biến ở `build()` và trả object bất biến.",
+      "example": "`HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(2)).GET().build()`.",
+      "related": ["telescoping-constructor"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "telescoping-constructor",
+      "term": "Telescoping constructor",
+      "meaning": "Chuỗi constructor chồng thêm từng tham số; khó đọc và dễ truyền nhầm các tham số cùng kiểu.",
+      "example": "`new Pizza(30)`, `new Pizza(30, true)`, `new Pizza(30, true, false, true)`.",
+      "related": ["builder-pattern"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "singleton-pattern",
+      "term": "Singleton",
+      "meaning": "Pattern đảm bảo một class chỉ có một instance (mỗi classloader) và cung cấp điểm truy cập toàn cục như `getInstance()`; là trạng thái toàn cục nên khó test.",
+      "example": "`ExchangeRates.getInstance().rate(\"USD\")` gọi giữa method, không hiện ở constructor.",
+      "related": ["holder-idiom", "double-checked-locking", "bean-scope"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "holder-idiom",
+      "term": "Holder idiom",
+      "meaning": "Cách khởi tạo lười Singleton bằng một class lồng `static` chứa instance; JVM khởi tạo class đó ở lần truy cập đầu, đúng một lần và an toàn giữa các thread.",
+      "example": "`private static class Holder { static final Config INSTANCE = load(); }` và `getInstance()` trả `Holder.INSTANCE`.",
+      "related": ["singleton-pattern", "double-checked-locking"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "classloader",
+      "term": "ClassLoader",
+      "meaning": "Thành phần của JVM nạp bytecode thành class. Cùng một tên class được nạp bởi hai classloader khác nhau là hai class khác nhau, mỗi bên có field `static` riêng.",
+      "example": "App server nạp hai ứng dụng bằng hai classloader, nên mỗi ứng dụng có một `ExchangeRates.INSTANCE` riêng.",
+      "related": ["singleton-pattern"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "prototype-pattern",
+      "term": "Prototype",
+      "meaning": "Pattern tạo object mới bằng cách sao chép một object mẫu thay vì gọi constructor.",
+      "example": "Sao chép một `ReportTemplate` đã cấu hình sẵn rồi chỉ đổi tiêu đề cho từng báo cáo.",
+      "related": ["shallow-copy"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "shallow-copy",
+      "term": "Shallow copy",
+      "meaning": "Sao chép nông: bản sao có field mới nhưng các field tham chiếu vẫn trỏ tới cùng object với bản gốc.",
+      "example": "`clone()` một `Order` có `List<OrderLine>` thì hai đơn dùng chung một list; thêm dòng vào bản sao là thêm vào cả bản gốc.",
+      "related": ["prototype-pattern"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "service-loader",
+      "term": "ServiceLoader",
+      "meaning": "Cơ chế của JDK nạp các cài đặt của một interface được khai báo trong `META-INF/services` (hoặc `provides` của module) trên classpath.",
+      "example": "JDBC 4 dùng `ServiceLoader` để tự tìm driver PostgreSQL có trên classpath.",
+      "related": ["factory-method"],
+      "topics": ["creational-patterns"]
+    },
+    {
+      "id": "spring-modulith",
+      "term": "Spring Modulith",
+      "meaning": "Dự án Spring hỗ trợ modular monolith: coi mỗi package con trực tiếp của package gốc là một module, kiểm tra trong test rằng module khác chỉ dùng API công khai của nó, và hỗ trợ event giữa các module.",
+      "example": "`ApplicationModules.of(ShopApplication.class).verify()` làm test đỏ khi `payment` gọi `shop.order.internal.OrderPricing`.",
+      "related": ["modular-monolith", "archunit"],
+      "topics": ["layered-architecture"]
+    },
+    {
+      "id": "modular-monolith",
+      "term": "Modular monolith",
+      "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
+      "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
+      "related": ["package-by-feature", "spring-modulith"],
+      "topics": ["layered-architecture"]
     }
   ]
 }

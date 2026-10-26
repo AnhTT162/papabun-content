@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "package-private-feature",
+      "kind": "output",
+      "prompt": "Dự án chia package theo tính năng. Biên dịch hai file sau cho kết quả gì?",
+      "code": "// file shop/order/OrderPricing.java\npackage shop.order;\n\nclass OrderPricing {\n    long totalOf(Order order) { /* ... */ return 0; }\n}\n\n// file shop/payment/RefundService.java\npackage shop.payment;\n\nimport shop.order.Order;\nimport shop.order.OrderPricing;\n\npublic class RefundService {\n    long refundAmount(Order order) {\n        return new OrderPricing().totalOf(order);\n    }\n}",
+      "options": [
+        "Lỗi biên dịch: `OrderPricing` không `public` nên không truy cập được từ `shop.payment`",
+        "Biên dịch được, vì cả hai package đều nằm dưới cùng package cha `shop`",
+        "Biên dịch được, chỉ lỗi lúc chạy với `IllegalAccessError` khi gọi `totalOf`",
+        "Biên dịch được nếu cả hai class nằm trong cùng một module Maven"
+      ],
+      "answer": 0,
+      "explanation": "Class không có modifier là package-private: chỉ nhìn thấy trong đúng package `shop.order`. Java không có khái niệm package con: `shop.order` và `shop.payment` không liên quan gì về quyền truy cập, và module Maven cũng không đổi điều đó. Đây là lợi ích của package-by-feature: compiler chặn module khác gọi tắt vào chi tiết nội bộ. Với package-by-layer, `OrderPricing` nằm ở `service/` và buộc phải `public`."
+    },
+    {
+      "id": "transactional-placement",
+      "kind": "single",
+      "prompt": "Use case \"đặt hàng\" gồm: trừ tồn kho, tạo đơn, ghi lịch sử điểm thưởng. Đặt `@Transactional` ở đâu là đúng?",
+      "options": [
+        "Trên method `placeOrder` của service, để cả ba bước commit hoặc rollback cùng nhau",
+        "Trên từng method của ba repository, để mỗi bước là một transaction nhỏ và nhanh",
+        "Trên method của controller, vì controller là điểm vào duy nhất của use case",
+        "Không cần, vì Spring Data đã mở transaction cho mọi method của repository"
+      ],
+      "answer": 0,
+      "explanation": "Ranh giới transaction là ranh giới của use case, và service là nơi đại diện use case. Mỗi repository một transaction thì lỗi ở bước ba để lại tồn kho đã trừ mà không có đơn. Controller không phải điểm vào duy nhất: cùng use case có thể được gọi từ Kafka listener hay batch job, và khi đó không có transaction. Transaction mặc định của Spring Data chỉ bao từng lời gọi `save` hay `findById`, không bao cả use case."
+    },
+    {
+      "id": "open-in-view-effect",
+      "kind": "single",
+      "prompt": "Boot 3 với cấu hình mặc định. Controller trả entity `Order` có `@ManyToOne(fetch = LAZY) Customer customer`; class `Customer` có `@JsonIgnoreProperties({\"hibernateLazyInitializer\", \"handler\"})`. Service đọc đơn trong một method `@Transactional(readOnly = true)`. Trả 50 đơn của 50 khách khác nhau thì sao?",
+      "options": [
+        "Chạy được, nhưng Jackson kích hoạt thêm khoảng 50 query lúc serialize vì Open Session in View đang bật",
+        "Lỗi `LazyInitializationException`, vì transaction của service đã đóng trước khi Jackson chạy",
+        "Chạy với đúng một query, vì Hibernate gom các proxy `Customer` lại để tải một lần",
+        "Trả `customer` là `null`, vì Jackson bỏ qua quan hệ lazy chưa được tải"
+      ],
+      "answer": 0,
+      "explanation": "`spring.jpa.open-in-view` mặc định `true`: `EntityManager` vẫn mở tới khi response viết xong, nên getter của proxy `Customer` chạy query được, mỗi khách một query ([[n-plus-one|N+1]]). Khi tắt open-in-view thì mới gặp `LazyInitializationException`. Nếu thiếu `@JsonIgnoreProperties`, Jackson còn lỗi sớm hơn với `No serializer found for class ...ByteBuddyInterceptor`, vì proxy có thêm property `hibernateLazyInitializer`. Hibernate chỉ gom query khi cấu hình [[batch-fetching|batch fetching]] (`@BatchSize` hay `hibernate.default_batch_fetch_size`)."
+    },
+    {
+      "id": "validation-location",
+      "kind": "single",
+      "prompt": "Quy tắc \"email chưa được tài khoản khác dùng\" nên kiểm tra ở đâu?",
+      "options": [
+        "Trong service, có unique constraint ở database làm chốt chặn cuối",
+        "Bằng annotation Bean Validation trên request DTO, nơi validate input",
+        "Trong controller trước khi gọi service, để trả lỗi 400 sớm nhất",
+        "Chỉ unique constraint, để exception của database trả thẳng ra client"
+      ],
+      "answer": 0,
+      "explanation": "Constraint ở database mới là chốt chặn thật, vì hai request cùng lúc đều có thể qua bước kiểm tra trước. Kiểm tra trong service (hoặc bắt `DataIntegrityViolationException` rồi dịch sang lỗi nghiệp vụ) để trả thông báo rõ ràng, và đúng cả khi use case được gọi từ batch job hay Kafka listener, không chỉ từ HTTP. Để exception của database trả thẳng ra client là lộ chi tiết nội bộ và lỗi 500 khó hiểu. Bean Validation trên DTO hợp với kiểm tra định dạng không cần dữ liệu."
+    }
+  ]
+}

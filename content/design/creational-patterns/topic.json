@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "creational-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Creational patterns",
+  "summary": "Static factory method và các lợi ích có trong JDK (`Integer.valueOf`, `List.of`); Factory Method và Abstract Factory, và khi nào DI đã thay chúng; Builder, bẫy `@Builder.Default` của Lombok; Singleton: `enum`, holder idiom, double-checked locking cần `volatile`, cách phá Singleton và vì sao nên để container quản lý; Prototype và `clone()`.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 15,
+  "prerequisites": ["solid", "ioc-di", "java-memory-model"],
+  "terms": ["static-factory-method", "factory-method", "abstract-factory", "builder-pattern", "telescoping-constructor", "singleton-pattern", "holder-idiom", "double-checked-locking", "bean-scope", "classloader", "prototype-pattern", "shallow-copy", "service-loader", "happens-before"],
+  "references": [
+    { "title": "Java SE 21 API: Integer.valueOf (cache -128..127)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Integer.html#valueOf(int)" },
+    { "title": "Java Language Specification SE 21, §8.9: Enum Classes", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.9" },
+    { "title": "Project Lombok: @Builder", "url": "https://projectlombok.org/features/Builder" },
+    { "title": "Spring Framework Reference: Bean Scopes", "url": "https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" },
+    { "title": "Java Language Specification SE 21, §12.4.2: Detailed Initialization Procedure", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-12.html#jls-12.4.2" },
+    { "title": "The \"Double-Checked Locking is Broken\" Declaration", "url": "https://www.cs.umd.edu/~pugh/java/memoryModel/DoubleCheckedLocking.html" },
+    { "title": "Java Object Serialization Specification: Serialization of Enum Constants", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/serialization/serial-arch.html#serialization-of-enum-constants" },
+    { "title": "Java SE 21 API: ServiceLoader", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ServiceLoader.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Viết Singleton thread-safe\". Viết holder idiom hoặc `enum`, rồi tự nói thêm: double-checked locking chỉ đúng khi có `volatile`, và trong ứng dụng Spring bạn không viết Singleton mà để container quản lý bean, vì Singleton tự quản lý là trạng thái toàn cục và khó test. Người phỏng vấn senior hay hỏi tiếp \"Spring singleton có thread-safe không\": không tự động; bean dùng chung giữa các request, nên phải không có trạng thái thay đổi được, hoặc tự đồng bộ." },
+    { "type": "callout", "style": "warning", "markdown": "Method \"chỉ dùng cho test\" (`override`, `reset`, `setInstanceForTesting`) trên một Singleton là dấu hiệu nó đang được dùng như biến toàn cục. Test quên gọi `reset` sẽ làm test khác đỏ tuỳ thứ tự chạy. Cấu hình Surefire `runOrder=random` để lộ sớm loại phụ thuộc này." }
+  ]
+}

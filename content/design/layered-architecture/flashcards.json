@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "layer-roles", "front": "Controller, service, repository mỗi tầng lo gì?", "back": "Controller: HTTP, validate định dạng, map request/response. Service: nghiệp vụ và transaction. Repository: truy cập dữ liệu." },
+    { "id": "dependency-direction", "front": "Phụ thuộc giữa các tầng đi theo chiều nào?", "back": "Chỉ đi xuống: controller gọi service, service gọi repository; tầng dưới không biết tầng trên." },
+    { "id": "no-entity-api", "front": "Vì sao không dùng entity làm request hay response?", "back": "Lộ hoặc cho ghi field không được phép, `save()` ghi `null` vào field không gửi, API dính vào schema, và lazy loading chạy lúc serialize." },
+    { "id": "merge-nulls", "front": "`save()` một entity có id, tạo từ request body, thì field không gửi bị gì?", "back": "Bị ghi `null`: `merge` chép mọi field của object detached lên bản trong database, kể cả `null`." },
+    { "id": "by-feature", "front": "Lợi ích chính của package-by-feature?", "back": "Thứ đổi cùng nhau nằm cùng nhau, và class nội bộ để package-private được nên module khác không gọi tắt vào." },
+    { "id": "tx-at-service", "front": "Vì sao `@Transactional` đặt ở service?", "back": "Service đại diện một use case, nên mọi bước của use case commit hoặc rollback cùng nhau, kể cả khi được gọi từ Kafka listener hay batch job." },
+    { "id": "osiv", "front": "Tắt `spring.jpa.open-in-view` thì phải làm gì thêm?", "back": "Map DTO bên trong transaction của service và tải trước quan hệ cần dùng bằng fetch join hoặc entity graph." },
+    { "id": "sinkhole", "front": "Architecture sinkhole là gì?", "back": "Phần lớn request đi qua các tầng mà không có logic, service chỉ chuyển tiếp xuống repository." }
+  ]
+}
