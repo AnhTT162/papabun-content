@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Gateway, BFF và service mesh",
+  "nodes": [
+    {"id": "app", "label": "App di động", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "gateway", "label": "API gateway", "kind": "generic", "x": 0.85, "y": 0.05},
+    {"id": "bff", "label": "BFF di động", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "order", "label": "Order + sidecar", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "catalog", "label": "Catalog + sidecar", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "cp", "label": "Control plane", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "app-gateway", "from": "app", "to": "gateway", "label": "HTTPS + JWT"},
+    {"id": "gateway-bff", "from": "gateway", "to": "bff", "label": "route /mobile/**"},
+    {"id": "bff-order", "from": "bff", "to": "order", "label": "song song, mTLS"},
+    {"id": "bff-catalog", "from": "bff", "to": "catalog", "label": "song song, mTLS"},
+    {"id": "order-catalog", "from": "order", "to": "catalog", "label": "retry, timeout"},
+    {"id": "cp-order", "from": "cp", "to": "order", "label": "cert + cấu hình"}
+  ],
+  "steps": [
+    {"caption": "App di động cần màn hình chi tiết đơn: dữ liệu nằm ở Order và Catalog. Mỗi vòng mạng trên 4G tốn vài trăm mili giây.", "show": ["app"]},
+    {"caption": "Mọi request từ ngoài đi qua API gateway: kết thúc TLS, kiểm tra JWT, rate limit, xoá header danh tính do client tự gửi. Gateway không chứa logic nghiệp vụ.", "show": ["gateway", "app-gateway"], "highlight": ["app-gateway"]},
+    {"caption": "Gateway route `/mobile/**` sang BFF của đội app di động. BFF biết màn hình cần gì; web có BFF riêng.", "show": ["bff", "gateway-bff"], "highlight": ["gateway-bff"]},
+    {"caption": "BFF gọi Order và Catalog song song rồi ghép một response gọn: app chỉ tốn một vòng mạng thay vì hai.", "show": ["order", "catalog", "bff-order", "bff-catalog"], "highlight": ["bff-order", "bff-catalog"]},
+    {"caption": "Giữa các service là việc của mesh: sidecar mã hoá bằng mTLS, áp timeout và retry, ghi metric cho từng lời gọi mà code không đổi. Retry chỉ nên đặt ở một tầng.", "show": ["order-catalog"], "highlight": ["order-catalog"]},
+    {"caption": "Control plane cấp chứng chỉ ngắn hạn theo service account và đẩy cấu hình route, chính sách xuống mọi proxy. Nó chết thì proxy vẫn chạy với cấu hình cũ, nhưng không nhận thay đổi mới và chứng chỉ (mặc định 24 giờ) sẽ hết hạn dần.", "show": ["cp", "cp-order"], "highlight": ["cp-order"]}
+  ]
+}

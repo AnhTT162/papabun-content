@@ -338,8 +338,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 6 | `data-consistency-services` | ✚ Nhất quán dữ liệu giữa các service | mid | Không có transaction chung, eventual consistency, dual write; tổng quan saga, outbox, đối soát | A L D | ✅ |
 | 7 | `resilience-patterns` | Timeout, retry, circuit breaker, bulkhead | mid | Timeout, retry với backoff + jitter, circuit breaker, bulkhead, fallback, load shedding và backpressure | L S B | ✅ |
 | 8 | `microservices-tradeoffs` | Microservices: khi nào và chia thế nào | senior | Chia theo domain, chi phí phân tán, khi nào giữ monolith | L Sc | ✅ |
-| 9 | `api-gateway-service-mesh` | ✚ API gateway, BFF & service mesh | senior | Trách nhiệm của gateway, BFF, sidecar (Istio/Linkerd), khi nào thừa | L D Sc | ⬜ |
-| 10 | `event-driven-architecture` | ✚ Event-driven architecture | senior | Event notification và event-carried state, broker, eventual consistency, thứ tự, consumer idempotent | L D Sc | ⬜ |
+| 9 | `api-gateway-service-mesh` | ✚ API gateway, BFF & service mesh | senior | Trách nhiệm của gateway, BFF, sidecar (Istio/Linkerd), khi nào thừa | L D Sc | ✅ |
+| 10 | `event-driven-architecture` | ✚ Event-driven architecture | senior | Event notification và event-carried state, broker, eventual consistency, thứ tự, consumer idempotent | L D Sc | ✅ |
 | 11 | `saga` | Saga | senior | Orchestration và choreography, compensation | L S Sc | ⬜ |
 | 12 | `outbox-cdc` | Transactional outbox & CDC | senior | Vấn đề dual write, Debezium, thứ tự và trùng lặp | L D B | ⬜ |
 | 13 | `cqrs-event-sourcing` | CQRS & Event Sourcing | senior | Read model, projection, snapshot, khi nào không dùng | L D Sc | ⬜ |

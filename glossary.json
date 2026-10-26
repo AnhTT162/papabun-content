@@ -79,7 +79,7 @@
       "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
       "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
       "related": ["reverse-proxy", "tls-termination"],
-      "topics": ["http-request-lifecycle", "load-balancing"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh"]
     },
     {
       "id": "reverse-proxy",
@@ -95,7 +95,7 @@
       "meaning": "Giải mã HTTPS tại load balancer hoặc reverse proxy; đoạn phía sau đi bằng HTTP thường hoặc được mã hoá lại.",
       "example": "Chứng chỉ cài trên load balancer, các app server chỉ nghe HTTP trong mạng nội bộ.",
       "related": ["tls-handshake", "load-balancer"],
-      "topics": ["http-request-lifecycle", "load-balancing"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh"]
     },
     {
       "id": "connection-pool",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh"]
     },
     {
       "id": "hash-spreading",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh"]
     },
     {
       "id": "orm",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "datasource",
@@ -1405,7 +1405,7 @@
       "meaning": "Khái niệm của Domain-Driven Design: một cụm entity luôn được thay đổi cùng nhau như một đơn vị nhất quán, và mọi thay đổi đi qua entity gốc (root).",
       "example": "`Order` là root của các `OrderLine`; sửa một dòng hàng cũng tính là sửa đơn hàng.",
       "related": ["optimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking", "ddd-tactical"]
+      "topics": ["optimistic-pessimistic-locking", "ddd-tactical", "event-driven-architecture"]
     },
     {
       "id": "advisory-lock",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture"]
     },
     {
       "id": "replication-slot",
@@ -2253,7 +2253,7 @@
       "meaning": "Điền dữ liệu cho cột hoặc bảng mới từ dữ liệu cũ, chạy theo lô nhỏ để không tạo transaction khổng lồ.",
       "example": "`UPDATE customers SET phone_number = phone WHERE id >= 1000000 AND id < 1005000 AND phone_number IS NULL;`",
       "related": ["expand-contract", "replica-lag"],
-      "topics": ["schema-migration"]
+      "topics": ["schema-migration", "event-driven-architecture"]
     },
     {
       "id": "table-rewrite",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "dead-letter-queue",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture"]
     },
     {
       "id": "poison-message",
@@ -2525,7 +2525,7 @@
       "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
-      "topics": ["messaging-fundamentals", "distributed-fundamentals"]
+      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture"]
     },
     {
       "id": "cache-aside",
@@ -2653,7 +2653,7 @@
       "meaning": "Một phần của topic Kafka: log chỉ ghi nối có thứ tự, nằm trên một broker leader và được sao chép sang các follower. Đơn vị song song và đơn vị giữ thứ tự.",
       "example": "Topic `orders` có 12 partition; message key `order-42` luôn vào cùng một partition.",
       "related": ["kafka-offset", "consumer-group"],
-      "topics": ["kafka-architecture", "service-communication"]
+      "topics": ["kafka-architecture", "service-communication", "event-driven-architecture"]
     },
     {
       "id": "kafka-offset",
@@ -2669,7 +2669,7 @@
       "meaning": "Nhóm consumer cùng `group.id`: mỗi partition của topic được giao cho đúng một consumer trong nhóm, và nhóm lưu offset chung. Nhiều nhóm cùng đọc một topic độc lập với nhau.",
       "example": "10 pod cùng group đọc topic 6 partition: 6 pod có việc, 4 pod chờ.",
       "related": ["kafka-partition", "competing-consumers"],
-      "topics": ["kafka-architecture", "kafka-producer-consumer"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer", "event-driven-architecture"]
     },
     {
       "id": "isr",
@@ -2709,7 +2709,7 @@
       "meaning": "Chính sách giữ dữ liệu của Kafka theo key: giữ ít nhất bản mới nhất cho mỗi key thay vì xoá theo thời gian; giá trị `null` (tombstone) đánh dấu xoá key.",
       "example": "Topic `product-prices` compact theo `product_id` để consumer mới dựng được bảng giá hiện tại.",
       "related": ["kafka-offset"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "event-driven-architecture"]
     },
     {
       "id": "kraft",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh"]
     },
     {
       "id": "redis-sentinel",
@@ -2933,7 +2933,7 @@
       "meaning": "Cho phép producer ghi nhiều partition và commit offset của consumer như một khối; consumer `read_committed` chỉ thấy message của transaction đã commit. Nền tảng của exactly-once trong Kafka.",
       "example": "`sendOffsetsToTransaction` rồi `commitTransaction` trong luồng đọc, xử lý, ghi.",
       "related": ["idempotent-producer", "delivery-semantics"],
-      "topics": ["kafka-producer-consumer"]
+      "topics": ["kafka-producer-consumer", "event-driven-architecture"]
     },
     {
       "id": "consumer-rebalance",
@@ -2981,7 +2981,7 @@
       "meaning": "Event mang đủ dữ liệu cần thiết để consumer không phải gọi lại producer; đối lập với event chỉ báo hiệu (chỉ mang id).",
       "example": "`OrderPlaced` mang danh sách sản phẩm, giá và địa chỉ giao hàng.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution", "data-consistency-services"]
+      "topics": ["event-schema-evolution", "data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "tolerant-reader",
@@ -2997,7 +2997,7 @@
       "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
       "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
       "related": ["consumer-group", "kafka-offset"],
-      "topics": ["kafka-troubleshooting", "service-communication"]
+      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture"]
     },
     {
       "id": "rebalance-storm",
@@ -3453,7 +3453,7 @@
       "meaning": "Cửa vào chung cho client bên ngoài, đứng trước các service: route, xác thực, rate limit, chuyển đổi header hay giao thức.",
       "example": "Spring Cloud Gateway route `/orders/**` tới `lb://orders` và kiểm tra JWT trước khi chuyển tiếp.",
       "related": ["service-discovery", "reverse-proxy"],
-      "topics": ["spring-cloud"]
+      "topics": ["spring-cloud", "api-gateway-service-mesh"]
     },
     {
       "id": "service-discovery",
@@ -4029,7 +4029,7 @@
       "meaning": "Bộ test kiểm hợp đồng chung của một interface, chạy lại cho mọi cài đặt để đảm bảo chúng thay thế được nhau.",
       "example": "`abstract class PaymentGatewayContractTest` có các test chung; `MomoGatewayTest` và `VnpayGatewayTest` kế thừa nó.",
       "related": ["liskov-substitution"],
-      "topics": ["solid"]
+      "topics": ["solid", "event-driven-architecture"]
     },
     {
       "id": "temporal-coupling",
@@ -4565,7 +4565,7 @@
       "meaning": "Sự kiện nghiệp vụ đã xảy ra, đặt tên ở thì quá khứ, dùng để báo cho các phần khác của hệ thống và phối hợp giữa các aggregate.",
       "example": "`OrderPaid(orderId, paymentReference)` được phát khi đơn chuyển sang trạng thái đã thanh toán.",
       "related": ["aggregate-root", "eventual-consistency", "outbox"],
-      "topics": ["ddd-tactical"]
+      "topics": ["ddd-tactical", "event-driven-architecture"]
     },
     {
       "id": "eventual-consistency",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services"]
+      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "event-publication-registry",
@@ -4693,7 +4693,7 @@
       "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó.",
       "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
       "related": ["graphql"],
-      "topics": ["service-communication"]
+      "topics": ["service-communication", "api-gateway-service-mesh"]
     },
     {
       "id": "headless-service",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services"]
+      "topics": ["data-consistency-services", "event-driven-architecture"]
     },
     {
       "id": "jitter",
@@ -4877,7 +4877,7 @@
       "meaning": "Container chạy cạnh container ứng dụng trong cùng pod, đảm nhận việc hạ tầng như mTLS, retry, metric, để ứng dụng không phải tự làm.",
       "example": "Envoy sidecar của service mesh mã hoá mọi kết nối giữa các pod bằng mTLS mà code không đổi.",
       "related": ["microservices"],
-      "topics": ["microservices-tradeoffs"]
+      "topics": ["microservices-tradeoffs", "api-gateway-service-mesh"]
     },
     {
       "id": "metastable-failure",
@@ -4886,6 +4886,166 @@
       "example": "Database hồi phục sau 30 giây, nhưng retry ở ba tầng giữ tải gấp 45 lần nên hệ thống vẫn sập thêm 40 phút.",
       "related": ["retry-budget", "load-shedding"],
       "topics": ["resilience-patterns"]
+    },
+    {
+      "id": "service-mesh",
+      "term": "Service mesh",
+      "meaning": "Tầng hạ tầng lo lưu lượng giữa các service bằng proxy đứng trên mọi kết nối (data plane) và một control plane cấu hình chúng: mTLS, retry, timeout, metric mà không sửa code.",
+      "example": "Istio, Linkerd: mọi lời gọi từ `checkout` tới `payments` đi qua proxy được mã hoá và đo latency.",
+      "related": ["sidecar", "data-plane", "control-plane"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "mtls",
+      "term": "mTLS",
+      "meaning": "Mutual TLS: cả hai đầu kết nối cùng trình chứng chỉ để xác thực nhau, không chỉ server như HTTPS thường. Dùng để xác thực service với service.",
+      "example": "Sidecar của `checkout` trình chứng chỉ mang danh tính service account `checkout` khi gọi `payments`.",
+      "related": ["service-mesh", "zero-trust"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "envoy",
+      "term": "Envoy",
+      "meaning": "Proxy L4/L7 mã nguồn mở viết bằng C++, cấu hình động qua API (xDS); là data plane của Istio và nền của nhiều gateway.",
+      "example": "Envoy sidecar áp retry `attempts: 2` và ghi metric latency cho mọi request ra khỏi pod.",
+      "related": ["sidecar", "service-mesh"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "data-plane",
+      "term": "Data plane",
+      "meaning": "Phần nằm trên đường đi của request và thật sự chuyển tiếp lưu lượng, như các proxy của service mesh.",
+      "example": "Các Envoy sidecar trong từng pod là data plane của Istio.",
+      "related": ["control-plane", "service-mesh"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "control-plane",
+      "term": "Control plane",
+      "meaning": "Phần cấu hình và quản lý data plane (cấp chứng chỉ, đẩy route, chính sách) nhưng không xử lý request. Nó chết thì data plane chạy tiếp với cấu hình cũ cho tới khi chứng chỉ hết hạn; pod mới không nhận được cấu hình.",
+      "example": "`istiod` cấp chứng chỉ và đẩy cấu hình route xuống mọi proxy.",
+      "related": ["data-plane", "service-mesh"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "correlation-id",
+      "term": "Correlation id",
+      "meaning": "Mã gắn với một yêu cầu hay một luồng nghiệp vụ, truyền qua mọi lời gọi và message để ghép log của nhiều service lại với nhau.",
+      "example": "Gateway gắn header `X-Correlation-Id`; mọi event của đơn đó mang cùng mã trong header message.",
+      "related": ["api-gateway", "integration-event"],
+      "topics": ["api-gateway-service-mesh", "event-driven-architecture"]
+    },
+    {
+      "id": "token-relay",
+      "term": "Token relay",
+      "meaning": "Gateway chuyển tiếp access token của người dùng xuống service phía sau để service tự kiểm tra và quyết định quyền, thay vì chỉ gửi header danh tính.",
+      "example": "Spring Cloud Gateway với filter `TokenRelay` gắn `Authorization: Bearer ...` vào request tới `orders`.",
+      "related": ["api-gateway", "zero-trust"],
+      "topics": ["api-gateway-service-mesh", "spring-cloud"]
+    },
+    {
+      "id": "zero-trust",
+      "term": "Zero trust",
+      "meaning": "Nguyên tắc không tin một request chỉ vì nó đến từ mạng nội bộ; mọi lời gọi đều phải xác thực và kiểm tra quyền.",
+      "example": "Service `payments` từ chối request không có chứng chỉ mTLS hợp lệ dù đến từ cùng cluster.",
+      "related": ["mtls", "token-relay"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "gateway-api",
+      "term": "Gateway API",
+      "meaning": "API của Kubernetes thay cho Ingress, tách vai trò: `GatewayClass` và `Gateway` cho đội hạ tầng, `HTTPRoute` cho đội ứng dụng; hỗ trợ chia lưu lượng, header, nhiều giao thức.",
+      "example": "`HTTPRoute` gửi 10% request `/orders` sang bản canary.",
+      "related": ["api-gateway", "reverse-proxy"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "event-driven-architecture",
+      "term": "Event-driven architecture",
+      "meaning": "Kiến trúc trong đó service phát event về việc đã xảy ra mà không biết ai nghe, các service khác đăng ký và tự phản ứng.",
+      "example": "Order phát `OrderPlaced`; Loyalty, Email, Search tự nghe mà Order không gọi ai.",
+      "related": ["event-notification", "event-carried-state", "choreography"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "event-notification",
+      "term": "Event notification",
+      "meaning": "Kiểu event chỉ báo có việc xảy ra kèm id, bên nghe phải gọi API của bên phát nếu cần chi tiết.",
+      "example": "`OrderPlaced{orderId: 42}`, Loyalty gọi `GET /orders/42` để biết tổng tiền.",
+      "related": ["event-carried-state", "event-driven-architecture"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "event-sourcing",
+      "term": "Event sourcing",
+      "meaning": "Lưu trạng thái của aggregate dưới dạng chuỗi event đã xảy ra; trạng thái hiện tại có được bằng cách phát lại các event.",
+      "example": "Tài khoản lưu `Deposited 100`, `Withdrawn 30` thay vì cột `balance = 70`.",
+      "related": ["cqrs", "domain-event"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "cqrs",
+      "term": "CQRS",
+      "meaning": "Command Query Responsibility Segregation: tách mô hình ghi (xử lý lệnh) và mô hình đọc (phục vụ truy vấn), thường đồng bộ với nhau bằng event.",
+      "example": "Ghi đơn vào bảng chuẩn hoá; một projection cập nhật bảng `order_summary` để màn hình danh sách đọc nhanh.",
+      "related": ["event-sourcing"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "choreography",
+      "term": "Choreography",
+      "meaning": "Cách phối hợp nhiều service mà không có bên điều khiển: mỗi service nghe event và tự quyết bước tiếp theo, phát event mới.",
+      "example": "Inventory nghe `OrderPlaced` rồi phát `StockReserved`; Payment nghe `StockReserved` rồi thu tiền.",
+      "related": ["saga", "event-driven-architecture"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "integration-event",
+      "term": "Integration event",
+      "meaning": "Event phát ra ngoài ranh giới service cho service khác dùng; là hợp đồng công khai có schema và version, khác domain event dùng nội bộ.",
+      "example": "`orders.OrderPlaced.v1` chỉ chứa các trường đã cam kết với đội khác, không phải toàn bộ entity `Order`.",
+      "related": ["domain-event", "tolerant-reader"],
+      "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "jwt",
+      "term": "JWT",
+      "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
+      "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
+      "related": ["token-relay", "api-gateway"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "ingress",
+      "term": "Ingress",
+      "meaning": "Tài nguyên Kubernetes khai báo route HTTP từ ngoài vào Service theo host và path; cần một Ingress controller (NGINX, Envoy...) thực thi. API đã đóng băng tính năng, Gateway API là bản thay thế.",
+      "example": "`host: shop.example.com`, `path: /orders` chuyển tới Service `orders` cổng 8080.",
+      "related": ["gateway-api", "reverse-proxy"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "canary-release",
+      "term": "Canary release",
+      "meaning": "Đưa phiên bản mới cho một phần nhỏ lưu lượng (1%, 10%) trước, theo dõi lỗi và latency rồi mới tăng dần; có vấn đề thì chuyển lưu lượng về bản cũ.",
+      "example": "Mesh gửi 5% request tới `orders-v2`, tỉ lệ `5xx` tăng thì chuyển hết về `orders-v1`.",
+      "related": ["service-mesh", "feature-flag"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "retry-storm",
+      "term": "Retry storm",
+      "meaning": "Lưu lượng tăng vọt do nhiều client hoặc nhiều tầng cùng retry khi một service đang lỗi, làm nó càng khó hồi phục.",
+      "example": "Gateway, mesh và app mỗi tầng thử 3 lần: một request lỗi thành 27 lời gọi tới service đang quá tải.",
+      "related": ["retry-backoff", "retry-budget"],
+      "topics": ["api-gateway-service-mesh"]
+    },
+    {
+      "id": "slo",
+      "term": "SLO",
+      "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
+      "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
+      "related": [],
+      "topics": ["event-driven-architecture"]
     }
   ]
 }

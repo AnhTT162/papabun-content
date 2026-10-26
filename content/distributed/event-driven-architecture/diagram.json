@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một event, nhiều bên nghe",
+  "nodes": [
+    {"id": "order", "label": "Order service", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "kafka", "label": "Topic orders", "kind": "queue", "x": 0.85, "y": 0.05},
+    {"id": "inventory", "label": "Inventory", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "email", "label": "Email", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "search", "label": "Search (mới)", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "dlq", "label": "DLQ", "kind": "queue", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "order-kafka", "from": "order", "to": "kafka", "label": "outbox, key orderId"},
+    {"id": "kafka-inventory", "from": "kafka", "to": "inventory", "label": "group inventory"},
+    {"id": "kafka-email", "from": "kafka", "to": "email", "label": "group email"},
+    {"id": "inventory-dlq", "from": "inventory", "to": "dlq", "label": "lỗi quá N lần"},
+    {"id": "order-search", "from": "order", "to": "search", "label": "backfill"},
+    {"id": "kafka-search", "from": "kafka", "to": "search", "label": "group search"}
+  ],
+  "steps": [
+    {"caption": "Order service lưu đơn và cần báo cho mọi bên quan tâm, nhưng không muốn biết đó là ai.", "show": ["order"]},
+    {"caption": "Event `OrderPlaced` được ghi vào outbox cùng transaction rồi phát lên topic `orders`, key là `orderId`: mọi event của một đơn nằm cùng partition nên giữ thứ tự.", "show": ["kafka", "order-kafka"], "highlight": ["order-kafka"]},
+    {"caption": "Inventory và Email là hai consumer group: mỗi group nhận đủ mọi event và đọc theo tốc độ riêng. Email chết một giờ thì đơn vẫn đặt được, email gửi bù khi nó sống lại.", "show": ["inventory", "email", "kafka-inventory", "kafka-email"], "highlight": ["kafka-inventory", "kafka-email"]},
+    {"caption": "Event có thể đến hai lần (relay gửi lại, consumer rebalance): cả hai consumer khử trùng theo `eventId` hoặc khoá nghiệp vụ.", "show": [], "highlight": ["kafka-inventory", "kafka-email"]},
+    {"caption": "Message mà Inventory xử lý lỗi mãi (dữ liệu hỏng) được chuyển vào DLQ sau N lần thử, có cảnh báo, để không chặn các đơn khác trong partition.", "show": ["dlq", "inventory-dlq"], "highlight": ["inventory-dlq"]},
+    {"caption": "Search ra đời sau: topic chỉ giữ 7 ngày nên nó backfill từ dữ liệu của Order trước, rồi đọc tiếp từ topic. Order service không phải sửa dòng code nào.", "show": ["search", "order-search", "kafka-search"], "highlight": ["order-search", "kafka-search"]}
+  ]
+}

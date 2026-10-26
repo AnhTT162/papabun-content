@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "north-south-east-west", "front": "Gateway và service mesh lo loại lưu lượng nào?", "back": "Gateway lo lưu lượng từ ngoài vào (north-south); mesh lo lưu lượng giữa các service bên trong (east-west)." },
+    { "id": "gateway-duties", "front": "Việc nào nên đặt ở API gateway?", "back": "Việc chung cho mọi API: kết thúc TLS, route, kiểm tra token, rate limit, giới hạn kích thước request, correlation id. Không đặt logic nghiệp vụ." },
+    { "id": "bff-owner", "front": "Ai nên sở hữu BFF?", "back": "Đội frontend của đúng loại client đó (app di động, web), để họ đổi response theo màn hình mà không chờ đội khác." },
+    { "id": "data-control-plane", "front": "Data plane và control plane của mesh khác nhau thế nào?", "back": "Data plane là các proxy nằm trên đường đi của request; control plane cấp chứng chỉ và đẩy cấu hình xuống proxy, không xử lý request." },
+    { "id": "header-spoof", "front": "Gateway gắn `X-User-Id` cho service phía sau thì bẫy là gì?", "back": "Client tự gửi header đó, hoặc gọi thẳng service bỏ qua gateway. Gateway phải xoá header từ client, và service nên tự kiểm tra JWT được chuyển tiếp." },
+    { "id": "retry-stack", "front": "Gateway, mesh và app mỗi tầng thử tối đa 3 lần (tính cả lần đầu). Một lỗi thành bao nhiêu lời gọi xuống service cuối?", "back": "Tới 27 (3 × 3 × 3). Chỉ đặt retry ở một tầng." },
+    { "id": "istio-default-retry", "front": "Istio có retry khi không cấu hình gì không?", "back": "Có: mặc định `attempts: 2` cho `connect-failure`, `refused-stream` và mã gRPC `unavailable`, `cancelled`. HTTP `503` chỉ được retry khi cấu hình `retryOn: 5xx`." },
+    { "id": "ambient", "front": "Ambient mode của Istio khác sidecar ở đâu?", "back": "Không có proxy trong từng pod: `ztunnel` theo node lo mTLS và L4, waypoint proxy chỉ thêm khi cần tính năng L7." },
+    { "id": "sidecar-startup", "front": "Vì sao lời gọi đầu tiên của app hay lỗi khi có sidecar?", "back": "App khởi động trước proxy nên kết nối ra ngoài chưa đi được. Sửa bằng native sidecar (Kubernetes 1.33) hoặc `holdApplicationUntilProxyStarts` của Istio." },
+    { "id": "sidecar-job", "front": "Vì sao pod của Job có sidecar không bao giờ `Completed`?", "back": "App xong nhưng sidecar kiểu cũ vẫn chạy. Native sidecar (init container `restartPolicy: Always`) được dừng sau khi container chính kết thúc." },
+    { "id": "when-not-mesh", "front": "Khi nào service mesh là thừa?", "back": "Ít service, một ngôn ngữ, không yêu cầu mã hoá nội bộ hay chính sách gọi nhau; khi đó Ingress và thư viện là đủ." }
+  ]
+}

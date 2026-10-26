@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "where-to-aggregate",
+      "kind": "single",
+      "prompt": "Màn hình trang chủ app di động cần dữ liệu từ 5 service. Nên đặt phần gọi và ghép dữ liệu ở đâu?",
+      "options": [
+        "Trong một BFF di động do đội app sở hữu",
+        "Trong API gateway dùng chung cho mọi client",
+        "Trong sidecar của service mesh cạnh mỗi service",
+        "Trong service Order vì nó được gọi nhiều nhất"
+      ],
+      "answer": 0,
+      "explanation": "Ghép dữ liệu theo màn hình là nhu cầu của một loại client, nên thuộc về BFF của client đó. Đặt trong gateway dùng chung biến gateway thành nơi mọi đội phải sửa. Sidecar chỉ lo mạng, không hiểu dữ liệu. Đặt trong Order làm service đó phụ thuộc vào cả 4 service kia chỉ vì một màn hình."
+    },
+    {
+      "id": "retry-amplification",
+      "kind": "single",
+      "prompt": "Gateway retry 2 lần, route của Istio cấu hình `attempts: 2` với `retryOn: 5xx`, app dùng Resilience4j `maxAttempts = 3`. Service cuối trả `503` liên tục. Một request của client tạo ra tối đa bao nhiêu lời gọi tới service cuối?",
+      "options": [
+        "27 lời gọi",
+        "9 lời gọi",
+        "7 lời gọi",
+        "3 lời gọi"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi tầng nhân số lần thử: gateway 1 + 2 retry = 3 lần, mỗi lần qua app thử 3 lần (`maxAttempts` tính cả lần đầu), mỗi lần đó qua sidecar thử 3 lần (`attempts: 2` là 2 lần retry). 3 × 3 × 3 = 27. Cộng số lần thử của các tầng (3 + 3 + 3 = 9) là hiểu lầm: retry nhân lên chứ không cộng."
+    },
+    {
+      "id": "spoofed-header",
+      "kind": "single",
+      "prompt": "Gateway kiểm tra JWT rồi gắn `X-User-Id` vào request. Service Order đọc header này để biết ai đang gọi. Rủi ro lớn nhất là gì?",
+      "options": [
+        "Request tới Order không qua gateway, hoặc mang header tự đặt, mạo danh được người khác",
+        "Header làm request to hơn nhiều và tăng latency của mọi lời gọi nội bộ",
+        "JWT có thể hết hạn trong lúc request đang đi từ gateway xuống Order",
+        "Header bị sidecar của service mesh xoá mất trước khi tới được Order"
+      ],
+      "answer": 0,
+      "explanation": "Header là chuỗi bất kỳ ai cũng gửi được. Gateway phải xoá header danh tính đến từ client, và Order chỉ tin header khi chắc request đi qua gateway (NetworkPolicy, mTLS); an toàn hơn là chuyển tiếp JWT để Order tự kiểm tra chữ ký. Sidecar không xoá header ứng dụng, và kích thước header không đáng kể."
+    },
+    {
+      "id": "mesh-overkill",
+      "kind": "single",
+      "prompt": "Startup có 4 service Spring Boot, một app di động, không có yêu cầu mã hoá nội bộ. Kỹ sư đề xuất cài Istio. Nhận xét nào hợp lý nhất?",
+      "options": [
+        "Chưa cần: Ingress và Resilience4j là đủ, mesh tốn công vận hành hơn lợi ích",
+        "Nên cài ngay vì mesh thay được mọi fallback nghiệp vụ trong app",
+        "Nên cài vì không có mesh thì các service không gọi nhau qua HTTP được",
+        "Nên cài vì mesh tự đặt rate limit theo hợp đồng cho từng đối tác"
+      ],
+      "answer": 0,
+      "explanation": "Mesh đáng giá khi có nhiều service, nhiều ngôn ngữ, yêu cầu mTLS hay chính sách gọi nhau. Với 4 service một ngôn ngữ, thư viện và Ingress đủ dùng. Mesh không biết fallback nghiệp vụ (trả giá cache khi Pricing chết), service gọi nhau qua HTTP bình thường không cần mesh, và hạn mức theo hợp đồng là việc của gateway ở cửa vào."
+    },
+    {
+      "id": "permissive-mode",
+      "kind": "single",
+      "prompt": "Sau khi cài mesh, đội để `PeerAuthentication` ở chế độ `PERMISSIVE` rồi báo cáo \"đã mã hoá toàn bộ lưu lượng nội bộ\". Vì sao báo cáo này có thể sai?",
+      "options": [
+        "`PERMISSIVE` vẫn nhận plaintext, ví dụ từ pod chưa có proxy",
+        "`PERMISSIVE` chỉ mã hoá request `GET`, còn `POST` đi plaintext",
+        "`PERMISSIVE` tự tắt mTLS mỗi khi control plane bị chết",
+        "`PERMISSIVE` chỉ mã hoá lưu lượng đi vào qua gateway"
+      ],
+      "answer": 0,
+      "explanation": "`PERMISSIVE` cho phép cả mTLS lẫn plaintext để chuyển đổi dần. Pod chưa có proxy hay client bên ngoài mesh vẫn gọi được bằng plaintext. Sau khi metric cho thấy mọi lời gọi đã là mTLS, chuyển sang `STRICT`. Chế độ này không phân biệt method HTTP, không áp dụng riêng cho gateway, và control plane chết thì proxy vẫn giữ chứng chỉ, cấu hình đang có."
+    }
+  ]
+}

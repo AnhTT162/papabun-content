@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "event-driven-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Event-driven architecture",
+  "summary": "Bốn nghĩa của event-driven: event notification, event-carried state transfer, event sourcing, CQRS; chọn broker; phát tin cậy, trùng lặp, thứ tự theo key, message lỗi; khi nào không dùng; chuỗi event không ai nhìn thấy, RPC trá hình, domain event và integration event, event đến sai thứ tự và version, read your writes, bên nghe mới cần dữ liệu cũ, fan-out, kiểm thử và đối soát.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 15,
+  "prerequisites": ["messaging-fundamentals", "data-consistency-services", "event-schema-evolution", "idempotency"],
+  "terms": ["event-driven-architecture", "event-notification", "event-carried-state", "event-sourcing", "cqrs", "eventual-consistency", "consumer-group", "dual-write", "outbox", "idempotent-consumer", "dead-letter-queue", "choreography", "correlation-id", "domain-event", "integration-event", "log-compaction", "backfill", "consumer-lag", "reconciliation", "cdc", "aggregate-root", "kafka-partition", "fan-out", "slo", "contract-test", "kafka-transaction"],
+  "references": [
+    { "title": "Martin Fowler: What do you mean by \"Event-Driven\"?", "url": "https://martinfowler.com/articles/201701-event-driven.html" },
+    { "title": "Apache Kafka Documentation: Design", "url": "https://kafka.apache.org/documentation/#design" },
+    { "title": "W3C Trace Context", "url": "https://www.w3.org/TR/trace-context/" },
+    { "title": "microservices.io: Pattern: Transactional outbox", "url": "https://microservices.io/patterns/data/transactional-outbox.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống event-driven của bạn, làm sao biết một đơn đang kẹt ở đâu?\" Người phỏng vấn muốn nghe: correlation id và trace context đi trong header của mọi message, consumer lag theo từng group có cảnh báo, DLQ có người theo dõi, và một chỗ lưu trạng thái nghiệp vụ của đơn (hoặc orchestrator) để trả lời mà không phải đọc log của năm service. Câu tiếp theo thường là \"khi nào bạn chọn orchestration thay vì choreography\" (bài Saga)." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng phát entity JPA hay bảng database thẳng ra topic (kể cả qua CDC thô): mọi đổi tên cột thành thay đổi phá vỡ cho các đội khác. Phát integration event có schema và version riêng, chuyển đổi ở ranh giới service." }
+  ]
+}

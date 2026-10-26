@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Gỡ chuỗi gọi đồng bộ của luồng đặt hàng",
+  "prompt": "Khi người dùng đặt hàng, Order service lần lượt gọi REST: Inventory (giữ hàng), Payment (trừ tiền), Loyalty (cộng điểm), Notification (gửi email, SMS), Analytics (ghi số liệu). p99 của API đặt hàng là 2,5 giây; tuần trước Loyalty chết 20 phút và không ai đặt hàng được. Đội Search muốn có dữ liệu đơn để gợi ý sản phẩm, đội Fraud muốn chấm điểm mọi đơn trong vòng 10 giây. Cao điểm 400 đơn mỗi giây. Đã có Kafka. Thiết kế lại để luồng đặt hàng nhanh và không phụ thuộc các service không cốt lõi, mà không mất điểm thưởng, email hay số liệu nào.",
+  "hints": [
+    "Bước nào người dùng phải biết kết quả trước khi thấy \"Đặt hàng thành công\", bước nào thì không?",
+    "Event cần mang dữ liệu gì để Loyalty, Notification, Search không phải gọi ngược lại Order?",
+    "Key của message là gì, và thứ tự quan trọng với event nào?",
+    "Loyalty chết 20 phút thì event đi đâu, và làm sao biết nó đang chậm?"
+  ],
+  "solution": "**Giữ đồng bộ phần cốt lõi**: giữ hàng và thanh toán vẫn là một phần của việc đặt hàng, vì người dùng cần biết kết quả. Có thể vẫn gọi đồng bộ (với timeout, circuit breaker) hoặc chuyển thành saga có trạng thái `PENDING` mà giao diện hiểu được (bài Saga). Loyalty, Notification, Analytics thì không ai cần kết quả ngay: chuyển sang event.\n\n**Phát event tin cậy**: trong transaction tạo đơn, ghi `OrderPlaced` vào bảng outbox; relay hoặc Debezium phát lên topic `orders` với key `orderId`. Không gọi `kafkaTemplate.send` trực tiếp trong method `@Transactional` (dual write).\n\n**Nội dung event**: integration event có version, mang đủ dữ liệu cho các bên nghe: `eventId`, `orderId`, `aggregateVersion`, `customerId`, các dòng hàng, tổng tiền, thời điểm, correlation id. Không mang PII thừa (số điện thoại, địa chỉ); Notification lấy liên hệ từ Customer service hoặc bản sao của nó. Schema đăng ký ở schema registry với chế độ tương thích BACKWARD (bài Event schema evolution).\n\n**Bên nghe**: mỗi service một consumer group. Loyalty cộng điểm idempotent theo `orderId` (unique constraint trên `(order_id, reason)`), Notification khử trùng theo `eventId` và truyền idempotency key cho nhà cung cấp SMS. Analytics ghi vào kho dữ liệu theo lô. Fraud đọc cùng topic; SLO 10 giây đo bằng độ trễ từ timestamp của event tới lúc chấm điểm, kèm cảnh báo consumer lag. Search backfill từ database của Order một lần rồi đọc tiếp từ topic.\n\n**Thứ tự**: các event sau này của đơn (`OrderPaid`, `OrderCancelled`) cùng key `orderId` để giữ thứ tự. Consumer bỏ qua chuyển trạng thái không hợp lệ và event có version cũ hơn.\n\n**Lỗi và giám sát**: lỗi tạm thời retry tại chỗ có backoff; lỗi quá 5 lần vào DLT kèm cảnh báo và công cụ đẩy lại. Loyalty chết 20 phút thì event nằm trong topic (giữ 7 ngày), lag tăng, cảnh báo bắn; khi Loyalty sống lại nó đọc bù. Đặt hàng không bị ảnh hưởng.\n\n**Lưới an toàn**: job đối soát hằng ngày so đơn `PAID` với điểm đã cộng. Kết quả: p99 đặt hàng chỉ còn thời gian giữ hàng và thanh toán (cần đo lại sau khi đổi, không còn cộng dồn latency của Loyalty, Notification, Analytics).",
+  "tradeoffs": [
+    {
+      "option": "Event-carried state transfer (event mang đủ dữ liệu)",
+      "pros": [
+        "Bên nghe không gọi ngược lại Order, chạy được khi Order chết",
+        "Thêm bên nghe không tăng tải cho Order"
+      ],
+      "cons": [
+        "Event to, schema là hợp đồng lớn phải giữ tương thích",
+        "Dữ liệu bị nhân bản ở nhiều nơi, có thể cũ"
+      ]
+    },
+    {
+      "option": "Event notification (chỉ `orderId`), bên nghe gọi API lấy chi tiết",
+      "pros": [
+        "Event nhỏ, schema ít thay đổi",
+        "Bên nghe luôn đọc dữ liệu mới nhất"
+      ],
+      "cons": [
+        "Mỗi event tạo thêm một lời gọi tới Order; cao điểm 400 đơn mỗi giây nhân với số bên nghe",
+        "Bên nghe vẫn chết theo khi Order chậm hoặc chết"
+      ]
+    },
+    {
+      "option": "Giữ gọi đồng bộ nhưng chạy song song và thêm circuit breaker",
+      "pros": [
+        "Ít thay đổi, không thêm hạ tầng",
+        "Biết ngay kết quả của từng bước"
+      ],
+      "cons": [
+        "Breaker mở thì điểm thưởng, email bị bỏ qua, phải tự lưu để làm lại",
+        "Thêm Search, Fraud vẫn phải sửa Order service"
+      ]
+    }
+  ]
+}

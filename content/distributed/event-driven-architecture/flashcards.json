@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "core-idea", "front": "Bên phát trong event-driven architecture biết gì về bên nghe?", "back": "Không biết gì: nó chỉ phát event về việc đã xảy ra; bên quan tâm tự đăng ký. Thêm bên nghe không phải sửa bên phát." },
+    { "id": "notification-vs-state", "front": "Event notification và event-carried state transfer khác nhau thế nào?", "back": "Notification chỉ báo hiệu kèm id, bên nghe gọi API lấy chi tiết; event-carried state mang đủ dữ liệu để bên nghe giữ bản sao, không phải gọi lại." },
+    { "id": "es-not-eda", "front": "Event sourcing có bắt buộc khi làm event-driven giữa các service không?", "back": "Không. Event sourcing là cách lưu trạng thái trong một service; event-driven giữa các service chỉ cần phát event sau khi thay đổi." },
+    { "id": "ordering", "front": "Thứ tự event được đảm bảo ở phạm vi nào?", "back": "Theo từng key trong một partition (key là id aggregate). Giữa các key, các partition, các topic thì không có thứ tự." },
+    { "id": "stale-event", "front": "Bản sao cục bộ nhận event cũ sau event mới thì xử lý thế nào?", "back": "Mỗi event mang `aggregateVersion`; chỉ cập nhật khi version mới hơn version đang lưu (`WHERE version < :v`)." },
+    { "id": "domain-vs-integration", "front": "Domain event và integration event khác nhau thế nào?", "back": "Domain event dùng trong một service, đổi tự do; integration event phát ra ngoài là hợp đồng có version, chuyển đổi ở ranh giới service." },
+    { "id": "rpc-disguised", "front": "\"RPC trá hình\" bằng event là gì?", "back": "Gửi event rồi chờ event trả lời để trả response cho người dùng: chịu mọi cái giá của bất đồng bộ mà không có lợi ích. Cần kết quả ngay thì gọi đồng bộ." },
+    { "id": "new-consumer", "front": "Bên nghe mới cần toàn bộ dữ liệu cũ thì lấy từ đâu?", "back": "Topic compacted giữ bản mới nhất theo key, hoặc backfill từ database của bên phát rồi đọc tiếp từ topic." },
+    { "id": "read-your-writes", "front": "Người dùng sửa xong tải lại trang vẫn thấy dữ liệu cũ. Vì sao và sửa thế nào?", "back": "Trang đọc từ bản sao chưa nhận event. Trả dữ liệu mới trong response, đọc từ service gốc ngay sau khi ghi, hoặc hiện trạng thái đang cập nhật." }
+  ]
+}

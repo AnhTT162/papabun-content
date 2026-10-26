@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "api-gateway-service-mesh",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "API gateway, BFF & service mesh",
+  "summary": "Gateway lo cửa vào, BFF lo nhu cầu của từng loại client, service mesh lo lưu lượng giữa các service; data plane và control plane, sidecar và ambient mode; header danh tính bị giả, retry chồng retry, timeout xếp tầng, thứ tự khởi động sidecar, mTLS `PERMISSIVE` và `STRICT`, gateway là điểm lỗi chung, Gateway API thay Ingress, và khi nào các tầng này là thừa.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 15,
+  "prerequisites": ["service-communication", "load-balancing", "resilience-patterns", "spring-cloud"],
+  "terms": ["api-gateway", "bff", "service-mesh", "mtls", "sidecar", "envoy", "data-plane", "control-plane", "tls-termination", "rate-limiting", "correlation-id", "token-relay", "zero-trust", "gateway-api", "jwt", "canary-release", "ingress", "load-balancer", "retry-storm", "idempotency-key", "bulkhead"],
+  "references": [
+    { "title": "Sam Newman: Backends For Frontends", "url": "https://samnewman.io/patterns/architectural/bff/" },
+    { "title": "Istio: Virtual Service (retries)", "url": "https://istio.io/latest/docs/reference/config/networking/virtual-service/" },
+    { "title": "Istio: Ambient mode reaches General Availability in v1.24", "url": "https://istio.io/latest/blog/2024/ambient-reaches-ga/" },
+    { "title": "Kubernetes: Sidecar Containers", "url": "https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/" },
+    { "title": "Kubernetes Blog: Ingress NGINX Retirement", "url": "https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/" },
+    { "title": "Kubernetes Gateway API", "url": "https://gateway-api.sigs.k8s.io/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gateway đã kiểm tra JWT rồi, service phía sau có cần kiểm tra lại không?\" Câu trả lời senior: có. Gateway là lớp chặn đầu; service vẫn kiểm tra token được chuyển tiếp và tự quyết định quyền, vì request có thể tới service mà không qua gateway, và header do gateway gắn có thể bị giả. Người phỏng vấn hay hỏi tiếp \"vậy mesh để làm gì\": mesh xác thực **service** gọi (mTLS), còn JWT xác thực **người dùng**; hai việc bổ sung cho nhau." },
+    { "type": "callout", "style": "warning", "markdown": "Trước khi thêm Resilience4j retry vào một service đã có mesh, xem retry đang bật ở đâu: Istio retry mặc định ngay cả khi bạn không cấu hình. Retry ở nhiều tầng nhân số lời gọi lên và biến một sự cố nhỏ thành retry storm." }
+  ]
+}

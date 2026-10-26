@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Cửa vào và lưu lượng nội bộ cho nền tảng bán lẻ 30 service",
+  "prompt": "Nền tảng bán lẻ có 30 service (Java là chính, vài service Go và Node) chạy trên Kubernetes. Có ba loại client: app di động (60% lưu lượng, màn hình trang chủ hiện gọi 7 API), web, và API cho đối tác (cần API key, hạn mức theo hợp đồng). Hiện mỗi service tự mở ra ngoài qua một Ingress riêng và tự kiểm tra JWT bằng thư viện, ba ngôn ngữ ba cách. Kiểm toán yêu cầu mã hoá mọi lưu lượng nội bộ và chứng minh được service nào được gọi service nào. Đội nền tảng có 4 người. Cao điểm 5.000 request mỗi giây từ ngoài. Đề xuất kiến trúc cửa vào và lưu lượng giữa các service, nói rõ cái gì đặt ở đâu.",
+  "hints": [
+    "Việc nào giống nhau cho mọi API và nên làm một lần ở cửa, việc nào thuộc về từng loại client?",
+    "Ai sở hữu phần ghép dữ liệu cho màn hình trang chủ của app, và vì sao không đặt nó trong gateway?",
+    "Mã hoá nội bộ cho ba ngôn ngữ: sửa code từng service hay đặt ở tầng proxy? Đội 4 người vận hành nổi cái gì?",
+    "Retry và timeout đang nằm ở đâu, sau khi thêm các tầng mới thì chúng chồng lên nhau thế nào?"
+  ],
+  "solution": "**Cửa vào**: một API gateway duy nhất (controller theo Gateway API như Envoy Gateway, hoặc gateway được quản lý của cloud) thay cho 30 Ingress. Gateway kết thúc TLS, kiểm tra JWT của người dùng và API key của đối tác, rate limit theo client (đối tác theo hạn mức hợp đồng), giới hạn kích thước body, xoá mọi header `X-User-*` do client gửi, gắn correlation id. Chạy ít nhất 3 replica qua nhiều zone; bảng route nằm trong Git, có test và deploy dần.\n\n**BFF**: `mobile-bff` do đội app sở hữu gom 7 API của trang chủ thành 1 (gọi song song, mỗi lời gọi có timeout riêng, phần không quan trọng như gợi ý sản phẩm lỗi thì trả rỗng). Web có `web-bff` riêng. API đối tác không cần BFF: gateway route thẳng tới các service với phiên bản API ổn định. BFF không chứa quy tắc nghiệp vụ; tính giá, kiểm tra quyền vẫn ở service.\n\n**Lưu lượng nội bộ**: service mesh để có mTLS cho cả ba ngôn ngữ mà không sửa code. Với đội 4 người, chọn mesh ít phải vận hành: Istio ambient mode (ztunnel lo mTLS L4, waypoint chỉ cho namespace cần L7) hoặc Linkerd (lưu ý từ 2024 dự án mã nguồn mở chỉ phát hành bản edge; bản stable do nhà cung cấp phát hành, kiểm tra điều khoản trước khi chọn). Bật `PERMISSIVE` trong lúc chuyển, theo dõi metric để chắc mọi lời gọi đã là mTLS, rồi chuyển `STRICT`. `AuthorizationPolicy` theo service account trả lời câu hỏi kiểm toán \"ai gọi ai\".\n\n**Xác thực trong service**: service vẫn kiểm tra JWT được chuyển tiếp (không tin header), nhưng dùng một thư viện chung mỗi ngôn ngữ với cấu hình giống nhau; gateway chỉ là lớp chặn đầu.\n\n**Retry và timeout**: tắt retry mặc định của mesh ở route không idempotent; giữ retry ở một tầng (mesh cho lỗi kết nối, app cho lỗi nghiệp vụ có idempotency key). Timeout xếp tầng: gateway 10 giây, BFF 3 giây cho cả màn hình, mỗi lời gọi nội bộ 800 ms.\n\n**Thứ tự triển khai**: gateway và BFF trước (giải ngay bài toán 4G và 30 Ingress), mesh sau theo từng namespace. Đo latency thêm vào của mỗi bước.",
+  "tradeoffs": [
+    {
+      "option": "Gateway + BFF + service mesh (ambient hoặc Linkerd)",
+      "pros": [
+        "mTLS và chính sách gọi nhau cho mọi ngôn ngữ, không sửa code",
+        "Metric và trace đồng nhất cho mọi lời gọi nội bộ"
+      ],
+      "cons": [
+        "Thêm một hệ thống phức tạp cho đội nền tảng nhỏ",
+        "Thêm latency mỗi hop và một lớp nữa khi debug"
+      ]
+    },
+    {
+      "option": "Gateway + BFF, mTLS bằng thư viện và chứng chỉ do nền tảng cấp",
+      "pros": [
+        "Ít thành phần hạ tầng, dễ hiểu",
+        "Không có proxy trên đường đi của mỗi lời gọi"
+      ],
+      "cons": [
+        "Phải làm và giữ đồng bộ ở ba ngôn ngữ",
+        "Khó chứng minh \"ai gọi ai\" cho kiểm toán"
+      ]
+    },
+    {
+      "option": "Một gateway làm luôn việc ghép dữ liệu cho mọi client",
+      "pros": [
+        "Ít service hơn",
+        "Một chỗ cấu hình duy nhất"
+      ],
+      "cons": [
+        "Gateway chứa logic của nhiều đội, thành điểm nghẽn khi thay đổi",
+        "Lỗi một route ghép dữ liệu có thể làm chậm mọi API"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "stale-update",
+      "kind": "output",
+      "prompt": "Bản sao `product_view` đang có `id = 7, price = 100, version = 3`. Consumer nhận lần lượt ba event của sản phẩm 7: (v5, giá 120), (v4, giá 110), (v5, giá 120) gửi lại. Mỗi event chạy câu SQL dưới. Giá trị cuối cùng là gì?",
+      "code": "UPDATE product_view\nSET price = :price, version = :v\nWHERE id = 7 AND version < :v;",
+      "options": [
+        "`price = 120, version = 5`",
+        "`price = 110, version = 4`",
+        "`price = 120, version = 4`",
+        "`price = 100, version = 3`"
+      ],
+      "answer": 0,
+      "explanation": "Event v5 khớp điều kiện `3 < 5` nên giá thành 120, version 5. Event v4 đến muộn: `5 < 4` sai, 0 dòng đổi, bị bỏ qua thay vì ghi đè giá mới bằng giá cũ. Event v5 gửi lại: `5 < 5` sai, cũng bị bỏ qua. Câu SQL vừa chống đảo thứ tự vừa idempotent."
+    },
+    {
+      "id": "message-key",
+      "kind": "single",
+      "prompt": "Topic `orders` có 12 partition, chứa `OrderPlaced`, `OrderPaid`, `OrderCancelled`. Consumer cần xử lý event của mỗi đơn đúng thứ tự. Chọn key message nào?",
+      "options": [
+        "`orderId`, để mọi event của một đơn vào cùng partition",
+        "`eventId` ngẫu nhiên, để chia đều tải và vẫn khử trùng được",
+        "Không đặt key, để Kafka chia đều tải ra các partition",
+        "Tên loại event, để mỗi loại event nằm trong một partition"
+      ],
+      "answer": 0,
+      "explanation": "Kafka chỉ giữ thứ tự trong một partition, và key quyết định partition. Key `orderId` giữ thứ tự theo từng đơn. `eventId` khác nhau cho mỗi event nên các event của một đơn rải ra nhiều partition, giống như không có key. Key theo loại event tách `OrderPaid` khỏi `OrderPlaced` của cùng đơn, phá đúng thứ tự cần giữ (và chỉ dùng được 3 trong 12 partition)."
+    },
+    {
+      "id": "notification-load",
+      "kind": "single",
+      "prompt": "Order phát `OrderPlaced{orderId}` (chỉ có id). Năm service nghe event và mỗi service gọi `GET /orders/{id}` để lấy chi tiết. Cao điểm 400 đơn mỗi giây. Hệ quả nào dễ xảy ra nhất?",
+      "options": [
+        "Order nhận thêm khoảng 2.000 request mỗi giây và kéo các bên nghe chậm theo",
+        "Event bị mất vì Kafka không chịu được 400 message mỗi giây trên một topic",
+        "Các bên nghe đọc phải dữ liệu cũ hơn lúc event được phát ra",
+        "Thứ tự event của mỗi đơn bị đảo vì có tới năm bên cùng nghe"
+      ],
+      "answer": 0,
+      "explanation": "Event notification đẩy tải ngược về bên phát: 400 × 5 = 2.000 lời gọi mỗi giây, và các bên nghe vẫn phụ thuộc Order còn sống. Dữ liệu lấy về thường mới hơn event chứ không cũ hơn. 400 message mỗi giây là rất nhỏ với Kafka, và mỗi consumer group đọc thứ tự riêng nên số bên nghe không làm đảo thứ tự."
+    },
+    {
+      "id": "when-sync",
+      "kind": "single",
+      "prompt": "Màn hình thanh toán cần báo người dùng \"thẻ bị từ chối\" ngay trên trang. Đội đề xuất gửi event `ChargeRequested` rồi chờ event `ChargeResult` trên một topic trả lời, timeout 5 giây. Nhận xét nào đúng nhất?",
+      "options": [
+        "Đây là RPC trá hình: cần kết quả ngay thì gọi đồng bộ có timeout",
+        "Ổn vì Kafka exactly-once nên thanh toán không thể bị trừ hai lần",
+        "Ổn nếu tăng số partition của topic trả lời lên đủ lớn",
+        "Tốt hơn gọi đồng bộ vì Payment chết thì request vẫn nằm chờ trong topic"
+      ],
+      "answer": 0,
+      "explanation": "Người dùng đang chờ trên trang, nên luồng này về bản chất là đồng bộ. Gửi event rồi chờ trả lời thêm broker, topic trả lời, ghép response với request, và khó đặt timeout, mà không có lợi ích tách rời: Payment chết thì người dùng vẫn nhận timeout sau 5 giây. Thêm partition không giải quyết thiết kế, và exactly-once của Kafka không bao lời gọi ra cổng thanh toán nên vẫn cần idempotency key."
+    },
+    {
+      "id": "new-consumer-history",
+      "kind": "single",
+      "prompt": "Topic `products` giữ 7 ngày (`retention.ms` mặc định). Service Search mới cần mọi sản phẩm, kể cả sản phẩm không đổi trong 2 năm. Cách nào đúng?",
+      "options": [
+        "Backfill từ database của Catalog rồi đọc tiếp topic từ điểm đã ghi nhận",
+        "Đặt `auto.offset.reset=earliest` để đọc lại từ đầu topic",
+        "Tăng `retention.ms` lên 2 năm rồi đọc lại từ đầu topic",
+        "Đổi topic sang `cleanup.policy=compact` rồi đọc lại từ đầu"
+      ],
+      "answer": 0,
+      "explanation": "`earliest` chỉ đọc được 7 ngày còn lại. Tăng retention hay bật compaction bây giờ không lấy lại được dữ liệu đã bị xoá. Backfill từ nguồn sự thật rồi nối vào topic từ offset ghi nhận lúc bắt đầu (consumer idempotent theo version nên phần chồng lấn không sao) là cách chuẩn. Về lâu dài, topic compacted ngay từ đầu cho phép bên nghe mới đọc từ đầu."
+    }
+  ]
+}
