@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "unmodifiable-view-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "List<String> source = new ArrayList<>(List.of(\"SALE10\"));\nList<String> view = Collections.unmodifiableList(source);\nList<String> copy = List.copyOf(source);\n\nsource.add(\"FREESHIP\");\n\nSystem.out.println(view.size() + \" \" + copy.size());",
+      "options": [
+        "`2 1`",
+        "`1 1`",
+        "`2 2`",
+        "Ném `UnsupportedOperationException` ở `source.add`"
+      ],
+      "answer": 0,
+      "explanation": "`unmodifiableList` là decorator dạng view: đọc chuyển thẳng xuống `source`, nên thấy phần tử mới. `List.copyOf` sao chép ra một list bất biến độc lập, nên vẫn 1 phần tử. `source` là `ArrayList` bình thường nên `add` chạy được; chỉ gọi `add` qua `view` hay `copy` mới ném `UnsupportedOperationException`."
+    },
+    {
+      "id": "pattern-by-intent",
+      "kind": "single",
+      "prompt": "Bạn viết class `MomoPaymentGateway implements PaymentGateway`, bên trong gọi `MomoClient` của SDK đối tác và dịch mã lỗi của Momo sang exception của hệ thống. Đây là pattern nào?",
+      "options": [
+        "Adapter, vì nó biến interface của SDK thành interface mà code của bạn cần",
+        "Decorator, vì nó bọc `MomoClient` và thêm việc dịch mã lỗi",
+        "Proxy, vì nó đứng giữa và kiểm soát mọi lời gọi tới `MomoClient`",
+        "Facade, vì nó che toàn bộ SDK sau một class duy nhất"
+      ],
+      "answer": 0,
+      "explanation": "Đặc điểm quyết định là interface thay đổi: `MomoClient` có interface của đối tác, `PaymentGateway` là interface của bạn. Decorator và Proxy giữ nguyên interface của object được bọc. Facade đơn giản hoá cả một hệ con nhiều class cho bên gọi; một adapter có thể kiêm luôn vai trò facade nếu SDK phức tạp, nhưng ý định chính ở đây là làm cho khớp interface."
+    },
+    {
+      "id": "decorator-order",
+      "kind": "single",
+      "prompt": "`PaymentGateway` được bọc theo thứ tự `new RetryingGateway(new MetricsGateway(momoAdapter), 3)`: retry ở ngoài, metrics ở trong. Một lần thanh toán thất bại hai lần rồi thành công ở lần thứ ba. Metric `payment.calls` tăng bao nhiêu?",
+      "options": [
+        "3, vì mỗi lần retry gọi xuống metrics một lần",
+        "1, vì `CheckoutService` chỉ gọi `pay` một lần",
+        "2, vì metrics chỉ đếm các lần gọi thất bại",
+        "0, vì retry chặn mọi lời gọi tới các lớp bên trong"
+      ],
+      "answer": 0,
+      "explanation": "Retry ở ngoài lặp lại lời gọi xuống lớp bên trong, nên metrics thấy ba lần gọi. Muốn đo trải nghiệm của bên gọi (một lời gọi, gồm cả thời gian retry) thì đặt metrics ngoài retry. Cả hai cách đều có ích; điều quan trọng là thứ tự xếp chồng quyết định ngữ nghĩa của metric."
+    },
+    {
+      "id": "jdk-proxy-class-injection",
+      "kind": "single",
+      "prompt": "Ứng dụng Spring (không dùng Boot) bật `@EnableTransactionManagement` với mặc định `proxyTargetClass = false`. `OrderServiceImpl implements OrderService` có method `@Transactional`. Một controller inject `private final OrderServiceImpl service;`. Điều gì xảy ra lúc khởi động?",
+      "options": [
+        "Lỗi `BeanNotOfRequiredTypeException`, vì bean là JDK proxy chỉ implement `OrderService`",
+        "Chạy được, nhưng transaction không áp dụng vì controller giữ object thật",
+        "Chạy được, vì Spring tự chuyển sang CGLIB khi cần inject theo class",
+        "Lỗi `NoUniqueBeanDefinitionException`, vì có cả proxy lẫn object thật trong context"
+      ],
+      "answer": 0,
+      "explanation": "Khi bean implement interface và `proxyTargetClass = false`, Spring tạo JDK dynamic proxy: một class lúc chạy implement `OrderService`, không phải lớp con của `OrderServiceImpl`. Container chỉ chứa proxy, nên inject theo class cụ thể thất bại. Spring Boot mặc định `spring.aop.proxy-target-class=true` nên dùng CGLIB và không gặp lỗi này. Cách sửa tốt hơn vẫn là inject theo interface."
+    }
+  ]
+}

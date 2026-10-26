@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sync-listener-rollback",
+      "kind": "output",
+      "prompt": "Spring Boot 3, cấu hình mặc định. Gọi `orderService.place(cmd)` khi máy chủ SMTP đang lỗi. Sau lời gọi, bảng `orders` có thêm mấy dòng?",
+      "code": "@Service\nclass OrderService {\n    @Transactional\n    public void place(PlaceOrder cmd) {\n        orders.save(Order.from(cmd));\n        events.publishEvent(new OrderPlaced(cmd.orderId()));\n    }\n}\n\n@Component\nclass ConfirmationMailer {\n    @EventListener\n    void on(OrderPlaced event) {\n        mail.send(confirmationFor(event));   // ném MailSendException\n    }\n}",
+      "options": [
+        "0 dòng: listener chạy đồng bộ trong transaction, exception làm transaction rollback",
+        "1 dòng: listener chạy sau khi method `place` commit xong",
+        "1 dòng: exception trong listener bị Spring bắt và ghi log",
+        "1 dòng: event được gửi sang thread khác nên không ảnh hưởng"
+      ],
+      "answer": 0,
+      "explanation": "`publishEvent` mặc định gọi listener ngay trên thread hiện tại, bên trong transaction của `place`. `MailSendException` là runtime exception, bay ngược qua `publishEvent` ra khỏi `place`, và proxy transaction rollback. Muốn gửi mail chỉ sau khi đơn đã lưu: `@TransactionalEventListener(phase = AFTER_COMMIT)`, thêm `@Async` nếu không muốn chặn request, và outbox nếu không được phép mất email."
+    },
+    {
+      "id": "jdbc-template-pattern",
+      "kind": "single",
+      "prompt": "`jdbcTemplate.query(\"select ...\", (rs, n) -> new Product(rs.getLong(\"id\"), rs.getString(\"name\")))`. Mô tả nào đúng nhất về thiết kế của `JdbcTemplate`?",
+      "options": [
+        "Template Method dạng callback: phần cố định trong template, phần thay đổi là lambda `RowMapper`",
+        "Template Method cổ điển: bạn kế thừa `JdbcTemplate` và override `mapRow`",
+        "Observer: `RowMapper` được đăng ký để nghe sự kiện có dòng mới từ database",
+        "Chain of Responsibility: mỗi dòng đi qua chuỗi `RowMapper` để được xử lý"
+      ],
+      "answer": 0,
+      "explanation": "`JdbcTemplate` giữ khung cố định (lấy connection, tạo statement, dịch `SQLException` sang `DataAccessException`, đóng resource) và nhận phần thay đổi qua callback. Đây là biến thể của Template Method dùng composition thay vì kế thừa, nên không cần tạo lớp con. Không có cơ chế đăng ký nghe hay chuỗi xử lý ở đây."
+    },
+    {
+      "id": "filter-forgot-chain",
+      "kind": "single",
+      "prompt": "Một filter mới chỉ ghi log cho request có header `X-Debug`: `if (request.getHeader(\"X-Debug\") != null) { log(request); chain.doFilter(request, response); }`. Request **không** có header thì sao?",
+      "options": [
+        "Trả 200 với body rỗng, vì chuỗi dừng ở filter này và không tới controller",
+        "Vẫn tới controller bình thường, vì filter chỉ bỏ qua phần ghi log",
+        "Spring trả 404, vì không có handler nào xử lý request",
+        "Trả 500, vì Servlet container phát hiện filter không gọi `doFilter`"
+      ],
+      "answer": 0,
+      "explanation": "Trong Chain of Responsibility, mỗi mắt xích tự quyết định chuyển tiếp. Không gọi `chain.doFilter` thì các filter sau, `DispatcherServlet` và controller đều không chạy; response chưa được ghi gì nên container trả status mặc định 200 với body rỗng. Container không kiểm tra việc filter có gọi chuỗi hay không. `chain.doFilter` phải nằm ngoài `if`."
+    },
+    {
+      "id": "state-transition-guard",
+      "kind": "single",
+      "prompt": "Hai request \"huỷ đơn\" và \"xác nhận giao hàng\" tới cùng lúc cho một đơn `PAID`. Code: đọc đơn, `if (order.status() == PAID) order.setStatus(...)`, rồi `save`. Cách nào chặn được việc cả hai cùng thành công?",
+      "options": [
+        "Ghi có điều kiện `where status = 'PAID'` hoặc dùng optimistic locking với `@Version`",
+        "Chuyển logic sang State pattern, mỗi trạng thái là một class riêng",
+        "Đánh dấu method `synchronized` trong service để chỉ một thread chạy",
+        "Kiểm tra lại trạng thái lần nữa ngay trước lời gọi `save`"
+      ],
+      "answer": 0,
+      "explanation": "Hai request cùng đọc `PAID` rồi cùng ghi: đây là [[lost-update|lost update]], không phải vấn đề tổ chức class. Database phải là nơi chốt điều kiện: `update ... where status = 'PAID'` trả 0 dòng cho request thứ hai, hoặc `@Version` làm request thứ hai lỗi `OptimisticLockException`. `synchronized` chỉ có tác dụng trong một JVM, không chặn được khi chạy nhiều pod; kể cả một JVM, khoá được nhả khi method trả về, trước khi proxy commit, nên vẫn để hở. Kiểm tra lại trước `save` vẫn để hở khoảng giữa lần đọc và lần ghi."
+    }
+  ]
+}

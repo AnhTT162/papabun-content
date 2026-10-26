@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "strategy-spring", "front": "Cách gọn nhất làm Strategy trong Spring?", "back": "Inject `List<Interface>`, mỗi cài đặt tự khai báo key (`method()`), dựng `EnumMap` trong constructor và fail fast khi trùng hay thiếu." },
+    { "id": "strategy-lambda", "front": "Strategy chỉ có một method thì cần class riêng không?", "back": "Thường không: một lambda hay method reference (`Comparator`, `Function`) là đủ." },
+    { "id": "template-callback", "front": "`JdbcTemplate` áp dụng Template Method thế nào?", "back": "Giữ phần cố định (connection, exception, đóng resource) và nhận phần thay đổi qua callback như `RowMapper`, không cần kế thừa." },
+    { "id": "event-sync", "front": "`@EventListener` mặc định chạy thế nào so với bên phát?", "back": "Đồng bộ, cùng thread và cùng transaction; exception của listener bay về bên phát và có thể làm rollback." },
+    { "id": "after-commit", "front": "Muốn gửi email chỉ khi đơn hàng đã commit thì dùng gì?", "back": "`@TransactionalEventListener(phase = AFTER_COMMIT)`, thêm `@Async` nếu không muốn chặn, outbox nếu không được mất sự kiện." },
+    { "id": "chain-filter", "front": "Quên gọi `chain.doFilter` trong một filter thì sao?", "back": "Chuỗi dừng ở filter đó: controller không chạy và client nhận 200 với body rỗng." },
+    { "id": "state-vs-enum", "front": "Khi nào dùng State pattern thay vì `enum` trạng thái?", "back": "Khi mỗi trạng thái có nhiều hành vi riêng; vài trạng thái với bảng chuyển hợp lệ thì `enum` là đủ." },
+    { "id": "visitor-java21", "front": "Từ Java 21, cái gì thường thay được Visitor?", "back": "`sealed` interface cùng `switch` pattern matching exhaustive trên các kiểu con." }
+  ]
+}

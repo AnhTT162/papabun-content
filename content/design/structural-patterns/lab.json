@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Danh sách khuyến mãi \"bất biến\" vẫn đổi giữa chừng",
+  "context": "`PromotionCatalog` giữ danh sách khuyến mãi đang chạy, được job làm mới mỗi phút. Để bên ngoài không sửa được, method đọc trả `Collections.unmodifiableList`. Request tính giá duyệt danh sách đó trên các thread của Tomcat.",
+  "buggyCode": "class PromotionCatalog {\n    private final List<Promotion> active = new ArrayList<>();\n\n    // \"Trả bản bất biến để không ai sửa được\"\n    List<Promotion> activePromotions() {\n        return Collections.unmodifiableList(active);\n    }\n\n    @Scheduled(fixedRate = 60_000)\n    synchronized void refresh() {\n        List<Promotion> latest = promotionClient.fetchActive();\n        active.clear();\n        active.addAll(latest);\n    }\n}\n\nclass PriceCalculator {\n    Money finalPrice(Cart cart) {\n        Money price = cart.subtotal();\n        for (Promotion promotion : catalog.activePromotions()) {\n            price = promotion.apply(price);\n        }\n        return price;\n    }\n}",
+  "symptom": {
+    "description": "Vài lần mỗi giờ, đúng lúc job làm mới chạy, một số request tính giá lỗi 500. Một số đơn khác cùng thời điểm được tính giá không có khuyến mãi nào. Stack trace (JDK 27):",
+    "output": "java.util.ConcurrentModificationException\n\tat java.base/java.util.ArrayList$Itr.checkForComodification(ArrayList.java:1104)\n\tat java.base/java.util.ArrayList$Itr.next(ArrayList.java:1058)\n\tat java.base/java.util.Collections$UnmodifiableCollection$1.next(Collections.java:1082)\n\tat shop.pricing.PriceCalculator.finalPrice(PriceCalculator.java:4)"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân gốc là gì?",
+    "options": [
+      "`unmodifiableList` là view bọc list gốc, nên `refresh` sửa list gốc là view đổi theo ngay khi đang duyệt",
+      "`unmodifiableList` sao chép list nhưng không an toàn đa luồng, nên phải đổi sang `synchronizedList`",
+      "`refresh` có `synchronized` nhưng thiếu `volatile`, nên thread đọc thấy bản sao cũ trong cache CPU",
+      "`@Scheduled` chạy `refresh` song song trên nhiều thread, nên hai lần làm mới ghi đè lên nhau"
+    ],
+    "answer": 0,
+    "explanation": "`Collections.unmodifiableList` là một [[decorator-pattern|Decorator]]: chặn `add`, `remove` gọi qua nó, còn đọc thì chuyển thẳng xuống list gốc. Không có bản sao nào. `refresh` gọi `clear()` rồi `addAll()` trên list gốc, nên thread đang duyệt gặp `ConcurrentModificationException`, còn thread đọc đúng lúc giữa `clear` và `addAll` thấy list rỗng. `synchronized` trên `refresh` không bảo vệ gì, vì bên đọc không lấy khoá. `synchronizedList` cũng không đủ: duyệt bằng iterator vẫn phải tự khoá. `@Scheduled` mặc định chạy trên một thread và `fixedRate` không chạy chồng lần trước (khi không bật virtual threads; với `spring.threads.virtual.enabled=true`, mỗi lần chạy có thể trên một thread riêng)."
+  },
+  "fix": {
+    "code": "class PromotionCatalog {\n    // Tham chiếu tới một ảnh chụp bất biến; thay cả ảnh chụp, không sửa tại chỗ\n    private volatile List<Promotion> active = List.of();\n\n    List<Promotion> activePromotions() {\n        return active;\n    }\n\n    @Scheduled(fixedRate = 60_000)\n    void refresh() {\n        active = List.copyOf(promotionClient.fetchActive());\n    }\n}",
+    "explanation": "`List.copyOf` tạo list bất biến thật, tách khỏi dữ liệu nguồn. `refresh` dựng ảnh chụp mới rồi thay tham chiếu một lần; `volatile` đảm bảo thread đọc thấy ảnh chụp mới đã dựng xong. Thread nào đang duyệt ảnh chụp cũ thì duyệt nốt bản cũ, không lỗi và không bao giờ thấy list rỗng nửa chừng. Đây là cách làm [[copy-on-write|copy-on-write]] cho dữ liệu đọc nhiều ghi ít, và không cần khoá ở cả hai phía."
+  }
+}

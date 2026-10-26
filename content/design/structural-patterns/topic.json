@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "structural-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Structural patterns",
+  "summary": "Adapter, Decorator, Proxy, Facade: cấu trúc giống nhau, ý định khác nhau; ví dụ trong JDK (I/O stream, `Collections`) và Spring (`HandlerAdapter`, AOP proxy, `JdbcTemplate`); thứ tự xếp chồng decorator, view của `unmodifiableList` không phải bản sao, JDK proxy và CGLIB; Composite, Bridge, Flyweight và anti-corruption layer.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 15,
+  "prerequisites": ["creational-patterns", "spring-aop-proxy"],
+  "terms": ["adapter-pattern", "decorator-pattern", "proxy-pattern", "facade-pattern", "composite-pattern", "anti-corruption-layer", "aop-proxy", "self-invocation", "cglib", "lazy-loading", "dependency-inversion", "jdk-dynamic-proxy", "copy-on-write", "unmodifiable-view", "bridge-pattern", "flyweight-pattern"],
+  "references": [
+    { "title": "Java SE 21 API: Collections.unmodifiableList", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Collections.html#unmodifiableList(java.util.List)" },
+    { "title": "Java SE 21 API: List.copyOf", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html#copyOf(java.util.Collection)" },
+    { "title": "Spring Framework Reference: Proxying Mechanisms", "url": "https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" },
+    { "title": "Spring Retry: @EnableRetry (thứ tự so với advice transaction)", "url": "https://github.com/spring-projects/spring-retry/blob/main/src/main/java/org/springframework/retry/annotation/EnableRetry.java" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Decorator và Proxy giống nhau về cấu trúc, khác nhau ở đâu?\" Trả lời theo ý định và ai quyết định việc bọc: Decorator do bên dùng chủ động xếp chồng để thêm hành vi, thường có nhiều lớp; Proxy đứng thay object thật để kiểm soát việc gọi (tạo lười, quyền, transaction, gọi từ xa), và bên gọi thường không biết nó tồn tại. Hỏi tiếp \"Spring AOP là cái nào\": về cơ chế là proxy, nhưng advice như log hay metrics đóng vai decorator." },
+    { "type": "callout", "style": "warning", "markdown": "Trả `Collections.unmodifiableList(internalList)` từ một getter **không** bảo vệ được bên gọi khỏi thay đổi bên trong. Nếu list bên trong còn bị sửa (bởi job làm mới, bởi thread khác), trả `List.copyOf(...)` hoặc giữ sẵn một ảnh chụp bất biến." }
+  ]
+}

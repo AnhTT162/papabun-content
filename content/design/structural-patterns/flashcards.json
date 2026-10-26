@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four-intents", "front": "Adapter, Decorator, Proxy, Facade khác nhau ở điểm nào?", "back": "Ý định: Adapter đổi interface, Decorator thêm hành vi giữ interface, Proxy kiểm soát truy cập, Facade đơn giản hoá một hệ con." },
+    { "id": "adapter-jdk", "front": "Ví dụ Adapter trong JDK?", "back": "`InputStreamReader` biến `InputStream` (byte) thành `Reader` (ký tự); `Arrays.asList` cho mảng dùng như `List`." },
+    { "id": "decorator-jdk", "front": "Ví dụ Decorator trong JDK?", "back": "Chuỗi I/O như `BufferedReader(InputStreamReader(GZIPInputStream(...)))`, và `Collections.unmodifiableList`." },
+    { "id": "unmodifiable-view", "front": "`Collections.unmodifiableList(list)` có phải bản sao bất biến không?", "back": "Không: đó là view; list gốc đổi thì view đổi theo. Cần ảnh chụp bất biến thì dùng `List.copyOf`." },
+    { "id": "decorator-order", "front": "Vì sao thứ tự xếp chồng decorator quan trọng?", "back": "Nó đổi ngữ nghĩa: metrics ngoài retry đếm một lời gọi, metrics trong retry đếm từng lần thử." },
+    { "id": "proxy-spring", "front": "Spring dùng Proxy pattern ở đâu?", "back": "Bean có `@Transactional`, `@Cacheable`, `@Async` được thay bằng proxy; Hibernate dùng proxy cho quan hệ lazy." },
+    { "id": "facade-example", "front": "Ví dụ Facade quen thuộc trong hệ sinh thái Spring?", "back": "`JdbcTemplate` che `Connection`, `PreparedStatement`, `ResultSet` và việc đóng resource; SLF4J là facade cho các thư viện logging." },
+    { "id": "retry-outside-tx", "front": "Retry nên đặt trong hay ngoài transaction?", "back": "Ngoài, để mỗi lần thử là một transaction mới; retry bên trong một transaction đã bị đánh dấu rollback thì vô ích." }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm ZaloPay, mọi đơn ZaloPay lỗi 500",
+  "context": "Thanh toán dùng Strategy: mỗi cổng là một bean implement `PaymentGateway`, và Spring inject tất cả vào một `Map` có key là tên bean. Đã có `MomoGateway` và `VnpayGateway` chạy ổn nhiều tháng. Sprint này thêm `ZaloPayGateway`; unit test của chính class đó đều xanh.",
+  "buggyCode": "@Component\nclass ZaloPayGateway implements PaymentGateway {\n    public PaymentResult pay(Order order) { /* gọi API ZaloPay */ }\n}\n\nenum PaymentMethod { MOMO, VNPAY, ZALOPAY }\n\n@Service\nclass CheckoutService {\n    private final Map<String, PaymentGateway> gateways;   // key = tên bean\n\n    CheckoutService(Map<String, PaymentGateway> gateways) {\n        this.gateways = gateways;\n    }\n\n    PaymentResult pay(Order order) {\n        String beanName = order.method().name().toLowerCase() + \"Gateway\";\n        return gateways.get(beanName).pay(order);\n    }\n}",
+  "symptom": {
+    "description": "Ứng dụng khởi động bình thường. Đơn Momo và VNPAY vẫn thanh toán được, nhưng mọi đơn chọn ZaloPay trả 500. Log:",
+    "output": "java.lang.NullPointerException: Cannot invoke \"shop.payment.PaymentGateway.pay(shop.order.Order)\" because the return value of \"java.util.Map.get(Object)\" is null\n\tat shop.payment.CheckoutService.pay(CheckoutService.java:12)"
+  },
+  "diagnosis": {
+    "question": "Vì sao `gateways.get(...)` trả `null` chỉ với ZaloPay?",
+    "options": [
+      "Tên bean sinh từ tên class là `zaloPayGateway`, còn code ghép ra `zalopayGateway`, nên không khớp key",
+      "`ZaloPayGateway` chưa được component scan, vì Spring chỉ inject các bean khai báo trước khi `Map` được tạo",
+      "`Map` được inject là bất biến, nên bean mới đăng ký sau lần khởi động đầu không được thêm vào",
+      "Có hai bean cùng implement `PaymentGateway` cho ZaloPay, nên Spring bỏ cả hai khỏi `Map`"
+    ],
+    "answer": 0,
+    "explanation": "Spring đặt tên bean mặc định bằng tên class với chữ cái đầu viết thường: `MomoGateway` thành `momoGateway`, `ZaloPayGateway` thành `zaloPayGateway`. Code lại ghép key từ enum bằng `toLowerCase()`, ra `zalopayGateway`. Momo và VNPAY chạy được chỉ vì tên class tình cờ có đúng một chữ hoa. Key của [[strategy-pattern|Strategy]] đang phụ thuộc ngầm vào tên class, thứ không ai nghĩ là một phần của hợp đồng. Bean đã được scan (nó có trong `Map`); `Map` được dựng một lần lúc khởi động với mọi bean khớp kiểu; và hai bean khác tên đều có mặt trong `Map`, còn trùng tên thì component scan báo `ConflictingBeanDefinitionException` lúc khởi động."
+  },
+  "fix": {
+    "code": "interface PaymentGateway {\n    PaymentMethod method();                 // mỗi cài đặt tự khai báo nó phục vụ phương thức nào\n    PaymentResult pay(Order order);\n}\n\n@Component\nclass ZaloPayGateway implements PaymentGateway {\n    public PaymentMethod method() { return PaymentMethod.ZALOPAY; }\n    public PaymentResult pay(Order order) { /* gọi API ZaloPay */ }\n}\n\n@Service\nclass CheckoutService {\n    private final Map<PaymentMethod, PaymentGateway> gateways = new EnumMap<>(PaymentMethod.class);\n\n    CheckoutService(List<PaymentGateway> all) {\n        for (PaymentGateway gateway : all) {\n            PaymentGateway previous = gateways.put(gateway.method(), gateway);\n            if (previous != null) {\n                throw new IllegalStateException(\"Hai gateway cho \" + gateway.method());\n            }\n        }\n        EnumSet<PaymentMethod> missing = EnumSet.allOf(PaymentMethod.class);\n        missing.removeAll(gateways.keySet());\n        if (!missing.isEmpty()) {\n            throw new IllegalStateException(\"Thiếu gateway cho \" + missing);\n        }\n    }\n\n    PaymentResult pay(Order order) {\n        return gateways.get(order.method()).pay(order);\n    }\n}",
+    "explanation": "Key của strategy giờ là một giá trị nghiệp vụ do chính cài đặt khai báo, không phụ thuộc tên class hay tên bean. Constructor kiểm tra ngay lúc khởi động: hai gateway cùng phục vụ một phương thức, hoặc thêm giá trị mới vào `PaymentMethod` mà quên cài đặt, đều làm ứng dụng không khởi động được thay vì lỗi 500 trên production. Thêm một test khởi động context (hoặc một unit test truyền đủ các gateway) để lỗi lộ ra ở CI."
+  }
+}

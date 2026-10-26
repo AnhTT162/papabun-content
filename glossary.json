@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns"]
     },
     {
       "id": "race-condition",
@@ -613,7 +613,7 @@
       "meaning": "Lớp bọc chặn mọi thao tác sửa nhưng vẫn đọc trực tiếp collection gốc; collection gốc đổi thì view đổi theo.",
       "example": "`Collections.unmodifiableList(list)` thấy ngay phần tử mới được thêm vào `list`.",
       "related": ["immutable"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "structural-patterns"]
     },
     {
       "id": "copy-on-write",
@@ -621,7 +621,7 @@
       "meaning": "Kỹ thuật cho hai bên dùng chung dữ liệu tới khi một bên ghi, lúc đó mới sao chép phần bị ghi. Áp dụng cho collection trong Java, và cho bộ nhớ của process sau `fork`, như khi Redis tạo snapshot.",
       "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn. Với Redis: snapshot trong lúc ghi nhiều làm các page bị ghi được sao chép, RAM có thể tăng gần gấp đôi.",
       "related": ["immutable", "fail-fast"],
-      "topics": ["collections-overview", "redis-internals"]
+      "topics": ["collections-overview", "redis-internals", "structural-patterns"]
     },
     {
       "id": "sequenced-collection",
@@ -917,7 +917,7 @@
       "meaning": "Không khoá khi đọc; khi ghi thì kiểm tra dữ liệu chưa bị ai sửa (thường bằng cột `version`), nếu đã bị sửa thì báo lỗi để retry.",
       "example": "JPA `@Version`: `UPDATE ... WHERE id = 1 AND version = 5` sửa 0 dòng thì JPA ném `OptimisticLockException`, qua Spring thành `ObjectOptimisticLockingFailureException`.",
       "related": ["pessimistic-locking", "lost-update"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "behavioral-patterns"]
     },
     {
       "id": "serialization-failure",
@@ -989,7 +989,7 @@
       "meaning": "Dữ liệu liên quan chỉ được tải khi code truy cập lần đầu; trước đó ORM giữ một proxy thay thế.",
       "example": "`order.getItems()` trả proxy; gọi `.size()` mới chạy `SELECT ... FROM order_item WHERE order_id = ?`.",
       "related": ["eager-loading", "n-plus-one"],
-      "topics": ["n-plus-one", "layered-architecture"]
+      "topics": ["n-plus-one", "layered-architecture", "structural-patterns"]
     },
     {
       "id": "eager-loading",
@@ -1349,7 +1349,7 @@
       "meaning": "Một method gọi method khác trong cùng class bằng `this`, nên không đi qua proxy của Spring; các annotation như `@Transactional`, `@Async`, `@Cacheable` trên method được gọi không có tác dụng.",
       "example": "`this.transferInTx()` trong cùng bean: `@Transactional` của `transferInTx` bị bỏ qua.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "caching-basics", "cache-patterns"]
+      "topics": ["acid-transactions-basics", "caching-basics", "cache-patterns", "structural-patterns"]
     },
     {
       "id": "dirty-checking",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns"]
     },
     {
       "id": "replication-slot",
@@ -3221,7 +3221,7 @@
       "meaning": "Thành phần của Servlet API chạy quanh mọi request trước khi tới servlet; có thể sửa, bọc request/response hoặc trả response luôn. Spring Security là một chuỗi filter.",
       "example": "Filter đặt `X-Correlation-Id` vào MDC rồi gọi `chain.doFilter`, xoá MDC trong `finally`.",
       "related": ["dispatcher-servlet", "handler-interceptor"],
-      "topics": ["spring-mvc-flow"]
+      "topics": ["spring-mvc-flow", "behavioral-patterns"]
     },
     {
       "id": "dispatcher-servlet",
@@ -3237,7 +3237,7 @@
       "meaning": "Móc của Spring MVC chạy quanh method controller (`preHandle`, `postHandle`, `afterCompletion`); biết handler sắp chạy nên đọc được annotation của method.",
       "example": "Interceptor đọc `@RateLimited` trên method và trả 429 trong `preHandle`.",
       "related": ["servlet-filter", "dispatcher-servlet"],
-      "topics": ["spring-mvc-flow"]
+      "topics": ["spring-mvc-flow", "behavioral-patterns"]
     },
     {
       "id": "problem-detail",
@@ -3293,7 +3293,7 @@
       "meaning": "Object Spring đặt vào chỗ bean thật, chặn lời gọi method để chạy advice (transaction, cache, bảo mật) rồi chuyển tiếp sang object gốc.",
       "example": "Bean có `@Transactional` được inject dưới dạng `OrderService$$SpringCGLIB$$0`.",
       "related": ["jdk-dynamic-proxy", "self-invocation", "bean-post-processor"],
-      "topics": ["spring-aop-proxy"]
+      "topics": ["spring-aop-proxy", "structural-patterns"]
     },
     {
       "id": "jdk-dynamic-proxy",
@@ -3301,7 +3301,7 @@
       "meaning": "Proxy do `java.lang.reflect.Proxy` tạo lúc chạy, chỉ implement các interface; khác CGLIB tạo lớp con của class.",
       "example": "Bean JDK proxy của `PaymentService` không inject được vào field kiểu `PaymentServiceImpl`.",
       "related": ["aop-proxy"],
-      "topics": ["spring-aop-proxy"]
+      "topics": ["spring-aop-proxy", "structural-patterns"]
     },
     {
       "id": "transactional-event-listener",
@@ -3309,7 +3309,7 @@
       "meaning": "Listener event của Spring gắn với một phase của transaction đang chạy, mặc định `AFTER_COMMIT`; không có transaction thì không chạy, trừ khi `fallbackExecution = true`.",
       "example": "Gửi email xác nhận trong listener `AFTER_COMMIT` để đơn bị rollback thì không có email.",
       "related": ["transaction", "outbox"],
-      "topics": ["spring-async-events"]
+      "topics": ["spring-async-events", "behavioral-patterns"]
     },
     {
       "id": "cglib",
@@ -3317,7 +3317,7 @@
       "meaning": "Thư viện sinh bytecode tạo lớp con của một class lúc chạy; Spring dùng nó để proxy bean theo class. Không override được class hay method `final`.",
       "example": "Bean `OrderService` có `@Transactional` thành `OrderService$$SpringCGLIB$$0`.",
       "related": ["aop-proxy", "jdk-dynamic-proxy"],
-      "topics": ["spring-aop-proxy"]
+      "topics": ["spring-aop-proxy", "structural-patterns"]
     },
     {
       "id": "micrometer",
@@ -4021,7 +4021,7 @@
       "meaning": "Nguyên tắc D của SOLID: module nghiệp vụ không phụ thuộc module hạ tầng; cả hai phụ thuộc abstraction do phía nghiệp vụ sở hữu.",
       "example": "Interface `OrderNotifier` nằm trong module `order`; `KafkaOrderNotifier` ở module hạ tầng cài đặt nó.",
       "related": ["solid", "dependency-injection", "ioc"],
-      "topics": ["solid"]
+      "topics": ["solid", "structural-patterns"]
     },
     {
       "id": "contract-test",
@@ -4061,7 +4061,7 @@
       "meaning": "Pattern trong đó lớp cha abstract định nghĩa khung của thuật toán, còn lớp con cài đặt một vài bước được chỉ định sẵn.",
       "example": "`AbstractReportExporter.export()` gọi `header()`, `rows()`, `footer()`; lớp con chỉ cài `rows()`.",
       "related": ["composition-over-inheritance"],
-      "topics": ["design-principles"]
+      "topics": ["design-principles", "behavioral-patterns"]
     },
     {
       "id": "polymorphism",
@@ -4246,6 +4246,118 @@
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
       "topics": ["layered-architecture"]
+    },
+    {
+      "id": "adapter-pattern",
+      "term": "Adapter",
+      "meaning": "Pattern bọc một class có sẵn để nó khớp với interface mà code của bạn cần.",
+      "example": "`MomoPaymentGateway implements PaymentGateway` gọi `MomoClient` của SDK và dịch mã lỗi sang exception của hệ thống.",
+      "related": ["decorator-pattern", "anti-corruption-layer"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "decorator-pattern",
+      "term": "Decorator",
+      "meaning": "Pattern bọc một object bằng object khác cùng interface để thêm hành vi rồi chuyển tiếp lời gọi; xếp chồng được nhiều lớp.",
+      "example": "`new BufferedReader(new InputStreamReader(stream))`; `Collections.unmodifiableList(list)`.",
+      "related": ["proxy-pattern", "adapter-pattern"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "proxy-pattern",
+      "term": "Proxy",
+      "meaning": "Pattern đặt một object cùng interface đứng thay object thật để kiểm soát việc truy cập: tạo lười, kiểm tra quyền, gọi từ xa, mở transaction.",
+      "example": "Spring thay bean có `@Transactional` bằng proxy mở và commit transaction quanh mỗi lời gọi.",
+      "related": ["decorator-pattern", "aop-proxy"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "facade-pattern",
+      "term": "Facade",
+      "meaning": "Pattern đưa ra một interface đơn giản cho cả một hệ con nhiều class phức tạp.",
+      "example": "`JdbcTemplate` che `Connection`, `PreparedStatement`, `ResultSet` và việc đóng resource.",
+      "related": ["adapter-pattern"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "composite-pattern",
+      "term": "Composite",
+      "meaning": "Pattern tổ chức object thành cây, trong đó nút lá và nút nhánh có cùng interface nên bên gọi xử lý như nhau.",
+      "example": "`CompositeMeterRegistry` của Micrometer nhận metric rồi gửi tới mọi registry con.",
+      "related": ["decorator-pattern"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "anti-corruption-layer",
+      "term": "Anti-corruption layer",
+      "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
+      "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
+      "related": ["adapter-pattern"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "strategy-pattern",
+      "term": "Strategy",
+      "meaning": "Pattern định nghĩa một họ thuật toán cùng interface để chọn và thay lúc chạy mà không sửa bên dùng.",
+      "example": "`EnumMap<PaymentMethod, PaymentGateway>` chọn cổng thanh toán theo phương thức khách chọn.",
+      "related": ["state-pattern", "open-closed"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "observer-pattern",
+      "term": "Observer",
+      "meaning": "Pattern cho phép nhiều bên đăng ký nhận thông báo khi một object có sự kiện, mà bên phát không biết ai đang nghe.",
+      "example": "`publishEvent(new OrderPlaced(id))` và các `@EventListener` gửi mail, cộng điểm thưởng.",
+      "related": ["transactional-event-listener"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "chain-of-responsibility",
+      "term": "Chain of Responsibility",
+      "meaning": "Pattern cho request đi qua một chuỗi bộ xử lý; mỗi mắt xích xử lý rồi tự quyết định có chuyển tiếp hay không.",
+      "example": "Servlet filter chain: mỗi filter gọi `chain.doFilter(request, response)` để chuyển tiếp.",
+      "related": ["servlet-filter", "handler-interceptor"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "state-pattern",
+      "term": "State",
+      "meaning": "Pattern để hành vi của object đổi theo trạng thái bên trong, thường bằng một class cho mỗi trạng thái, kèm quy tắc trạng thái kế tiếp hợp lệ.",
+      "example": "`order.cancel()` hoàn tiền khi `PAID`, bị từ chối khi `SHIPPED`.",
+      "related": ["strategy-pattern"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "command-pattern",
+      "term": "Command",
+      "meaning": "Pattern đóng gói một yêu cầu thành object để xếp hàng, ghi log, thử lại hay huỷ.",
+      "example": "Gửi `Runnable` vào `ExecutorService`; lưu job `SendInvoice(orderId)` vào hàng đợi.",
+      "related": ["strategy-pattern"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "visitor-pattern",
+      "term": "Visitor",
+      "meaning": "Pattern thêm thao tác mới cho một cấu trúc gồm các kiểu cố định mà không sửa các class đó; mỗi kiểu gọi method tương ứng của visitor.",
+      "example": "`Files.walkFileTree(path, fileVisitor)` gọi `visitFile` cho từng file.",
+      "related": ["expression-problem"],
+      "topics": ["behavioral-patterns"]
+    },
+    {
+      "id": "bridge-pattern",
+      "term": "Bridge",
+      "meaning": "Pattern tách abstraction khỏi phần cài đặt để hai bên thay đổi độc lập, nối với nhau qua một interface.",
+      "example": "Code dùng `java.sql.Connection`; driver PostgreSQL hay MySQL cung cấp cài đặt.",
+      "related": ["adapter-pattern"],
+      "topics": ["structural-patterns"]
+    },
+    {
+      "id": "flyweight-pattern",
+      "term": "Flyweight",
+      "meaning": "Pattern dùng chung các object bất biến thay vì tạo object mới cho mỗi lần dùng, để tiết kiệm bộ nhớ.",
+      "example": "`Integer.valueOf(100)` trả cùng một object từ cache -128..127.",
+      "related": ["static-factory-method"],
+      "topics": ["structural-patterns"]
     }
   ]
 }

@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lời gọi thanh toán đi qua các lớp bọc",
+  "nodes": [
+    {"id": "checkout", "label": "Checkout Service", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "metrics", "label": "Metrics decorator", "kind": "generic", "x": 0.85, "y": 0.05},
+    {"id": "retry", "label": "Retry decorator", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "adapter", "label": "Momo adapter", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "sdk", "label": "SDK đối tác", "kind": "external", "x": 0.1, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "checkout-metrics", "from": "checkout", "to": "metrics", "label": "pay(order)"},
+    {"id": "metrics-retry", "from": "metrics", "to": "retry", "label": "pay(order)"},
+    {"id": "retry-adapter", "from": "retry", "to": "adapter", "label": "pay(order), tối đa 3"},
+    {"id": "adapter-sdk", "from": "adapter", "to": "sdk", "label": "createPayment(req)"}
+  ],
+  "steps": [
+    {"caption": "`CheckoutService` chỉ biết interface `PaymentGateway` và gọi `pay(order)`. Nó không biết phía sau có bao nhiêu lớp bọc.", "show": ["checkout"]},
+    {"caption": "Lớp ngoài cùng là Decorator đo thời gian và đếm lời gọi. Nó cùng interface `PaymentGateway`, đo xong thì chuyển tiếp lời gọi.", "show": ["metrics", "checkout-metrics"], "highlight": ["checkout-metrics"]},
+    {"caption": "Lớp kế tiếp là Decorator retry: thử lại tối đa 3 lần khi gặp lỗi tạm thời. Metrics nằm ngoài retry nên đếm một lời gọi cho cả 3 lần thử; đổi thứ tự thì mỗi lần thử được đếm riêng.", "show": ["retry", "metrics-retry"], "highlight": ["metrics-retry"]},
+    {"caption": "Trong cùng là Adapter: cài đặt `PaymentGateway` bằng cách dịch `Order` thành request của SDK, và dịch mã lỗi của đối tác thành exception của bạn.", "show": ["adapter", "retry-adapter"], "highlight": ["retry-adapter"]},
+    {"caption": "Chỉ Adapter biết SDK tồn tại. Đổi nhà cung cấp là viết một adapter mới; hai decorator và `CheckoutService` giữ nguyên.", "show": ["sdk", "adapter-sdk"], "highlight": ["adapter-sdk"]}
+  ]
+}

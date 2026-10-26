@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "behavioral-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Behavioral patterns",
+  "summary": "Strategy bằng `EnumMap` và lambda, vì sao key theo tên bean mong manh; Template Method và biến thể callback của `JdbcTemplate`; Observer với event của Spring: đồng bộ, cùng transaction, `@TransactionalEventListener`; Chain of Responsibility qua filter và interceptor; State và việc chốt chuyển trạng thái ở database; Command, Visitor và `sealed` + `switch`.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 16,
+  "prerequisites": ["structural-patterns", "spring-async-events"],
+  "terms": ["strategy-pattern", "template-method", "observer-pattern", "chain-of-responsibility", "state-pattern", "command-pattern", "visitor-pattern", "transactional-event-listener", "servlet-filter", "handler-interceptor", "outbox", "optimistic-locking", "lost-update"],
+  "references": [
+    { "title": "Spring Framework Reference: Standard and Custom Events", "url": "https://docs.spring.io/spring-framework/reference/core/beans/context-introduction.html#context-functionality-events" },
+    { "title": "Spring Framework Reference: Transaction-bound Events", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" },
+    { "title": "Spring Framework Reference: Naming Beans", "url": "https://docs.spring.io/spring-framework/reference/core/beans/definition.html#beans-beanname" },
+    { "title": "Jakarta Servlet 6.0 Specification: Filtering", "url": "https://jakarta.ee/specifications/servlet/6.0/jakarta-servlet-spec-6.0#filtering" },
+    { "title": "Spring Framework API: @TransactionalEventListener", "url": "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/event/TransactionalEventListener.html" },
+    { "title": "Spring Framework API: ContentCachingRequestWrapper", "url": "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/util/ContentCachingRequestWrapper.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Strategy khác State thế nào, cấu trúc giống hệt nhau mà?\" Trả lời: Strategy do bên ngoài chọn (người dùng chọn cổng thanh toán) và các strategy không biết nhau; State do chính object chuyển, và mỗi trạng thái biết trạng thái kế tiếp hợp lệ. Hỏi tiếp \"event trong Spring có đảm bảo được giao không\": không; event trong bộ nhớ mất khi pod chết sau commit. Cần đảm bảo thì ghi vào bảng outbox trong cùng transaction rồi gửi đi sau." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng ghép key tra strategy từ tên class hay tên bean (`method.toLowerCase() + \"Gateway\"`). Đổi tên class khi refactor là hỏng mà compiler không báo. Để mỗi cài đặt tự khai báo key của nó, và kiểm tra đủ và không trùng lúc khởi động." }
+  ]
+}
