@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "troubleshooting-mindset",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Quy trình điều tra sự cố",
+  "summary": "Cầm máu trước, tìm nguyên nhân sau; giữ hiện trường trước khi restart; khoanh phạm vi theo endpoint, pod, phiên bản; hỏi \"gần đây đổi gì\"; giả thuyết phải đi kèm bằng chứng; lỗi ở người gọi hay người bị gọi; dòng thời gian, runbook và postmortem.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["perf-methodology"],
+  "terms": ["mitigation", "blast-radius", "feature-flag", "thread-dump", "heap-dump", "runbook", "postmortem", "red-method", "circuit-breaker", "bulkhead"],
+  "references": [
+    { "title": "Google SRE Book: Effective Troubleshooting", "url": "https://sre.google/sre-book/effective-troubleshooting/" },
+    { "title": "Google SRE Book: Managing Incidents", "url": "https://sre.google/sre-book/managing-incidents/" },
+    { "title": "JDK 21 Tools: jcmd", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jcmd.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi hay gặp: \"Kể một sự cố production bạn từng xử lý.\" Kể theo khung: triệu chứng và ảnh hưởng (bao nhiêu người dùng, bao lâu) → bạn cầm máu thế nào → bằng chứng nào dẫn tới nguyên nhân, giả thuyết nào bị loại → nguyên nhân gốc → hành động để không lặp lại. Người phỏng vấn chấm cách bạn suy luận và ưu tiên, không chấm việc bạn đoán trúng ngay." },
+    { "type": "callout", "style": "warning", "markdown": "Heap dump dừng ứng dụng trong lúc ghi (vài giây tới vài chục giây với heap lớn) và chứa mọi dữ liệu trong bộ nhớ, kể cả token, mật khẩu và dữ liệu cá nhân. Rút pod khỏi load balancer trước khi dump, lưu file ở nơi có kiểm soát truy cập và xoá khi điều tra xong." }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "perf-methodology",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Phương pháp phân tích hiệu năng",
+  "summary": "Latency và throughput, đọc latency bằng percentile thay vì trung bình, tail latency khi fan-out; RED cho service, USE cho tài nguyên; Little's law, Amdahl's law và vì sao latency vọt lên khi utilization gần 100%.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": ["http-request-lifecycle"],
+  "terms": ["latency", "throughput", "percentile", "tail-latency", "bottleneck", "red-method", "use-method", "saturation", "littles-law", "amdahls-law", "coordinated-omission", "cpu-throttling"],
+  "references": [
+    { "title": "Brendan Gregg: The USE Method", "url": "https://www.brendangregg.com/usemethod.html" },
+    { "title": "Google SRE Book: Monitoring Distributed Systems (four golden signals)", "url": "https://sre.google/sre-book/monitoring-distributed-systems/" },
+    { "title": "Grafana Labs: The RED Method, How to Instrument Your Services", "url": "https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/" },
+    { "title": "Dean & Barroso: The Tail at Scale (CACM 2013)", "url": "https://research.google/pubs/the-tail-at-scale/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Mỗi pod báo p99 là 200ms. p99 của cả dịch vụ là bao nhiêu?\" Không suy ra được: percentile không lấy trung bình hay cộng gộp được, và một pod chậm có thể kéo p99 chung lên rất cao. Cần xuất histogram từ mọi pod (Spring Boot: `management.metrics.distribution.percentiles-histogram.http.server.requests=true`) rồi tính percentile trên histogram đã gộp bằng Prometheus `histogram_quantile`. Kết quả là xấp xỉ theo ranh giới bucket, không phải giá trị chính xác." },
+    { "type": "callout", "style": "warning", "markdown": "Metric latency phía server (`http.server.requests` của Spring Boot 3.x) chỉ bắt đầu đo khi request đã có thread xử lý. Nó không thấy thời gian chờ trước đó: hàng đợi chờ thread của Tomcat (và backlog TCP khi vượt `maxConnections`), hàng đợi ở load balancer, connection pool của client. Khi server báo p99 vẫn đẹp mà người dùng kêu chậm, hãy so với latency đo ở LB hoặc phía client." }
+  ]
+}

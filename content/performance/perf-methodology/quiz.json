@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "mean-vs-p99",
+      "kind": "output",
+      "prompt": "Đoạn code tính latency trung bình và p99 (theo nearest-rank) của 100 request. Kết quả in ra là gì?",
+      "code": "List<Long> ms = new ArrayList<>();\nms.addAll(Collections.nCopies(95, 20L));\nms.addAll(Collections.nCopies(4, 300L));\nms.add(3000L);\n\nlong[] s = ms.stream().mapToLong(Long::longValue).sorted().toArray();\ndouble mean = LongStream.of(s).average().orElse(0);\nlong p99 = s[(int) Math.ceil(0.99 * s.length) - 1];\nSystem.out.printf(\"mean=%.0f p99=%d%n\", mean, p99);",
+      "options": [
+        "mean=61 p99=300",
+        "mean=20 p99=3000",
+        "mean=61 p99=3000",
+        "mean=20 p99=300"
+      ],
+      "answer": 0,
+      "explanation": "Trung bình = (95 × 20 + 4 × 300 + 3000) / 100 = 61ms, một con số không request nào thực sự có. p99 theo nearest-rank là phần tử thứ ceil(0,99 × 100) = 99 trong mảng đã sắp xếp, tức 300ms; 3000ms là max (p100). Trung bình 61ms trông ổn trong khi 5% request chậm hơn ít nhất 15 lần."
+    },
+    {
+      "id": "littles-law-threads",
+      "kind": "single",
+      "prompt": "order-api nhận đều 200 request/giây, latency trung bình 250ms, Tomcat tối đa 200 thread. Payment-api phía sau chậm lại khiến latency trung bình lên 2 giây, lượng request không đổi. Điều gì xảy ra?",
+      "options": [
+        "Cần khoảng 400 thread cùng lúc, vượt 200 nên request bắt đầu xếp hàng",
+        "Không sao, vì 200 thread vẫn đủ cho 200 request mỗi giây",
+        "Throughput tự giảm về 100 request/giây nên vẫn chỉ cần 50 thread",
+        "Chỉ CPU tăng gấp 8 lần, còn số thread đang dùng không thay đổi"
+      ],
+      "answer": 0,
+      "explanation": "Little's law: số request đồng thời = 200 × 2 = 400. Tomcat chỉ có 200 thread, nên khả năng xử lý chỉ còn 200 / 2 = 100 request/giây trong khi tải tới vẫn là 200 request/giây: hàng đợi tăng không giới hạn cho tới khi client timeout, và latency người dùng thấy còn lớn hơn 2 giây nhiều. Throughput phục vụ được đúng là giảm về 100, nhưng request tới không giảm theo. So sánh thread với request/giây là so hai đơn vị khác nhau. Thread đang chờ I/O không tốn CPU. Cách xử lý: timeout ngắn cho lời gọi payment-api, bulkhead, circuit breaker (bài Resilience patterns)."
+    },
+    {
+      "id": "use-bottleneck",
+      "kind": "single",
+      "prompt": "API chậm. Số liệu: Tomcat 60/200 thread bận; Hikari 10/10 connection đang dùng, 40 thread đang chờ connection; CPU database 30%, không có lock wait. Kết luận hợp lý nhất?",
+      "options": [
+        "Connection pool bão hoà; tìm vì sao connection bị giữ lâu",
+        "Database quá tải, cần nâng cấp máy database lên",
+        "Thread pool Tomcat quá nhỏ, cần tăng lên 400 thread",
+        "Ứng dụng thiếu CPU, cần thêm pod để chia bớt tải"
+      ],
+      "answer": 0,
+      "explanation": "Saturation nằm ở connection pool: 40 thread chờ trong khi database còn rảnh (30% CPU, không lock). Database không phải nút cổ chai, và thêm thread Tomcat chỉ thêm người xếp hàng chờ connection. Thêm pod thì mỗi pod thêm 10 connection, có thể đỡ tạm nhưng không chữa gốc. Thường gặp: gọi HTTP hoặc làm việc chậm trong lúc giữ transaction. Giảm thời gian giữ connection trước, rồi mới tính lại kích thước pool."
+    },
+    {
+      "id": "amdahl-cores",
+      "kind": "single",
+      "prompt": "Job xử lý dữ liệu có 10% thời gian là bước tuần tự (đọc file và ghi kết quả cuối), 90% song song hoá được. Chạy trên 8 core nhanh hơn 1 core khoảng 4,7 lần. Chuyển lên 64 core thì sao?",
+      "options": [
+        "Chỉ nhanh hơn 1 core khoảng 8,8 lần, và không bao giờ vượt 10 lần",
+        "Nhanh hơn 1 core khoảng 37 lần, tỉ lệ thuận theo số core thêm vào",
+        "Nhanh hơn 1 core đúng 64 lần nếu chia đều việc cho mọi thread",
+        "Chậm hơn chạy 8 core vì JVM không dùng được quá 8 core"
+      ],
+      "answer": 0,
+      "explanation": "Amdahl: tăng tốc = 1 / (0,1 + 0,9 / n). n = 8 cho 4,71; n = 64 cho 8,77; n tiến tới vô hạn cho 10. Gấp 8 lần số core chỉ nhanh thêm khoảng 1,9 lần. Muốn nhanh hơn nữa phải giảm phần tuần tự (ví dụ ghi kết quả song song), không phải thêm core. Tranh chấp lock thực tế còn có thể làm thêm core thành chậm hơn, nhưng đó không phải giới hạn của JVM."
+    },
+    {
+      "id": "utilization-latency",
+      "kind": "single",
+      "prompt": "CPU trung bình của service tăng từ 80% lên 90% sau một đợt khuyến mãi. Thời gian xử lý mỗi request không đổi, nhưng p99 tăng gấp đôi. Giải thích đúng nhất?",
+      "options": [
+        "Thời gian chờ trong hàng đợi tăng phi tuyến khi utilization tiến gần 100%",
+        "Tải chỉ tăng khoảng 12% nên p99 tăng gấp đôi chứng tỏ có memory leak",
+        "CPU trên 85% thì JVM tự giảm tần số JIT nên code chạy chậm hơn",
+        "p99 luôn tăng tỉ lệ thuận với CPU, nên đây là mức tăng bình thường"
+      ],
+      "answer": 0,
+      "explanation": "Theo mô hình hàng đợi đơn giản, thời gian phản hồi ≈ S / (1 − U). Từ U = 0,8 lên 0,9 thì mẫu số giảm từ 0,2 xuống 0,1, thời gian phản hồi gấp đôi dù S không đổi. Quan hệ không tuyến tính: càng gần 100% càng tăng nhanh. Vì vậy giữ utilization mục tiêu có headroom (ví dụ 60–70% CPU) và autoscale trước khi chạm vùng gãy."
+    }
+  ]
+}

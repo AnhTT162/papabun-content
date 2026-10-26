@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đi tìm nút cổ chai bằng RED rồi USE",
+  "nodes": [
+    {"id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "api", "label": "order-api", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "threads", "label": "Tomcat 200 thread", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "pool", "label": "Hikari 10 conn", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "payment", "label": "payment-api", "kind": "external", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "client-api", "from": "client", "to": "api", "label": "200 req/s"},
+    {"id": "api-threads", "from": "api", "to": "threads", "label": "60/200 thread bận"},
+    {"id": "threads-pool", "from": "threads", "to": "pool", "label": "40 thread chờ"},
+    {"id": "pool-db", "from": "pool", "to": "db", "label": "CPU DB 30%"},
+    {"id": "threads-payment", "from": "threads", "to": "payment", "label": "p99 80ms"}
+  ],
+  "steps": [
+    {"caption": "RED của order-api: 200 request/giây, lỗi 0,2%, nhưng p99 tăng từ 250ms lên 1,8 giây. Biết là chậm, chưa biết chậm ở đâu.", "show": ["client", "api", "client-api"], "highlight": ["client-api"]},
+    {"caption": "USE của thread pool Tomcat: 60/200 thread bận, không có request xếp hàng. Utilization vừa phải, không bão hoà: chưa phải nút cổ chai.", "show": ["threads", "api-threads"], "highlight": ["api-threads"]},
+    {"caption": "USE của connection pool: 10/10 connection đang dùng, 40 thread đang chờ lấy connection. Bão hoà rõ ràng: đây là nơi request mất thời gian.", "show": ["pool", "threads-pool"], "highlight": ["threads-pool"]},
+    {"caption": "Database chỉ bận 30% CPU, không có lock wait. Vậy vấn đề là connection bị giữ quá lâu so với số lượng, không phải database yếu.", "show": ["db", "pool-db"], "highlight": ["pool-db"]},
+    {"caption": "Lý do: bản deploy mới gọi payment-api bên trong `@Transactional`, nên mỗi request giữ connection khoảng 45ms thay vì 15ms. Little's law: 200 req/s × 45ms = 9 connection trung bình, tức pool 10 connection bận 90%, vùng hàng đợi dài vọt lên. Đưa lời gọi ra ngoài transaction để giảm thời gian giữ.", "show": ["payment", "threads-payment"], "highlight": ["threads-payment"]}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "mitigate-first", "front": "Khi sự cố đang diễn ra, ưu tiên số một là gì?", "back": "Khôi phục dịch vụ (cầm máu): rollback, tắt feature flag, chuyển hệ dự phòng. Tìm nguyên nhân gốc sau." },
+    { "id": "preserve-evidence", "front": "Trước khi restart service Java đang lỗi, nên làm gì?", "back": "Chụp vài thread dump, heap dump nếu nghi bộ nhớ, ghi lại metric và thời điểm; hoặc giữ một pod lỗi ngoài load balancer để điều tra." },
+    { "id": "what-changed", "front": "Câu hỏi đầu tiên khi khoanh vùng sự cố?", "back": "Gần đây đổi gì: deploy, cấu hình, flag, hạ tầng, dữ liệu, lưu lượng, dependency. Phần lớn sự cố đến từ thay đổi." },
+    { "id": "scope-dimensions", "front": "Khoanh phạm vi sự cố theo những chiều nào?", "back": "Endpoint, pod, node, zone, phiên bản, nhóm người dùng, thời điểm bắt đầu. So sánh phần hỏng với phần còn chạy." },
+    { "id": "hypothesis-evidence", "front": "Một giả thuyết tốt khi điều tra cần gì?", "back": "Chỉ ra được số liệu cụ thể sẽ xác nhận hoặc bác bỏ nó. Thời điểm trùng nhau chỉ là manh mối, chưa phải bằng chứng." },
+    { "id": "caller-or-callee", "front": "A báo timeout khi gọi B. Làm sao biết lỗi ở A hay B?", "back": "So latency phía B: B cũng thấy chậm thì lỗi ở B hoặc sau B; B thấy nhanh thì thời gian mất ở giữa (mạng, LB, pool hoặc GC của A)." },
+    { "id": "rollback-when", "front": "Khi nào nên rollback ngay dù chưa chắc deploy là thủ phạm?", "back": "Khi thời điểm khớp và rollback rẻ, an toàn. Không áp dụng khi deploy có migration không đảo ngược được." },
+    { "id": "runbook", "front": "Runbook dùng để làm gì?", "back": "Ghi sẵn cách nhận biết và cầm máu một loại sự cố quen thuộc, kèm lệnh cần chạy, để người on-call không phải nghĩ từ đầu lúc khẩn cấp." }
+  ]
+}

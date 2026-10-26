@@ -7,7 +7,7 @@
   "title": "Ứng dụng Java CPU 100%",
   "summary": "Quy trình tìm ra thread đang đốt CPU bằng top -H, thread dump, GC log và profiler, kèm một ca điều tra regex backtracking thực tế.",
   "level": "senior",
-  "order": 1,
+  "order": 7,
   "minutes": 15,
   "prerequisites": [],
   "terms": ["thread-dump", "native-thread-id", "cpu-throttling", "full-gc", "stop-the-world", "sampling-profiler", "flame-graph", "jfr", "catastrophic-backtracking", "busy-spin"],

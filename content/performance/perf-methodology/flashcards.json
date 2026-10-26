@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "latency-vs-throughput", "front": "Latency khác throughput thế nào?", "back": "Latency là thời gian một request; throughput là số request xử lý được mỗi giây. Tăng throughput có thể làm latency tăng nếu request phải xếp hàng." },
+    { "id": "why-percentile", "front": "Vì sao đọc latency bằng percentile thay vì trung bình?", "back": "Trung bình bị phần đông request nhanh kéo xuống và che mất phần đuôi chậm mà một số người dùng thật sự gặp." },
+    { "id": "fan-out-tail", "front": "Một trang gọi 10 backend, mỗi backend có 1% request chậm hơn p99. Bao nhiêu lượt tải trang bị chậm?", "back": "Khoảng 1 − 0,99^10 ≈ 9,6%. Fan-out khuếch đại phần đuôi." },
+    { "id": "red", "front": "RED method đo gì, cho đối tượng nào?", "back": "Rate, Errors, Duration cho mỗi service, nhìn từ phía người gọi." },
+    { "id": "use", "front": "USE method đo gì, cho đối tượng nào?", "back": "Utilization, Saturation, Errors cho mỗi tài nguyên: CPU, bộ nhớ, đĩa, mạng, thread pool, connection pool, lock." },
+    { "id": "saturation-signal", "front": "Trong USE, chỉ số nào chỉ ra nút cổ chai rõ nhất?", "back": "Saturation: lượng việc đang phải chờ tài nguyên đó, như thread chờ connection hay run queue của CPU." },
+    { "id": "littles-law", "front": "300 request/giây, mỗi request 200ms. Trung bình bao nhiêu request chạy cùng lúc?", "back": "Little's law: 300 × 0,2 = 60 request." },
+    { "id": "amdahl", "front": "90% công việc song song hoá được. Tăng tốc tối đa là bao nhiêu?", "back": "Không quá 10 lần dù có bao nhiêu core, vì 10% tuần tự vẫn phải chạy một mình (Amdahl's law)." },
+    { "id": "utilization-knee", "front": "Vì sao CPU từ 80% lên 90% mà latency tăng gấp đôi?", "back": "Thời gian chờ trong hàng đợi tăng phi tuyến theo utilization, xấp xỉ S / (1 − U): 50ms ở 80% thành 100ms ở 90% với S = 10ms." }
+  ]
+}

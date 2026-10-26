@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "restart-first",
+      "kind": "single",
+      "prompt": "Một pod của order-api treo, mọi request vào pod đó đều timeout; 5 pod còn lại khoẻ. Cách xử lý tốt nhất?",
+      "options": [
+        "Rút pod khỏi load balancer, chụp thread dump rồi mới xoá pod",
+        "Restart ngay pod đó vì người dùng đang bị ảnh hưởng mỗi giây",
+        "Restart cả 6 pod để chắc chắn không pod nào còn lỗi tương tự",
+        "Để nguyên pod nhận traffic để quan sát lỗi diễn biến thế nào"
+      ],
+      "answer": 0,
+      "explanation": "Rút pod khỏi load balancer là cầm máu ngay, vì 5 pod còn lại gánh được tải; pod lỗi vẫn giữ nguyên trạng thái để chụp thread dump. Restart ngay cũng cầm máu nhưng mất bằng chứng, và lỗi sẽ quay lại. Restart cả 6 pod gây thêm rủi ro không cần thiết. Để pod tiếp tục nhận traffic là để người dùng chịu lỗi."
+    },
+    {
+      "id": "correlation-not-cause",
+      "kind": "single",
+      "prompt": "Lỗi tăng lúc 10:07. Lúc 10:00 có deploy service X. Rollback X xong lúc 10:20 nhưng lỗi không giảm. Kết luận đúng nhất?",
+      "options": [
+        "Deploy X gần như chắc không phải nguyên nhân, khoanh vùng tiếp",
+        "Rollback chưa đủ, cần rollback thêm các service deploy trong ngày",
+        "Deploy X vẫn là nguyên nhân, chỉ là lỗi cần vài giờ mới hết",
+        "Rollback đã làm lỗi tệ hơn nên phải deploy lại X ngay"
+      ],
+      "answer": 0,
+      "explanation": "Thời điểm trùng nhau là manh mối, rollback không đổi gì là bằng chứng bác bỏ (trừ khi deploy để lại trạng thái lâu dài như migration hay dữ liệu đã ghi). Ghi vào dòng thời gian để không ai đề xuất lại. Rollback mù hàng loạt hay deploy lại đều là thay đổi không có căn cứ."
+    },
+    {
+      "id": "debug-log-prod",
+      "kind": "single",
+      "prompt": "Service đang quá tải và lỗi 5xx. Một đồng nghiệp đề xuất bật log mức DEBUG cho toàn bộ service để có thêm thông tin. Vấn đề chính của đề xuất này?",
+      "options": [
+        "Log DEBUG thêm CPU và I/O đúng lúc service đang quá tải",
+        "Spring Boot không đổi được log level lúc đang chạy, phải restart",
+        "Log DEBUG chỉ ghi ra console nên không thu thập được trên production",
+        "Không có vấn đề gì, càng nhiều log thì càng dễ tìm nguyên nhân"
+      ],
+      "answer": 0,
+      "explanation": "Khi service đang quá tải, log DEBUG toàn cục thêm tải (định dạng chuỗi, I/O, đẩy log đi) và chôn tín hiệu dưới khối lượng lớn. Spring Boot đổi được log level lúc chạy qua `/actuator/loggers`; nếu cần, bật DEBUG cho đúng một logger, trong thời gian ngắn, ở một pod."
+    },
+    {
+      "id": "caller-callee",
+      "kind": "single",
+      "prompt": "order-api báo nhiều timeout khi gọi inventory-api (p99 phía order-api: 3 giây). Metric phía inventory-api cho thấy p99 chỉ 40ms và không có lỗi. Nên tìm tiếp ở đâu?",
+      "options": [
+        "Phần giữa: pool của HTTP client, GC của order-api, mạng, LB",
+        "Database của inventory-api, vì metric server bỏ sót thời gian query",
+        "Code xử lý trong controller của inventory-api, vì nó chậm ngẫu nhiên",
+        "Không cần tìm, metric phía inventory-api chứng minh order-api đo sai"
+      ],
+      "answer": 0,
+      "explanation": "inventory-api chỉ đo từ lúc thread của nó nhận request. Nếu nó thấy 40ms mà order-api thấy 3 giây, thời gian mất ở trước đó: chờ connection trong pool của HTTP client, GC pause của order-api, hàng đợi ở LB, hàng đợi chờ thread phía server inventory-api, hoặc mạng. Metric server cũng chỉ ghi request đã hoàn tất, nên bỏ sót request mà client đã bỏ cuộc vì timeout. Query database nằm trong thời gian server đã đo, nên không giải thích được khoảng chênh."
+    }
+  ]
+}

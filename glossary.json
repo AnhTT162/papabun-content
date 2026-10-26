@@ -135,7 +135,7 @@
       "meaning": "Ảnh chụp tất cả thread của JVM tại một thời điểm: tên, trạng thái, stack trace, lock đang giữ hoặc đang chờ.",
       "example": "`jcmd <pid> Thread.print > dump.txt` rồi tìm thread `RUNNABLE` có stack lặp lại qua nhiều lần chụp.",
       "related": ["native-thread-id"],
-      "topics": ["java-high-cpu", "thread-lifecycle", "deadlock"]
+      "topics": ["java-high-cpu", "thread-lifecycle", "deadlock", "troubleshooting-mindset"]
     },
     {
       "id": "native-thread-id",
@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "perf-methodology"]
     },
     {
       "id": "full-gc",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology"]
     },
     {
       "id": "virtual-thread",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset"]
     },
     {
       "id": "hash-spreading",
@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset"]
     },
     {
       "id": "chunk-processing",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset"]
     },
     {
       "id": "dora-metrics",
@@ -5574,6 +5574,126 @@
       "example": "20 cell, mỗi cell phục vụ 5% tenant; bản deploy lỗi chỉ ra cell đầu tiên rồi bị dừng.",
       "related": ["active-active", "home-region"],
       "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "latency",
+      "term": "Latency",
+      "meaning": "Thời gian từ lúc gửi request tới lúc nhận đủ response, gồm cả thời gian chờ trong hàng đợi lẫn thời gian xử lý thật.",
+      "example": "API trả về sau 120ms: latency 120ms, trong đó 80ms chờ database.",
+      "related": ["throughput", "percentile"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "throughput",
+      "term": "Throughput",
+      "meaning": "Lượng việc hệ thống xử lý xong trong một đơn vị thời gian, như request/giây hay message/giây.",
+      "example": "Service xử lý 1.500 request/giây ở p99 200ms.",
+      "related": ["latency", "littles-law"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "percentile",
+      "term": "Percentile (p50, p99)",
+      "meaning": "Giá trị mà một tỉ lệ phần trăm số mẫu nằm dưới nó. p99 latency 300ms nghĩa là 99% request nhanh hơn 300ms. Không lấy trung bình hay cộng gộp giữa các máy được.",
+      "example": "p50 20ms, p99 300ms, max 3 giây trong khi trung bình chỉ 61ms.",
+      "related": ["latency", "tail-latency"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "tail-latency",
+      "term": "Tail latency",
+      "meaning": "Latency của phần chậm nhất trong các request (p99, p99.9). Bị khuếch đại khi một request gọi tới nhiều backend, vì chỉ cần một backend chậm là cả request chậm.",
+      "example": "Gọi 100 backend, mỗi cái 1% chậm, thì khoảng 63% request tổng bị chậm.",
+      "related": ["percentile"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "bottleneck",
+      "term": "Bottleneck",
+      "meaning": "Nút cổ chai: tài nguyên giới hạn throughput của cả hệ thống. Tối ưu chỗ khác không làm hệ thống nhanh hơn.",
+      "example": "Connection pool 10 connection bị dùng hết trong khi CPU còn rảnh.",
+      "related": ["saturation", "use-method"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "red-method",
+      "term": "RED method",
+      "meaning": "Theo dõi mỗi service bằng ba chỉ số nhìn từ phía người gọi: Rate (request/giây), Errors (tỉ lệ lỗi), Duration (phân bố latency).",
+      "example": "Dashboard order-api: 200 req/s, lỗi 0,2%, p99 250ms.",
+      "related": ["use-method", "percentile"],
+      "topics": ["perf-methodology", "troubleshooting-mindset"]
+    },
+    {
+      "id": "use-method",
+      "term": "USE method",
+      "meaning": "Kiểm tra mỗi tài nguyên bằng ba câu hỏi: Utilization (bận bao nhiêu), Saturation (bao nhiêu việc đang chờ), Errors (có lỗi không). Do Brendan Gregg đề xuất.",
+      "example": "Hikari pool: 10/10 connection đang dùng, 40 thread chờ, 0 timeout.",
+      "related": ["red-method", "saturation"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "saturation",
+      "term": "Saturation",
+      "meaning": "Mức độ tài nguyên có nhiều việc hơn khả năng xử lý, đo bằng lượng việc đang phải chờ. Dấu hiệu nút cổ chai rõ hơn utilization.",
+      "example": "Run queue CPU dài, thread chờ connection, message tồn trong queue.",
+      "related": ["use-method", "bottleneck"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "amdahls-law",
+      "term": "Amdahl's law",
+      "meaning": "Tăng tốc tối đa khi song song hoá = 1 / ((1 − p) + p / n), với p là phần song song hoá được và n là số bộ xử lý. Phần tuần tự đặt trần cho mức tăng tốc.",
+      "example": "p = 0,9: 8 core nhanh 4,7 lần, vô hạn core cũng không quá 10 lần.",
+      "related": ["littles-law", "bottleneck"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "coordinated-omission",
+      "term": "Coordinated omission",
+      "meaning": "Lỗi đo của công cụ tạo tải: khi hệ thống chậm, công cụ chờ response rồi mới gửi request tiếp, nên bỏ sót thời gian chờ mà người dùng thật phải chịu và báo latency đẹp hơn thực tế.",
+      "example": "Server đứng 5 giây nhưng công cụ chỉ ghi một mẫu chậm thay vì hàng trăm.",
+      "related": ["percentile", "latency"],
+      "topics": ["perf-methodology"]
+    },
+    {
+      "id": "mitigation",
+      "term": "Mitigation",
+      "meaning": "Cầm máu: hành động khôi phục dịch vụ cho người dùng trước khi biết nguyên nhân gốc, như rollback, tắt feature flag, chuyển hệ dự phòng.",
+      "example": "Bật flag chuyển thanh toán sang provider dự phòng trong lúc provider chính chậm.",
+      "related": ["feature-flag", "runbook"],
+      "topics": ["troubleshooting-mindset"]
+    },
+    {
+      "id": "blast-radius",
+      "term": "Blast radius",
+      "meaning": "Phạm vi ảnh hưởng của một sự cố hay một thay đổi: bao nhiêu người dùng, endpoint, service, region bị ảnh hưởng.",
+      "example": "Lỗi chỉ ở thanh toán thẻ của một provider, ví vẫn chạy.",
+      "related": ["mitigation"],
+      "topics": ["troubleshooting-mindset"]
+    },
+    {
+      "id": "heap-dump",
+      "term": "Heap dump",
+      "meaning": "Ảnh chụp toàn bộ object trong heap của JVM tại một thời điểm, dùng để tìm memory leak. Ghi file làm dừng ứng dụng và file chứa dữ liệu nhạy cảm.",
+      "example": "`jcmd <pid> GC.heap_dump /tmp/heap.hprof`, mở bằng Eclipse MAT.",
+      "related": ["thread-dump"],
+      "topics": ["troubleshooting-mindset"]
+    },
+    {
+      "id": "runbook",
+      "term": "Runbook",
+      "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
+      "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
+      "related": ["mitigation", "postmortem"],
+      "topics": ["troubleshooting-mindset"]
+    },
+    {
+      "id": "postmortem",
+      "term": "Postmortem",
+      "meaning": "Bản phân tích sau sự cố: dòng thời gian, ảnh hưởng, nguyên nhân và các yếu tố góp phần, hành động phòng ngừa có người phụ trách. Viết theo tinh thần không đổ lỗi cho cá nhân.",
+      "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
+      "related": ["runbook"],
+      "topics": ["troubleshooting-mindset"]
     }
   ]
 }

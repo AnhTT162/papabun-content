@@ -1,0 +1,210 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "checkout-api lỗi 5xx giữa giờ cao điểm",
+  "symptom": "14:20 alert báo checkout-api có 12% request lỗi 5xx (bình thường 0,3%) và p99 lên 6 giây. Bạn đang on-call. Đội kinh doanh nhắn rằng đơn hàng giảm mạnh.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "checkout-api: 6 pod, Spring Boot 3.3, JDK 21\n\ntime   RPS   5xx     p99\n13:50  410   0.3%    480ms\n14:00  420   0.3%    500ms\n14:05  430   3.1%    2.9s\n14:15  425   11.8%   6.0s\n\nThay đổi gần đây:\n13:30  đội DB đổi instance type của read replica\n13:58  deploy checkout-api v3.8.0 hoàn tất (thêm mã giảm giá vào response)\n14:00  lưu lượng tăng 5% theo dự kiến",
+      "evidenceFormat": "monospace",
+      "question": "Việc đầu tiên bạn làm là gì?",
+      "choices": [
+        {
+          "label": "Gom lỗi theo endpoint, pod, phiên bản và lỗi cụ thể để khoanh phạm vi trong vài phút",
+          "quality": "good",
+          "feedback": "Đúng. Hai thay đổi gần thời điểm lỗi đều là ứng viên. Vài phút khoanh vùng cho biết nên rollback, chuyển hướng hay chờ, thay vì đoán.",
+          "next": "scope"
+        },
+        {
+          "label": "Rollback v3.8.0 ngay vì thời điểm deploy khớp với lúc lỗi bắt đầu",
+          "quality": "ok",
+          "feedback": "Rollback rẻ và an toàn là cách cầm máu hợp lý khi thời điểm khớp. Nhưng lỗi bắt đầu lúc 14:05, 7 phút sau deploy, nên chưa chắc đây là thủ phạm. Nhìn nhanh lỗi tập trung ở đâu sẽ tiết kiệm thời gian.",
+          "next": "rollback"
+        },
+        {
+          "label": "Bật log mức DEBUG cho toàn bộ checkout-api để xem thêm chi tiết",
+          "quality": "poor",
+          "feedback": "DEBUG trên production lúc đang quá tải làm tăng I/O và CPU, có thể làm sự cố nặng hơn, và chôn tín hiệu dưới hàng triệu dòng log. Hãy dùng metric và log lỗi đã có để khoanh vùng trước.",
+          "next": "scope"
+        },
+        {
+          "label": "Restart cả 6 pod để giải phóng tài nguyên bị kẹt",
+          "quality": "poor",
+          "feedback": "Restart khi chưa biết nguyên nhân xoá mất hiện trường và có thể không giúp gì nếu lỗi nằm ngoài checkout-api. Nếu buộc phải restart, chụp thread dump của một pod trước.",
+          "next": "restarted"
+        }
+      ]
+    },
+    {
+      "id": "restarted",
+      "evidence": "14:24  kubectl rollout restart deployment/checkout-api\n14:27  6/6 pod Ready\n14:28  5xx 12.4%   p99 6.0s\n\nKhông có thread dump nào trước khi restart.",
+      "evidenceFormat": "monospace",
+      "question": "Restart không giúp gì. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Khoanh phạm vi: lỗi theo endpoint, pod, phiên bản và loại exception",
+          "quality": "good",
+          "feedback": "Đúng. Restart không đổi được gì nghĩa là nguyên nhân không nằm trong trạng thái của pod. Phải tìm nó ở chỗ khác bằng dữ liệu.",
+          "next": "scope"
+        },
+        {
+          "label": "Restart thêm lần nữa, lần này restart cả database",
+          "quality": "poor",
+          "feedback": "Không có bằng chứng nào chỉ vào database, và restart database làm mọi service khác cùng lỗi. Hành động phải đi theo bằng chứng.",
+          "next": "scope"
+        }
+      ]
+    },
+    {
+      "id": "rollback",
+      "evidence": "14:24  bắt đầu rollback về v3.7.2\n14:31  6/6 pod chạy v3.7.2\n14:33  5xx 11.5%   p99 6.0s\n\nLỗi không giảm.",
+      "evidenceFormat": "monospace",
+      "question": "Rollback xong nhưng lỗi vẫn vậy. Bạn làm gì?",
+      "choices": [
+        {
+          "label": "Ghi nhận đã loại trừ v3.8.0, quay lại khoanh phạm vi bằng dữ liệu",
+          "quality": "good",
+          "feedback": "Đúng. Rollback không giúp cũng là bằng chứng: deploy không phải nguyên nhân. Ghi vào dòng thời gian để không ai đề xuất lại, rồi khoanh vùng.",
+          "next": "scope"
+        },
+        {
+          "label": "Rollback tiếp các service khác đã deploy hôm nay",
+          "quality": "poor",
+          "feedback": "Rollback mù hàng loạt tạo thêm thay đổi và rủi ro mà không dựa trên bằng chứng nào. Hãy nhìn lỗi tập trung ở đâu trước.",
+          "next": "scope"
+        }
+      ]
+    },
+    {
+      "id": "scope",
+      "evidence": "5xx theo endpoint (14:10–14:30):\n  POST /checkout          97%\n  GET  /cart               2%\n  khác                     1%\n\n5xx theo pod: đều trên cả 6 pod (11–13% mỗi pod)\n\nException hàng đầu:\n  ResourceAccessException: Read timed out\n    -> https://api.provider-a.example/v2/charges    44,870\n  CannotGetJdbcConnectionException                        41\n\nPOST /checkout theo phương thức thanh toán:\n  card   (provider A)    5xx 31%\n  wallet (provider B)    5xx 1.9%  (tăng dần từ 14:20)",
+      "evidenceFormat": "monospace",
+      "question": "Giả thuyết nào khớp với dữ liệu nhất, và bạn kiểm chứng nó thế nào?",
+      "choices": [
+        {
+          "label": "Provider A chậm; kiểm chứng bằng latency gọi ra provider A và trang trạng thái của họ",
+          "quality": "good",
+          "feedback": "Đúng. Lỗi đều trên mọi pod (không phải một pod hỏng), tập trung ở thanh toán thẻ, và exception là timeout khi gọi provider A. Giả thuyết này dự đoán latency gọi ra tăng vọt: kiểm tra số liệu đó.",
+          "next": "verify"
+        },
+        {
+          "label": "Read replica mới yếu hơn nên checkout chậm vì database",
+          "quality": "poor",
+          "feedback": "Chỉ có 41 lỗi lấy connection so với gần 45.000 timeout tới provider A, và thanh toán ví gần như khoẻ dù dùng chung database. Dữ liệu không ủng hộ giả thuyết này.",
+          "next": "replica"
+        },
+        {
+          "label": "Lưu lượng tăng 5% làm checkout-api quá tải, cần scale thêm pod",
+          "quality": "poor",
+          "feedback": "Tăng 5% không giải thích được việc lỗi chỉ dồn vào thanh toán thẻ. Quá tải thật thì mọi endpoint đều chậm.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "replica",
+      "evidence": "Read replica: CPU 22%, replica lag 40ms, không có lock wait\nHikariCP checkout-api: active 6/20, pending 0 (trung bình)\nThanh toán qua wallet dùng cùng database: 5xx 0.4% trước 14:20",
+      "evidenceFormat": "monospace",
+      "question": "Database khoẻ. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Bỏ giả thuyết database, kiểm tra latency gọi ra provider A",
+          "quality": "good",
+          "feedback": "Đúng. Bằng chứng bác bỏ giả thuyết thì bỏ nó, dù đó là thay đổi trông đáng ngờ nhất.",
+          "next": "verify"
+        },
+        {
+          "label": "Vẫn yêu cầu đội DB đổi lại instance type cũ cho chắc",
+          "quality": "poor",
+          "feedback": "Thay đổi không có căn cứ chỉ thêm biến số và làm mất thời gian của đội khác. Quay lại với bằng chứng đang có: timeout tới provider A.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "evidence": "http.client.requests (uri=/v2/charges, provider A):\n  time   p50     p99     timeout\n  14:00  180ms   420ms   0\n  14:05  900ms   5.0s    790/phút\n  14:20  2.1s    5.0s    2,950/phút   (read timeout = 5s)\n\nTomcat threads busy: 188/200\nWallet 5xx: 0.4% (14:10) -> 3.8% (14:30)\n\nTrang trạng thái provider A (14:12): \"Degraded performance in Asia region. Investigating.\"",
+      "evidenceFormat": "monospace",
+      "question": "Giả thuyết đã được xác nhận, và lỗi bắt đầu lan sang wallet vì thread bị giữ chờ provider A. Cầm máu thế nào?",
+      "choices": [
+        {
+          "label": "Theo runbook, bật flag chuyển thanh toán thẻ sang provider B dự phòng",
+          "quality": "good",
+          "feedback": "Đúng. Cầm máu bằng cách đưa người dùng đi đường khác, không chờ bên thứ ba sửa. Thread không còn bị giữ 5 giây nên wallet cũng hồi phục.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Tăng Tomcat lên 400 thread và scale từ 6 lên 12 pod",
+          "quality": "ok",
+          "feedback": "Câu thêm thời gian cho wallet, nhưng thanh toán thẻ vẫn timeout, và gấp đôi số lời gọi đồng thời tới provider đang yếu có thể làm họ chậm thêm.",
+          "next": "more-threads"
+        },
+        {
+          "label": "Mở ticket với provider A rồi chờ họ khắc phục",
+          "quality": "poor",
+          "feedback": "Báo cho provider là cần, nhưng không phải cách cầm máu. Trong lúc chờ, lỗi đang lan sang wallet vì thread pool sắp cạn.",
+          "next": "waiting"
+        }
+      ]
+    },
+    {
+      "id": "more-threads",
+      "evidence": "14:45  12 pod x 400 thread\n14:52  Tomcat threads busy 371/400 mỗi pod\n       Card 5xx 33%, wallet 5xx 2.1%\n       Provider A p99: 5.0s (không đổi)",
+      "evidenceFormat": "monospace",
+      "question": "Wallet đỡ hơn một chút, thanh toán thẻ vẫn hỏng. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Bật flag chuyển thanh toán thẻ sang provider B",
+          "quality": "good",
+          "feedback": "Đúng. Thêm tài nguyên chỉ mua thời gian; nguyên nhân nằm ở provider A, nên phải đi đường khác.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "waiting",
+      "evidence": "14:50  provider A: \"Still investigating.\"\n       Tomcat threads busy 200/200\n       Wallet 5xx 9.2%, GET /cart 5xx 6%\n       Ước tính mất khoảng 1.300 đơn từ 14:05",
+      "evidenceFormat": "monospace",
+      "question": "Thread pool đã cạn, mọi endpoint bắt đầu lỗi. Bạn làm gì?",
+      "choices": [
+        {
+          "label": "Bật flag chuyển thanh toán thẻ sang provider B ngay",
+          "quality": "good",
+          "feedback": "Đúng, dù muộn. Chờ bên thứ ba là để sự cố lan rộng. Có đường dự phòng thì dùng nó trước, điều tra sau.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "T+0     bật flag payment.card.provider=B\nT+3 phút  card 5xx 0.5%, wallet 5xx 0.3%, p99 620ms\n          Tomcat threads busy 52/200\n16:10   provider A báo đã khắc phục",
+      "evidenceFormat": "monospace",
+      "question": "Dịch vụ đã ổn. Việc tiếp theo là gì?",
+      "choices": [
+        {
+          "label": "Giữ dòng thời gian, viết postmortem không đổ lỗi, đặt hành động có người phụ trách",
+          "quality": "good",
+          "feedback": "Đúng. Nguyên nhân trực tiếp ở bên ngoài, nhưng việc lỗi lan sang wallet, alert tới muộn 15 phút và phải chuyển hướng bằng tay là lỗ hổng của hệ thống mình.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đóng sự cố vì lỗi do provider A, không phải do mình",
+          "quality": "ok",
+          "feedback": "Nguyên nhân trực tiếp đúng là ở provider A, nhưng lần sau họ chậm, mọi chuyện sẽ lặp lại y hệt nếu hệ thống mình không thay đổi.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Chuyển hẳn sang provider B và bỏ provider A",
+          "quality": "poor",
+          "feedback": "Quyết định lớn trong lúc vội. Provider B cũng sẽ có ngày chậm; điều cần sửa là cách hệ thống chịu lỗi của provider bất kỳ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân trực tiếp**: provider A chậm ở khu vực châu Á từ 14:03. Mỗi lời gọi tới họ giữ một thread Tomcat tối đa 5 giây.\n\n**Vì sao ảnh hưởng lan rộng**: thanh toán thẻ, ví và giỏ hàng dùng chung một thread pool. Không có giới hạn đồng thời riêng cho lời gọi provider A, nên khi họ chậm, thread bị giữ dần tới cạn và cả service hỏng theo.\n\n**Bài học về quy trình**:\n- Hai thay đổi trùng thời điểm (deploy v3.8.0, đổi read replica) đều không phải nguyên nhân. Thời điểm trùng nhau chỉ là manh mối; bằng chứng là exception và metric gọi ra.\n- Rollback rẻ là cầm máu hợp lý, nhưng khoanh vùng 3 phút đã chỉ thẳng vào provider A.\n- Restart không giúp và còn xoá hiện trường.\n\n**Hành động sau postmortem**:\n- Timeout theo SLA thật của provider (ví dụ connect 1s, read 2s), circuit breaker và bulkhead riêng cho từng provider (bài Resilience patterns).\n- Tự động chuyển sang provider dự phòng khi circuit mở, thay vì bật flag bằng tay.\n- Alert theo latency gọi ra từng dependency, không chỉ theo 5xx của chính mình: lỗi bắt đầu từ 14:05 nhưng 14:20 mới có alert.\n- Cập nhật runbook \"provider thanh toán chậm\" với lệnh bật flag và tiêu chí quyết định.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}
