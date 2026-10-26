@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "production-logging",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Log cho production",
+  "summary": "Structured log JSON, correlation id và trace id qua MDC, mức log theo môi trường và đổi lúc chạy; chi phí và khối lượng log; log exception đúng cách; dữ liệu nhạy cảm; AsyncAppender bỏ dòng, appender đồng bộ làm chậm request; stdout trong container, ELK và Loki.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 15,
+  "prerequisites": ["observability", "threadlocal"],
+  "terms": ["structured-logging", "correlation-id", "mdc", "log-level", "async-appender", "loki"],
+  "references": [
+    { "title": "Spring Boot Reference: Logging (Structured Logging)", "url": "https://docs.spring.io/spring-boot/reference/features/logging.html" },
+    { "title": "Logback Manual: AsyncAppender", "url": "https://logback.qos.ch/manual/appenders-async-sift.html" },
+    { "title": "Grafana Loki: Label best practices", "url": "https://grafana.com/docs/loki/latest/get-started/labels/bp-labels/" },
+    { "title": "OWASP Logging Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Một request đi qua 6 service, làm sao tìm hết log của nó?\" Gateway tạo trace id (hoặc nhận correlation id từ client), truyền qua header `traceparent` và header của message; mỗi service đặt nó vào MDC để mọi dòng log mang theo; hệ thống log tập trung lọc theo trường đó. Nhắc thêm hai chỗ hay đứt: thread pool và `@Async` (MDC không tự sang thread mới), và consumer của message queue (phải đọc trace id từ header)." },
+    { "type": "callout", "style": "warning", "markdown": "Không bao giờ log header `Authorization`, cookie, mật khẩu, số thẻ hay toàn bộ body request. Log thường được lưu lâu, nhiều người đọc được và gửi sang bên thứ ba, nên một dòng log lộ token là một sự cố bảo mật. Bật wire log của HTTP client trên production là cách lộ tất cả những thứ này cùng lúc." }
+  ]
+}

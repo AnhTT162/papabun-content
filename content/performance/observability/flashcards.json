@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-signals", "front": "Metric, trace và log mỗi loại trả lời câu hỏi gì?", "back": "Metric: có vấn đề không và lớn cỡ nào. Trace: chậm hay lỗi ở bước nào. Log: vì sao, với chi tiết của đúng request đó." },
+    { "id": "span", "front": "Span là gì?", "back": "Một bước trong trace (request HTTP, query, gửi message) có trace id, span id, span cha, thời điểm bắt đầu, thời lượng và thuộc tính." },
+    { "id": "traceparent", "front": "Trace id đi từ service này sang service khác bằng cách nào?", "back": "Qua header W3C `traceparent` của request HTTP hoặc header của message; service nhận tạo span con với cùng trace id." },
+    { "id": "head-vs-tail", "front": "Head sampling khác tail sampling thế nào?", "back": "Head quyết định giữ trace ngay từ đầu, rẻ nhưng có thể bỏ mất trace lỗi. Tail quyết định sau khi trace xong, giữ được mọi trace lỗi hoặc chậm, nhưng Collector phải đệm span." },
+    { "id": "sli-slo-sla", "front": "SLI, SLO, SLA khác nhau thế nào?", "back": "SLI là chỉ số đo (tỉ lệ request tốt); SLO là mục tiêu nội bộ cho SLI (99,9% trong 30 ngày); SLA là cam kết hợp đồng có phạt, luôn lỏng hơn SLO." },
+    { "id": "error-budget", "front": "Error budget của SLO 99,9% trong 30 ngày là bao nhiêu?", "back": "0,1% số request được phép hỏng, tương đương khoảng 43 phút hỏng hoàn toàn." },
+    { "id": "burn-rate", "front": "Burn rate 14,4 trong 1 giờ nghĩa là gì?", "back": "Đang tiêu error budget nhanh gấp 14,4 lần mức đều; một giờ như vậy mất 2% budget của 30 ngày. Ngưỡng hay dùng để gọi on-call." },
+    { "id": "exemplar", "front": "Exemplar giúp gì khi điều tra?", "back": "Gắn trace id mẫu vào bucket của histogram, để từ điểm p99 trên biểu đồ mở thẳng trace của một request chậm thật." },
+    { "id": "otel-collector", "front": "Vì sao gửi telemetry qua OpenTelemetry Collector thay vì thẳng tới backend?", "back": "Collector lọc, gom, lấy mẫu (tail sampling) và chuyển tới backend nào cũng được; đổi backend không phải sửa hay deploy lại ứng dụng." }
+  ]
+}

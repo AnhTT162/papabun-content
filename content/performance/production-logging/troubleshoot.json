@@ -1,0 +1,132 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "search-api chậm dần sau khi đổi cấu hình",
+  "symptom": "Từ khoảng 10:15, p99 của search-api tăng từ 220ms lên 4 giây, có lúc timeout. CPU chỉ khoảng 45%, lượng request không đổi. Không có deploy code nào trong ngày.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "search-api: 8 pod, Spring Boot 3.3, JDK 21, Logback ghi ConsoleAppender (đồng bộ) ra stdout\n\ntime   RPS    p99     CPU   GC pause p99   tomcat.threads.busy\n10:00  1,200  220ms   38%   12ms           35/200\n10:20  1,210  1.9s    44%   14ms           170/200\n10:40  1,190  4.1s    46%   13ms           200/200\n\nThay đổi trong ngày:\n10:12  config-server: cập nhật application-prod.yml của search-api (ticket \"debug lỗi gọi catalog\")\n       pod tự refresh cấu hình",
+      "evidenceFormat": "monospace",
+      "question": "Thread bận tăng mà CPU và GC vẫn bình thường. Bạn làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Chụp vài thread dump của một pod để xem các thread bận đang chờ gì",
+          "quality": "good",
+          "feedback": "Đúng. Thread bận nhưng CPU không tăng nghĩa là chúng đang chờ thứ gì đó. Thread dump cho biết chính xác là chờ gì.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Mở diff của thay đổi cấu hình lúc 10:12",
+          "quality": "ok",
+          "feedback": "Hợp lý vì đó là thay đổi duy nhất gần thời điểm lỗi. Nhưng diff chỉ cho biết đã đổi gì, chưa cho biết vì sao nó làm request chậm; thread dump trả lời câu đó.",
+          "next": "config-diff"
+        },
+        {
+          "label": "Tăng `server.tomcat.threads.max` lên 400",
+          "quality": "poor",
+          "feedback": "Thread đang chờ một thứ gì đó; thêm thread chỉ thêm người xếp hàng ở cùng chỗ. Phải biết chúng chờ gì trước.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "config-diff",
+      "evidence": "--- application-prod.yml (trước)\n+++ application-prod.yml (sau)\n   logging:\n     level:\n       root: INFO\n+      org.apache.hc.client5.http.wire: DEBUG\n+      org.apache.hc.client5.http.headers: DEBUG",
+      "evidenceFormat": "monospace",
+      "question": "Thay đổi là bật log DEBUG cho HTTP client. Làm sao biết nó có gây chậm không?",
+      "choices": [
+        {
+          "label": "Chụp thread dump và đo lượng log mỗi giây để xác nhận",
+          "quality": "good",
+          "feedback": "Đúng. Có giả thuyết thì tìm bằng chứng: nếu log là thủ phạm, thread dump sẽ cho thấy thread chờ ở code ghi log.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Kết luận ngay: log DEBUG không thể làm chậm tới mức đó, tìm chỗ khác",
+          "quality": "poor",
+          "feedback": "Loại bỏ một giả thuyết bằng cảm giác cũng sai như chấp nhận nó bằng cảm giác. Hãy nhìn thread dump.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump",
+      "evidence": "\"http-nio-8080-exec-117\" #171 daemon prio=5 os_prio=0 cpu=812ms elapsed=5321s\n   java.lang.Thread.State: WAITING (parking)\n\tat jdk.internal.misc.Unsafe.park(java.base@21.0.4/Native Method)\n\t- parking to wait for  <0x00000000c1a2b3c8> (a java.util.concurrent.locks.ReentrantLock$NonfairSync)\n\tat java.util.concurrent.locks.LockSupport.park(java.base@21.0.4/LockSupport.java)\n\tat java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(java.base@21.0.4/AbstractQueuedSynchronizer.java)\n\tat java.util.concurrent.locks.ReentrantLock$Sync.lock(java.base@21.0.4/ReentrantLock.java)\n\tat java.util.concurrent.locks.ReentrantLock.lock(java.base@21.0.4/ReentrantLock.java)\n\tat ch.qos.logback.core.OutputStreamAppender.writeBytes(OutputStreamAppender.java)\n\tat ch.qos.logback.core.OutputStreamAppender.writeOut(OutputStreamAppender.java)\n\tat ch.qos.logback.core.OutputStreamAppender.subAppend(OutputStreamAppender.java)\n\t...\n\tat org.apache.hc.client5.http.impl.Wire.wire(Wire.java)\n\n(186 thread exec-* có stack giống hệt)\n\n\"http-nio-8080-exec-42\" #96 daemon prio=5\n   java.lang.Thread.State: RUNNABLE\n\tat java.io.FileOutputStream.writeBytes(java.base@21.0.4/Native Method)\n\tat java.io.FileOutputStream.write(java.base@21.0.4/FileOutputStream.java)\n\t...\n\tat ch.qos.logback.core.OutputStreamAppender.writeBytes(OutputStreamAppender.java)\n\nLượng log mỗi pod: 10:00  0.4 MB/s   ->   10:30  41 MB/s",
+      "evidenceFormat": "monospace",
+      "question": "Gần như mọi thread đang chờ khoá của appender, một thread đang ghi ra stdout. Cầm máu thế nào?",
+      "choices": [
+        {
+          "label": "Đặt lại hai logger về INFO qua `/actuator/loggers` (hoặc revert cấu hình)",
+          "quality": "good",
+          "feedback": "Đúng. Nguyên nhân là khối lượng log tăng 100 lần; tắt nó là cầm máu ngay, không cần restart.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Chuyển ConsoleAppender sang AsyncAppender và deploy lại",
+          "quality": "ok",
+          "feedback": "Giảm chặn thread, nhưng với 41 MB/giây hàng đợi sẽ đầy ngay: AsyncAppender mặc định bỏ INFO rồi chặn tiếp, và cần một lần deploy. Gốc vẫn là lượng log quá lớn.",
+          "next": "async-only"
+        },
+        {
+          "label": "Restart các pod để giải phóng thread bị kẹt",
+          "quality": "poor",
+          "feedback": "Pod restart đọc lại đúng cấu hình DEBUG từ config-server và kẹt lại sau vài phút.",
+          "next": "restart-only"
+        }
+      ]
+    },
+    {
+      "id": "restart-only",
+      "evidence": "10:52  kubectl rollout restart deployment/search-api\n10:55  8/8 pod Ready, p99 260ms\n11:01  pod đọc cấu hình từ config-server: logger wire và headers vẫn DEBUG\n       log mỗi pod 39 MB/s, threads busy 182/200, p99 3.6s\n\nKhông còn thread dump nào của lần trước restart.",
+      "evidenceFormat": "monospace",
+      "question": "Vài phút sau restart, mọi thứ quay lại như cũ. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Đặt lại logger wire và headers về INFO qua `/actuator/loggers`",
+          "quality": "good",
+          "feedback": "Đúng. Restart không đổi cấu hình nên nguyên nhân vẫn còn. Bỏ nguồn sinh log thì mới hết.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "async-only",
+      "evidence": "Sau khi deploy bản dùng AsyncAppender: p99 giảm còn 1.6s trong 5 phút rồi lại lên 3.8s\nLượng log stdout: vẫn khoảng 40 MB/s mỗi pod\nFluent Bit trên node: buffer đầy, cảnh báo \"retrying chunk\"",
+      "evidenceFormat": "monospace",
+      "question": "Vấn đề quay lại. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Đặt lại logger wire và headers về INFO qua `/actuator/loggers`",
+          "quality": "good",
+          "feedback": "Đúng. Phải bỏ nguồn sinh log, không phải làm đường ống rộng hơn.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "POST /actuator/loggers/org.apache.hc.client5.http.wire     {\"configuredLevel\": \"INFO\"}\nPOST /actuator/loggers/org.apache.hc.client5.http.headers  {\"configuredLevel\": \"INFO\"}\n\n2 phút sau:\n  log mỗi pod     0.4 MB/s\n  p99             230ms\n  threads busy    36/200\n\n(cấu hình trên config-server cũng được revert để pod mới không bật lại DEBUG)",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn. Phòng ngừa thế nào cho lần sau?",
+      "choices": [
+        {
+          "label": "Alert theo lượng log mỗi pod, chặn bật wire log trên prod qua review cấu hình",
+          "quality": "good",
+          "feedback": "Đúng. Phát hiện sớm bằng metric về log, và chặn từ quy trình. Gỡ lỗi thì bật DEBUG cho một pod trong thời gian ngắn.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Cấm hoàn toàn mức DEBUG trên production",
+          "quality": "ok",
+          "feedback": "An toàn nhưng cứng nhắc: DEBUG có mục tiêu, trong thời gian ngắn, ở một pod là công cụ điều tra hữu ích.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: cấu hình bật DEBUG cho `org.apache.hc.client5.http.wire` và `...headers` trên mọi pod. Wire log ghi từng byte request và response của HTTP client, gồm header và body, nên lượng log tăng khoảng 100 lần. Logback ghi đồng bộ ra stdout, mỗi lần ghi giữ `streamWriteLock`; pipe stdout bị agent trên node đọc không kịp nên mỗi lần ghi chậm. Thread đang giữ khoá là thread RUNNABLE trong `FileOutputStream.writeBytes`; mọi thread khác muốn log đều xếp hàng sau khoá đó. Thread Tomcat cạn dần, request chờ, p99 tăng trong khi CPU không đổi.\n\n**Vì sao nguy hiểm**: wire log còn ghi cả header `Authorization` và body có dữ liệu cá nhân ra hệ thống log tập trung. Cần kiểm tra và xoá log của khoảng thời gian đó, và xoay vòng token nếu bị lộ.\n\n**Phòng ngừa**:\n- Thay đổi mức log trên production đi qua review như thay đổi code; không bật wire log của HTTP client ở prod.\n- Gỡ lỗi: bật DEBUG cho một logger, ở một pod, có thời hạn (đặt lại sau 15 phút).\n- Metric và alert theo số byte log mỗi pod (agent như Fluent Bit có sẵn metric), cùng metric `logback.events` theo level của Micrometer.\n- Cân nhắc AsyncAppender với `neverBlock=true` cho log ứng dụng thường, chấp nhận mất dòng khi quá tải thay vì làm chậm request; dữ liệu cần chính xác không đi qua log.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

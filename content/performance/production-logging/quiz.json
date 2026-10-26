@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lost-cause",
+      "kind": "output",
+      "prompt": "Đoạn code mô phỏng thói quen `log.error(e.getMessage())` bằng `System.out`. Dòng in ra đầu tiên là gì?",
+      "code": "static class PaymentException extends RuntimeException {\n    PaymentException(String message, Throwable cause) { super(message, cause); }\n}\n\nstatic void charge() {\n    try {\n        throw new SocketTimeoutException(\"Read timed out\");\n    } catch (IOException e) {\n        throw new PaymentException(\"Charge failed\", e);\n    }\n}\n\npublic static void main(String[] args) {\n    try {\n        charge();\n    } catch (PaymentException e) {\n        System.out.println(\"ERROR \" + e.getMessage());\n    }\n}",
+      "options": [
+        "ERROR Charge failed",
+        "ERROR Charge failed: Read timed out",
+        "ERROR java.net.SocketTimeoutException: Read timed out",
+        "ERROR Charge failed, kèm stack trace của cả hai exception"
+      ],
+      "answer": 0,
+      "explanation": "`getMessage()` chỉ trả message của chính exception, không gồm cause và không có stack trace. Dòng log chỉ còn \"Charge failed\": không biết là timeout, không biết timeout ở đâu. Cách đúng với SLF4J là truyền exception làm tham số cuối: `log.error(\"Charge failed, order {}\", orderId, e)`; Logback in stack trace kèm chuỗi `Caused by: java.net.SocketTimeoutException: Read timed out`."
+    },
+    {
+      "id": "param-still-evaluated",
+      "kind": "single",
+      "prompt": "Mức log production là INFO. Dòng `log.debug(\"Cart {}\", cart.toJson())` nằm trong vòng lặp nóng và profiler cho thấy `toJson()` tốn 15% CPU. Vì sao?",
+      "options": [
+        "`cart.toJson()` vẫn được tính trước khi gọi `debug`, dù DEBUG đang tắt",
+        "SLF4J luôn định dạng message rồi mới kiểm tra mức log, nên tham số không giúp gì",
+        "Logback bỏ qua mức INFO khi message có placeholder `{}`",
+        "JIT không inline được `debug` nên mọi đối số bị tính hai lần"
+      ],
+      "answer": 0,
+      "explanation": "Java tính mọi đối số trước khi gọi method, nên `toJson()` chạy dù DEBUG tắt. Placeholder chỉ giúp tránh ghép chuỗi và gọi `toString()` của đối số khi mức log tắt. Sửa bằng `if (log.isDebugEnabled())` hoặc SLF4J 2 fluent API với supplier: `log.atDebug().addArgument(() -> cart.toJson()).log(\"Cart {}\")`."
+    },
+    {
+      "id": "loki-labels",
+      "kind": "single",
+      "prompt": "Đội chuyển log sang Loki và đặt `trace_id`, `user_id` làm nhãn (label) để tìm cho nhanh. Vài ngày sau Loki chậm hẳn và tốn bộ nhớ. Nguyên nhân?",
+      "options": [
+        "Nhãn nhiều giá trị tạo ra hàng triệu stream nhỏ trong Loki",
+        "Loki không hỗ trợ log JSON nên phải parse lại từng dòng khi ghi",
+        "Loki đánh index toàn văn mọi dòng log nên càng nhiều trường càng chậm",
+        "Trace id quá dài nên vượt giới hạn kích thước của một nhãn"
+      ],
+      "answer": 0,
+      "explanation": "Loki chỉ đánh index nhãn và gom log thành stream theo tổ hợp nhãn. Nhãn có giá trị không giới hạn như `trace_id` hay `user_id` tạo vô số stream nhỏ, làm phình index và giảm hiệu quả nén. Nhãn chỉ nên là thứ có ít giá trị (service, namespace, level); tìm theo trace id bằng bộ lọc nội dung, ví dụ `{service=\"order-api\"} | json | trace_id=\"...\"`. Đánh index toàn văn là cách của Elasticsearch, không phải Loki."
+    },
+    {
+      "id": "audit-via-log",
+      "kind": "single",
+      "prompt": "Bộ phận đối soát muốn đếm số giao dịch mỗi ngày bằng cách đếm dòng log INFO `payment captured`. Đánh giá nào đúng?",
+      "options": [
+        "Không nên: log có thể mất dòng; dữ liệu đối soát phải lưu vào database",
+        "Được, miễn là dùng ConsoleAppender đồng bộ thì log không bao giờ mất",
+        "Được, vì hệ thống log tập trung luôn đảm bảo nhận đủ mọi dòng log",
+        "Không nên, vì mức INFO bị tắt trên production theo mặc định của Spring Boot"
+      ],
+      "answer": 0,
+      "explanation": "Đường đi của log có nhiều chỗ bỏ dòng: AsyncAppender bỏ INFO khi gần đầy, agent bỏ chunk khi buffer đầy, hệ thống tập trung giới hạn tốc độ, pod bị xoá trước khi log kịp đẩy đi. Appender đồng bộ cũng không đảm bảo log tới được nơi lưu cuối. Spring Boot mặc định mức INFO, không tắt nó. Dữ liệu đối soát nên ghi vào database trong cùng transaction với giao dịch."
+    }
+  ]
+}

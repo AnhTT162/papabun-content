@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Log đối soát thanh toán mất dòng giờ cao điểm",
+  "context": "payment-api (Spring Boot 3.3, Logback 1.5) ghi một dòng INFO cho mỗi giao dịch thành công. Bộ phận đối soát đếm các dòng này để so với sao kê ngân hàng mỗi đêm. Log ghi vào file trên volume mạng rồi được agent đẩy về hệ thống log tập trung. Để ghi file chậm không làm chậm request, đội bọc appender file trong AsyncAppender.",
+  "buggyCode": "<!-- logback-spring.xml -->\n<appender name=\"FILE\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\">\n  <file>/var/log/payment/app.log</file>\n  <!-- rollingPolicy, encoder JSON ... -->\n</appender>\n\n<appender name=\"ASYNC_FILE\" class=\"ch.qos.logback.classic.AsyncAppender\">\n  <appender-ref ref=\"FILE\"/>\n</appender>\n\n<root level=\"INFO\">\n  <appender-ref ref=\"ASYNC_FILE\"/>\n</root>\n\n// PaymentService.java\nlog.info(\"AUDIT payment captured order={} amount={} txn={}\",\n         order.id(), order.amount(), result.transactionId());",
+  "symptom": {
+    "description": "Sau đợt khuyến mãi tối thứ Sáu, số giao dịch trong log ít hơn trong database khoảng 13%. Toàn bộ chỗ thiếu rơi vào 20:00–20:20, lúc tải gấp 6 lần bình thường và volume mạng ghi chậm. Đếm thẳng trong file trên pod (trước khi agent đẩy đi) cũng thiếu y hệt. Không có lỗi nào trong log ứng dụng.",
+    "output": "Đối soát ngày 2026-10-23\n  Giao dịch thành công trong DB       18,420\n  Dòng \"AUDIT payment captured\"        15,977   (thiếu 2,443)\n\nTheo khung giờ (log / DB):\n  19:40-20:00   1,102 / 1,102\n  20:00-20:20   4,215 / 6,658\n  20:20-20:40   1,320 / 1,320\n\nCùng khoảng 20:00-20:20:\n  dòng WARN trong log   312   (khớp metric payment.warn = 312)\n  dòng ERROR trong log   57   (khớp metric payment.error = 57)"
+  },
+  "diagnosis": {
+    "question": "Vì sao chỉ dòng INFO bị mất, và chỉ trong lúc cao điểm?",
+    "options": [
+      "AsyncAppender mặc định bỏ TRACE, DEBUG, INFO khi hàng đợi còn dưới 20% chỗ trống",
+      "Agent đẩy log bị giới hạn tốc độ nên hệ thống log tập trung từ chối bớt các dòng",
+      "RollingFileAppender xoá file cũ trong lúc xoay vòng nên mất một phần dòng",
+      "Logger tự hạ mức log xuống WARN khi CPU cao để bảo vệ ứng dụng khỏi quá tải"
+    ],
+    "answer": 0,
+    "explanation": "AsyncAppender có hàng đợi 256 event. Volume mạng ghi chậm làm hàng đợi đầy dần; khi còn dưới 20% chỗ trống (`discardingThreshold` mặc định bằng `queueSize / 5`), Logback bỏ mọi event TRACE, DEBUG, INFO mà không báo gì, chỉ giữ WARN và ERROR. Vì vậy WARN và ERROR khớp metric còn INFO thì thiếu. Giới hạn tốc độ ở agent không giải thích được việc file trên pod cũng thiếu. Xoay vòng file mất cả khối liên tục và mọi mức log như nhau. Logback không có cơ chế tự hạ mức log theo CPU."
+  },
+  "fix": {
+    "code": "// 1. Dữ liệu đối soát là dữ liệu nghiệp vụ: ghi vào DB, không suy ra từ log\nPaymentResult capture(Order order) {\n    // ghi PENDING trước (transaction ngắn), không giữ transaction trong lúc gọi cổng thanh toán\n    PaymentRecord record = paymentRecords.save(PaymentRecord.pending(order));\n    PaymentResult result = gateway.capture(order, record.idempotencyKey());\n    paymentRecords.markCaptured(record.id(), result.transactionId());   // nguồn đối soát\n    log.info(\"Payment captured order={} txn={}\", order.id(), result.transactionId());\n    return result;\n}\n\n<!-- 2. Log ứng dụng: chọn rõ ràng giữa mất dòng và chặn thread -->\n<appender name=\"ASYNC_FILE\" class=\"ch.qos.logback.classic.AsyncAppender\">\n  <queueSize>8192</queueSize>\n  <discardingThreshold>0</discardingThreshold>  <!-- không bỏ INFO -->\n  <neverBlock>false</neverBlock>                <!-- đầy thì chặn, không mất -->\n  <appender-ref ref=\"FILE\"/>\n</appender>",
+    "explanation": "Sửa gốc: dữ liệu phải đếm chính xác (đối soát, audit) không đi qua log. Ghi bản ghi `PENDING` trước khi gọi cổng thanh toán (kèm idempotency key), cập nhật kết quả sau khi gọi. Nếu ứng dụng chết giữa chừng, bản ghi `PENDING` vẫn còn để job đối chiếu với cổng thanh toán, nên không có giao dịch nào biến mất không dấu vết. Không bọc lời gọi cổng thanh toán trong `@Transactional`: connection bị giữ suốt lời gọi chậm. Log vẫn giữ để điều tra.\n\nVới bản thân log, AsyncAppender buộc phải chọn khi hàng đợi đầy: bỏ dòng (mặc định với INFO trở xuống, hoặc mọi mức khi `neverBlock=true`) hay chặn thread xử lý request (`discardingThreshold=0`, `neverBlock=false`). Hàng đợi lớn hơn chỉ hấp thụ đợt tăng ngắn; nếu đích ghi chậm kéo dài thì sớm muộn vẫn đầy. Theo dõi tốc độ ghi của volume, và ưu tiên ghi ra stdout hoặc đĩa cục bộ thay vì volume mạng."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "structured-log", "front": "Structured log có lợi gì so với log dạng chữ?", "back": "Mỗi dòng là JSON có trường cố định, tìm và lọc theo trường được, stack trace không vỡ thành nhiều dòng, xuống dòng trong input được escape." },
+    { "id": "boot-structured", "front": "Bật structured log trong Spring Boot 3.4+ thế nào?", "back": "`logging.structured.format.console=ecs` (hoặc `logstash`, `gelf`); tương tự với `logging.structured.format.file`." },
+    { "id": "mdc-correlation", "front": "Làm sao mọi dòng log của một request mang cùng trace id?", "back": "Filter đặt trace id vào MDC; pattern hoặc encoder in nó ra. MDC dựa trên ThreadLocal nên phải copy khi chuyển sang thread khác." },
+    { "id": "log-exception", "front": "Log exception đúng cách với SLF4J?", "back": "Truyền exception làm tham số cuối: `log.error(\"Charge failed, order {}\", id, e)`. `e.getMessage()` mất stack trace và cause." },
+    { "id": "runtime-level", "front": "Đổi mức log trên production không restart bằng cách nào?", "back": "POST tới `/actuator/loggers/<tên logger>` với `{\"configuredLevel\": \"DEBUG\"}`; chỉ áp dụng cho pod đó, mất khi restart; endpoint phải có xác thực." },
+    { "id": "async-discard", "front": "AsyncAppender của Logback mặc định làm gì khi hàng đợi gần đầy?", "back": "Còn dưới 20% chỗ trống thì bỏ TRACE, DEBUG, INFO; đầy hẳn thì chặn thread gọi (trừ khi `neverBlock=true`, khi đó bỏ mọi mức)." },
+    { "id": "sync-log-latency", "front": "Vì sao log nhiều làm API chậm dù CPU thấp?", "back": "Appender đồng bộ giữ một khoá khi ghi; đích ghi chậm (pipe stdout, đĩa mạng) làm mọi thread muốn log phải xếp hàng chờ khoá." },
+    { "id": "loki-vs-elk", "front": "Loki khác Elasticsearch thế nào khi lưu log?", "back": "Elasticsearch đánh index toàn văn, tìm nhanh nhưng tốn; Loki chỉ index nhãn ít giá trị và quét nội dung khi truy vấn, rẻ hơn nhiều." },
+    { "id": "log-cost", "front": "3.000 request/giây, mỗi request 5 dòng log 500 byte là bao nhiêu mỗi ngày?", "back": "7,5 MB/giây, khoảng 650 GB/ngày; dịch vụ log thường tính tiền theo GB nạp vào." }
+  ]
+}

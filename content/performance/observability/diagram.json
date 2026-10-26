@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một trace đi qua ba service và Kafka",
+  "nodes": [
+    {"id": "gateway", "label": "API gateway", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "order", "label": "order-api", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "payment", "label": "payment-api", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.85, "y": 0.5},
+    {"id": "collector", "label": "OTel Collector", "kind": "generic", "x": 0.1, "y": 0.95},
+    {"id": "backend", "label": "Tempo + Prometheus", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "gw-order", "from": "gateway", "to": "order", "label": "traceparent"},
+    {"id": "order-payment", "from": "order", "to": "payment", "label": "span 1,2s"},
+    {"id": "order-kafka", "from": "order", "to": "kafka", "label": "header traceparent"},
+    {"id": "payment-collector", "from": "payment", "to": "collector", "label": "OTLP (mọi service)"},
+    {"id": "collector-backend", "from": "collector", "to": "backend", "label": "giữ trace lỗi/chậm"}
+  ],
+  "steps": [
+    {"caption": "Gateway nhận request, tạo trace id và span gốc, rồi gửi header `traceparent: 00-<trace id>-<span id>-01` sang order-api.", "show": ["gateway", "order", "gw-order"], "highlight": ["gw-order"]},
+    {"caption": "order-api tạo span con với cùng trace id. Lời gọi sang payment-api là một span nữa; span này mất 1,2 giây trong tổng 1,3 giây của request.", "show": ["payment", "order-payment"], "highlight": ["order-payment"]},
+    {"caption": "order-api gửi event `OrderPlaced` vào Kafka, ghi `traceparent` vào header của message. Consumer phía sau tạo span nối vào cùng trace, nên thấy được cả phần xử lý bất đồng bộ.", "show": ["kafka", "order-kafka"], "highlight": ["order-kafka"]},
+    {"caption": "Mỗi service gửi span qua OTLP tới OpenTelemetry Collector, không gửi thẳng tới backend. Đổi backend chỉ cần đổi cấu hình Collector.", "show": ["collector", "payment-collector"], "highlight": ["payment-collector"]},
+    {"caption": "Collector chờ trace kết thúc rồi mới quyết định (tail sampling): giữ mọi trace lỗi hoặc chậm hơn 1 giây, chỉ giữ 5% trace bình thường. Trên Grafana, exemplar ở điểm p99 mở thẳng trace 1,3 giây này.", "show": ["backend", "collector-backend"], "highlight": ["collector-backend"]}
+  ]
+}

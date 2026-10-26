@@ -3669,7 +3669,7 @@
       "meaning": "Mapped Diagnostic Context: bảng key-value theo thread của thư viện log (SLF4J, Logback), tự gắn vào mọi dòng log của thread đó. Dựa trên `ThreadLocal` nên không tự sang thread khác.",
       "example": "`MDC.put(\"traceId\", id)` trong filter, pattern log có `%X{traceId}`.",
       "related": ["thread-local", "context-propagation"],
-      "topics": ["threadlocal"]
+      "topics": ["threadlocal", "production-logging"]
     },
     {
       "id": "inheritable-thread-local",
@@ -3685,7 +3685,7 @@
       "meaning": "Copy context theo request (trace id, MDC, user, tenant) từ thread này sang thread khác khi công việc đổi thread, vì `ThreadLocal` không tự đi theo.",
       "example": "`TaskDecorator` lấy `MDC.getCopyOfContextMap()` lúc nộp task và `MDC.setContextMap(...)` trong thread chạy task.",
       "related": ["thread-local", "mdc"],
-      "topics": ["threadlocal"]
+      "topics": ["threadlocal", "observability"]
     },
     {
       "id": "weak-reference",
@@ -4933,7 +4933,7 @@
       "meaning": "Mã gắn với một yêu cầu hay một luồng nghiệp vụ, truyền qua mọi lời gọi và message để ghép log của nhiều service lại với nhau.",
       "example": "Gateway gắn header `X-Correlation-Id`; mọi event của đơn đó mang cùng mã trong header message.",
       "related": ["api-gateway", "integration-event"],
-      "topics": ["api-gateway-service-mesh", "event-driven-architecture"]
+      "topics": ["api-gateway-service-mesh", "event-driven-architecture", "production-logging"]
     },
     {
       "id": "token-relay",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture"]
+      "topics": ["event-driven-architecture", "observability"]
     },
     {
       "id": "compensating-transaction",
@@ -5694,6 +5694,102 @@
       "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
       "related": ["runbook"],
       "topics": ["troubleshooting-mindset"]
+    },
+    {
+      "id": "distributed-tracing",
+      "term": "Distributed tracing",
+      "meaning": "Ghi lại đường đi của một request qua nhiều service thành một trace gồm các span có quan hệ cha con, để thấy thời gian mất ở bước nào.",
+      "example": "Trace 1,3 giây: gateway → order-api → payment-api (1,2 giây).",
+      "related": ["span", "context-propagation", "opentelemetry"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "span",
+      "term": "Span",
+      "meaning": "Một bước trong trace: có trace id, span id, span cha, thời điểm bắt đầu, thời lượng và thuộc tính (method, URL, status).",
+      "example": "Span `POST /v2/charges` của payment-client mất 1,2 giây, status lỗi.",
+      "related": ["distributed-tracing"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "opentelemetry",
+      "term": "OpenTelemetry",
+      "meaning": "Chuẩn mở (CNCF) cho metric, trace và log: API, SDK, Java agent tự instrument, giao thức OTLP và Collector để xử lý rồi gửi tới backend bất kỳ.",
+      "example": "Chạy `-javaagent:opentelemetry-javaagent.jar`, gửi OTLP tới Collector, Collector xuất sang Tempo và Prometheus.",
+      "related": ["distributed-tracing", "tail-sampling"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "tail-sampling",
+      "term": "Tail sampling",
+      "meaning": "Quyết định giữ hay bỏ một trace sau khi nó kết thúc, dựa trên toàn bộ span (có lỗi, chậm). Làm ở OpenTelemetry Collector, cần mọi span của một trace tới cùng một instance.",
+      "example": "Giữ 100% trace lỗi, 100% trace chậm hơn 1 giây, 1% trace còn lại.",
+      "related": ["opentelemetry", "distributed-tracing"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "exemplar",
+      "term": "Exemplar",
+      "meaning": "Trace id mẫu gắn vào một bucket của histogram metric, để nhảy từ điểm trên biểu đồ latency sang trace của một request cụ thể.",
+      "example": "Bấm vào điểm p99 trên Grafana, mở trace của request 1,3 giây.",
+      "related": ["distributed-tracing", "percentile"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "sli",
+      "term": "SLI",
+      "meaning": "Service Level Indicator: chỉ số đo chất lượng dịch vụ từ góc người dùng, thường là tỉ lệ sự kiện tốt trên tổng sự kiện.",
+      "example": "Tỉ lệ `POST /checkout` không lỗi 5xx và nhanh hơn 1,5 giây, đo ở gateway.",
+      "related": ["slo", "error-budget"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "error-budget",
+      "term": "Error budget",
+      "meaning": "Phần được phép hỏng theo SLO: 1 trừ mục tiêu SLO, tính trên cửa sổ thời gian. Dùng để alert và để quyết định nên đẩy tính năng hay ưu tiên độ ổn định.",
+      "example": "SLO 99,9% trong 30 ngày: được hỏng 0,1% request, tương đương khoảng 43 phút.",
+      "related": ["slo", "burn-rate"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "burn-rate",
+      "term": "Burn rate",
+      "meaning": "Tốc độ tiêu error budget so với mức tiêu đều vừa hết budget đúng cuối cửa sổ SLO. Burn rate 1 là vừa đủ, 10 là cạn sau một phần mười thời gian.",
+      "example": "SLO 99,9%, tỉ lệ lỗi 1%: burn rate 10, budget 30 ngày cạn sau 3 ngày.",
+      "related": ["error-budget", "slo"],
+      "topics": ["observability"]
+    },
+    {
+      "id": "structured-logging",
+      "term": "Structured logging",
+      "meaning": "Ghi mỗi dòng log thành bản ghi có trường cố định (thường là JSON) thay vì chuỗi tự do, để tìm, lọc và tổng hợp theo trường.",
+      "example": "`{\"level\":\"ERROR\",\"trace_id\":\"4bf9...\",\"order_id\":8812,\"message\":\"Charge failed\"}`",
+      "related": ["mdc", "correlation-id"],
+      "topics": ["production-logging"]
+    },
+    {
+      "id": "log-level",
+      "term": "Log level",
+      "meaning": "Mức độ nghiêm trọng của một dòng log (TRACE, DEBUG, INFO, WARN, ERROR); logger chỉ ghi các dòng từ mức được cấu hình trở lên.",
+      "example": "Production đặt `logging.level.root=INFO`, bật DEBUG tạm cho một logger qua `/actuator/loggers`.",
+      "related": ["structured-logging"],
+      "topics": ["production-logging"]
+    },
+    {
+      "id": "async-appender",
+      "term": "AsyncAppender",
+      "meaning": "Appender của Logback đưa event vào hàng đợi cho một thread riêng ghi. Mặc định bỏ TRACE, DEBUG, INFO khi hàng đợi còn dưới 20% chỗ trống và chặn thread gọi khi đầy.",
+      "example": "`<queueSize>8192</queueSize><discardingThreshold>0</discardingThreshold>` để không bỏ INFO.",
+      "related": ["log-level"],
+      "topics": ["production-logging"]
+    },
+    {
+      "id": "loki",
+      "term": "Loki",
+      "meaning": "Hệ thống lưu log của Grafana Labs, chỉ đánh index nhãn (service, namespace, level) và quét nội dung khi truy vấn, nên rẻ hơn Elasticsearch; nhãn phải có ít giá trị.",
+      "example": "`{service=\"order-api\", level=\"error\"} | json | trace_id=\"4bf9...\"`",
+      "related": ["structured-logging"],
+      "topics": ["production-logging"]
     }
   ]
 }

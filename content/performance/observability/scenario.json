@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đặt SLO và alert cho luồng đặt hàng",
+  "prompt": "Hệ thống thương mại điện tử có 12 service Spring Boot trên Kubernetes, cao điểm 3.000 request/giây ở gateway. Hiện tại đội chỉ có log tập trung và khoảng 80 alert kiểu \"CPU > 80%\", \"pod restart\", \"heap > 85%\". On-call bị gọi trung bình 15 lần mỗi tuần, phần lớn không cần làm gì; trong khi tuần trước một lỗi khiến 4% lượt thanh toán thất bại suốt 3 giờ mà không alert nào kêu, khách hàng báo qua hotline mới biết. Ngân sách lưu trữ trace có hạn: khoảng 500 span/giây. Hãy đề xuất SLI, SLO, cách alert và cách thu trace.",
+  "hints": [
+    "Người dùng quan tâm điều gì ở luồng đặt hàng? Đo nó ở đâu để bắt được cả lúc service không trả lời?",
+    "Với SLO 99,9% trong 30 ngày, lỗi 4% là burn rate bao nhiêu? Alert burn rate cửa sổ 1 giờ sẽ kêu sau bao lâu? Nếu SLO chỉ là 99,5% thì sao?",
+    "80 alert theo nguyên nhân nên xử lý thế nào: xoá, chuyển thành dashboard, hay giữ?",
+    "3.000 request/giây, mỗi request khoảng 10 span: sampling cố định bao nhiêu thì vừa ngân sách, và còn giữ được trace lỗi không?"
+  ],
+  "solution": "**SLI và SLO** (đo ở gateway, theo từng hành trình quan trọng, không theo từng service):\n- Đặt hàng thành công: tỉ lệ `POST /checkout` không trả 5xx. SLO 99,9% trong 30 ngày (error budget 0,1%). Lỗi 4xx do người dùng không tính là hỏng.\n- Đặt hàng đủ nhanh: tỉ lệ `POST /checkout` hoàn tất dưới 1,5 giây. SLO 99%.\n- Xem sản phẩm: tỉ lệ `GET /products/*` thành công và dưới 300ms. SLO 99,5%.\n- Đơn được xử lý tiếp (bất đồng bộ): 99% event `OrderPlaced` được xử lý xong trong 2 phút, đo bằng độ trễ consumer.\n\nBắt đầu ít SLO, đặt mục tiêu theo số liệu thực tế vài tuần gần nhất, không đặt 100%.\n\n**Alert theo burn rate** (cửa sổ dài và ngắn cùng vượt ngưỡng):\n- Gọi on-call: burn rate ≥ 14,4 trong 1 giờ và 5 phút; hoặc ≥ 6 trong 6 giờ và 30 phút.\n- Tạo ticket: burn rate ≥ 1 trong 3 ngày và 6 giờ.\n- Sự cố tuần trước: lỗi 4% so với budget 0,1% là burn rate 40. Ngưỡng 14,4 ứng với tỉ lệ lỗi 1,44%; cửa sổ 1 giờ cần tỉ lệ lỗi trung bình 1,44%; với lỗi 4% thì mất 1,44 / 4 = 0,36 giờ, khoảng 22 phút, để chạm ngưỡng; cửa sổ 5 phút đã vượt từ trước, nên on-call bị gọi sau khoảng 22 phút thay vì 3 giờ. Ba giờ lỗi như vậy tiêu 40 × 3 / 720 ≈ 17% budget tháng.\n- Nếu chọn SLO 99,5% cho thanh toán: burn rate chỉ còn 8, cửa sổ 1 giờ không bao giờ kêu (cần lỗi ≥ 7,2%), cửa sổ 6 giờ cần lỗi kéo dài 4,5 giờ. Sự cố 3 giờ lặp lại y hệt mà không ai được gọi. SLO quá lỏng cũng làm alert vô dụng như không có SLO.\n\n**80 alert cũ**: CPU, heap, pod restart không phải thứ người dùng thấy. Chuyển chúng thành dashboard USE để dùng khi điều tra. Chỉ giữ alert nguyên nhân khi nó báo trước một sự cố chắc chắn và cần người xử lý ngay: đĩa sắp đầy trong 4 giờ, chứng chỉ TLS hết hạn trong 7 ngày, consumer lag tăng liên tục.\n\n**Trace**: 3.000 × 10 = 30.000 span/giây; ngân sách 500 span/giây là chưa tới 2%. Sampling cố định 1,5% sẽ bỏ gần hết trace của lỗi hiếm. Dùng tail sampling ở OpenTelemetry Collector: giữ 100% trace có lỗi, 100% trace chậm hơn 1,5 giây, và 1% trace bình thường. Đặt lớp load balancing theo trace id trước các Collector. Bật exemplar trên histogram latency để nối điểm p99 sang trace.\n\n**Ghép lại**: alert SLO báo \"thanh toán hỏng\"; dashboard RED từng service và trace lỗi chỉ ra service nào; log có `trace_id` của đúng request cho biết vì sao.",
+  "tradeoffs": [
+    {
+      "option": "Head sampling cố định (ví dụ 1,5%) ngay ở SDK",
+      "pros": ["Đơn giản, không cần hạ tầng thêm", "Chi phí dự đoán được, quyết định lan theo `traceparent` nên trace không bị cắt"],
+      "cons": ["Bỏ mất phần lớn trace lỗi và trace chậm, đúng loại cần nhất khi điều tra", "Lưu lượng thấp thì gần như không còn trace nào"]
+    },
+    {
+      "option": "Tail sampling ở OpenTelemetry Collector",
+      "pros": ["Giữ được mọi trace lỗi và chậm, chỉ lấy mẫu trace bình thường", "Chính sách đổi được ở Collector mà không deploy lại ứng dụng"],
+      "cons": ["Collector phải giữ span trong bộ nhớ chờ trace xong, cần lớp load balancing theo trace id", "Ứng dụng vẫn gửi 100% span qua mạng tới Collector"]
+    },
+    {
+      "option": "Giữ 100% trace",
+      "pros": ["Không bỏ sót gì, tra cứu được mọi request"],
+      "cons": ["30.000 span/giây, chi phí lưu trữ vượt ngân sách khoảng 60 lần", "Phần lớn dữ liệu là request bình thường không ai xem"]
+    }
+  ]
+}

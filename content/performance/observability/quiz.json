@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "burn-rate-days",
+      "kind": "single",
+      "prompt": "SLO của API là 99,9% request thành công trong 30 ngày. Từ sáng nay tỉ lệ lỗi đứng ở 1% và giữ nguyên. Nếu không làm gì, error budget của cả 30 ngày cạn sau bao lâu?",
+      "options": [
+        "Khoảng 3 ngày, vì burn rate là 10",
+        "Khoảng 10 ngày, vì lỗi 1% gấp 10 lần ngưỡng",
+        "Khoảng 30 ngày, vì budget tính cho cả tháng",
+        "Không cạn, vì 1% vẫn nhỏ hơn mức cho phép"
+      ],
+      "answer": 0,
+      "explanation": "Budget là 0,1%; lỗi 1% là tiêu nhanh gấp 10 lần mức đều (burn rate 10). Budget đủ cho 30 ngày ở mức đều thì cạn sau 30 / 10 = 3 ngày. Burn rate 10 thấp hơn ngưỡng 14,4 của cửa sổ 1 giờ nhưng vượt ngưỡng 6 của cửa sổ 6 giờ, nên alert gọi người sau vài giờ. 1% không nhỏ hơn mức cho phép: mức cho phép là 0,1%."
+    },
+    {
+      "id": "rare-error-trace",
+      "kind": "single",
+      "prompt": "Khoảng 0,05% request thanh toán lỗi với timeout. Tracing đang bật với head sampling 10% ở SDK. Đội gần như không bao giờ tìm được trace của request lỗi. Cách sửa phù hợp nhất?",
+      "options": [
+        "Tail sampling ở Collector, giữ mọi trace lỗi và chậm",
+        "Tăng head sampling lên 50% để bắt được nhiều lỗi hơn",
+        "Tắt tracing và tìm lỗi bằng log ở mức DEBUG",
+        "Giảm sampling xuống 1% để Collector đỡ quá tải"
+      ],
+      "answer": 0,
+      "explanation": "Head sampling quyết định trước khi biết request có lỗi, nên chỉ giữ ngẫu nhiên 10% của số trace lỗi vốn đã hiếm, và trace có khi còn thiếu span. Tail sampling chờ trace kết thúc rồi giữ 100% trace có lỗi hoặc chậm, chỉ lấy mẫu trace bình thường. Tăng lên 50% tốn gấp 5 lần mà vẫn bỏ nửa số lỗi. Log DEBUG không cho thấy thời gian mất ở service nào."
+    },
+    {
+      "id": "page-on-symptom",
+      "kind": "single",
+      "prompt": "Đội muốn giảm số lần on-call bị gọi vô ích nhưng không bỏ sót sự cố. Alert nào nên được phép gọi người lúc 3 giờ sáng?",
+      "options": [
+        "Error budget thanh toán đang bị tiêu nhanh gấp 14 lần",
+        "CPU của một pod order-api vượt 85% trong 5 phút liên tục",
+        "Một pod bị Kubernetes restart do liveness probe thất bại",
+        "Heap của payment-api vượt 80% sau một lần full GC"
+      ],
+      "answer": 0,
+      "explanation": "Alert gọi người nên dựa trên triệu chứng người dùng thấy: SLO đang bị tiêu nhanh nghĩa là thật sự có người không thanh toán được. CPU cao, một pod restart hay heap 80% có thể không ảnh hưởng ai (Kubernetes tự xử lý, pod khác gánh tải), và nếu có ảnh hưởng thì alert SLO cũng kêu. Đưa chúng lên dashboard để điều tra."
+    },
+    {
+      "id": "kafka-trace-break",
+      "kind": "single",
+      "prompt": "Trace của luồng đặt hàng dừng ở bước order-api gửi event vào Kafka; phần xử lý ở inventory-consumer hiện thành trace riêng không liên quan. Nguyên nhân hay gặp nhất?",
+      "options": [
+        "Producer không ghi `traceparent` vào header message",
+        "Kafka xoá mọi header của message khi lưu xuống đĩa",
+        "Trace chỉ đi qua HTTP, không thể nối qua message queue",
+        "Consumer chạy trên pod khác nên phải có trace id mới"
+      ],
+      "answer": 0,
+      "explanation": "Context đi qua message bằng header: producer phải ghi `traceparent`, consumer phải đọc nó để tạo span nối vào trace (thư viện instrumentation của Kafka làm việc này khi được bật; Spring Kafka cần `observationEnabled`). Kafka giữ nguyên header từ phiên bản 0.11. Pod nào xử lý không quan trọng, trace id đi theo dữ liệu chứ không theo máy."
+    },
+    {
+      "id": "slo-target",
+      "kind": "single",
+      "prompt": "Product owner đề nghị SLO 100% cho luồng thanh toán vì \"thanh toán không được phép lỗi\". Phản hồi tốt nhất?",
+      "options": [
+        "Chọn mức như 99,9% theo dữ liệu thật, vì 100% không còn budget",
+        "Đồng ý 100%, vì SLO chỉ là mục tiêu nội bộ nên đặt cao cũng không mất gì",
+        "Đặt 100% cho SLA với khách hàng, còn SLO nội bộ để 99%",
+        "Không đặt SLO cho thanh toán, chỉ đặt cho các luồng ít quan trọng hơn"
+      ],
+      "answer": 0,
+      "explanation": "SLO 100% nghĩa là error budget bằng 0: mọi lỗi đều vi phạm, alert kêu liên tục rồi bị lờ, và không còn chỗ cho deploy hay thay đổi. Người dùng cũng không phân biệt được 99,99% với 100% vì mạng và thiết bị của họ kém tin cậy hơn. SLA phải lỏng hơn SLO, không chặt hơn. Thanh toán là luồng quan trọng nhất nên càng cần SLO."
+    }
+  ]
+}
