@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "availability-chain",
+      "kind": "single",
+      "prompt": "Một request phải gọi đồng bộ qua 3 service, mỗi service độc lập sẵn sàng 99,9%. Khả dụng của cả luồng xấp xỉ bao nhiêu?",
+      "options": [
+        "99,7%",
+        "99,9%",
+        "99,99%",
+        "97%"
+      ],
+      "answer": 0,
+      "explanation": "Cả ba phải cùng sống: 0,999³ ≈ 0,997. Thời gian lỗi tăng khoảng gấp ba (từ khoảng 43 phút lên khoảng 130 phút mỗi tháng). Mỗi phụ thuộc đồng bộ thêm vào làm khả dụng giảm, đó là lý do chuyển phần không thiết yếu sang bất đồng bộ."
+    },
+    {
+      "id": "grpc-l4-imbalance",
+      "kind": "single",
+      "prompt": "Service A gọi service B bằng gRPC qua một Kubernetes Service (ClusterIP) bình thường. B có 6 pod nhưng một pod chịu gần hết tải, 5 pod còn lại gần như rảnh. Nguyên nhân hay gặp nhất là gì?",
+      "options": [
+        "HTTP/2 giữ một kết nối lâu dài, còn L4 chỉ chọn pod khi mở kết nối",
+        "Pod đó có readiness probe đặt sai nên Kubernetes chỉ gửi tới nó",
+        "gRPC chỉ hỗ trợ một server cho mỗi client, nên phải tạo 6 client",
+        "Protobuf ép mọi request có cùng hash vào một pod"
+      ],
+      "answer": 0,
+      "explanation": "kube-proxy cân bằng theo kết nối TCP. gRPC mở ít kết nối và gửi mọi request qua multiplexing của HTTP/2, nên request dồn vào pod được chọn lúc mở kết nối. Sửa bằng cân bằng tải phía client (headless Service, chính sách `round_robin`), proxy L7 như Envoy, hoặc giới hạn tuổi kết nối. Readiness sai thì pod bị loại khỏi danh sách, không làm pod khác rảnh."
+    },
+    {
+      "id": "graphql-n-plus-one",
+      "kind": "single",
+      "prompt": "Query GraphQL lấy 50 đơn hàng, mỗi đơn kèm `customer { name }`. Log cho thấy 1 lời gọi lấy danh sách đơn và 50 lời gọi riêng tới Customer service. Cách sửa phổ biến nhất?",
+      "options": [
+        "Gom các lần lấy `customer` theo lô (DataLoader), gọi một lần theo danh sách id",
+        "Chuyển sang REST, vì GraphQL luôn sinh một lời gọi cho mỗi trường",
+        "Bật cache HTTP cho từng lời gọi tới Customer service",
+        "Tăng số thread của server GraphQL để 50 lời gọi chạy song song"
+      ],
+      "answer": 0,
+      "explanation": "Resolver `customer` chạy cho từng đơn nên sinh N+1 lời gọi. DataLoader gom các key được yêu cầu trong cùng một lượt rồi gọi một lần `getCustomers(ids)`, đồng thời cache trong phạm vi request. Chạy song song 50 lời gọi vẫn là 50 lời gọi; cache HTTP chỉ giúp lần sau, lượt đầu vẫn 50 lời gọi; REST không tự giải quyết vấn đề này."
+    },
+    {
+      "id": "sync-or-async",
+      "kind": "single",
+      "prompt": "Trong luồng đặt hàng, việc nào hợp nhất để làm bất đồng bộ qua event?",
+      "options": [
+        "Cộng điểm thưởng cho khách sau khi đơn được thanh toán",
+        "Kiểm tra và giữ hàng trước khi xác nhận đơn",
+        "Tính giá cuối cùng hiển thị cho khách trước khi thanh toán",
+        "Xác thực token của người dùng trước khi tạo đơn"
+      ],
+      "answer": 0,
+      "explanation": "Cộng điểm không cần xong trước khi trả lời khách, và chậm vài giây không ảnh hưởng nghiệp vụ, nên hợp với event. Ba việc còn lại cung cấp thông tin mà bước tiếp theo cần ngay (còn hàng không, giá bao nhiêu, người dùng là ai), nên cần lời gọi đồng bộ hoặc dữ liệu có sẵn tại chỗ."
+    }
+  ]
+}

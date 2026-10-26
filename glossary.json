@@ -111,7 +111,7 @@
       "meaning": "Chạy nhiều luồng dữ liệu độc lập đan xen trên cùng một kết nối. HTTP/2 chia mỗi request thành frame có stream id.",
       "example": "Trình duyệt tải 50 ảnh song song qua một kết nối HTTP/2 thay vì 6 kết nối HTTP/1.1.",
       "related": ["head-of-line-blocking", "quic"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "service-communication"]
     },
     {
       "id": "quic",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals"]
     },
     {
       "id": "hash-spreading",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals"]
     },
     {
       "id": "idempotency-key",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication"]
     },
     {
       "id": "orm",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication"]
     },
     {
       "id": "replication-slot",
@@ -2141,7 +2141,7 @@
       "meaning": "Hai node cùng nghĩ mình là primary và cùng nhận ghi, thường do cô lập mạng; dữ liệu rẽ thành hai nhánh khó gộp lại.",
       "example": "Primary cũ bị cô lập vẫn nhận đơn hàng từ vài pod trong khi replica đã được promote.",
       "related": ["fencing", "failover"],
-      "topics": ["replication-ha", "redis-ha-cluster"]
+      "topics": ["replication-ha", "redis-ha-cluster", "distributed-fundamentals"]
     },
     {
       "id": "fencing",
@@ -2149,7 +2149,7 @@
       "meaning": "Cơ chế chắc chắn node cũ không thể ghi nữa trước khi node mới nhận vai: lease tự hết hạn, watchdog khởi động lại máy, hoặc STONITH tắt nguồn node cũ.",
       "example": "Patroni hạ primary xuống read-only khi không gia hạn được khoá leader trong etcd; watchdog khởi động lại máy nếu chính Patroni treo.",
       "related": ["split-brain", "patroni"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "distributed-fundamentals"]
     },
     {
       "id": "patroni",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication"]
     },
     {
       "id": "dead-letter-queue",
@@ -2525,7 +2525,7 @@
       "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "distributed-fundamentals"]
     },
     {
       "id": "cache-aside",
@@ -2653,7 +2653,7 @@
       "meaning": "Một phần của topic Kafka: log chỉ ghi nối có thứ tự, nằm trên một broker leader và được sao chép sang các follower. Đơn vị song song và đơn vị giữ thứ tự.",
       "example": "Topic `orders` có 12 partition; message key `order-42` luôn vào cùng một partition.",
       "related": ["kafka-offset", "consumer-group"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "service-communication"]
     },
     {
       "id": "kafka-offset",
@@ -2997,7 +2997,7 @@
       "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
       "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
       "related": ["consumer-group", "kafka-offset"],
-      "topics": ["kafka-troubleshooting"]
+      "topics": ["kafka-troubleshooting", "service-communication"]
     },
     {
       "id": "rebalance-storm",
@@ -3245,7 +3245,7 @@
       "meaning": "Định dạng body lỗi chuẩn cho HTTP API theo RFC 9457, gồm `type`, `title`, `status`, `detail`, `instance`; Spring 6 có class `ProblemDetail` và `ErrorResponse`.",
       "example": "`ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, \"Đơn đã thanh toán\")`.",
       "related": ["dispatcher-servlet"],
-      "topics": ["spring-mvc-flow", "clean-hexagonal"]
+      "topics": ["spring-mvc-flow", "clean-hexagonal", "service-communication"]
     },
     {
       "id": "mass-assignment",
@@ -3461,7 +3461,7 @@
       "meaning": "Cơ chế để service tìm địa chỉ các instance đang chạy của service khác, qua registry (Eureka, Consul) hoặc DNS của nền tảng (Kubernetes Service).",
       "example": "Order Service gọi `lb://payment`; LoadBalancer hỏi Eureka danh sách instance của `payment` rồi chọn một.",
       "related": ["client-side-load-balancing", "api-gateway"],
-      "topics": ["spring-cloud"]
+      "topics": ["spring-cloud", "service-communication"]
     },
     {
       "id": "config-server",
@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals"]
     },
     {
       "id": "chunk-processing",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical"]
+      "topics": ["ddd-tactical", "service-communication"]
     },
     {
       "id": "event-publication-registry",
@@ -4614,6 +4614,94 @@
       "example": "Đổi một trường trong service đơn hàng buộc năm service khác cùng release.",
       "related": ["modular-monolith"],
       "topics": ["modular-monolith"]
+    },
+    {
+      "id": "partial-failure",
+      "term": "Partial failure",
+      "meaning": "Một phần hệ thống phân tán hỏng trong khi phần khác vẫn chạy, và bên gọi thường không biết chính xác phần nào hỏng hay thao tác đã được thực hiện chưa.",
+      "example": "Payment đã trừ tiền nhưng response mất trên mạng; Order service chỉ thấy timeout.",
+      "related": ["timeout", "network-partition"],
+      "topics": ["distributed-fundamentals"]
+    },
+    {
+      "id": "timeout",
+      "term": "Timeout",
+      "meaning": "Giới hạn thời gian chờ một thao tác qua mạng; hết giờ thì bỏ chờ. Timeout không cho biết bên kia chậm, chết hay đã làm xong.",
+      "example": "`HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(2))`; không đặt thì JDK `HttpClient` chờ vô hạn.",
+      "related": ["partial-failure"],
+      "topics": ["distributed-fundamentals"]
+    },
+    {
+      "id": "fallacies-of-distributed-computing",
+      "term": "Fallacies of distributed computing",
+      "meaning": "Tám giả định sai khi thiết kế hệ phân tán: mạng tin cậy, latency bằng 0, băng thông vô hạn, mạng an toàn, topology không đổi, một người quản trị, chi phí truyền bằng 0, mạng đồng nhất.",
+      "example": "Code gọi REST như gọi method trong process, không timeout, không retry, là đang tin \"mạng tin cậy\" và \"latency bằng 0\".",
+      "related": ["partial-failure"],
+      "topics": ["distributed-fundamentals"]
+    },
+    {
+      "id": "gray-failure",
+      "term": "Gray failure",
+      "meaning": "Lỗi một phần khó thấy: node vẫn qua health check nhưng xử lý request thật chậm hoặc lỗi một phần.",
+      "example": "Pod trả `200` cho `/health` nhưng 30% request thật timeout vì disk chậm.",
+      "related": ["partial-failure"],
+      "topics": ["distributed-fundamentals"]
+    },
+    {
+      "id": "network-partition",
+      "term": "Network partition",
+      "meaning": "Mạng chia các node thành nhóm không liên lạc được với nhau trong khi từng node vẫn chạy.",
+      "example": "Hai data center mất đường kết nối; mỗi bên vẫn nhận request của người dùng gần nó.",
+      "related": ["partial-failure", "split-brain"],
+      "topics": ["distributed-fundamentals"]
+    },
+    {
+      "id": "grpc",
+      "term": "gRPC",
+      "meaning": "Framework gọi hàm từ xa dùng Protobuf trên HTTP/2, có sinh code client cho nhiều ngôn ngữ, streaming hai chiều và deadline truyền qua các lời gọi.",
+      "example": "`inventoryStub.withDeadlineAfter(300, MILLISECONDS).reserve(request)`.",
+      "related": ["protobuf", "multiplexing"],
+      "topics": ["service-communication"]
+    },
+    {
+      "id": "graphql",
+      "term": "GraphQL",
+      "meaning": "Ngôn ngữ truy vấn cho API: client khai báo đúng các trường cần, server gom dữ liệu từ nhiều nguồn trong một request.",
+      "example": "`query { order(id: 42) { total customer { name } } }`.",
+      "related": ["dataloader"],
+      "topics": ["service-communication"]
+    },
+    {
+      "id": "protobuf",
+      "term": "Protobuf",
+      "meaning": "Protocol Buffers: định dạng nhị phân có schema (`.proto`); field nhận diện bằng số nên thêm field mới vẫn tương thích ngược.",
+      "example": "`message Order { string id = 1; int64 total = 2; reserved 3; }`.",
+      "related": ["grpc"],
+      "topics": ["service-communication"]
+    },
+    {
+      "id": "dataloader",
+      "term": "DataLoader",
+      "meaning": "Kỹ thuật (và thư viện) gom các lần lấy dữ liệu theo key trong cùng một request GraphQL thành một lời gọi theo lô, kèm cache trong request.",
+      "example": "50 resolver `customer` được gom thành một lời gọi `getCustomers([...50 id])`.",
+      "related": ["graphql"],
+      "topics": ["service-communication"]
+    },
+    {
+      "id": "bff",
+      "term": "BFF",
+      "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó.",
+      "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
+      "related": ["graphql"],
+      "topics": ["service-communication"]
+    },
+    {
+      "id": "headless-service",
+      "term": "Headless Service",
+      "meaning": "Kubernetes Service với `clusterIP: None`: DNS trả thẳng IP của từng pod thay vì một IP ảo, để client tự cân bằng tải giữa các pod.",
+      "example": "Client gRPC phân giải `inventory-headless` ra 6 IP pod và dùng chính sách `round_robin`.",
+      "related": ["grpc", "service-discovery"],
+      "topics": ["service-communication"]
     }
   ]
 }

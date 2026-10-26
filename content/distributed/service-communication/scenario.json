@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Checkout chậm và sập dây chuyền vì gọi đồng bộ khắp nơi",
+  "prompt": "Luồng checkout hiện tại: Order service gọi tuần tự bằng REST tới Customer (lấy hồ sơ), Pricing (tính giá), Inventory (giữ hàng), Payment (trừ tiền), Loyalty (cộng điểm), Notification (gửi email), Analytics (ghi sự kiện), rồi mới trả lời app. p50 mỗi lời gọi khoảng 40 ms, p99 khoảng 400 ms. Mỗi service sẵn sàng 99,9%. Giờ cao điểm 400 đơn mỗi giây. Tuần trước Notification bị treo vì nhà cung cấp email chậm, và toàn bộ checkout ngừng 20 phút. Mục tiêu: p99 checkout dưới 800 ms, checkout không phụ thuộc vào các phần không thiết yếu. Thiết kế lại cách các service giao tiếp.",
+  "hints": [
+    "Trong 7 lời gọi, lời gọi nào phải có kết quả trước khi trả lời khách?",
+    "Tính khả dụng của checkout khi phụ thuộc đồng bộ vào 7 service, và khi chỉ phụ thuộc vào 3.",
+    "Những lời gọi đồng bộ còn lại có chạy song song được không? Timeout của từng lời gọi nên đặt thế nào để vừa tổng 800 ms?",
+    "Event cho các phần còn lại cần đảm bảo gì để không mất khi Order service chết ngay sau commit?"
+  ],
+  "solution": "**Phân loại lời gọi**:\n- *Cần kết quả ngay*: Pricing (giá cuối), Inventory (giữ hàng), Payment (trừ tiền hoặc tạo phiên thanh toán). Giữ đồng bộ.\n- *Có thể lấy trước hoặc cache*: hồ sơ Customer (tên, địa chỉ mặc định) đọc nhiều, ít đổi: cache cục bộ với TTL ngắn hoặc giữ bản sao cập nhật bằng event.\n- *Không cần trước khi trả lời*: Loyalty, Notification, Analytics. Chuyển sang event `OrderPlaced`, `OrderPaid`.\n\n**Khả dụng**: 7 phụ thuộc đồng bộ ở 99,9% cho khoảng 99,3% (khoảng 5 giờ lỗi mỗi tháng); 3 phụ thuộc cho khoảng 99,7%. Quan trọng hơn: lỗi của Notification không còn chặn checkout.\n\n**Latency**: Pricing và kiểm tra tồn kho chạy song song nếu Pricing không cần kết quả giữ hàng; Payment chạy sau. Timeout chỉ là chặn trên, không làm request nhanh hơn: hai bước nối tiếp mà mỗi bước p99 khoảng 400 ms thì đã chạm 800 ms. Để đạt mục tiêu phải giảm latency thật: bỏ lời gọi Customer khỏi đường chính (cache), chạy song song Pricing và Inventory, và đo lại p99 của từng service. Timeout đặt trên p99 của từng dependency (ví dụ Pricing, Inventory 500 ms; Payment 1,5 giây) cùng một deadline tổng truyền xuống (gRPC deadline hoặc header); Payment hết giờ thì hỏi lại trạng thái bằng idempotency key thay vì coi là thất bại. Retry tối đa một lần cho lỗi tạm thời của thao tác đọc; Payment chỉ retry với [[idempotency-key|idempotency key]].\n\n**Event**: ghi `OrderPlaced` vào bảng [[outbox]] trong cùng transaction tạo đơn, relay sang Kafka; Loyalty, Notification, Analytics tiêu thụ với [[idempotent-consumer|consumer idempotent]] theo `orderId`. Notification chậm thì event chờ trong Kafka; theo dõi [[consumer-lag|consumer lag]].\n\n**Bảo vệ thêm**: [[circuit-breaker|circuit breaker]] quanh ba lời gọi đồng bộ, [[bulkhead]] (pool riêng) cho mỗi dependency để Payment chậm không chiếm hết thread của Pricing.\n\n**Trải nghiệm**: app nhận xác nhận đơn ngay sau khi thanh toán xong; email tới sau vài giây, điểm thưởng cập nhật sau đó, và giao diện nói rõ điều này.",
+  "tradeoffs": [
+    {
+      "option": "Giữ đồng bộ cho Pricing, Inventory, Payment; event cho phần còn lại",
+      "pros": [
+        "Checkout không phụ thuộc vào phần không thiết yếu",
+        "p99 giảm nhờ ít lời gọi và chạy song song"
+      ],
+      "cons": [
+        "Email và điểm thưởng tới chậm hơn vài giây",
+        "Cần outbox, Kafka, consumer idempotent và giám sát lag"
+      ]
+    },
+    {
+      "option": "Giữ REST đồng bộ, chỉ thêm timeout và circuit breaker cho Notification",
+      "pros": [
+        "Thay đổi nhỏ, không thêm hạ tầng"
+      ],
+      "cons": [
+        "Vẫn 7 phụ thuộc đồng bộ, latency cộng dồn",
+        "Khi breaker mở, email bị mất nếu không có nơi lưu để gửi lại"
+      ]
+    },
+    {
+      "option": "Biến toàn bộ checkout thành chuỗi event bất đồng bộ",
+      "pros": [
+        "Không service nào chặn service nào"
+      ],
+      "cons": [
+        "Khách không biết ngay đơn thành công hay hết hàng",
+        "Phải xử lý trạng thái trung gian và bù trừ cho cả luồng thanh toán"
+      ]
+    }
+  ]
+}

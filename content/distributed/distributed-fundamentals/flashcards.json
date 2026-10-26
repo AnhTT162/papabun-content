@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "third-outcome", "front": "Lời gọi qua mạng có kết cục nào mà lời gọi method trong process không có?", "back": "Không biết: request có thể mất, đã xử lý nhưng response mất, hoặc chỉ đang chậm." },
+    { "id": "partial-failure", "front": "Partial failure là gì?", "back": "Một phần hệ thống hỏng trong khi phần khác vẫn chạy, và bên gọi thường không biết chính xác phần nào hỏng." },
+    { "id": "fallacies", "front": "Kể bốn trong tám ngộ nhận về hệ phân tán.", "back": "Mạng tin cậy; latency bằng 0; băng thông vô hạn; topology không đổi (còn: mạng an toàn, một người quản trị, chi phí truyền bằng 0, mạng đồng nhất)." },
+    { "id": "default-timeout", "front": "JDK `HttpClient` không đặt `timeout` cho request thì chờ bao lâu?", "back": "Vô hạn. Đặt `connectTimeout` trên client và `timeout` trên từng `HttpRequest`." },
+    { "id": "retry-safe", "front": "Khi nào retry sau timeout là an toàn?", "back": "Khi thao tác idempotent, hoặc có idempotency key để bên nhận nhận ra lần gửi lại." },
+    { "id": "fanout", "front": "Gọi song song 10 backend, mỗi cái 1% chậm, thì bao nhiêu request bị chậm?", "back": "Khoảng 9,6% (1 − 0,99^10); với 100 backend là khoảng 63%." },
+    { "id": "exactly-once", "front": "Có exactly-once delivery qua mạng không tin cậy không?", "back": "Không; chỉ có at-most-once hoặc at-least-once. Exactly-once processing đạt được bằng at-least-once cộng dedup hay transaction." },
+    { "id": "gray-failure", "front": "Gray failure là gì?", "back": "Node vẫn qua health check nhưng xử lý request thật chậm hoặc lỗi một phần; cần theo dõi lỗi và latency của request thật để phát hiện." }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "service-communication",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Giao tiếp giữa service",
+  "summary": "Đồng bộ và bất đồng bộ, chọn theo luồng nghiệp vụ; REST, gRPC, GraphQL và chỗ hợp của từng loại; khả dụng nhân với nhau qua chuỗi gọi; service discovery phía server và phía client; gRPC lệch tải sau cân bằng tải L4, deadline, tương thích Protobuf; client HTTP của Spring; request-reply qua broker, mã lỗi và versioning.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["distributed-fundamentals"],
+  "terms": ["grpc", "graphql", "service-discovery", "multiplexing", "protobuf", "dataloader", "bff", "headless-service", "eventual-consistency", "idempotent-consumer", "kafka-partition", "problem-detail", "outbox", "circuit-breaker", "bulkhead", "consumer-lag", "idempotency-key"],
+  "references": [
+    { "title": "gRPC: Core concepts, architecture and lifecycle (deadlines)", "url": "https://grpc.io/docs/what-is-grpc/core-concepts/" },
+    { "title": "Protocol Buffers: Updating a Message Type", "url": "https://protobuf.dev/programming-guides/proto3/#updating" },
+    { "title": "Spring Framework Reference: REST Clients", "url": "https://docs.spring.io/spring-framework/reference/integration/rest-clients.html" },
+    { "title": "Kubernetes: Service", "url": "https://kubernetes.io/docs/concepts/services-networking/service/" },
+    { "title": "Spring blog: The state of HTTP clients in Spring", "url": "https://spring.io/blog/2025/09/30/the-state-of-http-clients-in-spring/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao không dùng gRPC cho mọi thứ, nó nhanh hơn mà?\" Trả lời: nhanh hơn ở serialize và kết nối, nhưng thời gian của phần lớn API nằm ở database và mạng. gRPC đổi lấy khó debug, cần gRPC-Web cho trình duyệt, và phải xử lý cân bằng tải HTTP/2. Chọn gRPC cho đường gọi nội bộ nóng, đã đo được serialize hay số kết nối là nút cổ chai, hoặc cần streaming." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng dùng message broker theo kiểu gửi request rồi chờ reply trên một queue tạm để \"cho có bất đồng bộ\". Bên gọi vẫn treo chờ và vẫn phụ thuộc bên kia đang sống, lại thêm broker vào đường đi. Cần kết quả ngay thì gọi đồng bộ với timeout rõ ràng; không cần thì phát event và không chờ." }
+  ]
+}

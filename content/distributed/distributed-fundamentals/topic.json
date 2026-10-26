@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "distributed-fundamentals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Vì sao hệ phân tán khó",
+  "summary": "Kết cục thứ ba của lời gọi qua mạng; partial failure và tám ngộ nhận; timeout không phân biệt được chậm, chết hay đã xong, và mặc định thường là vô hạn; latency đuôi khi fan-out; process pause, đồng hồ lệch, ACK của TCP, exactly-once, gray failure, network partition, hỏng dây chuyền và retry khuếch đại.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 11,
+  "prerequisites": ["http-request-lifecycle"],
+  "terms": ["partial-failure", "timeout", "fallacies-of-distributed-computing", "idempotency-key", "gray-failure", "network-partition", "split-brain", "fencing", "circuit-breaker", "bulkhead", "retry-backoff", "fan-out"],
+  "references": [
+    { "title": "Java SE 21 API: HttpRequest.Builder.timeout", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html#timeout(java.time.Duration)" },
+    { "title": "AWS Builders' Library: Timeouts, retries, and backoff with jitter", "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" },
+    { "title": "Jeffrey Dean, Luiz André Barroso: The Tail at Scale (CACM 2013)", "url": "https://cacm.acm.org/research/the-tail-at-scale/" },
+    { "title": "Arnon Rotem-Gal-Oz: Fallacies of Distributed Computing Explained", "url": "https://arnon.me/wp-content/uploads/Files/fallacies.pdf" },
+    { "title": "Apache Kafka Documentation: Message Delivery Semantics", "url": "https://kafka.apache.org/documentation/#semantics" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gọi service khác bị timeout thì bạn xử lý thế nào?\" Câu trả lời yếu là \"retry 3 lần\". Câu trả lời tốt nêu ba khả năng (chưa tới, đã xử lý nhưng mất response, đang chậm), rồi nói cách chọn: thao tác đọc thì retry có [[retry-backoff|backoff]]; thao tác ghi thì cần idempotency key hoặc hỏi trạng thái; và giới hạn tổng số lần retry để không khuếch đại tải lên một service đang quá tải." },
+    { "type": "callout", "style": "warning", "markdown": "Kiểm tra timeout của **mọi** client gọi ra ngoài: HTTP client, JDBC (`connectTimeout`, `socketTimeout`), Redis, Kafka producer. Nhiều thư viện mặc định chờ vô hạn hoặc rất lâu, và lỗi chỉ lộ ra khi một dependency treo giữa giờ cao điểm." }
+  ]
+}

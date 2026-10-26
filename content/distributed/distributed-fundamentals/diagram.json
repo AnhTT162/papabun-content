@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lời gọi thanh toán hết thời gian chờ",
+  "nodes": [
+    {"id": "client", "label": "App khách", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "order", "label": "Order service", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "payment", "label": "Payment service", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "db", "label": "Payment DB", "kind": "database", "x": 0.85, "y": 0.95},
+    {"id": "retry", "label": "Gửi lại?", "kind": "generic", "x": 0.1, "y": 0.5}
+  ],
+  "edges": [
+    {"id": "client-order", "from": "client", "to": "order", "label": "POST /checkout"},
+    {"id": "order-payment", "from": "order", "to": "payment", "label": "charge 500.000đ"},
+    {"id": "payment-db", "from": "payment", "to": "db", "label": "commit"},
+    {"id": "order-retry", "from": "order", "to": "retry", "label": "timeout 2s"},
+    {"id": "retry-payment", "from": "retry", "to": "payment", "label": "kèm idempotency key"}
+  ],
+  "steps": [
+    {"caption": "Khách bấm thanh toán. App gọi Order service.", "show": ["client", "order", "client-order"], "highlight": ["client-order"]},
+    {"caption": "Order service gọi Payment service để trừ 500.000đ. Từ đây có ba khả năng, và Order service không nhìn thấy được khả năng nào đang xảy ra.", "show": ["payment", "order-payment"], "highlight": ["order-payment"]},
+    {"caption": "Khả năng khó nhất: Payment đã trừ tiền và commit vào database, nhưng response bị mất trên đường về (mạng chập chờn, pod bị kill ngay sau commit).", "show": ["db", "payment-db"], "highlight": ["payment-db"]},
+    {"caption": "Sau 2 giây không có trả lời, Order service hết thời gian chờ. Request mất, response mất, hay Payment chỉ đang chậm đều trông giống hệt nhau.", "show": ["retry", "order-retry"], "highlight": ["order-retry"]},
+    {"caption": "Gửi lại như cũ thì có thể trừ tiền hai lần. Gửi lại kèm cùng idempotency key thì Payment nhận ra lần trước đã xử lý và trả lại kết quả cũ. Không có cơ chế này, phải hỏi trạng thái trước khi gửi lại.", "show": ["retry-payment"], "highlight": ["retry-payment"]}
+  ]
+}

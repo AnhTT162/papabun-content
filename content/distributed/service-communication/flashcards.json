@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "sync-vs-async", "front": "Khi nào chọn giao tiếp đồng bộ, khi nào bất đồng bộ?", "back": "Đồng bộ khi cần câu trả lời ngay để đi tiếp; bất đồng bộ khi chỉ cần báo việc đã xảy ra và bên nhận có thể xử lý sau." },
+    { "id": "availability", "front": "3 phụ thuộc đồng bộ, mỗi cái 99,9%, thì khả dụng chung bao nhiêu?", "back": "Khoảng 99,7% (0,999³); thời gian lỗi tăng khoảng gấp ba." },
+    { "id": "grpc-fit", "front": "gRPC hợp cho trường hợp nào?", "back": "Gọi nội bộ tần suất cao, hợp đồng chặt bằng Protobuf, cần streaming; ít hợp cho API công khai hay gọi trực tiếp từ trình duyệt." },
+    { "id": "grpc-lb", "front": "Vì sao gRPC sau Kubernetes Service thường bị lệch tải?", "back": "HTTP/2 dùng kết nối lâu dài, còn cân bằng tải L4 chỉ chọn pod khi mở kết nối; cần cân bằng tải phía client hoặc proxy L7." },
+    { "id": "protobuf-compat", "front": "Quy tắc tương thích quan trọng nhất của Protobuf?", "back": "Field nhận diện bằng số: thêm field với số mới; không dùng lại số đã xoá (đánh dấu `reserved`); không đổi kiểu field." },
+    { "id": "graphql-pitfall", "front": "Bẫy hay gặp nhất của GraphQL ở server?", "back": "Resolver gọi lẻ từng bản ghi gây N+1; gom bằng DataLoader. Ngoài ra cần giới hạn độ sâu và chi phí query." },
+    { "id": "discovery", "front": "Service discovery phía server và phía client khác nhau thế nào?", "back": "Server: gọi một tên DNS ổn định, hạ tầng (Kubernetes Service) chọn instance. Client: client lấy danh sách instance từ registry rồi tự cân bằng tải." },
+    { "id": "spring-clients", "front": "Client HTTP nên dùng trong Spring 6.1+?", "back": "`RestClient` hoặc HTTP interface (`@HttpExchange`) cho code đồng bộ, `WebClient` cho reactive; `RestTemplate` ở chế độ bảo trì và có kế hoạch deprecate từ Spring 7.1." }
+  ]
+}

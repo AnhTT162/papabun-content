@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần đặt hàng dùng nhiều kiểu giao tiếp",
+  "nodes": [
+    {"id": "app", "label": "App di động", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "bff", "label": "BFF (GraphQL)", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "order", "label": "Order service", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "inventory", "label": "Inventory service", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.85, "y": 0.95},
+    {"id": "notify", "label": "Notification", "kind": "service", "x": 0.1, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "app-bff", "from": "app", "to": "bff", "label": "1 query GraphQL"},
+    {"id": "bff-order", "from": "bff", "to": "order", "label": "REST POST /orders"},
+    {"id": "order-inventory", "from": "order", "to": "inventory", "label": "gRPC Reserve, 300ms"},
+    {"id": "order-kafka", "from": "order", "to": "kafka", "label": "event OrderPlaced"},
+    {"id": "kafka-notify", "from": "kafka", "to": "notify", "label": "consume"}
+  ],
+  "steps": [
+    {"caption": "App di động gửi một query GraphQL tới BFF, lấy đúng những trường màn hình cần thay vì gọi năm API.", "show": ["app", "bff", "app-bff"], "highlight": ["app-bff"]},
+    {"caption": "BFF gọi Order service bằng REST. Đây là lời gọi đồng bộ: BFF cần biết đơn được tạo hay bị từ chối để trả lời app.", "show": ["order", "bff-order"], "highlight": ["bff-order"]},
+    {"caption": "Order cần giữ hàng ngay mới tạo được đơn, nên gọi Inventory đồng bộ bằng gRPC với deadline 300 ms. Inventory chết thì đặt hàng lỗi: cái giá của gọi đồng bộ.", "show": ["inventory", "order-inventory"], "highlight": ["order-inventory"]},
+    {"caption": "Gửi email xác nhận không cần xong trước khi trả lời khách. Order chỉ phát event `OrderPlaced` lên Kafka (qua [[outbox]] để không mất).", "show": ["kafka", "order-kafka"], "highlight": ["order-kafka"]},
+    {"caption": "Notification tiêu thụ event theo nhịp của nó. Notification chết vài phút thì event chờ trong Kafka, đặt hàng vẫn chạy bình thường. Consumer phải chịu được event trùng.", "show": ["notify", "kafka-notify"], "highlight": ["kafka-notify"]}
+  ]
+}

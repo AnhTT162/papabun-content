@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "httpclient-no-timeout",
+      "kind": "output",
+      "prompt": "Server ở `payment.internal` nhận kết nối TCP nhưng bị treo, không bao giờ trả response. Đoạn code sau (JDK 21+) chạy thế nào?",
+      "code": "HttpClient client = HttpClient.newHttpClient();\nHttpRequest request = HttpRequest.newBuilder(URI.create(\"http://payment.internal/charge\"))\n        .POST(HttpRequest.BodyPublishers.ofString(\"{}\"))\n        .build();\n\nHttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());\nSystem.out.println(response.statusCode());",
+      "options": [
+        "Chặn thread mãi mãi, vì request không đặt `timeout` nên không có giới hạn chờ",
+        "Ném `HttpTimeoutException` sau 30 giây, là timeout mặc định của `HttpClient`",
+        "Ném `ConnectException` ngay, vì server không trả response",
+        "In `504`, vì client tự trả Gateway Timeout khi server không trả lời"
+      ],
+      "answer": 0,
+      "explanation": "`HttpClient` của JDK không có timeout mặc định cho response: không gọi `HttpRequest.Builder.timeout(...)` thì `send` chờ vô hạn. Kết nối đã thành công nên không có `ConnectException`; mã `504` là do proxy hay gateway trả về, không phải do client tự sinh. Một dependency treo như vậy giữ thread mãi, đủ để làm cạn thread pool của service gọi nó. Đặt `connectTimeout` trên client và `timeout` trên từng request."
+    },
+    {
+      "id": "fanout-tail",
+      "kind": "single",
+      "prompt": "Trang chủ gọi song song 100 backend; mỗi backend độc lập có 1% lời gọi chậm hơn 1 giây. Xấp xỉ bao nhiêu phần trăm lượt tải trang chủ gặp ít nhất một lời gọi chậm?",
+      "options": [
+        "Khoảng 63%",
+        "Khoảng 1%",
+        "Khoảng 10%",
+        "100%"
+      ],
+      "answer": 0,
+      "explanation": "Xác suất cả 100 lời gọi đều nhanh là 0,99^100 ≈ 0,366, nên khoảng 63% lượt tải có ít nhất một lời gọi chậm. Với 10 backend là khoảng 9,6%. Đây là lý do khi [[fan-out|fan-out]] lớn, p99 của từng backend quyết định trải nghiệm chung, và các kỹ thuật như hedged request hay bỏ qua backend chậm trở nên cần thiết."
+    },
+    {
+      "id": "timeout-then-what",
+      "kind": "single",
+      "prompt": "`OrderService` gọi `PaymentService.charge(order)` và bị timeout. API thanh toán không hỗ trợ idempotency key. Nên làm gì?",
+      "options": [
+        "Hỏi trạng thái giao dịch theo mã đơn trước, chỉ gửi lại khi chắc chưa trừ tiền",
+        "Gửi lại ngay, vì timeout nghĩa là Payment chưa nhận được request",
+        "Đánh dấu đơn thất bại và báo khách thanh toán lại từ đầu",
+        "Tăng timeout lên 60 giây để chắc chắn luôn nhận được response"
+      ],
+      "answer": 0,
+      "explanation": "Timeout chỉ nghĩa là chưa có trả lời; tiền có thể đã bị trừ. Gửi lại mù có thể trừ hai lần. Báo thất bại có thể khiến khách trả lần hai trong khi lần đầu đã thành công. Tăng timeout không xoá được khả năng response bị mất, chỉ giữ thread lâu hơn. Đúng là kiểm tra trạng thái (hoặc để một job đối soát xử lý đơn ở trạng thái chưa rõ), và đề nghị bên Payment hỗ trợ idempotency key."
+    },
+    {
+      "id": "tcp-ack",
+      "kind": "single",
+      "prompt": "Service gửi message qua socket TCP tới service khác và nhận được ACK của TCP. Kết luận nào đúng?",
+      "options": [
+        "Byte đã tới kernel bên nhận, nhưng ứng dụng bên kia có thể chưa đọc hay xử lý",
+        "Ứng dụng bên kia đã đọc và xử lý xong message",
+        "Message đã được ghi bền vững xuống đĩa bên nhận",
+        "Message sẽ không bao giờ bị gửi trùng ở tầng ứng dụng"
+      ],
+      "answer": 0,
+      "explanation": "ACK của TCP xác nhận dữ liệu đã tới tầng TCP bên nhận. Ứng dụng có thể crash trước khi đọc, hoặc đọc rồi crash trước khi xử lý xong. Muốn biết thao tác đã xong thì cần xác nhận ở tầng ứng dụng (response HTTP, ack của consumer sau khi xử lý), và khi có gửi lại thì bên nhận phải chịu được trùng."
+    }
+  ]
+}
