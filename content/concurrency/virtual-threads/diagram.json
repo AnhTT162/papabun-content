@@ -61,7 +61,7 @@
       "id": "poller-heap",
       "from": "poller",
       "to": "heap",
-      "label": "có dữ liệu: unpark"
+      "label": "unpark"
     },
     {
       "id": "heap-c2",
