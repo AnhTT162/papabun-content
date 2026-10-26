@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "which-idempotent",
+      "kind": "output",
+      "prompt": "Mỗi câu SQL sau được chạy hai lần liên tiếp do retry. Câu nào cho kết quả sau cùng khác với khi chỉ chạy một lần?",
+      "code": "-- (1)\nUPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING';\n-- (2)\nUPDATE accounts SET balance = balance - 100000 WHERE id = 7;\n-- (3)\nINSERT INTO points (order_id, amount) VALUES (42, 50) ON CONFLICT (order_id) DO NOTHING;\n-- (4)\nDELETE FROM carts WHERE user_id = 7;",
+      "options": [
+        "Chỉ (2)",
+        "(2) và (4)",
+        "(1) và (2)",
+        "Cả bốn câu"
+      ],
+      "answer": 0,
+      "explanation": "(2) trừ thêm 100.000 mỗi lần chạy. (1) lần hai không khớp điều kiện `status = 'PENDING'` nên không đổi gì. (3) lần hai bị bỏ qua nhờ unique constraint trên `order_id`. (4) lần hai xoá 0 dòng, trạng thái vẫn là giỏ hàng trống. Kết quả trả về (số dòng ảnh hưởng) có thể khác, nhưng idempotent nói về trạng thái sau cùng."
+    },
+    {
+      "id": "key-per-what",
+      "kind": "single",
+      "prompt": "App di động gửi `Idempotency-Key` khi tạo đơn hàng. Cách sinh key nào đúng?",
+      "options": [
+        "Sinh một key cho mỗi thao tác người dùng, dùng lại ở mọi lần retry của thao tác đó",
+        "Sinh key mới cho mỗi lần gửi HTTP, kể cả khi retry",
+        "Để server sinh key rồi trả về trong response của lần gửi đầu",
+        "Dùng `userId` làm key để mỗi người chỉ có một đơn đang xử lý"
+      ],
+      "answer": 0,
+      "explanation": "Key phải giống nhau giữa các lần gửi của **cùng một ý định**, để server nhận ra bản trùng. Key mới mỗi lần thì vô dụng. Server sinh key thì lần gửi đầu mất response là client không biết key. Dùng `userId` chặn luôn các đơn khác hợp lệ của cùng người dùng."
+    },
+    {
+      "id": "concurrent-duplicate",
+      "kind": "single",
+      "prompt": "Request đầu với key `K` đang chờ cổng thanh toán (dòng key ở trạng thái `IN_PROGRESS`). Request thứ hai với cùng `K` và cùng nội dung tới. Server nên làm gì?",
+      "options": [
+        "Trả `409` (hoặc chờ ngắn) để client hỏi lại sau, không xử lý lần hai",
+        "Xử lý luôn lần hai, vì request đầu có thể đã thất bại",
+        "Trả `200` với response rỗng, vì key đã tồn tại",
+        "Xoá dòng key cũ và bắt đầu lại từ đầu với request mới"
+      ],
+      "answer": 0,
+      "explanation": "Request đầu chưa xong nên chưa có kết quả để trả lại, và xử lý lần hai là đúng điều cần tránh. `409` báo client thử lại sau; khi request đầu hoàn tất, lần hỏi sau nhận đúng response đã lưu. Trả `200` rỗng làm client tưởng đã xong. Nếu request đầu thực sự chết giữa chừng, một job dọn dòng `IN_PROGRESS` quá hạn sẽ kiểm tra trạng thái thật rồi xử lý."
+    },
+    {
+      "id": "same-key-different-body",
+      "kind": "single",
+      "prompt": "Client gửi `POST /payments` với `Idempotency-Key: K` và số tiền 500.000đ, đã xử lý xong. Vài phút sau, do lỗi code phía client, nó gửi lại cùng key `K` nhưng số tiền 700.000đ. Server nên làm gì?",
+      "options": [
+        "Trả `422`: key đã dùng cho một request có nội dung khác",
+        "Trả lại response của lần 500.000đ, vì key đã hoàn tất",
+        "Xử lý lần 700.000đ như một thanh toán mới",
+        "Ghi đè kết quả cũ bằng thanh toán 700.000đ"
+      ],
+      "answer": 0,
+      "explanation": "Server lưu hash của request cùng key để phát hiện trường hợp này. Trả lại response cũ sẽ che lỗi của client (client tưởng đã trả 700.000đ). Xử lý như thanh toán mới hay ghi đè đều phá ý nghĩa của key. `422` báo rõ client đang dùng nhầm key, theo bản thảo IETF về header `Idempotency-Key`."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Dual write và outbox",
+  "nodes": [
+    {"id": "order", "label": "Order service", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "db", "label": "Order DB + outbox", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "relay", "label": "Relay / CDC", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.1, "y": 0.5},
+    {"id": "inventory", "label": "Inventory service", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "recon", "label": "Job đối soát", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "order-kafka", "from": "order", "to": "kafka", "label": "gửi trực tiếp"},
+    {"id": "order-db", "from": "order", "to": "db", "label": "1 transaction"},
+    {"id": "db-relay", "from": "db", "to": "relay", "label": "đọc outbox"},
+    {"id": "relay-kafka", "from": "relay", "to": "kafka", "label": "phát, ít nhất 1 lần"},
+    {"id": "kafka-inventory", "from": "kafka", "to": "inventory", "label": "consumer idempotent"},
+    {"id": "recon-db", "from": "recon", "to": "db", "label": "so với Inventory"}
+  ],
+  "steps": [
+    {"caption": "Order service cần lưu đơn và báo Inventory giữ hàng. Hai việc này nằm ở hai hệ thống khác nhau.", "show": ["order"]},
+    {"caption": "Cách sai: lưu đơn rồi gửi thẳng lên Kafka. Pod chết giữa hai bước là đơn có mà event không có; gửi trước rồi database rollback là event có mà đơn không có. Đây là dual write.", "show": ["kafka", "order-kafka"], "highlight": ["order-kafka"]},
+    {"caption": "Cách đúng: trong một transaction, ghi đơn và một dòng `OrderPlaced` vào bảng outbox. Commit thì cả hai cùng có, rollback thì cả hai cùng không.", "show": ["db", "order-db"], "highlight": ["order-db"]},
+    {"caption": "Relay (poll bảng outbox, hoặc CDC đọc WAL) đẩy event sang Kafka. Relay chết giữa chừng thì gửi lại khi khởi động, nên event có thể trùng nhưng không mất.", "show": ["relay", "db-relay", "relay-kafka"], "highlight": ["relay-kafka"]},
+    {"caption": "Inventory tiêu thụ event và khử trùng theo `orderId`, nên event gửi hai lần cũng chỉ giữ hàng một lần.", "show": ["inventory", "kafka-inventory"], "highlight": ["kafka-inventory"]},
+    {"caption": "Job đối soát định kỳ so đơn và hàng đã giữ giữa hai service, sửa hoặc báo các chỗ lệch mà không pattern nào chặn hết (lỗi phần mềm, sửa tay database).", "show": ["recon", "recon-db"], "highlight": ["recon-db"]}
+  ]
+}

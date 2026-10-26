@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Thao tác idempotent là gì?", "back": "Làm nhiều lần cho cùng trạng thái hệ thống như làm một lần; kết quả trả về có thể khác (như `404` ở lần `DELETE` thứ hai)." },
+    { "id": "http-methods", "front": "Method HTTP nào idempotent theo chuẩn?", "back": "`GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, `TRACE`; `POST` và `PATCH` thì không." },
+    { "id": "key-scope", "front": "Idempotency key được sinh cho mỗi cái gì?", "back": "Mỗi thao tác của người dùng, dùng lại ở mọi lần retry của thao tác đó; không sinh mới cho mỗi lần gửi." },
+    { "id": "reserve-first", "front": "Vì sao phải ghi key trước khi làm việc?", "back": "Kiểm tra rồi mới ghi là check-then-act: hai request trùng cùng thấy \"chưa có\"; insert trước dưới unique constraint thì chỉ một request thắng." },
+    { "id": "same-tx", "front": "Key được ghi trong transaction nào?", "back": "Giữ chỗ cho key bằng một transaction ngắn trước khi làm việc; đánh dấu `COMPLETED` trong cùng transaction với thay đổi nghiệp vụ. Không gọi ra ngoài thì một transaction là đủ." },
+    { "id": "status-codes", "front": "Key trùng nhưng request đầu chưa xong, hoặc nội dung khác, thì trả gì?", "back": "Đang xử lý: `409` để client thử lại sau. Nội dung khác với lần đầu: `422`, vì client dùng nhầm key." },
+    { "id": "concurrent-insert", "front": "PostgreSQL: hai transaction cùng `INSERT ... ON CONFLICT DO NOTHING` một key thì sao?", "back": "Transaction sau chờ trên unique index tới khi transaction đầu kết thúc: đầu commit thì sau insert 0 dòng, đầu rollback thì sau insert thành công." },
+    { "id": "side-effects", "front": "Thao tác gọi ra ngoài (cổng thanh toán, email) làm idempotent thế nào?", "back": "Truyền tiếp idempotency key (hoặc key dẫn xuất) cho bên ngoài, vì chúng không nằm trong transaction database của bạn." }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "send-inside-tx",
+      "kind": "output",
+      "prompt": "`KafkaTemplate` dùng cấu hình mặc định (không có `transactionIdPrefix`). Cổng thanh toán từ chối thẻ, nên `payments.authorize` ném `PaymentDeclinedException` và transaction database rollback. Inventory service (consumer của topic `orders`) nhận được gì?",
+      "code": "@Transactional\npublic void placeOrder(PlaceOrder cmd) {\n    Order order = orders.save(Order.from(cmd));\n    kafkaTemplate.send(\"orders\", order.id().toString(), OrderPlaced.of(order));\n    payments.authorize(order);   // ném PaymentDeclinedException\n}",
+      "options": [
+        "Một event `OrderPlaced` cho đơn không tồn tại, vì message đã gửi trước khi rollback",
+        "Không có gì, vì Spring huỷ message Kafka khi transaction database rollback",
+        "Không có gì, vì Kafka chỉ giao message sau khi transaction database commit",
+        "Một event `OrderCancelled` do Spring tự phát khi rollback"
+      ],
+      "answer": 0,
+      "explanation": "Message được gửi ngay khi gọi `send`; transaction database không bao được Kafka, nên rollback không thu hồi được nó. Consumer giữ hàng cho một đơn không tồn tại. Chỉ khi `KafkaTemplate` được cấu hình transaction thì Spring Kafka mới abort message theo transaction database, và consumer phải đọc với `isolation.level=read_committed` mới không thấy nó. Ghi event vào bảng outbox trong cùng transaction thì event chỉ tồn tại khi đơn tồn tại."
+    },
+    {
+      "id": "after-commit-gap",
+      "kind": "single",
+      "prompt": "Nhóm chuyển việc gửi Kafka sang `@TransactionalEventListener(phase = AFTER_COMMIT)`. Rủi ro nào còn lại?",
+      "options": [
+        "Pod chết ngay sau commit, trước khi gửi xong, làm mất event",
+        "Event có thể được gửi cho đơn bị rollback",
+        "Listener chạy trước khi transaction commit nên vẫn là dual write",
+        "Không còn rủi ro, vì Spring lưu event lại để gửi lại khi khởi động"
+      ],
+      "answer": 0,
+      "explanation": "`AFTER_COMMIT` chỉ chạy khi commit thành công, nên không còn event cho đơn không tồn tại. Nhưng event nằm trong bộ nhớ: pod bị kill hay broker lỗi đúng lúc đó là event mất, và không có gì gửi lại. Spring Framework không lưu event (Spring Modulith có event publication registry, nhưng cần cấu hình). Outbox hoặc CDC đóng được khoảng hở này."
+    },
+    {
+      "id": "why-not-2pc",
+      "kind": "single",
+      "prompt": "Lý do chính khiến các hệ thống microservice thường tránh 2PC (XA) giữa database và message broker là gì?",
+      "options": [
+        "Giao thức chặn khi coordinator lỗi, và Kafka hay REST API không hỗ trợ XA",
+        "2PC không đảm bảo được tính nguyên tử khi có nhiều hơn hai bên tham gia",
+        "2PC chỉ chạy được khi mọi service dùng cùng một loại database",
+        "2PC bị cấm bởi chuẩn JDBC từ Java 9"
+      ],
+      "answer": 0,
+      "explanation": "2PC có đảm bảo nguyên tử với nhiều bên, nhưng là giao thức chặn: participant đã \"prepare\" phải giữ khoá cho tới khi coordinator quyết định. Kafka không hỗ trợ XA, REST API của đối tác cũng không. Thêm vào đó là latency và việc coordinator trở thành điểm lỗi. Outbox cộng saga cho eventual consistency với chi phí vận hành thấp hơn."
+    },
+    {
+      "id": "reconciliation-role",
+      "kind": "single",
+      "prompt": "Hệ thống đã có outbox, consumer idempotent và saga có bù trừ. Vẫn nên có job đối soát định kỳ không?",
+      "options": [
+        "Có: bug, sự cố đối tác hay sửa tay vẫn tạo lệch mà pattern không chặn hết",
+        "Không: có outbox và saga thì dữ liệu chắc chắn luôn khớp",
+        "Chỉ cần khi hệ thống chưa có outbox",
+        "Không: đối soát là dấu hiệu thiết kế sai, nên sửa thiết kế thay vì thêm job"
+      ],
+      "answer": 0,
+      "explanation": "Các pattern bảo vệ khỏi những lỗi đã lường trước (crash, message trùng). Bug trong logic bù trừ, đối tác ghi nhận giao dịch mà không gửi webhook, hay ai đó sửa dữ liệu bằng tay vẫn xảy ra. Đối soát là lưới an toàn cuối cùng, và là yêu cầu bắt buộc với dữ liệu tài chính."
+    }
+  ]
+}

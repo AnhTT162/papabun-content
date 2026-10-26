@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "no-shared-tx", "front": "Mỗi service một database thì nhất quán dữ liệu giữa chúng ra sao?", "back": "Không còn transaction chung; chỉ có eventual consistency, và kiến trúc phải làm cho dữ liệu hội tụ chắc chắn." },
+    { "id": "dual-write", "front": "Dual write là gì?", "back": "Ghi vào hai hệ thống (database và broker, hay hai service) bằng hai bước rời; crash hoặc lỗi giữa hai bước làm chúng lệch nhau." },
+    { "id": "two-failures", "front": "Hai chiều hỏng của dual write?", "back": "Database commit nhưng gửi message lỗi (event mất); gửi message rồi database rollback (event cho dữ liệu không tồn tại)." },
+    { "id": "outbox", "front": "Outbox giải quyết dual write thế nào?", "back": "Ghi event vào bảng outbox trong cùng transaction với dữ liệu, relay hay CDC phát sang broker sau; event được phát ít nhất một lần khi và chỉ khi transaction commit." },
+    { "id": "after-commit", "front": "`@TransactionalEventListener(AFTER_COMMIT)` còn hở chỗ nào?", "back": "Event nằm trong bộ nhớ: pod chết ngay sau commit là mất event." },
+    { "id": "compensation", "front": "Bù trừ trong saga khác rollback thế nào?", "back": "Là hành động nghiệp vụ mới (hoàn tiền, nhả hàng), có thể không hoàn hảo (email đã gửi không thu hồi được)." },
+    { "id": "reconciliation", "front": "Vai trò của reconciliation?", "back": "Job định kỳ so các nguồn dữ liệu để tìm và sửa chỗ lệch mà các pattern không chặn được; bắt buộc với dữ liệu tài chính." },
+    { "id": "merge-back", "front": "Dấu hiệu hai service nên gộp lại?", "back": "Chúng luôn phải nhất quán ngay với nhau và gọi nhau cho mọi thao tác: ranh giới bị tách nhầm." }
+  ]
+}

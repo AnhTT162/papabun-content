@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns", "idempotency"]
     },
     {
       "id": "race-condition",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency"]
     },
     {
       "id": "orm",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services"]
     },
     {
       "id": "datasource",
@@ -1381,7 +1381,7 @@
       "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại nó trong `If-None-Match` để hỏi có đổi không (không đổi thì server trả `304`), hoặc trong `If-Match` khi sửa để server chỉ ghi nếu phiên bản còn khớp (không thì `412 Precondition Failed`).",
       "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
       "related": ["optimistic-locking", "lost-update"],
-      "topics": ["optimistic-pessimistic-locking", "caching-basics"]
+      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency"]
     },
     {
       "id": "skip-locked",
@@ -1549,7 +1549,7 @@
       "meaning": "Insert nếu chưa có, update nếu đã có, trong một câu lệnh nguyên tử dựa trên unique index.",
       "example": "PostgreSQL `INSERT ... ON CONFLICT (sku) DO UPDATE SET ...`; MySQL `INSERT ... ON DUPLICATE KEY UPDATE ...`.",
       "related": ["constraint", "jdbc-batching"],
-      "topics": ["query-patterns", "views-procedures-triggers", "postgres-vs-mysql"]
+      "topics": ["query-patterns", "views-procedures-triggers", "postgres-vs-mysql", "idempotency"]
     },
     {
       "id": "generic-plan",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services"]
     },
     {
       "id": "replication-slot",
@@ -2493,7 +2493,7 @@
       "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
       "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
       "related": ["message-ack", "idempotent-consumer"],
-      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer"]
+      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "idempotency"]
     },
     {
       "id": "idempotent-consumer",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services"]
     },
     {
       "id": "dead-letter-queue",
@@ -2925,7 +2925,7 @@
       "meaning": "Producer Kafka có ID và số thứ tự cho mỗi partition, để broker bỏ bản gửi lại trùng và giữ thứ tự khi client tự retry. Bật mặc định từ client 3.0.",
       "example": "Retry sau khi mất phản hồi không tạo bản ghi thứ hai trong partition.",
       "related": ["kafka-transaction", "kafka-acks"],
-      "topics": ["kafka-producer-consumer"]
+      "topics": ["kafka-producer-consumer", "idempotency"]
     },
     {
       "id": "kafka-transaction",
@@ -2981,7 +2981,7 @@
       "meaning": "Event mang đủ dữ liệu cần thiết để consumer không phải gọi lại producer; đối lập với event chỉ báo hiệu (chỉ mang id).",
       "example": "`OrderPlaced` mang danh sách sản phẩm, giá và địa chỉ giao hàng.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution"]
+      "topics": ["event-schema-evolution", "data-consistency-services"]
     },
     {
       "id": "tolerant-reader",
@@ -3549,7 +3549,7 @@
       "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
       "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
       "related": ["race-condition", "atomicity"],
-      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview"]
+      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview", "idempotency"]
     },
     {
       "id": "critical-section",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services"]
     },
     {
       "id": "ubiquitous-language",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical", "service-communication", "consistency-cap"]
+      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services"]
     },
     {
       "id": "event-publication-registry",
@@ -4589,7 +4589,7 @@
       "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
       "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
       "related": ["eventual-consistency", "outbox"],
-      "topics": ["modular-monolith", "ddd-tactical"]
+      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services"]
     },
     {
       "id": "jpms",
@@ -4806,6 +4806,22 @@
       "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
       "related": ["last-write-wins", "eventual-consistency"],
       "topics": ["consistency-cap"]
+    },
+    {
+      "id": "idempotency",
+      "term": "Idempotency",
+      "meaning": "Tính chất của thao tác mà làm nhiều lần cho cùng trạng thái hệ thống như làm một lần; điều kiện để retry an toàn.",
+      "example": "`UPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING'` chạy hai lần vẫn chỉ đổi một lần.",
+      "related": ["idempotency-key", "idempotent-consumer"],
+      "topics": ["idempotency"]
+    },
+    {
+      "id": "reconciliation",
+      "term": "Reconciliation",
+      "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
+      "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
+      "related": ["dual-write", "saga"],
+      "topics": ["data-consistency-services"]
     }
   ]
 }

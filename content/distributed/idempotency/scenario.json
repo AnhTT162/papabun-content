@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "API đặt vé xem phim chịu được mạng di động chập chờn",
+  "prompt": "App đặt vé xem phim: người dùng chọn ghế rồi bấm \"Thanh toán\". Backend tạo đơn, giữ ghế, gọi cổng thanh toán (cổng hỗ trợ idempotency key, mỗi lời gọi 1–4 giây), rồi phát event `TicketIssued` để gửi vé qua email. Ràng buộc: 3G/4G chập chờn nên app phải tự retry; người dùng hay bấm \"Thanh toán\" hai lần; cổng thanh toán gửi webhook xác nhận và có thể gửi lại cùng một webhook tới 5 lần; backend chạy 4 instance; cao điểm suất chiếu mới khoảng 300 đơn mỗi giây. Thiết kế để không ai bị trừ tiền hai lần, không có hai đơn cho một lần bấm, và không ai nhận hai email vé.",
+  "hints": [
+    "Key sinh ở đâu và lúc nào để cả retry tự động lẫn lần bấm thứ hai đều dùng chung một key?",
+    "Lưu key ở đâu để việc ghi key và việc tạo đơn không thể lệch nhau?",
+    "Request trùng đến khi request đầu đang chờ cổng thanh toán 4 giây thì trả gì?",
+    "Webhook và event gửi email cũng có thể đến nhiều lần. Mỗi chỗ khử trùng theo cái gì?"
+  ],
+  "solution": "**Sinh key**: app sinh UUID khi người dùng vào màn hình xác nhận thanh toán của một giỏ cụ thể (không phải lúc bấm), giữ key cho tới khi nhận được kết quả cuối. Bấm hai lần hay retry tự động đều gửi cùng key. Nút \"Thanh toán\" bị khoá sau lần bấm đầu để giảm trùng, nhưng không dựa vào đó.\n\n**Server, bước 1 (giữ chỗ cho key)**: `INSERT INTO idempotency_records (user_id, key, request_hash, status) VALUES (..., 'IN_PROGRESS') ON CONFLICT DO NOTHING`. Thắng thì tiếp tục; thua thì đọc dòng hiện có: `COMPLETED` trả lại response đã lưu, `IN_PROGRESS` trả `409` kèm `Retry-After: 2` để app hỏi lại, hash khác trả `422`.\n\n**Bước 2 (đơn và ghế)**: trong một transaction, tạo đơn `PENDING_PAYMENT` và giữ ghế bằng lần ghi có điều kiện (`UPDATE seats SET hold_order = ? WHERE id IN (...) AND hold_order IS NULL`, kiểm tra số dòng đổi). Ghế đã bị giữ thì kết thúc với lỗi nghiệp vụ, và lỗi này cũng được lưu vào dòng key để retry nhận cùng kết quả.\n\n**Bước 3 (thanh toán)**: gọi cổng với idempotency key dẫn xuất từ đơn hàng (`order-<orderId>`), ngoài transaction database. Pod chết sau bước này thì job dọn các dòng `IN_PROGRESS` quá 2 phút sẽ hỏi trạng thái ở cổng theo key rồi hoàn tất hoặc nhả ghế.\n\n**Bước 4 (hoàn tất)**: gọi hàm `markPaid(orderId)` dùng chung với webhook: trong một transaction, `UPDATE orders SET status = 'PAID' WHERE id = ? AND status = 'PENDING_PAYMENT'`; **chỉ khi số dòng đổi bằng 1** mới chuyển ghế từ giữ sang bán và ghi `TicketIssued` vào bảng outbox. Rồi đánh dấu dòng key `COMPLETED` kèm response.\n\n**Webhook**: bảng `payment_webhooks` có unique constraint trên `event_id` của cổng. Xử lý trong một transaction: insert `event_id`, rồi gọi đúng hàm `markPaid(orderId)` ở trên. Nhánh nào (bước 4 hay webhook) chuyển trạng thái trước thì nhánh đó chuyển ghế và ghi outbox; nhánh sau thấy 0 dòng đổi và không làm gì. Nhờ vậy vé được phát đúng một lần, kể cả khi pod chết trước bước 4 và chỉ còn webhook. Bản trùng vẫn trả `200`.\n\n**Email**: consumer `TicketIssued` lưu `event_id` đã xử lý (hoặc `order_id`) trong cùng transaction ghi trạng thái gửi; nhà cung cấp email cũng nhận idempotency key là `ticket-<orderId>`.\n\n**Dọn dẹp**: giữ dòng key 48 giờ, xoá theo lô bằng job. Theo dõi tỉ lệ `409` và số dòng `IN_PROGRESS` quá hạn.",
+  "tradeoffs": [
+    {
+      "option": "Bảng idempotency key trong cùng database với đơn hàng",
+      "pros": [
+        "Giữ key và tạo đơn nằm chung transaction, không lệch nhau",
+        "Unique constraint giải quyết request trùng đồng thời"
+      ],
+      "cons": [
+        "Thêm một lần ghi cho mỗi request",
+        "Cần job dọn dòng cũ và dòng `IN_PROGRESS` bị treo"
+      ]
+    },
+    {
+      "option": "Lưu key trong Redis với `SET NX` và TTL",
+      "pros": [
+        "Nhanh, tự hết hạn",
+        "Không tăng tải cho database chính"
+      ],
+      "cons": [
+        "Redis và database có thể lệch khi crash giữa hai bước",
+        "Failover Redis bất đồng bộ có thể làm mất key vừa ghi"
+      ]
+    },
+    {
+      "option": "Chỉ dựa vào khoá nút ở app và idempotency của cổng thanh toán",
+      "pros": [
+        "Không cần thay đổi backend"
+      ],
+      "cons": [
+        "Retry tự động vẫn tạo hai đơn và giữ ghế hai lần",
+        "Không khử trùng được webhook và email"
+      ]
+    }
+  ]
+}

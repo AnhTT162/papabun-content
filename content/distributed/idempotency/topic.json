@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "idempotency",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Idempotency",
+  "summary": "Idempotent là gì, method HTTP nào idempotent; cài đặt idempotency key đúng: key cho mỗi thao tác, giữ chỗ trước dưới unique constraint, cùng transaction với nghiệp vụ, `409` và `422`; bẫy check-then-act và key ở Redis; exactly-once là at-least-once cộng idempotent; tác dụng phụ ra ngoài, lỗi lần đầu, phạm vi và thời hạn key, `PUT` và lost update, idempotent tự nhiên, webhook.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 14,
+  "prerequisites": ["distributed-fundamentals", "messaging-fundamentals"],
+  "terms": ["idempotency", "idempotency-key", "check-then-act", "idempotent-consumer", "outbox", "lost-update", "delivery-semantics", "upsert", "etag"],
+  "references": [
+    { "title": "IETF draft: The Idempotency-Key HTTP Header Field", "url": "https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/" },
+    { "title": "RFC 9110 §9.2.2: Idempotent Methods", "url": "https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2" },
+    { "title": "PostgreSQL: INSERT ... ON CONFLICT", "url": "https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT" },
+    { "title": "Apache Kafka: Producer Configs (enable.idempotence)", "url": "https://kafka.apache.org/documentation/#producerconfigs_enable.idempotence" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai request cùng idempotency key đến cùng lúc ở hai server thì sao?\" Đây là câu phân loại ứng viên. Trả lời: không kiểm tra rồi mới ghi; insert key trước với unique constraint, database quyết định ai thắng; bên thua nhận `409` hoặc response đã lưu. Hỏi tiếp \"server chết sau khi đã trừ tiền nhưng chưa ghi kết quả\": truyền key cho cổng thanh toán, và có job xử lý các dòng `IN_PROGRESS` quá hạn bằng cách hỏi trạng thái thật." },
+    { "type": "callout", "style": "warning", "markdown": "Rollback database không hoàn được tiền ở cổng thanh toán, không thu hồi được email đã gửi. Mọi tác dụng phụ ra ngoài phải tự idempotent (truyền key xuống) hoặc đi qua outbox; đừng dựa vào việc transaction của bạn rollback để \"huỷ\" chúng." }
+  ]
+}

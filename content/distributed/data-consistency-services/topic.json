@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "data-consistency-services",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Nhất quán dữ liệu giữa các service",
+  "summary": "Không có transaction chung giữa các service; dual write và hai chiều hỏng của nó; `AFTER_COMMIT` vẫn hở; tổng quan outbox và CDC, vì sao tránh 2PC, saga và bù trừ, đọc dữ liệu của service khác; Kafka transaction không bao database, listen to yourself, trạng thái trung gian, thứ tự và trùng lặp, đối soát, saga bị kẹt, schema event, khi nào gộp service lại.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 14,
+  "prerequisites": ["idempotency", "consistency-cap"],
+  "terms": ["eventual-consistency", "dual-write", "outbox", "saga", "reconciliation", "cdc", "idempotent-consumer", "event-carried-state", "bounded-context"],
+  "references": [
+    { "title": "microservices.io: Pattern: Transactional outbox", "url": "https://microservices.io/patterns/data/transactional-outbox.html" },
+    { "title": "Spring Framework Reference: Transaction-bound Events", "url": "https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" },
+    { "title": "Debezium: Outbox Event Router", "url": "https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html" },
+    { "title": "Spring for Apache Kafka: Transactions", "url": "https://docs.spring.io/spring-kafka/reference/kafka/transactions.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lưu đơn rồi gửi event lên Kafka, có vấn đề gì không?\" Nêu cả hai chiều hỏng của dual write, chỉ ra `AFTER_COMMIT` vẫn hở khi pod chết, rồi đưa outbox hoặc CDC. Người phỏng vấn senior hay hỏi tiếp \"vậy event có thể trùng, xử lý thế nào\": consumer idempotent theo khoá nghiệp vụ; và \"nếu vẫn lệch thì sao\": job đối soát." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng gọi `kafkaTemplate.send(...)` hay gọi REST sang service khác bên trong method `@Transactional` rồi tin rằng rollback sẽ \"huỷ\" nó. Transaction của database chỉ bao database. Mọi tác dụng phụ ra ngoài cần outbox, hoặc phải idempotent và có bù trừ." }
+  ]
+}
