@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "token-bucket", "front": "Token bucket hoạt động thế nào?", "back": "Thùng chứa tối đa `capacity` token, nạp `rate` token mỗi giây; mỗi request lấy một token, hết thì từ chối. Burst tối đa bằng `capacity`." },
+    { "id": "lazy-refill", "front": "Token bucket có cần thread nạp token định kỳ không?", "back": "Không: lưu số token và thời điểm nạp cuối, mỗi request tính bù theo thời gian đã trôi rồi giới hạn ở `capacity`." },
+    { "id": "leaky-bucket", "front": "Leaky bucket khác token bucket ở đâu?", "back": "Leaky bucket đưa request vào hàng và cho ra với tốc độ đều, làm mượt đầu ra; token bucket cho burst đi ngay." },
+    { "id": "fixed-window-flaw", "front": "Điểm yếu của fixed window?", "back": "Quanh ranh giới cửa sổ có thể lọt gấp đôi hạn mức trong thời gian rất ngắn." },
+    { "id": "sliding-estimate", "front": "Sliding window ước lượng tính thế nào?", "back": "Số của cửa sổ trước nhân phần còn lại của nó, cộng số của cửa sổ hiện tại; chỉ cần hai bộ đếm." },
+    { "id": "distributed", "front": "Nhiều instance gateway thì rate limit thế nào cho đúng?", "back": "Bộ đếm chung cập nhật nguyên tử (Redis `INCR` hoặc Lua script), hoặc chia hạn mức theo số instance khi số instance cố định và tải chia đều." },
+    { "id": "fail-open", "front": "Redis của rate limiter chết thì cho qua hay chặn?", "back": "Thường cho qua (fail open) kèm hạn mức cục bộ dự phòng và cảnh báo; chặn (fail closed) cho tài nguyên đắt." },
+    { "id": "response", "front": "Vượt hạn mức thì trả gì?", "back": "`429 Too Many Requests` kèm `Retry-After`, thường thêm header số còn lại và thời điểm đặt lại." },
+    { "id": "concurrency", "front": "Vì sao rate limit chưa đủ cho endpoint chạy lâu?", "back": "Nó giới hạn tốc độ, không giới hạn số việc đang chạy; cần thêm concurrency limiter." }
+  ]
+}

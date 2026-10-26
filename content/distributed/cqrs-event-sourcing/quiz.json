@@ -12,7 +12,8 @@
         "State[balance=20, version=4]"
       ],
       "answer": 0,
-      "explanation": "Request đầu append khi stream có 2 event: thành công, stream lên 3 event, số dư 20. Request sau vẫn gửi `expectedVersion = 2` nhưng stream đã có 3 event, nên bị `ConcurrencyException` và không ghi gì. Nếu bỏ kiểm tra version thì cả hai cùng ghi và số dư là -30 ở version 4. Đây là optimistic locking theo từng stream."
+      "explanation": "Request đầu append khi stream có 2 event: thành công, stream lên 3 event, số dư 20. Request sau vẫn gửi `expectedVersion = 2` nhưng stream đã có 3 event, nên bị `ConcurrencyException` và không ghi gì. Nếu bỏ kiểm tra version thì cả hai cùng ghi và số dư là -30 ở version 4. Đây là optimistic locking theo từng stream.",
+      "code": "static synchronized void append(String streamId, long expectedVersion, List<WalletEvent> events) {\n    var stream = store.computeIfAbsent(streamId, id -> new ArrayList<>());\n    if (stream.size() != expectedVersion)\n        throw new ConcurrencyException(\"expected \" + expectedVersion + \", actual \" + stream.size());\n    stream.addAll(events);\n}"
     },
     {
       "id": "cqrs-needs-es",

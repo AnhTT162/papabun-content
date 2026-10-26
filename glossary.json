@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing"]
     },
     {
       "id": "redis-single-thread",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting"]
     },
     {
       "id": "redis-sentinel",
@@ -2877,7 +2877,7 @@
       "meaning": "Một trong 16.384 ô mà Redis Cluster chia không gian key; slot của key là `CRC16(key) mod 16384`, và mỗi slot thuộc đúng một master.",
       "example": "Key `user:7` rơi vào slot 2.780, do master giữ dải 0–5460 phục vụ.",
       "related": ["redis-cluster", "hash-tag"],
-      "topics": ["redis-ha-cluster"]
+      "topics": ["redis-ha-cluster", "consistent-hashing"]
     },
     {
       "id": "hash-tag",
@@ -2901,7 +2901,7 @@
       "meaning": "Đoạn Lua chạy trên server Redis như một bước nguyên tử: không lệnh nào khác chen vào giữa. Dùng để gộp đọc rồi ghi; script chạy lâu chặn cả instance.",
       "example": "Script `INCR` rồi `EXPIRE` khi giá trị bằng 1 cho rate limiter.",
       "related": ["sorted-set"],
-      "topics": ["redis-use-cases"]
+      "topics": ["redis-use-cases", "rate-limiting"]
     },
     {
       "id": "sorted-set",
@@ -4733,7 +4733,7 @@
       "meaning": "Số bản sao tối thiểu phải tham gia một lần đọc (R) hoặc ghi (W) trong N bản sao; R + W > N thì tập đọc và tập ghi luôn giao nhau.",
       "example": "N = 3, W = 2, R = 2: lần đọc luôn hỏi ít nhất một node đã nhận lần ghi gần nhất.",
       "related": ["tunable-consistency", "linearizability"],
-      "topics": ["consistency-cap"]
+      "topics": ["consistency-cap", "consistent-hashing"]
     },
     {
       "id": "round-robin",
@@ -4787,9 +4787,9 @@
       "id": "sloppy-quorum",
       "term": "Sloppy quorum",
       "meaning": "Khi node chính của một key không liên lạc được, lần ghi tạm được nhận bởi node khác ngoài danh sách bản sao (rồi chuyển lại sau, gọi là hinted handoff); tăng khả dụng nhưng R + W > N không còn đảm bảo đọc thấy lần ghi.",
-      "example": "Cassandra với hinted handoff ghi tạm vào node D khi node B của key đang mất kết nối.",
+      "example": "Riak: node B của key đang mất kết nối, node D nhận lần ghi thay B và được tính vào W, rồi trả lại cho B khi B quay về. Cassandra chỉ có hinted handoff, không tính hint vào QUORUM.",
       "related": ["quorum"],
-      "topics": ["consistency-cap"]
+      "topics": ["consistency-cap", "consistent-hashing"]
     },
     {
       "id": "last-write-wins",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns"]
+      "topics": ["resilience-patterns", "rate-limiting"]
     },
     {
       "id": "fallback",
@@ -4845,7 +4845,7 @@
       "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
       "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
       "related": ["backpressure", "circuit-breaker"],
-      "topics": ["resilience-patterns"]
+      "topics": ["resilience-patterns", "rate-limiting"]
     },
     {
       "id": "retry-budget",
@@ -5222,6 +5222,102 @@
       "example": "Thẻ tín dụng: pre-authorization giữ tiền (Try), capture trừ thật (Confirm), void huỷ phần giữ (Cancel).",
       "related": ["saga", "two-phase-commit"],
       "topics": ["distributed-transactions"]
+    },
+    {
+      "id": "consistent-hashing",
+      "term": "Consistent hashing",
+      "meaning": "Cách phân key cho node bằng một vòng hash: key thuộc node gặp đầu tiên theo chiều kim đồng hồ, nên thêm hay bớt node chỉ chuyển khoảng 1/N số key thay vì gần hết như modulo.",
+      "example": "Cụm cache 4 node thêm node thứ 5: khoảng 20% key đổi node, so với 80% khi dùng `hash % N`.",
+      "related": ["virtual-node", "hash-slot", "rendezvous-hashing"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "virtual-node",
+      "term": "Virtual node",
+      "meaning": "Mỗi node vật lý được đặt nhiều điểm trên vòng hash (vnode, token) để tải chia đều và node mới lấy tải từ mọi node.",
+      "example": "Node A có 100 điểm `A#0` tới `A#99`; với 4 node, mỗi node nhận 24–26% số key thay vì 1–55%.",
+      "related": ["consistent-hashing"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "rendezvous-hashing",
+      "term": "Rendezvous hashing",
+      "meaning": "Highest random weight: tính `hash(key, node)` cho mọi node và chọn node có giá trị lớn nhất; bỏ một node chỉ chuyển key của node đó.",
+      "example": "Chọn 1 trong 5 cache server cho key `user:42` bằng cách lấy server có `hash(\"user:42\" + server)` lớn nhất.",
+      "related": ["consistent-hashing"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "hinted-handoff",
+      "term": "Hinted handoff",
+      "meaning": "Khi bản sao chủ tạm thời không nhận được ghi, node khác giữ hộ bản ghi kèm gợi ý và trả lại khi node chủ quay về.",
+      "example": "Node C bảo trì 10 phút; node D giữ các lần ghi dành cho C rồi đẩy sang C khi C sống lại.",
+      "related": ["sloppy-quorum", "read-repair"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "read-repair",
+      "term": "Read repair",
+      "meaning": "Khi một lần đọc thấy các bản sao trả giá trị khác nhau, coordinator ghi giá trị mới nhất đè lên bản sao cũ.",
+      "example": "Đọc QUORUM thấy A có v2, B có v1: trả v2 cho client và ghi v2 sang B.",
+      "related": ["anti-entropy", "quorum"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "anti-entropy",
+      "term": "Anti-entropy",
+      "meaning": "Tiến trình định kỳ so dữ liệu giữa các bản sao và chép phần lệch, để sửa cả những key không ai đọc tới.",
+      "example": "Chạy `nodetool repair` hằng tuần trên cụm Cassandra, trong khoảng `gc_grace_seconds`.",
+      "related": ["merkle-tree", "read-repair"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "merkle-tree",
+      "term": "Merkle tree",
+      "meaning": "Cây băm: lá là hash của từng khoảng dữ liệu, nút cha là hash của các con. Hai bản sao so gốc trước, chỉ đi xuống nhánh có hash khác, nên tìm phần lệch mà không chuyển toàn bộ dữ liệu.",
+      "example": "Hai node có cùng hash gốc thì khớp hoàn toàn; khác thì so hai nhánh con, lặp lại tới khoảng dữ liệu cần chép.",
+      "related": ["anti-entropy"],
+      "topics": ["consistent-hashing"]
+    },
+    {
+      "id": "token-bucket",
+      "term": "Token bucket",
+      "meaning": "Thuật toán rate limit: thùng chứa tối đa `capacity` token, nạp với tốc độ cố định; mỗi request lấy một token, hết thì từ chối. Cho phép burst bằng `capacity`.",
+      "example": "Spring Cloud Gateway `replenishRate: 10`, `burstCapacity: 20`: trung bình 10 request mỗi giây, dồn được 20.",
+      "related": ["leaky-bucket", "rate-limiting"],
+      "topics": ["rate-limiting"]
+    },
+    {
+      "id": "leaky-bucket",
+      "term": "Leaky bucket",
+      "meaning": "Thuật toán rate limit đưa request vào hàng đợi và cho ra với tốc độ đều; hàng đầy thì từ chối. Làm mượt lưu lượng cho hệ phía sau.",
+      "example": "Nginx `limit_req zone=one burst=5` với `rate=1r/s`: request vượt tốc độ chờ trong hàng tối đa 5, hơn nữa thì bị từ chối.",
+      "related": ["token-bucket", "gcra"],
+      "topics": ["rate-limiting"]
+    },
+    {
+      "id": "fixed-window",
+      "term": "Fixed window",
+      "meaning": "Đếm request trong từng cửa sổ thời gian cố định (theo phút, theo giờ) và đặt lại ở đầu cửa sổ; quanh ranh giới có thể lọt gấp đôi hạn mức.",
+      "example": "Lua script: `INCR rl:user42:202610261205`, nếu kết quả là 1 thì `EXPIRE` 60 giây; chặn khi kết quả lớn hơn 100.",
+      "related": ["sliding-window", "rate-limiting"],
+      "topics": ["rate-limiting"]
+    },
+    {
+      "id": "sliding-window",
+      "term": "Sliding window",
+      "meaning": "Đếm request trong khoảng thời gian trượt kết thúc ở hiện tại: lưu từng timestamp (chính xác) hoặc ước lượng từ hai cửa sổ cố định có trọng số.",
+      "example": "Cửa sổ trước 100 request, đã qua 25% cửa sổ hiện tại có 30: ước lượng 100 × 0,75 + 30 = 105.",
+      "related": ["fixed-window", "rate-limiting"],
+      "topics": ["rate-limiting"]
+    },
+    {
+      "id": "gcra",
+      "term": "GCRA",
+      "meaning": "Generic Cell Rate Algorithm: dạng leaky bucket chỉ lưu một mốc thời gian \"lúc được phép tiếp theo\" cho mỗi khoá, so sánh và cập nhật trong một bước.",
+      "example": "Mô-đun `redis-cell`: `CL.THROTTLE user42 15 30 60` cho 30 request mỗi 60 giây; `max_burst` 15 nghĩa là dồn được 16 request (15 cộng 1).",
+      "related": ["leaky-bucket", "token-bucket"],
+      "topics": ["rate-limiting"]
     }
   ]
 }

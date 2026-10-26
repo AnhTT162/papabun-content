@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "modulo-moved",
+      "kind": "output",
+      "prompt": "Đoạn code dưới chạy với 100.000 key, `md5Hash` lấy 8 byte đầu của MD5 (phân phối đều). Nó đếm số key phải chuyển node khi đi từ 4 lên 5 node bằng modulo. Chương trình in ra gì?",
+      "options": [
+        "80.0%",
+        "20.0%",
+        "25.0%",
+        "50.0%"
+      ],
+      "answer": 0,
+      "explanation": "Hai phép modulo cho cùng kết quả khi `h % 20` nằm trong {0, 1, 2, 3}, tức 4/20 = 20% số key. 80% còn lại đổi node. Chạy thật với 100.000 key băm MD5 in đúng `80.0%`. Con số 20% là của consistent hashing: chỉ phần của node mới (1/5) chuyển.",
+      "code": "int moved = 0;\nfor (int k = 0; k < 100_000; k++) {\n    long h = md5Hash(\"user:\" + k) & Long.MAX_VALUE;\n    if (h % 4 != h % 5) moved++;\n}\nSystem.out.printf(\"%.1f%%%n\", 100.0 * moved / 100_000);"
+    },
+    {
+      "id": "vnode-purpose",
+      "kind": "single",
+      "prompt": "Vì sao mỗi node vật lý nên có nhiều virtual node trên vòng?",
+      "options": [
+        "Để tổng độ dài đoạn vòng của mỗi node gần bằng nhau",
+        "Để mỗi key được ghi lên nhiều node, tạo bản sao chống mất dữ liệu",
+        "Để key nóng được chia đều ra nhiều node thay vì dồn vào một node",
+        "Để tra cứu node chủ của key nhanh hơn so với chỉ một điểm mỗi node"
+      ],
+      "answer": 0,
+      "explanation": "Một điểm mỗi node thì đoạn vòng dài ngắn ngẫu nhiên (đo thật: 1,3% tới 55%), và node mới chỉ lấy tải của một láng giềng. Bản sao là cơ chế riêng (N node kế tiếp). Một key nóng vẫn chỉ nằm ở một điểm, virtual node không chia nó ra. Tra cứu còn chậm hơn chút vì vòng có nhiều điểm hơn."
+    },
+    {
+      "id": "quorum-config",
+      "kind": "single",
+      "prompt": "Cassandra với replication factor 3. Cấu hình nào cho phép một node chết mà mọi lần đọc vẫn thấy lần ghi đã báo thành công gần nhất (bỏ qua ghi đồng thời và lệch đồng hồ)?",
+      "options": [
+        "Ghi QUORUM, đọc QUORUM",
+        "Ghi ONE, đọc ONE",
+        "Ghi ALL, đọc ONE",
+        "Ghi ONE, đọc QUORUM"
+      ],
+      "answer": 0,
+      "explanation": "QUORUM của 3 là 2: R + W = 4 > 3 nên tập đọc giao tập ghi, và vẫn đủ 2 node khi một node chết. ONE/ONE có R + W = 2, đọc có thể trượt sang bản cũ. ALL/ONE thì giao nhau nhưng ghi thất bại ngay khi một node chết. ONE/QUORUM có R + W = 3, không lớn hơn N."
+    },
+    {
+      "id": "hot-key",
+      "kind": "single",
+      "prompt": "Cụm cache 10 node dùng consistent hashing với 200 virtual node mỗi node. Một node luôn ở 90% CPU, các node khác 30%. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Một vài key rất nóng cùng nằm ở node đó",
+        "Số virtual node quá ít nên các đoạn vòng lệch nhau",
+        "Hàm hash MD5 phân phối không đều cho key dạng chuỗi",
+        "Vòng hash bị hỏng khi một node khởi động lại"
+      ],
+      "answer": 0,
+      "explanation": "200 virtual node mỗi node đã chia đều số key tới vài phần trăm; lệch 3 lần là dấu hiệu của lưu lượng dồn vào ít key chứ không phải phân phối key. Consistent hashing cân bằng số key, không cân bằng lưu lượng. Xác nhận bằng thống kê request theo key, rồi tách key, cache cục bộ hoặc nhân bản key nóng."
+    },
+    {
+      "id": "failed-write-visible",
+      "kind": "single",
+      "prompt": "N = 3, W = 2, R = 2. Lần ghi v2 chỉ được một bản sao xác nhận rồi hết giờ, client nhận lỗi. Điều nào đúng?",
+      "options": [
+        "v2 vẫn có thể bị đọc thấy và lan sang bản khác qua read repair",
+        "Coordinator rollback v2 trên bản sao đã ghi, nên không ai thấy v2",
+        "Mọi lần đọc QUORUM sau đó chắc chắn trả về v1",
+        "Bản sao đã ghi v2 sẽ tự xoá v2 khi phát hiện thiếu W"
+      ],
+      "answer": 0,
+      "explanation": "Hệ kiểu Dynamo không có transaction giữa các bản sao: bản đã nhận v2 giữ nó. Lần đọc hỏi trúng bản đó trả v2 vì timestamp mới hơn, và read repair chép v2 sang bản còn lại. Vì vậy lỗi khi ghi nghĩa là \"không biết\", không phải \"chưa ghi\"; client retry phải idempotent."
+    }
+  ]
+}

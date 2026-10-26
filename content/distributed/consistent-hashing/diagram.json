@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Thêm node E vào vòng hash",
+  "nodes": [
+    {"id": "a", "label": "Node A", "kind": "database", "x": 0.1, "y": 0.05},
+    {"id": "b", "label": "Node B", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "key", "label": "user:42", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "e", "label": "Node E (mới)", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "d", "label": "Node D", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "c", "label": "Node C", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "a-b", "from": "a", "to": "b", "label": "đoạn (A, B]"},
+    {"id": "b-c", "from": "b", "to": "c", "label": "đoạn (B, C]"},
+    {"id": "c-d", "from": "c", "to": "d", "label": "đoạn (C, D]"},
+    {"id": "d-a", "from": "d", "to": "a", "label": "đoạn (D, A]"},
+    {"id": "key-c", "from": "key", "to": "c", "label": "trước: C"},
+    {"id": "b-e", "from": "b", "to": "e", "label": "đoạn (B, E]"},
+    {"id": "key-e", "from": "key", "to": "e", "label": "sau: E"},
+    {"id": "e-c", "from": "e", "to": "c", "label": "bản sao 2"}
+  ],
+  "steps": [
+    {"caption": "Bốn node được hash lên vòng, đi theo chiều kim đồng hồ A, B, C, D. Mỗi node sở hữu đoạn từ node đứng trước tới điểm của chính nó.", "show": ["a", "b", "c", "d", "a-b", "b-c", "c-d", "d-a"], "highlight": ["b-c"]},
+    {"caption": "Hash của `user:42` rơi vào giữa B và C. Đi theo chiều kim đồng hồ, điểm node đầu tiên gặp là C: C giữ key này.", "show": ["key", "key-c"], "highlight": ["key-c"]},
+    {"caption": "Thêm E; hash của E rơi giữa B và C. E nhận đoạn (B, E], phần còn lại (E, C] vẫn của C.", "show": ["e", "b-e"], "highlight": ["b-e"]},
+    {"caption": "`user:42` nằm trong (B, E] nên chuyển sang E. Key ở các đoạn của A, B, D không đổi chủ: chỉ phần đoạn vòng của node mới (khoảng 1/5 số key khi lên 5 node) phải chuyển, thay vì 80% với modulo.", "show": ["key-e"], "highlight": ["key-e"]},
+    {"caption": "Chỉ một điểm mỗi node thì E chỉ lấy tải của C; A, B, D không nhẹ đi chút nào. Virtual node cho E hàng chục điểm rải khắp vòng, lấy một ít từ mọi node.", "show": [], "highlight": ["e", "c"]},
+    {"caption": "Với N = 3 bản sao, key được ghi lên ba node phân biệt kế tiếp theo chiều kim đồng hồ: E, C, D. Thêm node cũng làm đổi tập bản sao của các key gần đó.", "show": ["e-c"], "highlight": ["e-c", "c-d"]}
+  ]
+}

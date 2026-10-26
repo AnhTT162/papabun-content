@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Đọc ghi theo quorum: N = 3, W = 2, R = 2",
+  "instructions": "Ghi v2 với hai ack rồi đọc, và thử bấm \"Hai bản đều v1\" để thấy vì sao R + W > N chặn được nó. Sau đó bấm \"Ghi v2\" lần nữa, chỉ cho một ack rồi hết giờ: lần ghi báo lỗi nhưng vẫn có thể bị đọc thấy.",
+  "config": {
+    "states": [
+      { "id": "idle", "label": "v1 ở A, B, C", "x": 0.1, "y": 0.05, "note": "Key `cart:7` có ba bản sao trên ba node kế tiếp của vòng, cả ba đang ở v1. Coordinator là node nhận request của client, không nhất thiết là một trong ba node đó." },
+      { "id": "writing", "label": "Đang ghi v2", "x": 0.5, "y": 0.05, "note": "Coordinator gửi v2 (kèm timestamp) tới cả ba bản sao và chờ W = 2 xác nhận. Mỗi bản sao tự ghi xuống đĩa của nó; không có transaction chung." },
+      { "id": "writeok", "label": "Ghi thành công", "x": 0.9, "y": 0.05, "note": "Đủ hai ack: client nhận thành công. Bản sao thứ ba có thể vẫn đang ở v1 cho tới khi lời ghi tới nơi hoặc được sửa sau." },
+      { "id": "writefail", "label": "Ghi báo lỗi", "x": 0.1, "y": 0.5, "note": "Hết giờ trước khi đủ W ack: client nhận lỗi. Nhưng bản sao nào đã ghi v2 thì **không rollback**. Lần ghi \"thất bại\" có thể vẫn bị đọc thấy, và có thể lan ra các bản sao khác qua read repair." },
+      { "id": "reading", "label": "Đang đọc R = 2", "x": 0.5, "y": 0.5, "note": "Coordinator hỏi hai bản sao, trả về giá trị có timestamp mới nhất. Bấm theo cái mà hai bản sao được hỏi đang giữ." },
+      { "id": "sawnew", "label": "Đọc thấy v2", "x": 0.9, "y": 0.5, "note": "Ít nhất một bản sao được hỏi có v2, coordinator trả v2. Nếu bản còn lại trả v1 thì đó là bản sao lệch, có thể sửa ngay bằng read repair." },
+      { "id": "sawold", "label": "Đọc thấy v1", "x": 0.1, "y": 0.95, "note": "Cả hai bản được hỏi đều v1. Chỉ xảy ra khi không có lần ghi v2 nào đạt W. Nếu đang có một bản v2 từ lần ghi lỗi, lần đọc sau có thể thấy v2 rồi lần sau nữa lại thấy v1: không linearizable." },
+      { "id": "converged", "label": "Cả 3 bản là v2", "x": 0.9, "y": 0.95, "note": "Mọi bản sao đã hội tụ. Mọi lần đọc từ giờ đều thấy v2 bất kể hỏi bản nào." }
+    ],
+    "initial": "idle",
+    "events": [
+      { "id": "write", "label": "Ghi v2" },
+      { "id": "ack", "label": "Bản sao ack" },
+      { "id": "timeout", "label": "Hết giờ ghi" },
+      { "id": "read", "label": "Đọc" },
+      { "id": "hit-new", "label": "Trúng bản v2" },
+      { "id": "two-old", "label": "Hai bản đều v1" },
+      { "id": "repair", "label": "Read repair" },
+      { "id": "anti-entropy", "label": "Repair nền" }
+    ],
+    "counters": [
+      { "id": "copies", "label": "Bản sao có v2", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "start-write", "from": "idle", "event": "write", "to": "writing", "label": "gửi tới 3 bản", "effects": [ { "counter": "copies", "set": 0 } ], "note": "Client ghi v2 với mức nhất quán QUORUM." },
+      { "id": "first-ack", "from": "writing", "event": "ack", "to": "writing", "label": "1/2 ack", "guard": { "counter": "copies", "lt": 1 }, "effects": [ { "counter": "copies", "add": 1 } ], "note": "Một bản sao đã ghi v2. Chưa đủ W = 2." },
+      { "id": "quorum-ack", "from": "writing", "event": "ack", "to": "writeok", "label": "đủ W", "effects": [ { "counter": "copies", "add": 1 } ], "note": "Hai bản sao đã có v2: lần ghi thành công." },
+      { "id": "write-timeout", "from": "writing", "event": "timeout", "to": "writefail", "label": "thiếu W", "note": "Một node chậm, một node chết. Coordinator báo lỗi cho client, nhưng không có cơ chế nào gỡ v2 khỏi bản sao đã nhận." },
+      { "id": "late-ack", "from": "writeok", "event": "ack", "to": "converged", "label": "bản thứ 3 tới", "effects": [ { "counter": "copies", "add": 1 } ], "note": "Lời ghi tới bản sao thứ ba muộn hơn. Client không chờ nó." },
+      { "id": "read-after-ok", "from": "writeok", "event": "read", "to": "reading", "label": "đọc", "note": "Đọc sau khi ghi thành công." },
+      { "id": "read-after-fail", "from": "writefail", "event": "read", "to": "reading", "label": "đọc", "note": "Đọc sau khi ghi báo lỗi. Kết quả phụ thuộc vào việc hỏi trúng bản sao nào." },
+      { "id": "read-idle", "from": "idle", "event": "read", "to": "reading", "label": "đọc", "note": "Đọc khi chưa có lần ghi nào." },
+      { "id": "read-again-new", "from": "sawnew", "event": "read", "to": "reading", "label": "đọc lại", "note": "Đọc thêm lần nữa." },
+      { "id": "read-again-old", "from": "sawold", "event": "read", "to": "reading", "label": "đọc lại", "note": "Đọc thêm lần nữa." },
+      { "id": "read-converged", "from": "converged", "event": "read", "to": "reading", "label": "đọc", "note": "Đọc khi mọi bản đã hội tụ." },
+      { "id": "rewrite", "from": "converged", "event": "write", "to": "writing", "label": "ghi giá trị mới", "effects": [ { "counter": "copies", "set": 0 } ], "note": "Ghi một giá trị mới nữa (gọi tiếp là v2 cho gọn): cả ba bản đang giữ giá trị cũ của lần ghi này." },
+      { "id": "rewrite-ok", "from": "writeok", "event": "write", "to": "writing", "label": "ghi giá trị mới", "effects": [ { "counter": "copies", "set": 0 } ], "note": "Ghi giá trị mới khi bản thứ ba còn chưa nhận lần ghi trước; đếm lại số bản có giá trị mới." },
+      { "id": "rewrite-fail", "from": "writefail", "event": "write", "to": "writing", "label": "client retry", "effects": [ { "counter": "copies", "set": 0 } ], "note": "Client nhận lỗi nên retry cùng giá trị. Với giá trị ghi đè (đặt giỏ hàng = X) thì an toàn; với thao tác cộng dồn thì retry có thể áp dụng hai lần, nên lệnh phải idempotent." },
+      { "id": "got-new", "from": "reading", "event": "hit-new", "to": "sawnew", "label": "trả v2", "guard": { "counter": "copies", "gte": 1 }, "note": "Một trong hai bản được hỏi có v2. Coordinator chọn bản có timestamp mới nhất." },
+      { "id": "no-new", "from": "reading", "event": "hit-new", "to": "reading", "label": "không có v2", "note": "Không bản sao nào có v2, nên không thể hỏi trúng nó." },
+      { "id": "got-old", "from": "reading", "event": "two-old", "to": "sawold", "label": "trả v1", "guard": { "counter": "copies", "lt": 2 }, "note": "Hai bản được hỏi đều v1. Có thể xảy ra vì số bản v2 chưa đạt W." },
+      { "id": "impossible-old", "from": "reading", "event": "two-old", "to": "reading", "label": "R + W > N", "note": "Không thể: đã có ít nhất 2 trong 3 bản là v2, nên hai bản bất kỳ được hỏi luôn có ít nhất một bản v2. Đó là ý nghĩa của R + W > N: 2 + 2 > 3." },
+      { "id": "repair-to-all", "from": "sawnew", "event": "repair", "to": "converged", "label": "sửa bản lệch", "guard": { "counter": "copies", "eq": 2 }, "effects": [ { "counter": "copies", "add": 1 } ], "note": "Bản được hỏi còn v1 nhận v2 từ coordinator. Giờ cả ba đều v2." },
+      { "id": "repair-partial", "from": "sawnew", "event": "repair", "to": "sawnew", "label": "sửa bản lệch", "guard": { "counter": "copies", "lt": 2 }, "effects": [ { "counter": "copies", "add": 1 } ], "note": "Lần ghi lỗi giờ đã có trên hai bản: read repair vừa biến nó thành giá trị mà mọi lần đọc quorum đều thấy. Client vẫn nghĩ lần ghi đã thất bại." },
+      { "id": "ae-fail-new", "from": "writefail", "event": "anti-entropy", "to": "converged", "label": "Merkle tree", "guard": { "counter": "copies", "gte": 1 }, "effects": [ { "counter": "copies", "set": 3 } ], "note": "Repair nền so cây Merkle giữa các bản sao, thấy v2 có timestamp mới hơn và chép sang các bản còn lại." },
+      { "id": "ae-fail-none", "from": "writefail", "event": "anti-entropy", "to": "idle", "label": "không có gì", "note": "Không bản nào nhận v2: các bản sao vẫn khớp nhau ở v1." },
+      { "id": "ae-ok", "from": "writeok", "event": "anti-entropy", "to": "converged", "label": "Merkle tree", "effects": [ { "counter": "copies", "set": 3 } ], "note": "Repair nền chép v2 sang bản sao còn thiếu." },
+      { "id": "ae-old", "from": "sawold", "event": "anti-entropy", "to": "converged", "label": "Merkle tree", "guard": { "counter": "copies", "gte": 1 }, "effects": [ { "counter": "copies", "set": 3 } ], "note": "Bản v2 duy nhất từ lần ghi lỗi được chép sang các bản còn lại. Từ giờ mọi lần đọc đều thấy v2." },
+      { "id": "ae-new", "from": "sawnew", "event": "anti-entropy", "to": "converged", "label": "Merkle tree", "effects": [ { "counter": "copies", "set": 3 } ], "note": "Repair nền chép v2 sang mọi bản sao còn lệch." }
+    ],
+    "invalidNote": "Sự kiện này không có ý nghĩa ở trạng thái hiện tại."
+  }
+}

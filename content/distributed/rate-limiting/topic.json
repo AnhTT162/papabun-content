@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "rate-limiting",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Rate limiting",
+  "summary": "Token bucket nạp lười, leaky bucket và Nginx `limit_req`, fixed window và lỗi ranh giới, sliding window log và ước lượng; bộ đếm chung nguyên tử trong Redis, chia hạn mức theo instance; GCRA; Resilience4j, Guava, Bucket4j, Spring Cloud Gateway, Envoy local và global; fail open hay fail closed; lô token; `429`, `Retry-After`, header RateLimit; chọn khoá; concurrency limiter; giới hạn khi gọi đối tác; kiểm thử với đồng hồ giả.",
+  "level": "senior",
+  "order": 16,
+  "minutes": 15,
+  "prerequisites": ["redis-use-cases", "api-gateway-service-mesh", "resilience-patterns"],
+  "terms": ["rate-limiting", "token-bucket", "leaky-bucket", "fixed-window", "sliding-window", "lua-script", "load-shedding", "gcra", "jitter"],
+  "references": [
+    { "title": "RFC 6585: Additional HTTP Status Codes (429)", "url": "https://www.rfc-editor.org/rfc/rfc6585" },
+    { "title": "IETF draft: RateLimit header fields for HTTP", "url": "https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" },
+    { "title": "Spring Cloud Gateway: RequestRateLimiter", "url": "https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html" },
+    { "title": "Nginx: ngx_http_limit_req_module", "url": "https://nginx.org/en/docs/http/ngx_http_limit_req_module.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Rate limiter thêm một lời gọi Redis mỗi request, có thành nút thắt không?\" Trả lời: một Lua script mỗi request, Redis cùng vùng thì dưới 1 ms; timeout ngắn và fail open có hạn mức cục bộ dự phòng; khách cực lớn thì mỗi instance xin trước lô token; và lớp local rate limit ở từng instance chặn đột biến trước khi tới Redis. Người phỏng vấn hay hỏi tiếp \"sao không chia hạn mức cho từng instance\": được khi số instance cố định và tải chia đều, sai khi autoscale." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng đọc rồi ghi bộ đếm bằng hai lệnh Redis riêng (`GET` rồi `SET`): dưới tải, nhiều instance cùng thấy 99 và cùng cho qua. Dùng `INCR` rồi so kết quả (và đặt TTL trong cùng script), hoặc gộp cả logic vào một Lua script." }
+  ]
+}

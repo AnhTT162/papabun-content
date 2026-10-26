@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "modulo-problem", "front": "Vì sao `hash(key) % N` không hợp khi số node thay đổi?", "back": "Đổi N làm gần hết key đổi node: từ 4 lên 5 node, khoảng 80% key phải chuyển." },
+    { "id": "ring", "front": "Consistent hashing tìm node cho một key thế nào?", "back": "Hash key lên vòng, đi theo chiều kim đồng hồ tới điểm node đầu tiên; quá cuối vòng thì quay về đầu." },
+    { "id": "moved", "front": "Thêm một node vào vòng N node thì bao nhiêu key phải chuyển?", "back": "Khoảng 1/(N+1): chỉ phần đoạn vòng mà node mới nhận." },
+    { "id": "vnode", "front": "Virtual node giải quyết vấn đề gì?", "back": "Tải lệch do đoạn vòng dài ngắn ngẫu nhiên; nhiều điểm mỗi node làm tải đều và node mới lấy tải từ mọi node." },
+    { "id": "replicas", "front": "Hệ kiểu Dynamo đặt N bản sao của một key ở đâu?", "back": "Trên N node vật lý phân biệt kế tiếp theo chiều kim đồng hồ, bỏ qua virtual node của cùng máy, thường rải qua rack." },
+    { "id": "quorum", "front": "R + W > N đảm bảo điều gì?", "back": "Tập bản sao được đọc luôn giao tập đã ghi thành công, nên đọc thấy lần ghi thành công gần nhất; chưa đủ để linearizable." },
+    { "id": "hinted-handoff", "front": "Hinted handoff là gì?", "back": "Node chủ tạm chết thì node khác giữ hộ bản ghi kèm gợi ý, trả lại khi node chủ quay lại." },
+    { "id": "repair", "front": "Read repair và anti-entropy khác nhau thế nào?", "back": "Read repair sửa bản lệch khi tình cờ đọc thấy; anti-entropy chạy định kỳ, so cây Merkle để sửa mọi phần lệch." },
+    { "id": "hot-key", "front": "Consistent hashing có giải quyết key nóng không?", "back": "Không: nó cân bằng số key, không cân bằng lưu lượng. Key nóng cần tách key, cache cục bộ hoặc nhân bản." },
+    { "id": "alternatives", "front": "Kể hai phương án khác vòng hash để phân phối key.", "back": "Slot cố định (Redis Cluster 16.384 slot), rendezvous hashing (chọn node có hash(key, node) cao nhất), jump consistent hash." }
+  ]
+}

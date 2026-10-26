@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "token-bucket-output",
+      "kind": "output",
+      "prompt": "Token bucket `capacity = 10`, nạp 5 token mỗi giây, bắt đầu đầy ở t = 0. `tryAcquire` như dưới. Gửi 15 request ở t = 0, rồi một ở t = 0,1 s, một ở t = 0,2 s, rồi 15 request ở t = 3 s. Đợt cuối được bao nhiêu request?",
+      "options": [
+        "accepted=10",
+        "accepted=14",
+        "accepted=15",
+        "accepted=5"
+      ],
+      "answer": 0,
+      "explanation": "Sau t = 0 thùng còn 0 token. t = 0,1 s có 0,5 token: từ chối. t = 0,2 s có 1 token: cho qua, còn 0. Từ 0,2 s tới 3 s nạp 2,8 × 5 = 14 token, nhưng `Math.min(capacity, ...)` giới hạn ở 10. Nên đợt cuối nhận 10. Bỏ quên giới hạn thì ra 14; quên rằng thùng chỉ nạp theo thời gian thì ra 15 hoặc 5.",
+      "code": "synchronized boolean tryAcquire(long nowNanos) {\n    tokens = Math.min(capacity, tokens + (nowNanos - lastRefill) * refillPerNano);\n    lastRefill = nowNanos;\n    if (tokens >= 1) { tokens -= 1; return true; }\n    return false;\n}"
+    },
+    {
+      "id": "fixed-window-boundary",
+      "kind": "single",
+      "prompt": "Fixed window 100 request mỗi phút. Kẻ gian gửi 100 request lúc 12:05:59.9 và 100 request lúc 12:06:00.1. Bao nhiêu request được qua?",
+      "options": [
+        "200, vì hai đợt rơi vào hai cửa sổ khác nhau",
+        "100, vì bộ đếm vẫn nhớ cửa sổ trước",
+        "150, vì cửa sổ tính trung bình trượt",
+        "0, vì phát hiện burst nên chặn cả hai"
+      ],
+      "answer": 0,
+      "explanation": "Fixed window đặt lại bộ đếm ở đầu mỗi phút, nên 200 request trong 0,2 giây đều lọt. Đây là lý do dùng sliding window hoặc token bucket. Ước lượng trượt (trung bình có trọng số hai cửa sổ) là thuật toán khác, không phải fixed window."
+    },
+    {
+      "id": "distributed-counter",
+      "kind": "single",
+      "prompt": "Gateway 4 instance, mỗi instance tự đếm trong bộ nhớ với hạn mức 100 request mỗi phút cho mỗi API key. Load balancer chia đều. Một API key thực tế được tối đa bao nhiêu?",
+      "options": [
+        "Khoảng 400 request mỗi phút",
+        "Đúng 100 request mỗi phút",
+        "Khoảng 25 request mỗi phút",
+        "Không giới hạn vì bộ đếm không đồng bộ"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi instance cho qua 100 của riêng nó, cộng lại khoảng 400. Muốn đúng 100 thì dùng bộ đếm chung (Redis, nguyên tử) hoặc đặt mỗi instance 25 khi lưu lượng chia đều và số instance cố định. 25 là con số cần cấu hình, không phải kết quả."
+    },
+    {
+      "id": "redis-race",
+      "kind": "single",
+      "prompt": "Rate limiter dùng Redis viết: `GET count`, nếu `< 100` thì `SET count count+1`. Dưới tải cao, khách vượt hạn mức đáng kể. Nguyên nhân?",
+      "options": [
+        "Đọc rồi ghi là hai lệnh, nhiều instance cùng đọc 99 và cùng cho qua",
+        "Redis chạy đa luồng nên lệnh `SET` ghi đè lẫn nhau",
+        "TTL của key hết hạn sớm do lệch đồng hồ giữa các instance",
+        "Redis Cluster chia key `count` ra nhiều node khác nhau"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lệnh Redis nguyên tử, nhưng chuỗi GET rồi SET từ ứng dụng thì không: check-then-act kinh điển. Dùng `INCR` (tăng rồi so kết quả) hoặc gộp logic vào Lua script. Redis thực thi lệnh trên một luồng, và một key luôn nằm trọn ở một slot của Redis Cluster."
+    },
+    {
+      "id": "concurrency-vs-rate",
+      "kind": "single",
+      "prompt": "Endpoint xuất báo cáo chạy 60 giây mỗi lần, giới hạn 10 request mỗi phút mỗi khách. Một khách vẫn làm worker quá tải. Thiếu gì?",
+      "options": [
+        "Giới hạn số export đang chạy đồng thời của mỗi khách",
+        "Đổi từ token bucket sang fixed window để chặt hơn",
+        "Giảm `capacity` của token bucket xuống 1",
+        "Rate limit theo IP thay vì theo API key"
+      ],
+      "answer": 0,
+      "explanation": "10 request mỗi phút, mỗi cái 60 giây, thì lúc nào cũng có khoảng 10 export chạy song song, và nhiều khách cộng lại thành quá tải. Rate limit giới hạn tốc độ, không giới hạn số việc đang chạy. Cần concurrency limiter (và hàng đợi). Đổi thuật toán hay giảm burst không đổi số việc chạy đồng thời ở trạng thái ổn định."
+    }
+  ]
+}

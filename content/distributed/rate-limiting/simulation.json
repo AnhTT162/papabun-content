@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Token bucket: burst 3, nạp 5 token mỗi giây",
+  "instructions": "Bấm \"Request đến\" liên tục để thấy burst 3 request được qua rồi bị 429. Bấm \"Qua 200 ms\" vài lần khi thùng đã đầy để thấy token không tích luỹ quá sức chứa. Cuối cùng cho Redis lỗi theo hai kiểu để so sánh fail open và fail closed.",
+  "config": {
+    "states": [
+      { "id": "full", "label": "Thùng đầy", "x": 0.1, "y": 0.05, "note": "API key `k-42` có 3/3 token. Ba request đến cùng lúc đều được qua: đó là burst cho phép. Bộ đếm nằm trong Redis, mỗi request chạy một Lua script đọc số token và thời điểm nạp cuối, tính bù, rồi trừ, tất cả trong một bước nguyên tử." },
+      { "id": "partial", "label": "Còn token", "x": 0.5, "y": 0.05, "note": "Còn token nên request được qua. Script tính lại token theo thời gian đã trôi; không có thread nào nạp token định kỳ." },
+      { "id": "empty", "label": "Cạn token", "x": 0.9, "y": 0.05, "note": "Hết token: request bị từ chối với `429 Too Many Requests` và `Retry-After: 1` (giây, làm tròn lên từ 200 ms tới token kế tiếp). Trung bình dài hạn không vượt 5 request mỗi giây." },
+      { "id": "failopen", "label": "Redis lỗi, cho qua", "x": 0.1, "y": 0.95, "note": "Fail open: gọi Redis hết giờ (timeout vài ms) thì cho request qua. API vẫn sống, nhưng không còn giới hạn theo khách hàng. Nên có hạn mức cục bộ dự phòng ở mỗi instance và cảnh báo." },
+      { "id": "failclosed", "label": "Redis lỗi, chặn", "x": 0.9, "y": 0.95, "note": "Fail closed: không kiểm tra được thì từ chối. An toàn cho tài nguyên đắt hoặc chống lạm dụng, nhưng Redis trở thành điểm chết của toàn bộ API." }
+    ],
+    "initial": "full",
+    "events": [
+      { "id": "request", "label": "Request đến" },
+      { "id": "tick", "label": "Qua 200 ms" },
+      { "id": "redis-open", "label": "Redis lỗi: cho qua" },
+      { "id": "redis-closed", "label": "Redis lỗi: chặn" },
+      { "id": "recover", "label": "Redis hồi phục" }
+    ],
+    "counters": [
+      { "id": "tokens", "label": "Token", "initial": 3 },
+      { "id": "accepted", "label": "Đã cho qua", "initial": 0 },
+      { "id": "rejected", "label": "Bị 429/503", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "full-take", "from": "full", "event": "request", "to": "partial", "label": "lấy 1 token", "effects": [ { "counter": "tokens", "add": -1 }, { "counter": "accepted", "add": 1 } ], "note": "Request qua, còn 2 token." },
+      { "id": "full-tick", "from": "full", "event": "tick", "to": "full", "label": "bỏ token thừa", "note": "Thùng đã đầy: token nạp thêm bị bỏ. Đây là `Math.min(capacity, ...)`, giới hạn burst tối đa là 3 dù client đã im lặng cả giờ." },
+      { "id": "partial-take", "from": "partial", "event": "request", "to": "partial", "label": "lấy 1 token", "guard": { "counter": "tokens", "gte": 2 }, "effects": [ { "counter": "tokens", "add": -1 }, { "counter": "accepted", "add": 1 } ], "note": "Request qua, còn token." },
+      { "id": "partial-last", "from": "partial", "event": "request", "to": "empty", "label": "token cuối", "effects": [ { "counter": "tokens", "add": -1 }, { "counter": "accepted", "add": 1 } ], "note": "Request này lấy token cuối cùng." },
+      { "id": "partial-tick", "from": "partial", "event": "tick", "to": "partial", "label": "nạp 1", "guard": { "counter": "tokens", "lt": 2 }, "effects": [ { "counter": "tokens", "add": 1 } ], "note": "200 ms trôi qua: tốc độ 5 token mỗi giây nghĩa là thêm 1 token." },
+      { "id": "partial-fill", "from": "partial", "event": "tick", "to": "full", "label": "đầy lại", "effects": [ { "counter": "tokens", "add": 1 } ], "note": "Thùng đầy trở lại sau một lúc không có request." },
+      { "id": "empty-reject", "from": "empty", "event": "request", "to": "empty", "label": "429", "effects": [ { "counter": "rejected", "add": 1 } ], "note": "Bị từ chối. Client tốt đọc `Retry-After` và chờ; client tệ retry ngay và chỉ tốn thêm một lượt kiểm tra Redis." },
+      { "id": "empty-tick", "from": "empty", "event": "tick", "to": "partial", "label": "nạp 1", "effects": [ { "counter": "tokens", "add": 1 } ], "note": "Có lại 1 token sau 200 ms." },
+      { "id": "full-open", "from": "full", "event": "redis-open", "to": "failopen", "label": "fail open", "note": "Redis không trả lời trong 5 ms. Cấu hình chọn cho qua." },
+      { "id": "partial-open", "from": "partial", "event": "redis-open", "to": "failopen", "label": "fail open", "note": "Redis không trả lời trong 5 ms. Cấu hình chọn cho qua." },
+      { "id": "empty-open", "from": "empty", "event": "redis-open", "to": "failopen", "label": "fail open", "note": "Khách đang bị chặn bỗng được qua hết: nếu đó là kẻ tấn công, đây là lúc họ được lợi." },
+      { "id": "full-closed", "from": "full", "event": "redis-closed", "to": "failclosed", "label": "fail closed", "note": "Redis không trả lời. Cấu hình chọn chặn." },
+      { "id": "partial-closed", "from": "partial", "event": "redis-closed", "to": "failclosed", "label": "fail closed", "note": "Redis không trả lời. Cấu hình chọn chặn." },
+      { "id": "empty-closed", "from": "empty", "event": "redis-closed", "to": "failclosed", "label": "fail closed", "note": "Redis không trả lời. Cấu hình chọn chặn." },
+      { "id": "open-pass", "from": "failopen", "event": "request", "to": "failopen", "label": "cho qua", "effects": [ { "counter": "accepted", "add": 1 } ], "note": "Không giới hạn theo khách hàng. Hạn mức cục bộ dự phòng (ví dụ mức chuẩn chia cho số instance tối thiểu, nhân 2) vẫn chặn được đột biến cực lớn." },
+      { "id": "closed-block", "from": "failclosed", "event": "request", "to": "failclosed", "label": "chặn", "effects": [ { "counter": "rejected", "add": 1 } ], "note": "Mọi request đều bị từ chối, kể cả khách hàng chưa dùng hết hạn mức. Lỗi của một thành phần phụ thành sự cố toàn API." },
+      { "id": "open-recover", "from": "failopen", "event": "recover", "to": "full", "label": "hồi phục", "effects": [ { "counter": "tokens", "set": 3 } ], "note": "Redis trả lời lại sau một lúc lâu: key của thùng đã hết TTL nên thùng tạo lại đầy. Nếu Redis chỉ mất kết nối ngắn thì trạng thái cũ vẫn còn và thùng tiếp tục từ số token cũ; mô phỏng đơn giản hoá thành thùng đầy." },
+      { "id": "closed-recover", "from": "failclosed", "event": "recover", "to": "full", "label": "hồi phục", "effects": [ { "counter": "tokens", "set": 3 } ], "note": "Redis trả lời lại sau một lúc lâu: key của thùng đã hết TTL nên thùng tạo lại đầy (đơn giản hoá, như nhánh fail open)." }
+    ],
+    "invalidNote": "Sự kiện này không thay đổi gì ở trạng thái hiện tại."
+  }
+}

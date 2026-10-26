@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "consistent-hashing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Consistent hashing & phân phối dữ liệu",
+  "summary": "Vì sao modulo chuyển 80% key; vòng hash và tra cứu bằng TreeMap; virtual node và số đo tải; bản sao trên N node kế tiếp, quorum R và W; num_tokens của Cassandra; hash slot của Redis Cluster và partition của Kafka; rendezvous, jump hash, Maglev, bounded load; key nóng; rebalance an toàn; sloppy quorum, hinted handoff, read repair, anti-entropy với Merkle tree; ghi lỗi vẫn bị đọc thấy; client hay proxy định tuyến.",
+  "level": "senior",
+  "order": 15,
+  "minutes": 15,
+  "prerequisites": ["consistency-cap", "sharding-strategies", "load-balancing"],
+  "terms": ["consistent-hashing", "virtual-node", "quorum", "hot-key", "hash-slot", "rendezvous-hashing", "sloppy-quorum", "hinted-handoff", "read-repair", "anti-entropy", "merkle-tree"],
+  "references": [
+    { "title": "Karger et al.: Consistent Hashing and Random Trees (STOC 1997)", "url": "https://dl.acm.org/doi/10.1145/258533.258660" },
+    { "title": "DeCandia et al.: Dynamo, Amazon's Highly Available Key-value Store (SOSP 2007)", "url": "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf" },
+    { "title": "Apache Cassandra: Dynamo architecture", "url": "https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Thêm node thì dữ liệu chuyển thế nào mà không gián đoạn?\" Node mới tham gia vòng ở trạng thái đang nạp, nhận dữ liệu của các đoạn sẽ thuộc về nó (streaming, có giới hạn băng thông), trong lúc đó lệnh ghi vào đoạn đó đi tới cả chủ cũ và chủ mới; nạp xong mới nhận lưu lượng đọc, rồi chủ cũ dọn dữ liệu thừa. Người phỏng vấn hay hỏi tiếp \"key nóng thì sao\": consistent hashing không giúp, phải tách key hoặc cache cục bộ." },
+    { "type": "callout", "style": "warning", "markdown": "Mọi client phải dùng **cùng hàm hash, cùng cách đặt tên điểm và cùng danh sách node**. Hai service dùng hai thư viện memcached khác nhau (một bên ketama, một bên modulo) sẽ đọc ghi cùng key ở hai node khác nhau: cache miss âm thầm và dữ liệu cũ không bao giờ bị xoá." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Rate limit cho API công khai nhiều gói cước",
+  "prompt": "Một nền tảng SaaS mở API công khai. Gói Free được 60 request mỗi phút, gói Pro 1.000 request mỗi phút, gói Enterprise theo hợp đồng. Endpoint `POST /exports` tạo file báo cáo, mỗi lần chạy 20–60 giây và tốn nhiều CPU. Gateway chạy 6–20 pod tuỳ tải (autoscale), tổng khoảng 15.000 request mỗi giây lúc cao điểm. Có sẵn một cụm Redis. Yêu cầu: rate limit không thêm quá 2 ms vào p99; khách Pro dùng script đồng bộ dữ liệu hay gửi dồn 200 request trong vài giây rồi im lặng; khách phải biết khi nào được gọi lại; tuần trước một khách Free tạo 400 export cùng lúc làm chậm cả hệ thống. Ngoài ra hệ thống gọi API gửi SMS của một đối tác cho phép 100 request mỗi giây cho cả công ty. Thiết kế rate limiting.",
+  "hints": [
+    "Thuật toán nào cho Pro gửi dồn 200 request mà trung bình vẫn 1.000 mỗi phút?",
+    "Số pod thay đổi từ 6 tới 20: chia hạn mức theo pod có còn đúng không?",
+    "400 export cùng lúc là vấn đề tốc độ hay số việc đang chạy?",
+    "Redis chậm hoặc chết thì API công khai nên cho qua hay chặn?"
+  ],
+  "solution": "**Khoá và hạn mức**: khoá theo API key (gắn với tenant và gói cước), lấy từ bảng cấu hình cache cục bộ vài chục giây. IP chỉ dùng ở lớp chống lạm dụng trước khi xác thực, với ngưỡng rộng, để không chặn cả văn phòng sau NAT.\n\n**Thuật toán: token bucket**. Pro: `rate` khoảng 16,7 token mỗi giây (1.000 mỗi phút), `capacity` 200, nên script đồng bộ gửi dồn 200 request được qua ngay, sau đó chỉ còn tốc độ trung bình. Free: 1 token mỗi giây, `capacity` 10. Fixed window bị loại vì cho gấp đôi hạn mức quanh ranh giới phút.\n\n**Bộ đếm chung**: số pod thay đổi liên tục nên không chia hạn mức theo pod. Mỗi request chạy một Lua script trên Redis: đọc `tokens` và `last_refill` của key `rl:{apiKey}`, tính bù theo `TIME` của Redis, trừ token, đặt TTL; một lần gọi mạng, nguyên tử. Redis cùng vùng, p99 dưới 1 ms. 15.000 request mỗi giây là tải nhỏ với Redis Cluster; key phân tán theo API key. Khách Enterprise cực lớn thì mỗi pod xin trước lô 20 token để giảm lời gọi.\n\n**Phản hồi**: vượt thì `429` kèm `Retry-After` tính từ thời gian tới token kế tiếp, cùng header số còn lại và thời điểm nạp đủ. Tài liệu API hướng dẫn client backoff có jitter.\n\n**Export: giới hạn đồng thời, không chỉ tốc độ**. Export đưa vào hàng đợi, trả `202 Accepted` và id để hỏi trạng thái. Hai giới hạn tách bạch: mỗi tenant tối đa 2 (Free) hoặc 5 (Pro) export **đang chạy**, worker chỉ lấy job của tenant còn chỗ; và tối đa 10 export **đang chờ**, vượt thì `429`. Đếm số đang chạy bằng sorted set lease trong Redis (`ZADD` với score là thời điểm hết hạn, `ZREMRANGEBYSCORE` bỏ lease quá hạn trước khi `ZCARD`, worker gia hạn định kỳ), để worker chết thì chỗ tự được trả, thay vì `INCR`/`DECR` dễ lệch. Export cũng tính nhiều token hơn request thường (Free 5 token, Pro 20 token), luôn nhỏ hơn `capacity` của gói, nếu không request sẽ bị từ chối vĩnh viễn.\n\n**Redis lỗi**: lời gọi Redis có timeout 2 ms và circuit breaker; mạch mở thì bỏ qua Redis ngay, nên Redis chết không làm mọi request chờ timeout. Fail open cho API thường, kèm token bucket cục bộ ở mỗi pod với hạn mức rộng (mức chuẩn chia cho số pod tối thiểu, nhân 2) để chặn đột biến; fail closed cho `POST /exports` vì tài nguyên đắt. Cảnh báo khi tỉ lệ fail open vượt ngưỡng.\n\n**Gọi đối tác SMS**: hạn mức 100 mỗi giây cho cả công ty nên mọi pod dùng chung một token bucket trong Redis, và việc gửi SMS đi qua hàng đợi với consumer lấy token trước khi gọi (leaky bucket), thay vì gọi thẳng rồi nhận `429` từ đối tác.\n\n**Vận hành**: metric số `429` theo API key và gói; cảnh báo khi một khách Pro bị chặn liên tục (có thể cần nâng gói, là chuyện kinh doanh); dashboard độ trễ của bước rate limit.",
+  "tradeoffs": [
+    {
+      "option": "Token bucket chung trong Redis bằng Lua script",
+      "pros": [
+        "Đúng hạn mức bất kể số pod",
+        "Cho phép burst có kiểm soát theo từng gói"
+      ],
+      "cons": [
+        "Thêm một lời gọi mạng mỗi request",
+        "Phải chọn fail open hay fail closed khi Redis lỗi"
+      ]
+    },
+    {
+      "option": "Bộ đếm cục bộ, chia hạn mức theo số pod",
+      "pros": [
+        "Không lời gọi mạng, không phụ thuộc Redis",
+        "Đơn giản nhất để vận hành"
+      ],
+      "cons": [
+        "Sai khi autoscale đổi số pod",
+        "Lệch khi lưu lượng không chia đều giữa các pod"
+      ]
+    },
+    {
+      "option": "Rate limit ở gateway có sẵn (Envoy global rate limit, gateway của cloud)",
+      "pros": [
+        "Không phải tự viết, có sẵn local và global",
+        "Cấu hình theo route và header"
+      ],
+      "cons": [
+        "Thuật toán và header tuỳ sản phẩm, khó tuỳ biến theo gói cước",
+        "Giới hạn đồng thời cho export vẫn phải làm ở ứng dụng"
+      ]
+    }
+  ]
+}
