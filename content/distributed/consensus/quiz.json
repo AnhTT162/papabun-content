@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "quorum-output",
+      "kind": "output",
+      "prompt": "Đoạn code tính đa số và số node hỏng chịu được cho các kích thước cụm. Chương trình in gì?",
+      "options": [
+        "n=3 majority=2 tolerated=1; n=4 majority=3 tolerated=1; n=5 majority=3 tolerated=2; n=6 majority=4 tolerated=2; ",
+        "n=3 majority=2 tolerated=1; n=4 majority=2 tolerated=2; n=5 majority=3 tolerated=2; n=6 majority=3 tolerated=3; ",
+        "n=3 majority=2 tolerated=1; n=4 majority=3 tolerated=2; n=5 majority=3 tolerated=2; n=6 majority=4 tolerated=3; ",
+        "n=3 majority=1 tolerated=2; n=4 majority=2 tolerated=2; n=5 majority=2 tolerated=3; n=6 majority=3 tolerated=3; "
+      ],
+      "answer": 0,
+      "explanation": "`n / 2 + 1` là phép chia nguyên: 4 / 2 + 1 = 3, 6 / 2 + 1 = 4. Số hỏng chịu được là `n - majority`: thêm node thứ 4 hay thứ 6 tăng đa số mà không tăng số node được phép hỏng. Nếu coi đa số của 4 node là 2 thì hai nửa của một lần chia mạng 2 | 2 đều tự coi mình đủ đa số: split brain.",
+      "code": "for (int n : new int[]{3, 4, 5, 6}) {\n    int majority = n / 2 + 1;\n    int tolerated = n - majority;\n    System.out.print(\"n=\" + n + \" majority=\" + majority + \" tolerated=\" + tolerated + \"; \");\n}"
+    },
+    {
+      "id": "minority-leader",
+      "kind": "single",
+      "prompt": "Cụm etcd 5 node bị chia mạng: leader cũ N1 cùng N2 ở một phía, N3, N4, N5 ở phía kia. Client ở phía N1 gửi lần ghi tới N1. Chuyện gì xảy ra?",
+      "options": [
+        "N1 không commit được vì chỉ có 2/5 node; client nhận lỗi",
+        "N1 commit được vì vẫn là leader hợp lệ của term hiện tại",
+        "N1 commit trên 2 node rồi đồng bộ sang phía kia sau",
+        "N1 chuyển lần ghi sang leader mới ở phía 3 node qua N2"
+      ],
+      "answer": 0,
+      "explanation": "Commit cần đa số, 2 trên 5 là không đủ, nên lần ghi treo rồi timeout. Với etcd, CheckQuorum làm N1 tự xuống follower sau khoảng một election timeout, nên các lần ghi sau bị từ chối ngay vì không có leader. Phía 3 node bầu leader mới với term lớn hơn và tiếp tục nhận ghi. Khi nối lại, N1 làm follower và entry chưa commit xung đột với leader mới bị ghi đè. Không có cơ chế \"commit thiểu số rồi gộp sau\": đó chính là split brain mà consensus tránh. N2 cũng bị cô lập nên không chuyển tiếp được."
+    },
+    {
+      "id": "three-az",
+      "kind": "single",
+      "prompt": "Bạn có hai data center A và B. Đặt cụm etcd 3 node thế nào để mất trọn một data center vẫn ghi được?",
+      "options": [
+        "Không làm được: cần nơi thứ ba, dù nhỏ, cho một node",
+        "Đặt 2 node ở A và 1 node ở B là đủ chịu lỗi",
+        "Đặt 2 node ở A, 2 node ở B thành cụm 4 node",
+        "Đặt 3 node ở A, B giữ một bản sao lưu đồng bộ"
+      ],
+      "answer": 0,
+      "explanation": "Với 2 nơi, nơi giữ đa số mất là cụm dừng: 2 + 1 thì mất A là hết; 2 + 2 thì mất bất kỳ nơi nào cũng chỉ còn 2 trên 4, không đủ 3. Cách chuẩn là ba vùng lỗi độc lập (3 AZ), hoặc một node \"trọng tài\" ở nơi thứ ba. Bản sao lưu ở B giúp khôi phục nhưng không giữ cụm chạy tự động."
+    },
+    {
+      "id": "stale-leader-read",
+      "kind": "single",
+      "prompt": "Ứng dụng đọc cấu hình từ etcd bằng `--consistency=s` (serializable) để nhanh hơn. Rủi ro là gì?",
+      "options": [
+        "Có thể đọc dữ liệu cũ từ node bị chậm hoặc bị cô lập",
+        "Có thể đọc dữ liệu chưa commit mà sau đó bị huỷ",
+        "Lần đọc làm tăng term và gây bầu lại leader mới",
+        "Lần đọc bị từ chối nếu node đó không phải leader"
+      ],
+      "answer": 0,
+      "explanation": "Serializable đọc thẳng từ dữ liệu node đang có, không hỏi đa số, nên có thể chậm hơn leader hoặc thuộc phía bị cô lập. Nó vẫn chỉ trả dữ liệu đã commit (đã áp vào state machine). Đọc không bao giờ làm tăng term. Mặc định etcd đọc linearizable chính để tránh rủi ro này."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "multi-region-active-active",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Multi-region & active-active",
+  "summary": "Vì sao chạy nhiều region; active-passive, active-active cho đọc và cho ghi; ghi đồng bộ hay bất đồng bộ liên region; giải quyết xung đột bằng last-write-wins, CRDT (G-Counter, PN-Counter, OR-Set), gộp nghiệp vụ, và tránh xung đột bằng home region; dữ liệu cần nhất quán mạnh; GeoDNS và anycast; DynamoDB global tables MREC và MRSC, Aurora Global Database, Spanner và CockroachDB, PostgreSQL hai chiều, Cassandra, MirrorMaker 2; unique toàn cục và ID; read-your-writes; failover, witness và failback; cell-based architecture; chi phí và khi nào không nên.",
+  "level": "architect",
+  "order": 20,
+  "minutes": 18,
+  "prerequisites": ["consistency-cap", "consensus", "clocks-ids", "replication-ha"],
+  "terms": ["active-passive", "active-active", "home-region", "rpo-rto", "last-write-wins", "crdt", "consensus", "geodns", "read-your-writes", "idempotency", "split-brain", "anycast", "witness", "cell-based-architecture"],
+  "references": [
+    { "title": "AWS: DynamoDB global tables consistency modes (MREC, MRSC)", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/multi-region-strong-consistency-gt.html" },
+    { "title": "Shapiro et al.: Conflict-free Replicated Data Types (2011)", "url": "https://inria.hal.science/inria-00609399" },
+    { "title": "PostgreSQL 16: CREATE SUBSCRIPTION (origin)", "url": "https://www.postgresql.org/docs/16/sql-createsubscription.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Active-active rồi thì mất một region có tự động không mất gì không?\" Trả lời: chỉ khi ghi được xác nhận ở region khác trước khi trả lời (đồng bộ hoặc consensus), và trả giá bằng độ trễ mỗi lần ghi. Với sao chép bất đồng bộ, phần ghi trong khoảng trễ cuối cùng là RPO; và nếu cùng bản ghi được sửa ở region còn lại trước khi đối soát thì còn có xung đột. Người phỏng vấn muốn nghe con số RPO cụ thể và ai quyết định failover." },
+    { "type": "callout", "style": "warning", "markdown": "Bật replication hai chiều cho database có sẵn rồi gọi đó là active-active là cách nhanh nhất để mất dữ liệu: không có gì ngăn hai region cùng sửa một dòng. Trước khi cho region thứ hai nhận ghi, liệt kê từng bảng: ai là home, xung đột giải thế nào, ràng buộc unique nào cần toàn cục." }
+  ]
+}

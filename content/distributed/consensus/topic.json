@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "consensus",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Consensus & leader election",
+  "summary": "Vì sao đa số chặn được split brain; Raft: term, bầu leader với timeout ngẫu nhiên và điều kiện log, sao chép log và commit, term làm fencing token; chọn 3 hay 5 node và đặt theo AZ; đọc linearizable bằng ReadIndex hay lease; luật commit entry term cũ; thông số và độ nhạy fsync của etcd; PreVote và CheckQuorum; đổi thành viên, learner; mất đa số và khôi phục snapshot; FLP; ZooKeeper và etcd; Sentinel, ISR, Patroni; leader election trong Java; consensus qua nhiều region.",
+  "level": "architect",
+  "order": 19,
+  "minutes": 18,
+  "prerequisites": ["distributed-fundamentals", "consistency-cap", "distributed-locks"],
+  "terms": ["consensus", "raft", "paxos", "quorum", "split-brain", "raft-term", "leader-election", "fencing-token", "linearizability", "kraft", "patroni", "ephemeral-node", "lease", "read-index", "pre-vote", "learner"],
+  "references": [
+    { "title": "Ongaro & Ousterhout: In Search of an Understandable Consensus Algorithm (Raft, 2014)", "url": "https://raft.github.io/raft.pdf" },
+    { "title": "etcd docs: Tuning (heartbeat, election timeout, disk)", "url": "https://etcd.io/docs/v3.5/tuning/" },
+    { "title": "Apache ZooKeeper: Programmer's Guide (consistency guarantees)", "url": "https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Raft có leader rồi, sao service của tôi vẫn có hai instance cùng tưởng mình là leader?\" Trả lời: Raft đảm bảo trong cụm etcd mỗi term chỉ một leader, nhưng instance ứng dụng chỉ biết mình là leader qua một lease; bị pause quá lease thì nó vẫn tưởng mình là leader khi đã mất vai. Cách chặn: mọi lần ghi ra ngoài kèm term hoặc revision làm fencing token, và tài nguyên từ chối số cũ (bài Distributed lock & fencing token)." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chạy cụm consensus 2 node \"cho có dự phòng\": đa số của 2 là 2, nên mất một node là cả cụm dừng, kém hơn cả một node. Cũng đừng trải 3 node trên 2 data center rồi tin rằng mất một data center vẫn chạy: nơi giữ 2 node mất là mất đa số." }
+  ]
+}

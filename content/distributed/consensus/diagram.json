@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần ghi đi qua Raft",
+  "nodes": [
+    {"id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "leader", "label": "Leader N1", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "f2", "label": "Follower N2", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "f3", "label": "Follower N3", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "f4", "label": "Follower N4 (chậm)", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "f5", "label": "Follower N5 (chết)", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "put", "from": "client", "to": "leader", "label": "PUT /config/x"},
+    {"id": "ae2", "from": "leader", "to": "f2", "label": "AppendEntries"},
+    {"id": "ae3", "from": "leader", "to": "f3", "label": "AppendEntries"},
+    {"id": "ae4", "from": "leader", "to": "f4", "label": "AppendEntries"},
+    {"id": "ae5", "from": "leader", "to": "f5", "label": "AppendEntries"},
+    {"id": "ack2", "from": "f2", "to": "leader", "label": "đã fsync"},
+    {"id": "ack3", "from": "f3", "to": "leader", "label": "đã fsync"},
+    {"id": "reply", "from": "leader", "to": "client", "label": "OK, commit"}
+  ],
+  "steps": [
+    {"caption": "Client gửi lần ghi tới leader. Gửi nhầm tới follower thì follower chuyển tiếp hoặc chỉ cho client biết leader là ai.", "show": ["client", "leader", "put"], "highlight": ["put"]},
+    {"caption": "Leader ghi entry vào log của mình (term 7, index 42) rồi gửi `AppendEntries` cho mọi follower, kèm term và index của entry ngay trước để follower kiểm tra log khớp.", "show": ["f2", "f3", "f4", "f5", "ae2", "ae3", "ae4", "ae5"], "highlight": ["ae2", "ae3", "ae4", "ae5"]},
+    {"caption": "N2 và N3 ghi xuống đĩa rồi xác nhận. Cùng với leader là 3 trên 5: đa số.", "show": ["ack2", "ack3"], "highlight": ["ack2", "ack3"]},
+    {"caption": "Đủ đa số nên entry 42 được commit: leader áp vào state machine và trả lời client. Không cần chờ N4 chậm hay N5 đã chết: cụm 5 node chịu được 2 node hỏng.", "show": ["reply"], "highlight": ["reply"]},
+    {"caption": "N4 sẽ nhận entry ở lần gửi sau; N5 khi sống lại sẽ được leader gửi bù từ chỗ log hai bên khớp nhau. Độ trễ của mỗi lần ghi là thời gian tới follower nhanh thứ hai cộng `fsync`, nên đĩa chậm ở leader hoặc ở phần lớn follower làm cả cụm chậm.", "show": [], "highlight": ["f4", "f5"]}
+  ]
+}

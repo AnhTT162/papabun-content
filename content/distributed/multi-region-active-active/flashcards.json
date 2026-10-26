@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-multi-region", "front": "Ba lý do chạy multi-region?", "back": "Giảm độ trễ cho người dùng ở xa, sống sót khi mất cả một region, và giữ dữ liệu trong vùng pháp lý hoặc hợp đồng yêu cầu." },
+    { "id": "active-passive", "front": "Active-passive giữa hai region có RPO bằng 0 không?", "back": "Thường không: sao chép bất đồng bộ nên phần ghi chưa kịp sang region phụ sẽ mất khi region chính chết." },
+    { "id": "sync-cost", "front": "Giá của ghi đồng bộ liên region?", "back": "Mỗi lần ghi chờ ít nhất một vòng mạng liên region (50–200 ms tuỳ khoảng cách), và mất kết nối liên region là ghi bị chặn." },
+    { "id": "home-region", "front": "Home region tránh xung đột thế nào?", "back": "Mỗi bản ghi (theo người dùng, tenant, khách sạn) chỉ có một region được ghi; region khác đọc bản sao và chuyển tiếp lần ghi về home." },
+    { "id": "lww-loss", "front": "Last-write-wins giữa các region mất gì?", "back": "Khi hai region sửa cùng bản ghi gần như cùng lúc, một lần sửa bị bỏ âm thầm, không lỗi nào báo." },
+    { "id": "crdt-limit", "front": "CRDT không giải quyết được ràng buộc nào?", "back": "Ràng buộc toàn cục như số dư không âm, tồn kho không bán quá, tên đăng nhập duy nhất: những thứ này cần phối hợp qua một nơi hoặc consensus." },
+    { "id": "ryw", "front": "Read-your-writes vỡ thế nào khi có nhiều region?", "back": "Người dùng ghi ở region A rồi request sau vào region B, nơi bản sao chưa nhận lần ghi; cách sửa là gắn người dùng với home region hoặc chờ theo phiên bản." },
+    { "id": "region-split", "front": "Vì sao không tự promote region phụ khi mất đường nối giữa hai region?", "back": "Cả hai region có thể vẫn sống và cùng nhận ghi: split brain. Cần witness ở region thứ ba hoặc người quyết định." },
+    { "id": "mrsc", "front": "DynamoDB global tables chế độ strong consistency (MRSC) đòi hỏi gì?", "back": "Đúng ba region (ba bản sao, hoặc hai bản sao cộng witness), và mỗi lần ghi đồng bộ sang ít nhất một region khác trước khi trả lời." }
+  ]
+}

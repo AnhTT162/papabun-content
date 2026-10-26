@@ -348,8 +348,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 16 | `rate-limiting` | Rate limiting | senior | Token bucket, leaky bucket, sliding window; phân tán | L S Sc | ✅ |
 | 17 | `distributed-locks` | Distributed lock & fencing token | senior | Lease, fencing, vì sao lock dựa trên thời gian nguy hiểm | L S B | ✅ |
 | 18 | `clocks-ids` | Đồng hồ, thứ tự & sinh ID | senior | Lệch đồng hồ, Lamport/vector clock, snowflake, UUID v7 | L D | ✅ |
-| 19 | `consensus` | Consensus & leader election | architect | Raft, quorum, split brain, etcd/ZooKeeper | L S D | ⬜ |
-| 20 | `multi-region-active-active` | ✚ Multi-region & active-active | architect | Replication giữa region, giải quyết xung đột (LWW, CRDT), định tuyến người dùng, chi phí | L D Sc | ⬜ |
+| 19 | `consensus` | Consensus & leader election | architect | Raft, quorum, split brain, etcd/ZooKeeper | L S D | ✅ |
+| 20 | `multi-region-active-active` | ✚ Multi-region & active-active | architect | Replication giữa region, giải quyết xung đột (LWW, CRDT), định tuyến người dùng, chi phí | L D Sc | ✅ |
 
 ### 13. Cloud & DevOps (`cloud-devops`)
 

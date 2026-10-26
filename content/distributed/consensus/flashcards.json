@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "majority-why", "front": "Vì sao consensus dùng đa số?", "back": "Hai đa số bất kỳ luôn có ít nhất một node chung, nên không thể có hai quyết định trái nhau (hai leader cùng term, hai entry khác nhau cùng vị trí)." },
+    { "id": "cluster-size", "front": "Cụm 3, 4, 5 node chịu được bao nhiêu node hỏng?", "back": "3 chịu 1, 4 vẫn chỉ chịu 1, 5 chịu 2. Số chẵn không thêm khả năng chịu lỗi." },
+    { "id": "election-timeout", "front": "Vì sao election timeout của Raft là ngẫu nhiên?", "back": "Để một node thường hết chờ trước hẳn các node khác và thắng, tránh nhiều node cùng ứng cử làm chia phiếu mãi." },
+    { "id": "vote-rule", "front": "Node Raft bầu cho candidate khi nào?", "back": "Khi chưa bầu ai trong term đó và log của candidate ít nhất mới bằng log của mình (so term rồi index của entry cuối)." },
+    { "id": "commit-rule", "front": "Entry Raft được commit khi nào?", "back": "Khi leader của term hiện tại đã sao chép nó lên đa số node (đã lưu xuống đĩa); entry của term cũ chỉ commit gián tiếp qua entry của term hiện tại." },
+    { "id": "term-fencing", "front": "Raft ngăn leader cũ bị cô lập gây hại thế nào?", "back": "Nó không đủ đa số nên không commit được gì; khi thấy term lớn hơn thì lập tức xuống làm follower, và entry chưa commit xung đột với leader mới bị ghi đè." },
+    { "id": "stale-read", "front": "Đọc từ leader có luôn mới nhất không?", "back": "Không: leader cũ chưa biết mình bị thay vẫn trả dữ liệu cũ. Cần ReadIndex (xác nhận với đa số) hoặc leader lease." },
+    { "id": "prevote", "front": "PreVote giải quyết vấn đề gì?", "back": "Node bị cô lập tăng term liên tục; khi nối lại nó ép leader tốt phải xuống. PreVote hỏi thử trước, chỉ tăng term khi thật sự thắng được." },
+    { "id": "not-for", "front": "Không nên dùng etcd/ZooKeeper cho việc gì?", "back": "Database nghiệp vụ hay hàng đợi khối lượng lớn: mỗi lần ghi tốn một vòng tới đa số cộng `fsync`, và dữ liệu phải nhỏ (etcd mặc định giới hạn 2 GiB)." }
+  ]
+}

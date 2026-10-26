@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Nền tảng đặt phòng khách sạn mở rộng sang châu Âu",
+  "prompt": "Nền tảng đặt phòng khách sạn đang chạy ở một region Singapore, phục vụ khách sạn và người dùng Đông Nam Á. Công ty mở thị trường châu Âu: thêm khoảng 3.000 khách sạn ở EU, người dùng EU chiếm 40% lượt tìm kiếm. Ràng buộc: tìm kiếm p99 dưới 300 ms cho cả hai châu lục (RTT Singapore–Frankfurt khoảng 160 ms); **không bao giờ bán trùng một phòng**; hợp đồng với đối tác yêu cầu dữ liệu cá nhân của người dùng EU lưu trong EU; mất trọn một region thì trong 30 phút phải đặt phòng lại được; khi đó không được mất đặt phòng đã xác nhận. Cao điểm khoảng 400 lượt đặt mỗi giây toàn cầu, tìm kiếm gấp 100 lần. Thiết kế triển khai multi-region.",
+  "hints": [
+    "Chia dữ liệu theo loại: cái gì đọc nhiều và chịu được cũ vài giây, cái gì phải nhất quán mạnh, cái gì bị ràng buộc nơi lưu?",
+    "Tồn kho phòng của một khách sạn nên có mấy nơi được ghi? Nơi đó nên ở đâu?",
+    "Người dùng EU đặt phòng ở khách sạn Đà Nẵng: request đi qua những region nào?",
+    "\"Không mất đặt phòng đã xác nhận khi mất region\" nghĩa là RPO bằng 0 cho dữ liệu nào, và cái giá là gì?"
+  ],
+  "solution": "**Phân loại dữ liệu**:\n- *Danh mục khách sạn, ảnh, giá niêm yết*: đọc rất nhiều, chịu được cũ vài giây. Có ở cả hai region, phục vụ tìm kiếm cục bộ; mỗi khách sạn có home region để sửa.\n- *Tồn kho phòng và đặt phòng*: nhất quán mạnh, không bán trùng. Home region **theo khách sạn**: khách sạn EU thuộc Frankfurt, khách sạn Đông Nam Á thuộc Singapore. Chỉ home region được trừ tồn kho.\n- *Hồ sơ người dùng*: home region theo nơi cư trú; người dùng EU lưu ở Frankfurt, không sao chép dữ liệu cá nhân sang Singapore (chỉ gửi những trường cần cho một đơn, như tên khách, theo thoả thuận).\n\n**Đường đi của một lần đặt**: người dùng EU vào Frankfurt (GeoDNS). Tìm kiếm khách sạn Đà Nẵng đọc danh mục và tồn kho xấp xỉ từ bản sao ở Frankfurt (nhanh, có thể cũ vài giây: chỉ để hiển thị). Khi bấm đặt, Frankfurt chuyển request về Singapore (home của khách sạn đó) kèm idempotency key; Singapore trừ tồn kho bằng ghi có điều kiện (`UPDATE inventory SET available = available - 1 WHERE hotel_id = ? AND date = ? AND available > 0`) và tạo đặt phòng trong cùng transaction. Thêm 160 ms cho một lần đặt là chấp nhận được; tìm kiếm không bị ảnh hưởng.\n\n**Không mất đặt phòng đã xác nhận**: mỗi home region có một **region dự phòng cùng châu lục**: Frankfurt cặp với một region EU khác (Ireland hoặc Paris), Singapore cặp với một region châu Á khác. Nhờ vậy dữ liệu của người dùng EU không rời EU kể cả khi failover. Trong region dùng Multi-AZ đồng bộ; sang region dự phòng thì **tồn kho và đặt phòng cùng một transaction, cùng sao chép đồng bộ** (thêm vài chục mili giây vì hai region gần nhau), để sau failover không có tồn kho cũ gây bán trùng và không mất đặt phòng. Danh mục và hồ sơ sao chép bất đồng bộ. Phương án khác là database consensus trải ba region cùng châu lục; lưu ý chế độ strong consistency của DynamoDB global tables không hỗ trợ transaction, nên mẫu \"trừ tồn kho và tạo đặt phòng cùng transaction\" phải đổi sang ghi có điều kiện trên một item.\n\n**Mất region Singapore**: health check rút Singapore khỏi định tuyến; runbook promote region dự phòng châu Á thành home cho khách sạn và người dùng Đông Nam Á. Người dùng vẫn vào Frankfurt để tìm kiếm thì không bị ảnh hưởng. Không tự động promote khi chỉ mất đường nối giữa hai region: cần witness ở region thứ ba hoặc người trực quyết định, để không có hai home cho cùng một khách sạn. Khi Singapore quay lại, nó làm bản sao và đối soát các thay đổi chưa kịp sao chép (nếu có) trước khi nhận lại vai home.\n\n**Chi tiết khác**: ID đặt phòng dùng UUID v7 (sinh ở bất kỳ region nào); event `BookingConfirmed` qua outbox và Kafka trong home region, MirrorMaker 2 sao chép sang region kia cho báo cáo; diễn tập rút một region mỗi quý; theo dõi độ trễ sao chép và số request bị chuyển tiếp liên region.",
+  "tradeoffs": [
+    {
+      "option": "Active-passive: mọi thứ ghi ở Singapore, Frankfurt chỉ có bản sao đọc và chờ promote",
+      "pros": [
+        "Đơn giản nhất, không có xung đột",
+        "Tìm kiếm ở EU vẫn nhanh nhờ bản sao đọc"
+      ],
+      "cons": [
+        "Mọi lần đặt của người dùng EU đi vòng Á–Âu",
+        "Dữ liệu cá nhân người dùng EU nằm ở Singapore, trái hợp đồng"
+      ]
+    },
+    {
+      "option": "Home region theo khách sạn và theo người dùng (đề xuất)",
+      "pros": [
+        "Mỗi bản ghi chỉ có một nơi ghi nên không xung đột, không bán trùng",
+        "Dữ liệu cá nhân ở đúng vùng; đọc nhanh ở mọi region"
+      ],
+      "cons": [
+        "Phải định tuyến ghi theo home, xử lý chuyển tiếp và failover theo từng phần dữ liệu",
+        "Người dùng đặt phòng ở châu lục khác chịu thêm một vòng mạng"
+      ]
+    },
+    {
+      "option": "Database consensus trải ba region (Spanner, CockroachDB) cho tồn kho và đặt phòng",
+      "pros": [
+        "RPO bằng 0 cả khi mất trọn region, failover tự động",
+        "Ứng dụng không phải tự định tuyến theo home region"
+      ],
+      "cons": [
+        "Mỗi lần ghi chờ đa số region: vài chục mili giây nếu các region gần nhau, hàng trăm nếu trải châu lục",
+        "Cần region thứ ba, chi phí và độ phức tạp vận hành cao"
+      ]
+    },
+    {
+      "option": "Multi-master bất đồng bộ với last-write-wins cho mọi bảng",
+      "pros": [
+        "Ghi nhanh ở mọi region",
+        "Dễ bật trên dịch vụ có sẵn như DynamoDB global tables"
+      ],
+      "cons": [
+        "Hai region cùng bán phòng cuối cùng, LWW giữ một bản và bỏ bản kia: bán trùng",
+        "Mất ghi âm thầm, phát hiện muộn qua đối soát"
+      ]
+    }
+  ]
+}

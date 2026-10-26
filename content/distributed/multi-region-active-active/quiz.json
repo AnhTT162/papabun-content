@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "gcounter-output",
+      "kind": "output",
+      "prompt": "Bộ đếm lượt thích ở hai region đã đồng bộ ở 10. Cùng lúc, Singapore nhận 3 lượt và Frankfurt nhận 5 lượt. So last-write-wins (bản của Frankfurt ghi sau) với gộp G-Counter, rồi gộp thêm lần nữa. Chương trình in gì?",
+      "options": [
+        "lww=15 crdt=18 again=18",
+        "lww=15 crdt=18 again=23",
+        "lww=18 crdt=18 again=18",
+        "lww=15 crdt=28 again=28"
+      ],
+      "answer": 0,
+      "explanation": "LWW giữ nguyên bản Frankfurt (10 + 5 = 15), mất 3 lượt của Singapore. G-Counter giữ phần của từng region: Singapore 13, Frankfurt 5; gộp lấy `max` từng phần nên tổng là 18. Gộp lại với bản Frankfurt lần nữa không đổi gì vì `max` không cộng dồn: phép gộp idempotent, nên sao chép lặp lại vẫn an toàn. Cộng thẳng hai giá trị thì đếm 10 lượt ban đầu hai lần (28).",
+      "code": "record GCounter(Map<String, Long> counts) {\n    GCounter increment(String region, long n) {\n        var copy = new HashMap<>(counts);\n        copy.merge(region, n, Long::sum);\n        return new GCounter(copy);\n    }\n    GCounter merge(GCounter other) {\n        var copy = new HashMap<>(counts);\n        other.counts().forEach((region, n) -> copy.merge(region, n, Math::max));\n        return new GCounter(copy);\n    }\n    long value() { return counts.values().stream().mapToLong(Long::longValue).sum(); }\n}\n\nvar start = new GCounter(Map.of(\"sg\", 10L));\nvar sg = start.increment(\"sg\", 3);\nvar fra = start.increment(\"fra\", 5);\nlong lww = fra.value();                 // last-write-wins: bản Frankfurt ghi sau\nvar merged = sg.merge(fra);\nSystem.out.println(\"lww=\" + lww + \" crdt=\" + merged.value() + \" again=\" + merged.merge(fra).value());"
+    },
+    {
+      "id": "inventory-model",
+      "kind": "single",
+      "prompt": "Hệ thống bán vé hoà nhạc chạy hai region, cả hai nhận ghi, bảng ghế dùng DynamoDB global tables chế độ mặc định. Rủi ro lớn nhất?",
+      "options": [
+        "Hai region cùng bán một ghế; LWW giữ một vé, bỏ vé kia",
+        "Ghi bị chặn mỗi khi đường nối giữa hai region chập chờn",
+        "Mỗi lần bán ghế phải chờ một vòng mạng sang region kia",
+        "Hai region sinh trùng khoá chính do DynamoDB tự tăng số"
+      ],
+      "answer": 0,
+      "explanation": "Chế độ mặc định (MREC) sao chép bất đồng bộ và giải xung đột bằng last writer wins theo item. Conditional write \"ghế còn trống\" chỉ kiểm tra bản cục bộ, nên cả hai region cùng bán được, rồi một vé bị ghi đè âm thầm. Chặn ghi và chờ vòng mạng là đặc điểm của chế độ đồng bộ. DynamoDB không có khoá tự tăng. Sửa: ghế thuộc home region của sự kiện, hoặc dùng chế độ strong consistency."
+    },
+    {
+      "id": "promote-on-partition",
+      "kind": "single",
+      "prompt": "Active-passive giữa hai region, công cụ giám sát tự promote region phụ khi không ping được region chính trong 60 giây. Một hôm đường mạng giữa hai region đứt nhưng cả hai region vẫn phục vụ người dùng. Chuyện gì xảy ra?",
+      "options": [
+        "Region phụ được promote khi region chính vẫn nhận ghi: hai bên cùng ghi",
+        "Không có gì xảy ra vì region chính vẫn sống và phục vụ người dùng",
+        "Region chính tự động chuyển sang chỉ đọc khi mất kết nối tới region phụ",
+        "DNS tự chọn một region duy nhất nên không thể có hai bên cùng ghi"
+      ],
+      "answer": 0,
+      "explanation": "Mất ping không phân biệt được \"region chính chết\" với \"đường nối đứt\". Region phụ tự promote trong khi region chính không hề biết, nên cả hai nhận ghi: split brain cấp region. Region chính chỉ tự hạ xuống chỉ đọc nếu được thiết kế như vậy (fencing), không tự động. DNS không biết trạng thái dữ liệu và client cache DNS. Cần witness ở region thứ ba, hoặc để người quyết định promote."
+    },
+    {
+      "id": "when-not",
+      "kind": "single",
+      "prompt": "Hệ thống quản lý nội bộ cho một doanh nghiệp, người dùng chỉ ở Việt Nam, yêu cầu RTO 4 giờ và RPO 15 phút. Kiến trúc nào hợp lý?",
+      "options": [
+        "Một region Multi-AZ, sao lưu và bản sao async sang region khác",
+        "Active-active hai region với home region theo từng phòng ban",
+        "Database consensus trải ba region để RPO luôn bằng 0",
+        "Multi-master hai region dùng last-write-wins cho mọi bảng"
+      ],
+      "answer": 0,
+      "explanation": "Người dùng ở một nơi nên không cần giảm độ trễ toàn cầu; RTO 4 giờ, RPO 15 phút đạt được bằng Multi-AZ cộng sao lưu hoặc bản sao bất đồng bộ sang region khác và runbook khôi phục. Active-active hay consensus ba region tốn gấp nhiều lần hạ tầng và độ phức tạp mà không đem lại gì yêu cầu cần. LWW cho mọi bảng còn thêm rủi ro mất ghi."
+    }
+  ]
+}

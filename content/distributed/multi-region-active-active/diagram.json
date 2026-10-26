@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Hai region, ghi theo home region",
+  "nodes": [
+    {"id": "user-vn", "label": "Người dùng ở VN", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "user-eu", "label": "Người dùng ở EU", "kind": "client", "x": 0.85, "y": 0.05},
+    {"id": "app-sg", "label": "App Singapore", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "app-fra", "label": "App Frankfurt", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "db-sg", "label": "DB Singapore", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "db-fra", "label": "DB Frankfurt", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "route-vn", "from": "user-vn", "to": "app-sg", "label": "GeoDNS: gần nhất"},
+    {"id": "route-eu", "from": "user-eu", "to": "app-fra", "label": "GeoDNS: gần nhất"},
+    {"id": "write-sg", "from": "app-sg", "to": "db-sg", "label": "ghi local"},
+    {"id": "write-fra", "from": "app-fra", "to": "db-fra", "label": "ghi local"},
+    {"id": "repl", "from": "db-sg", "to": "db-fra", "label": "sao chép async"},
+    {"id": "repl-back", "from": "db-fra", "to": "db-sg", "label": "sao chép async"},
+    {"id": "forward", "from": "app-fra", "to": "app-sg", "label": "về home region"}
+  ],
+  "steps": [
+    {"caption": "Người dùng được đưa tới region gần nhất bằng GeoDNS hoặc định tuyến theo độ trễ: đọc và ghi đều nhanh vì chỉ đi trong một region.", "show": ["user-vn", "user-eu", "app-sg", "app-fra", "route-vn", "route-eu"], "highlight": ["route-vn", "route-eu"]},
+    {"caption": "Mỗi region ghi vào database của mình và sao chép bất đồng bộ sang region kia. Không ai phải chờ vòng mạng Á–Âu.", "show": ["db-sg", "db-fra", "write-sg", "write-fra", "repl", "repl-back"], "highlight": ["write-sg", "write-fra", "repl", "repl-back"]},
+    {"caption": "Xung đột: một người dùng VN đang ở châu Âu sửa hồ sơ qua Frankfurt, cùng lúc ứng dụng ở Singapore cũng sửa hồ sơ đó. Hai bản cùng đi qua đường sao chép; last-write-wins sẽ âm thầm bỏ một bản.", "show": [], "highlight": ["write-sg", "write-fra", "repl", "repl-back"]},
+    {"caption": "Tránh xung đột bằng home region: hồ sơ của người dùng VN thuộc Singapore. Frankfurt vẫn phục vụ đọc từ bản sao cục bộ, nhưng chuyển lần ghi về Singapore (thêm khoảng 160 ms, một vòng Á–Âu, chỉ cho lần ghi).", "show": ["forward"], "highlight": ["forward"]},
+    {"caption": "Mất region Singapore: Frankfurt được promote làm home cho các người dùng đó. Phần ghi chưa kịp sao chép trong vài trăm mili giây cuối là RPO; phải đối soát khi Singapore quay lại.", "show": [], "highlight": ["db-fra", "repl"]}
+  ]
+}

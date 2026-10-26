@@ -1901,7 +1901,7 @@
       "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
       "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
       "related": ["pitr"],
-      "topics": ["backup-restore", "replication-ha"]
+      "topics": ["backup-restore", "replication-ha", "multi-region-active-active"]
     },
     {
       "id": "table-lock",
@@ -2117,7 +2117,7 @@
       "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
       "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
       "related": ["replica-lag", "monotonic-reads"],
-      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap"]
+      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap", "multi-region-active-active"]
     },
     {
       "id": "monotonic-reads",
@@ -2141,7 +2141,7 @@
       "meaning": "Hai node cùng nghĩ mình là primary và cùng nhận ghi, thường do cô lập mạng; dữ liệu rẽ thành hai nhánh khó gộp lại.",
       "example": "Primary cũ bị cô lập vẫn nhận đơn hàng từ vài pod trong khi replica đã được promote.",
       "related": ["fencing", "failover"],
-      "topics": ["replication-ha", "redis-ha-cluster", "distributed-fundamentals", "distributed-locks"]
+      "topics": ["replication-ha", "redis-ha-cluster", "distributed-fundamentals", "distributed-locks", "consensus", "multi-region-active-active"]
     },
     {
       "id": "fencing",
@@ -2157,7 +2157,7 @@
       "meaning": "Công cụ quản lý high availability cho PostgreSQL: lưu khoá leader trong etcd, Consul hoặc ZooKeeper, tự failover và tự hạ primary khi mất lease.",
       "example": "`patronictl list` cho thấy node nào là Leader, node nào là Replica và lag của từng node.",
       "related": ["failover", "fencing"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "consensus"]
     },
     {
       "id": "pg-rewind",
@@ -2717,7 +2717,7 @@
       "meaning": "Chế độ Kafka tự quản lý metadata bằng các controller chạy giao thức đồng thuận kiểu Raft, thay cho ZooKeeper. Kafka 4.0 chỉ còn KRaft.",
       "example": "3 controller KRaft lưu danh sách topic, partition và leader.",
       "related": ["unclean-leader-election"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "consensus"]
     },
     {
       "id": "unclean-leader-election",
@@ -4709,7 +4709,7 @@
       "meaning": "Mức nhất quán mạnh nhất cho một object: hệ thống trông như chỉ có một bản dữ liệu, mỗi thao tác có hiệu lực tại một thời điểm giữa lúc gọi và lúc trả về, nên đọc luôn thấy lần ghi đã xác nhận gần nhất.",
       "example": "Sau khi etcd xác nhận ghi `leader=node-2`, mọi client đọc sau đó đều thấy `node-2`.",
       "related": ["cap-theorem", "eventual-consistency"],
-      "topics": ["consistency-cap"]
+      "topics": ["consistency-cap", "consensus"]
     },
     {
       "id": "cap-theorem",
@@ -4733,7 +4733,7 @@
       "meaning": "Số bản sao tối thiểu phải tham gia một lần đọc (R) hoặc ghi (W) trong N bản sao; R + W > N thì tập đọc và tập ghi luôn giao nhau.",
       "example": "N = 3, W = 2, R = 2: lần đọc luôn hỏi ít nhất một node đã nhận lần ghi gần nhất.",
       "related": ["tunable-consistency", "linearizability"],
-      "topics": ["consistency-cap", "consistent-hashing"]
+      "topics": ["consistency-cap", "consistent-hashing", "consensus"]
     },
     {
       "id": "round-robin",
@@ -4794,10 +4794,10 @@
     {
       "id": "last-write-wins",
       "term": "Last-write-wins",
-      "meaning": "Cách giải quyết xung đột giữ bản ghi có timestamp lớn nhất và bỏ các bản còn lại; đơn giản nhưng âm thầm mất lần ghi khi đồng hồ các máy lệch nhau.",
+      "meaning": "Cách giải quyết xung đột giữ bản ghi có timestamp lớn nhất và bỏ các bản còn lại. Luôn âm thầm bỏ các lần ghi đồng thời thua cuộc; đồng hồ lệch còn có thể làm bản thật sự mới hơn bị bỏ.",
       "example": "Hai region cùng sửa địa chỉ giao hàng; bản có timestamp lớn hơn thắng, bản kia biến mất không báo lỗi.",
       "related": ["crdt", "eventual-consistency"],
-      "topics": ["consistency-cap", "clocks-ids"]
+      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active"]
     },
     {
       "id": "crdt",
@@ -4805,7 +4805,7 @@
       "meaning": "Conflict-free replicated data type: kiểu dữ liệu có phép gộp được chứng minh luôn hội tụ, nên các bản sao sửa độc lập vẫn gộp được mà không mất dữ liệu.",
       "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
       "related": ["last-write-wins", "eventual-consistency"],
-      "topics": ["consistency-cap", "clocks-ids"]
+      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active"]
     },
     {
       "id": "idempotency",
@@ -4813,7 +4813,7 @@
       "meaning": "Tính chất của thao tác mà làm nhiều lần cho cùng trạng thái hệ thống như làm một lần; điều kiện để retry an toàn.",
       "example": "`UPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING'` chạy hai lần vẫn chỉ đổi một lần.",
       "related": ["idempotency-key", "idempotent-consumer"],
-      "topics": ["idempotency", "cqrs-event-sourcing"]
+      "topics": ["idempotency", "cqrs-event-sourcing", "multi-region-active-active"]
     },
     {
       "id": "reconciliation",
@@ -5213,7 +5213,7 @@
       "meaning": "Bài toán để nhiều node thống nhất một giá trị (hoặc một chuỗi lệnh) dù một số node chết; các giao thức như Paxos, Raft chỉ cần đa số đồng ý.",
       "example": "Cụm etcd 3 node vẫn ghi được khi một node chết, vì 2 trên 3 là đa số.",
       "related": ["quorum", "two-phase-commit"],
-      "topics": ["distributed-transactions", "distributed-locks"]
+      "topics": ["distributed-transactions", "distributed-locks", "consensus", "multi-region-active-active"]
     },
     {
       "id": "tcc",
@@ -5333,7 +5333,7 @@
       "meaning": "Quyền (giữ khoá, làm leader) có thời hạn: hết hạn mà không gia hạn thì tự mất, nên người giữ chết không làm hệ thống kẹt mãi.",
       "example": "Lease etcd TTL 10 giây, client gửi keepalive mỗi 3 giây; process treo thì sau 10 giây khoá tự nhả.",
       "related": ["distributed-lock", "fencing"],
-      "topics": ["distributed-locks", "clocks-ids"]
+      "topics": ["distributed-locks", "clocks-ids", "consensus"]
     },
     {
       "id": "fencing-token",
@@ -5341,7 +5341,7 @@
       "meaning": "Số tăng dần được cấp kèm mỗi lần lấy khoá. Client gửi nó cùng mỗi lần ghi; storage nhớ token lớn nhất đã thấy và từ chối token nhỏ hơn, chặn người giữ khoá cũ đã hết hạn.",
       "example": "A giữ token 33 bị GC pause, B lấy khoá với token 34 và ghi; lần ghi muộn của A mang 33 bị storage từ chối.",
       "related": ["fencing", "distributed-lock", "lease"],
-      "topics": ["distributed-locks"]
+      "topics": ["distributed-locks", "consensus"]
     },
     {
       "id": "redlock",
@@ -5357,7 +5357,7 @@
       "meaning": "Znode của ZooKeeper tồn tại theo session của client tạo ra nó: session hết hạn (client chết, mất kết nối quá lâu) thì node tự bị xoá. Nền của lock và leader election trên ZooKeeper.",
       "example": "Client tạo `/locks/job/lock-0000000042` kiểu ephemeral sequential; node có số nhỏ nhất đang giữ khoá.",
       "related": ["lease", "distributed-lock"],
-      "topics": ["distributed-locks"]
+      "topics": ["distributed-locks", "consensus"]
     },
     {
       "id": "clock-skew",
@@ -5462,6 +5462,118 @@
       "example": "Phút có 23:59:60 làm vài hệ thống cũ treo hoặc tính sai thời lượng.",
       "related": ["ntp", "wall-clock"],
       "topics": ["clocks-ids"]
+    },
+    {
+      "id": "raft",
+      "term": "Raft",
+      "meaning": "Thuật toán consensus thiết kế để dễ hiểu: một leader mỗi term, bầu bằng đa số phiếu, leader sao chép log lên follower và entry được commit khi đa số đã lưu.",
+      "example": "etcd, Consul, KRaft của Kafka và CockroachDB đều dùng Raft (hoặc biến thể).",
+      "related": ["consensus", "raft-term", "leader-election", "quorum"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "paxos",
+      "term": "Paxos",
+      "meaning": "Họ thuật toán consensus của Leslie Lamport, nền của nhiều hệ (Chubby, Spanner). Cùng nguyên lý đa số với Raft nhưng khó hiểu và khó cài đúng hơn.",
+      "example": "Multi-Paxos chọn một proposer ổn định làm leader để mỗi lệnh chỉ cần một vòng tới đa số.",
+      "related": ["consensus", "raft"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "raft-term",
+      "term": "Term (Raft)",
+      "meaning": "Số thứ tự tăng dần của mỗi nhiệm kỳ trong Raft; mỗi term có tối đa một leader. Node thấy term lớn hơn của mình thì lập tức xuống làm follower, nên term đóng vai fencing token.",
+      "example": "Leader cũ term 6 bị cô lập; khi nối lại, nó nhận heartbeat term 7 và xuống làm follower.",
+      "related": ["raft", "fencing-token"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "leader-election",
+      "term": "Leader election",
+      "meaning": "Chọn một node duy nhất trong cụm làm một vai (leader, người chạy job định kỳ). Thường dựng trên consensus hoặc lease; node có thể mất vai mà không biết nên vẫn cần fencing.",
+      "example": "Ba pod dùng Curator `LeaderLatch`; chỉ pod đang là leader chạy job đối soát lúc nửa đêm.",
+      "related": ["lease", "raft", "fencing-token"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "active-passive",
+      "term": "Active-passive",
+      "meaning": "Mô hình dự phòng: một nơi (region, data center) nhận ghi và phục vụ, nơi kia nhận bản sao và chỉ được promote khi nơi chính hỏng.",
+      "example": "Singapore nhận mọi lần ghi; Tokyo giữ bản sao bất đồng bộ, được promote theo runbook khi mất Singapore.",
+      "related": ["active-active", "failover", "rpo-rto"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "active-active",
+      "term": "Active-active",
+      "meaning": "Nhiều nơi (region, data center) cùng phục vụ request thật cùng lúc. Active-active cho ghi nghĩa là nhiều nơi cùng nhận ghi, nên phải giải quyết hoặc tránh xung đột.",
+      "example": "Người dùng châu Á vào Singapore, người dùng châu Âu vào Frankfurt; cả hai region đều nhận đặt phòng.",
+      "related": ["active-passive", "home-region", "crdt"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "home-region",
+      "term": "Home region",
+      "meaning": "Region duy nhất được ghi một phần dữ liệu (theo người dùng, tenant, khách sạn...). Region khác đọc bản sao và chuyển tiếp lần ghi về home, nên không có xung đột ghi.",
+      "example": "Tồn kho của khách sạn Đà Nẵng chỉ được trừ ở Singapore, kể cả khi người đặt đang ở châu Âu.",
+      "related": ["active-active", "last-write-wins"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "geodns",
+      "term": "GeoDNS",
+      "meaning": "DNS trả địa chỉ khác nhau tuỳ vị trí (hoặc độ trễ) của người hỏi, để đưa người dùng tới region gần nhất. Health check rút region hỏng khỏi câu trả lời.",
+      "example": "Route 53 latency-based routing trả IP của Frankfurt cho người dùng ở Đức và của Singapore cho người dùng ở Việt Nam.",
+      "related": ["dns", "active-active"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "read-index",
+      "term": "ReadIndex",
+      "meaning": "Cách đọc linearizable trong Raft: leader ghi nhận commit index, xác nhận với đa số rằng mình vẫn là leader, chờ state machine áp tới index đó rồi mới trả kết quả.",
+      "example": "etcd mặc định phục vụ đọc linearizable bằng ReadIndex, không dựa vào lease theo thời gian.",
+      "related": ["raft", "linearizability"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "pre-vote",
+      "term": "PreVote",
+      "meaning": "Bước hỏi thử trong Raft trước khi ứng cử: chỉ tăng term khi đa số sẵn sàng bầu, nên node bị cô lập không ép leader đang tốt phải xuống khi nối lại.",
+      "example": "Node mất mạng 5 phút quay lại; nhờ PreVote nó không làm tăng term của cả cụm.",
+      "related": ["raft", "raft-term"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "learner",
+      "term": "Learner",
+      "meaning": "Thành viên etcd nhận log nhưng không bỏ phiếu; dùng khi thêm node mới để nó đuổi kịp trước khi được promote thành voter.",
+      "example": "`etcdctl member add node4 --learner`, chờ đuổi kịp rồi `etcdctl member promote <id>`.",
+      "related": ["raft", "quorum"],
+      "topics": ["consensus"]
+    },
+    {
+      "id": "witness",
+      "term": "Witness",
+      "meaning": "Thành viên chỉ để bỏ phiếu hoặc giữ log, không phục vụ dữ liệu, đặt ở nơi thứ ba để phân xử khi hai nơi chính mất liên lạc.",
+      "example": "DynamoDB MRSC có thể chạy hai bản sao cộng một witness ở region thứ ba.",
+      "related": ["quorum", "split-brain"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "anycast",
+      "term": "Anycast",
+      "meaning": "Cùng một địa chỉ IP được quảng bá từ nhiều điểm; mạng tự đưa gói tin tới điểm gần nhất, nên chuyển hướng khi một điểm hỏng không phụ thuộc cache DNS.",
+      "example": "Load balancer toàn cục có IP anycast: người dùng ở Đức vào điểm biên Frankfurt, ở Việt Nam vào điểm biên Singapore.",
+      "related": ["geodns", "dns"],
+      "topics": ["multi-region-active-active"]
+    },
+    {
+      "id": "cell-based-architecture",
+      "term": "Cell-based architecture",
+      "meaning": "Chia hệ thống thành nhiều cell độc lập, mỗi cell đủ service và database cho một nhóm người dùng, để lỗi hay đợt triển khai hỏng chỉ ảnh hưởng một cell.",
+      "example": "20 cell, mỗi cell phục vụ 5% tenant; bản deploy lỗi chỉ ra cell đầu tiên rồi bị dừng.",
+      "related": ["active-active", "home-region"],
+      "topics": ["multi-region-active-active"]
     }
   ]
 }

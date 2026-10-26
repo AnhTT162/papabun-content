@@ -1,0 +1,452 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Cụm Raft 5 node: leader chết và mạng bị chia",
+  "instructions": "Thử hai đường: \"N1 chết\" rồi bầu lại; và \"Chia mạng 2 | 3\", ghi vào N1 ở phía thiểu số, bầu leader mới ở phía đa số, rồi nối lại. Xem bộ đếm ghi đã commit và ghi treo.",
+  "config": {
+    "states": [
+      {
+        "id": "stable",
+        "label": "Leader N1",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "N1 là leader, gửi heartbeat 100 ms một lần. Mỗi lần ghi được commit khi 3 trên 5 node (tính cả N1) đã lưu xuống đĩa."
+      },
+      {
+        "id": "partitioned",
+        "label": "Chia mạng 2 | 3",
+        "x": 0.5,
+        "y": 0.05,
+        "note": "N1, N2 ở một phía; N3, N4, N5 ở phía kia. N1 vẫn tưởng mình là leader, nhưng chỉ nghe được 2 trên 5 node. Với etcd (CheckQuorum luôn bật), sau khoảng một election timeout N1 tự xuống follower; lần ghi sau đó ở phía này bị từ chối ngay vì không có leader."
+      },
+      {
+        "id": "leaderless",
+        "label": "Mất leader",
+        "x": 0.9,
+        "y": 0.05,
+        "note": "N1 chết. Follower chưa biết; mỗi node chờ hết election timeout ngẫu nhiên của mình. Trong lúc này cụm không nhận ghi. etcd chọn timeout ngẫu nhiên từ 1 tới 2 lần giá trị cấu hình (mặc định 1 giây)."
+      },
+      {
+        "id": "candidate",
+        "label": "N3 ứng cử",
+        "x": 0.9,
+        "y": 0.5,
+        "note": "N3 hết timeout trước: tăng term, tự bầu mình, gửi RequestVote. Node khác chỉ bầu nếu chưa bầu ai trong term này và log của N3 ít nhất mới bằng log của họ."
+      },
+      {
+        "id": "split-vote",
+        "label": "Chia phiếu",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "N3 và N4 ứng cử gần như cùng lúc trong cùng term; phiếu chia đôi, không ai đủ 3. Không có leader cho tới khi một node hết timeout lần nữa."
+      },
+      {
+        "id": "new-leader",
+        "label": "Leader N3",
+        "x": 0.9,
+        "y": 0.95,
+        "note": "N3 có đa số phiếu, thành leader của term mới và gửi heartbeat. Ghi mới commit được nhờ đa số N3, N4, N5."
+      },
+      {
+        "id": "converged",
+        "label": "Hội tụ",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "Cả cụm theo N3. Log của mọi node khớp với log của leader; entry chưa commit ở N1 mà xung đột với log của N3 đã bị ghi đè."
+      }
+    ],
+    "initial": "stable",
+    "events": [
+      {
+        "id": "write",
+        "label": "Client ghi"
+      },
+      {
+        "id": "crash",
+        "label": "N1 chết"
+      },
+      {
+        "id": "partition",
+        "label": "Chia mạng 2 | 3"
+      },
+      {
+        "id": "timeout",
+        "label": "Hết election timeout"
+      },
+      {
+        "id": "majority",
+        "label": "Nhận đa số phiếu"
+      },
+      {
+        "id": "split",
+        "label": "Hai node cùng ứng cử"
+      },
+      {
+        "id": "rejoin",
+        "label": "N1 quay lại cụm"
+      },
+      {
+        "id": "reset",
+        "label": "Làm lại"
+      }
+    ],
+    "counters": [
+      {
+        "id": "term",
+        "label": "Term mới nhất",
+        "initial": 1
+      },
+      {
+        "id": "committed",
+        "label": "Ghi đã commit",
+        "initial": 0
+      },
+      {
+        "id": "pending",
+        "label": "Ghi treo ở N1 (chưa commit)",
+        "initial": 0
+      },
+      {
+        "id": "split-net",
+        "label": "Đang chia mạng (1 = có)",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "stable-write",
+        "from": "stable",
+        "event": "write",
+        "to": "stable",
+        "label": "commit 3/5",
+        "effects": [
+          {
+            "counter": "committed",
+            "add": 1
+          }
+        ],
+        "note": "N1 thêm entry vào log, gửi AppendEntries; khi 2 follower xác nhận đã ghi xuống đĩa thì đủ 3/5, commit và trả lời client."
+      },
+      {
+        "id": "stable-crash",
+        "from": "stable",
+        "event": "crash",
+        "to": "leaderless",
+        "label": "N1 chết"
+      },
+      {
+        "id": "stable-partition",
+        "from": "stable",
+        "event": "partition",
+        "to": "partitioned",
+        "label": "chia mạng",
+        "effects": [
+          {
+            "counter": "split-net",
+            "set": 1
+          }
+        ]
+      },
+      {
+        "id": "minority-write",
+        "from": "partitioned",
+        "event": "write",
+        "to": "partitioned",
+        "label": "chỉ 2/5, treo",
+        "effects": [
+          {
+            "counter": "pending",
+            "add": 1
+          }
+        ],
+        "note": "N1 thêm entry vào log và gửi đi, nhưng chỉ N2 trả lời: 2 trên 5, không đủ đa số. Entry không được commit, client chờ rồi timeout (với etcd, khi N1 đã tự xuống nhờ CheckQuorum thì client nhận lỗi không có leader). Không trả thành công là đúng: đó là cách consensus tránh split brain."
+      },
+      {
+        "id": "majority-timeout",
+        "from": "partitioned",
+        "event": "timeout",
+        "to": "candidate",
+        "label": "N3 hết chờ",
+        "effects": [
+          {
+            "counter": "term",
+            "add": 1
+          }
+        ],
+        "note": "Ở phía 3 node, không ai nghe thấy heartbeat của N1. N3 hết timeout trước, tăng term và ứng cử."
+      },
+      {
+        "id": "leaderless-write",
+        "from": "leaderless",
+        "event": "write",
+        "to": "leaderless",
+        "label": "không có leader",
+        "note": "Client không tìm được leader; lần ghi bị từ chối hoặc chờ. Thời gian mất leader thường khoảng một election timeout (etcd mặc định 1 giây) cộng thời gian bầu."
+      },
+      {
+        "id": "leaderless-timeout",
+        "from": "leaderless",
+        "event": "timeout",
+        "to": "candidate",
+        "label": "N3 hết chờ",
+        "effects": [
+          {
+            "counter": "term",
+            "add": 1
+          }
+        ]
+      },
+      {
+        "id": "win",
+        "from": "candidate",
+        "event": "majority",
+        "to": "new-leader",
+        "label": "3/5 phiếu"
+      },
+      {
+        "id": "split-happens",
+        "from": "candidate",
+        "event": "split",
+        "to": "split-vote",
+        "label": "chia phiếu"
+      },
+      {
+        "id": "retry-election",
+        "from": "split-vote",
+        "event": "timeout",
+        "to": "candidate",
+        "label": "thử term mới",
+        "effects": [
+          {
+            "counter": "term",
+            "add": 1
+          }
+        ],
+        "note": "Timeout ngẫu nhiên làm một node thức dậy trước hẳn các node khác ở lần sau, nên chia phiếu hiếm khi lặp lại nhiều lần."
+      },
+      {
+        "id": "leader-write",
+        "from": "new-leader",
+        "event": "write",
+        "to": "new-leader",
+        "label": "commit 3/5",
+        "effects": [
+          {
+            "counter": "committed",
+            "add": 1
+          }
+        ],
+        "note": "N3, N4, N5 là đa số nên ghi commit bình thường, kể cả khi N1, N2 vẫn bị cô lập."
+      },
+      {
+        "id": "heal",
+        "from": "new-leader",
+        "event": "rejoin",
+        "to": "converged",
+        "label": "N1 thấy term mới",
+        "guard": {
+          "counter": "split-net",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ],
+        "note": "Mạng nối lại. N1 nhận message mang term lớn hơn, lập tức xuống làm follower. Các entry N1 nhận khi bị cô lập chưa bao giờ commit và xung đột với log của N3, nên bị ghi đè; client của chúng đã nhận lỗi, không nhận thành công."
+      },
+      {
+        "id": "restart",
+        "from": "new-leader",
+        "event": "rejoin",
+        "to": "converged",
+        "label": "N1 khởi động lại",
+        "note": "N1 khởi động lại với log trên đĩa và term cũ; nghe heartbeat của N3 với term lớn hơn thì làm follower và chép phần log còn thiếu."
+      },
+      {
+        "id": "reset-converged",
+        "from": "converged",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "candidate-timeout",
+        "from": "candidate",
+        "event": "timeout",
+        "to": "candidate",
+        "label": "ứng cử lại",
+        "effects": [
+          {
+            "counter": "term",
+            "add": 1
+          }
+        ],
+        "note": "Candidate chưa đủ phiếu khi hết timeout thì tăng term và ứng cử lại."
+      },
+      {
+        "id": "reset-stable",
+        "from": "stable",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "reset-partitioned",
+        "from": "partitioned",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "reset-leaderless",
+        "from": "leaderless",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "reset-candidate",
+        "from": "candidate",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "reset-split-vote",
+        "from": "split-vote",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      },
+      {
+        "id": "reset-new-leader",
+        "from": "new-leader",
+        "event": "reset",
+        "to": "stable",
+        "effects": [
+          {
+            "counter": "term",
+            "set": 1
+          },
+          {
+            "counter": "committed",
+            "set": 0
+          },
+          {
+            "counter": "pending",
+            "set": 0
+          },
+          {
+            "counter": "split-net",
+            "set": 0
+          }
+        ]
+      }
+    ],
+    "invalidNote": "Sự kiện này không đổi trạng thái ở đây."
+  }
+}
