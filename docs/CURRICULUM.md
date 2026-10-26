@@ -340,8 +340,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 8 | `microservices-tradeoffs` | Microservices: khi nào và chia thế nào | senior | Chia theo domain, chi phí phân tán, khi nào giữ monolith | L Sc | ✅ |
 | 9 | `api-gateway-service-mesh` | ✚ API gateway, BFF & service mesh | senior | Trách nhiệm của gateway, BFF, sidecar (Istio/Linkerd), khi nào thừa | L D Sc | ✅ |
 | 10 | `event-driven-architecture` | ✚ Event-driven architecture | senior | Event notification và event-carried state, broker, eventual consistency, thứ tự, consumer idempotent | L D Sc | ✅ |
-| 11 | `saga` | Saga | senior | Orchestration và choreography, compensation | L S Sc | ⬜ |
-| 12 | `outbox-cdc` | Transactional outbox & CDC | senior | Vấn đề dual write, Debezium, thứ tự và trùng lặp | L D B | ⬜ |
+| 11 | `saga` | Saga | senior | Orchestration và choreography, compensation | L S Sc | ✅ |
+| 12 | `outbox-cdc` | Transactional outbox & CDC | senior | Vấn đề dual write, Debezium, thứ tự và trùng lặp | L D B | ✅ |
 | 13 | `cqrs-event-sourcing` | CQRS & Event Sourcing | senior | Read model, projection, snapshot, khi nào không dùng | L D Sc | ⬜ |
 | 14 | `distributed-transactions` | 2PC & giao dịch phân tán | senior | 2PC, XA, vì sao tránh, các lựa chọn thay thế | L S | ⬜ |
 | 15 | `consistent-hashing` | ✚ Consistent hashing & phân phối dữ liệu | senior | Vòng hash, virtual node, rebalance, replication theo quorum (N, R, W) | L S D | ⬜ |

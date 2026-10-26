@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "relay-output",
+      "kind": "output",
+      "prompt": "Relay nhớ `lastId` và poll `where id > lastId order by id`. Các sự kiện xảy ra theo thứ tự dưới. Relay gửi những id nào, theo thứ tự nào?",
+      "code": "T1: insert outbox -> id 1041, commit\npoll\nT2: insert outbox -> id 1042   -- chưa commit, đang chờ lock\nT3: insert outbox -> id 1043, commit\npoll\nT4: insert outbox -> id 1044, commit\nT2: commit\npoll\npoll",
+      "options": [
+        "1041, 1043, 1044",
+        "1041, 1042, 1043, 1044",
+        "1041, 1043, 1042, 1044",
+        "1041, 1043, 1044, 1042"
+      ],
+      "answer": 0,
+      "explanation": "Lần poll thứ hai chỉ thấy 1043 (1042 chưa commit nên chưa hiện ra) và đặt `lastId = 1043`. Lần thứ ba thấy cả 1042 lẫn 1044 nhưng `1042 > 1043` sai, nên chỉ gửi 1044. 1042 không bao giờ được gửi. Relay đọc `published_at is null` thì sẽ gửi 1041, 1043, 1042, 1044: đủ cả bốn, không theo thứ tự id nhưng không mất."
+    },
+    {
+      "id": "mark-before-send",
+      "kind": "single",
+      "prompt": "Relay chạy trong một transaction: `update outbox set published_at = now()` cho lô 500 dòng, commit, rồi mới gửi 500 message lên Kafka. Pod bị kill giữa lúc gửi. Hệ quả?",
+      "options": [
+        "Các dòng chưa kịp gửi đã bị đánh dấu nên mất vĩnh viễn",
+        "Cả lô được gửi lại khi pod khởi động, consumer nhận trùng",
+        "Kafka tự rollback các message đã gửi của lô đó",
+        "Không mất gì vì dữ liệu vẫn nằm trong bảng outbox"
+      ],
+      "answer": 0,
+      "explanation": "Đánh dấu trước khi broker ack biến outbox thành at-most-once: phần chưa gửi đã mang `published_at` nên relay không bao giờ chọn lại. Gửi lại chỉ xảy ra khi đánh dấu **sau** ack. Kafka không biết gì về transaction của database. Dữ liệu còn trong bảng nhưng không ai đọc tới, trừ khi đối soát phát hiện."
+    },
+    {
+      "id": "slot-disk",
+      "kind": "single",
+      "prompt": "Kafka Connect chết từ tối thứ Sáu tới sáng thứ Hai. Sáng thứ Hai database PostgreSQL chính báo gần đầy đĩa dù không có thêm dữ liệu nghiệp vụ lớn. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Replication slot của Debezium giữ toàn bộ WAL chưa được đọc từ tối thứ Sáu",
+        "Bảng outbox phình to vì không ai xoá dòng đã gửi trong ba ngày",
+        "Autovacuum dừng chạy khi không có connector nào kết nối vào",
+        "PostgreSQL tự sao lưu WAL ra đĩa khi mất kết nối tới Kafka"
+      ],
+      "answer": 0,
+      "explanation": "Slot đảm bảo không mất thay đổi nào cho bên đọc, nên database giữ mọi WAL kể từ vị trí connector xác nhận cuối cùng, kể cả WAL của các bảng không được capture. Bảng outbox ba ngày thường nhỏ hơn nhiều so với WAL của cả database. Autovacuum không phụ thuộc connector (slot logical chỉ giữ lùi `catalog_xmin`), và PostgreSQL không biết gì về Kafka. Phòng tránh: cảnh báo độ trễ slot, cân nhắc `max_slot_wal_keep_size`."
+    },
+    {
+      "id": "consumer-duplicate",
+      "kind": "single",
+      "prompt": "Đã có outbox với Debezium, cấu hình mặc định. Đội Inventory hỏi: \"vậy consumer khỏi cần khử trùng?\" Trả lời đúng là gì?",
+      "options": [
+        "Vẫn cần: connector khởi động lại có thể phát lại một đoạn từ offset cuối đã lưu",
+        "Không cần: Debezium đọc WAL nên mỗi thay đổi chỉ được phát đúng một lần",
+        "Không cần nếu bật idempotent producer của Kafka cho connector",
+        "Chỉ cần nếu dùng polling relay, với Debezium thì không cần"
+      ],
+      "answer": 0,
+      "explanation": "Debezium lưu offset định kỳ; chết giữa hai lần lưu thì khởi động lại phát lại các thay đổi sau offset cuối. Idempotent producer chỉ chống trùng do retry của một phiên producer, không chống phát lại sau khi connector khởi động lại. Exactly-once của Kafka Connect cũng dừng ở Kafka; ghi vào database của Inventory vẫn cần khử trùng theo `id` trong header."
+    },
+    {
+      "id": "raw-cdc-vs-outbox",
+      "kind": "single",
+      "prompt": "Đội Order muốn bỏ bảng outbox, cho Debezium đọc thẳng bảng `orders` và phát mọi thay đổi cho 6 đội khác. Rủi ro chính là gì?",
+      "options": [
+        "Event thành bản chụp schema nội bộ: đổi cột là phá consumer",
+        "Debezium không đọc được bảng có nhiều cột hoặc cột `jsonb`",
+        "Mất tính nguyên tử vì CDC đọc bảng ngoài transaction",
+        "Thứ tự sự kiện của một đơn bị đảo vì CDC không theo commit"
+      ],
+      "answer": 0,
+      "explanation": "CDC thô vẫn nguyên tử (chỉ dòng đã commit mới vào log) và theo thứ tự commit. Vấn đề là hợp đồng: consumer phụ thuộc trực tiếp vào cấu trúc bảng, và một `UPDATE` không nói được ý nghĩa nghiệp vụ (đơn được thanh toán hay chỉ sửa ghi chú). Outbox cho phép thiết kế integration event riêng, có version."
+    }
+  ]
+}

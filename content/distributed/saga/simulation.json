@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Saga đặt hàng do orchestrator điều khiển",
+  "instructions": "Đi hết đường thành công trước, rồi thử \"Thẻ bị từ chối\" để thấy bù trừ, và \"Payment timeout\" để thấy vì sao không được bù trừ ngay. Thử thêm \"Nhả hàng lỗi\" nhiều lần và gửi kết quả đến muộn sau khi đơn đã huỷ.",
+  "config": {
+    "states": [
+      { "id": "reserving", "label": "Đang giữ hàng", "x": 0.1, "y": 0.05, "note": "Orchestrator đã tạo đơn `PENDING` và lưu trạng thái saga, rồi gửi lệnh `ReserveStock` qua outbox trong cùng transaction. Trạng thái `PENDING` là semantic lock: giao diện và các service khác biết đơn chưa xong." },
+      { "id": "charging", "label": "Đang thu tiền", "x": 0.9, "y": 0.05, "note": "Hàng đã giữ. Orchestrator gửi `ChargePayment` kèm idempotency key `order-<id>`. Ở cửa hàng này hoàn tiền mất phí và mất vài ngày, nên thu tiền được chọn làm pivot: thành công thì saga chỉ còn đi tiếp." },
+      { "id": "unknown", "label": "Chưa rõ tiền", "x": 0.9, "y": 0.5, "note": "Lời gọi Payment hết giờ: tiền **có thể** đã bị trừ. Không bù trừ mù. Orchestrator tra cứu trạng thái ở Payment theo idempotency key, hoặc chờ webhook, rồi mới quyết định." },
+      { "id": "releasing", "label": "Đang nhả hàng", "x": 0.1, "y": 0.5, "note": "Đang bù trừ: gửi `ReleaseStock`. Lệnh bù trừ phải idempotent và được retry tới khi thành công; nó không được phép thất bại vĩnh viễn." },
+      { "id": "cancelled", "label": "Đã huỷ", "x": 0.1, "y": 0.95, "note": "Saga kết thúc bằng bù trừ: đơn `CANCELLED`, không còn hàng bị giữ. Trạng thái cuối vẫn phải xử lý được kết quả đến muộn." },
+      { "id": "approved", "label": "Đã duyệt", "x": 0.9, "y": 0.95, "note": "Qua pivot: đơn `APPROVED`. Các bước sau (tạo vận đơn, cộng điểm, gửi email) là retriable: retry tới khi xong, không bù trừ ngược lại việc thu tiền." }
+    ],
+    "initial": "reserving",
+    "events": [
+      { "id": "stock-ok", "label": "Giữ hàng OK" },
+      { "id": "stock-fail", "label": "Hết hàng" },
+      { "id": "pay-ok", "label": "Thu tiền OK" },
+      { "id": "pay-declined", "label": "Thẻ bị từ chối" },
+      { "id": "pay-timeout", "label": "Payment timeout" },
+      { "id": "query-not-charged", "label": "Tra cứu: chưa trừ" },
+      { "id": "release-ok", "label": "Nhả hàng OK" },
+      { "id": "release-fail", "label": "Nhả hàng lỗi" }
+    ],
+    "counters": [
+      { "id": "release-failures", "label": "Lần nhả hàng lỗi", "initial": 0}
+    ],
+    "transitions": [
+      { "id": "reserved", "from": "reserving", "event": "stock-ok", "to": "charging", "label": "giữ hàng xong", "note": "Inventory trả `StockReserved`. Orchestrator ghi bước mới và lệnh `ChargePayment` vào outbox trong một transaction." },
+      { "id": "out-of-stock", "from": "reserving", "event": "stock-fail", "to": "cancelled", "label": "hết hàng", "note": "Bước đầu tiên thất bại: chưa có gì phải bù trừ, đơn huỷ ngay." },
+      { "id": "dup-reserved", "from": "charging", "event": "stock-ok", "to": "charging", "label": "bỏ qua bản trùng", "note": "`StockReserved` bị gửi lại (relay chạy lại, consumer rebalance). Orchestrator đã qua bước này nên bỏ qua, không gửi `ChargePayment` lần hai." },
+      { "id": "charged", "from": "charging", "event": "pay-ok", "to": "approved", "label": "qua pivot", "note": "Thu tiền thành công. Từ đây saga không quay lại nữa." },
+      { "id": "declined", "from": "charging", "event": "pay-declined", "to": "releasing", "label": "bù trừ", "effects": [ { "counter": "release-failures", "set": 0} ], "note": "Thẻ bị từ chối là kết quả chắc chắn: bù trừ các bước đã xong theo thứ tự ngược, ở đây là nhả hàng." },
+      { "id": "timed-out", "from": "charging", "event": "pay-timeout", "to": "unknown", "label": "hết giờ", "note": "Hết giờ không có nghĩa là thất bại. Nhả hàng ngay lúc này có thể dẫn tới đơn huỷ mà tiền vẫn bị trừ." },
+      { "id": "late-ok", "from": "unknown", "event": "pay-ok", "to": "approved", "label": "đã trừ", "note": "Tra cứu (hoặc webhook đến muộn) cho thấy tiền đã trừ: đi tiếp như thành công." },
+      { "id": "late-declined", "from": "unknown", "event": "pay-declined", "to": "releasing", "label": "bị từ chối", "effects": [ { "counter": "release-failures", "set": 0} ], "note": "Payment xác nhận đã từ chối: giờ mới bù trừ." },
+      { "id": "not-charged", "from": "unknown", "event": "query-not-charged", "to": "releasing", "label": "chưa trừ", "effects": [ { "counter": "release-failures", "set": 0} ], "note": "Payment không có giao dịch nào theo key. Orchestrator huỷ yêu cầu ở Payment (cùng idempotency key) để lời gọi cũ không thể thành công muộn, rồi nhả hàng." },
+      { "id": "charged-while-releasing", "from": "releasing", "event": "pay-ok", "to": "releasing", "label": "ghi cần hoàn tiền", "note": "Lời gọi thu tiền cũ thành công muộn trong lúc đang bù trừ (huỷ yêu cầu ở Payment không phải lúc nào cũng kịp). Không bỏ qua: ghi nhận cần hoàn tiền, phát lệnh hoàn tiền, rồi tiếp tục nhả hàng." },
+      { "id": "released", "from": "releasing", "event": "release-ok", "to": "cancelled", "label": "nhả xong", "note": "Bù trừ hoàn tất. Saga kết thúc ở `CANCELLED`." },
+      { "id": "release-retry", "from": "releasing", "event": "release-fail", "to": "releasing", "label": "retry", "guard": { "counter": "release-failures", "lt": 2}, "effects": [ { "counter": "release-failures", "add": 1} ], "note": "Inventory đang lỗi. Bù trừ không được bỏ cuộc: retry với backoff. `ReleaseStock` idempotent nên gửi lại an toàn." },
+      { "id": "release-alert", "from": "releasing", "event": "release-fail", "to": "releasing", "label": "báo + retry thưa", "effects": [ { "counter": "release-failures", "add": 1} ], "note": "Quá ngưỡng retry: saga vẫn ở trạng thái bù trừ (không tự kết thúc), bắn cảnh báo và tiếp tục retry thưa hơn. Dashboard \"saga kẹt quá 30 phút\" chỉ ra đơn này." },
+      { "id": "dup-release", "from": "cancelled", "event": "release-ok", "to": "cancelled", "label": "bỏ qua bản trùng", "note": "Kết quả nhả hàng gửi lại: đơn đã huỷ, bỏ qua." },
+      { "id": "charged-after-cancel", "from": "cancelled", "event": "pay-ok", "to": "cancelled", "label": "hoàn tiền", "note": "Tiền bị trừ cho một đơn đã huỷ (webhook đến rất muộn, hoặc lời gọi cũ không huỷ được). Không mở lại đơn: phát lệnh hoàn tiền, ghi nhận cho đối soát. Trạng thái cuối cũng phải có nhánh cho kết quả muộn." },
+      { "id": "dup-charged", "from": "approved", "event": "pay-ok", "to": "approved", "label": "bỏ qua bản trùng", "note": "Webhook thanh toán gửi lại: đơn đã duyệt, bỏ qua." }
+    ],
+    "invalidNote": "Ở trạng thái này orchestrator không chờ sự kiện đó; nếu nó đến (bản trùng, kết quả lạc), ghi log và bỏ qua."
+  }
+}

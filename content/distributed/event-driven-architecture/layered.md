@@ -9,11 +9,11 @@ Trong [[event-driven-architecture|event-driven architecture]], service **phát e
 - **[[event-carried-state|Event-carried state transfer]]**: event mang đủ dữ liệu, bên nghe giữ bản sao cục bộ. Chạy được khi bên phát chết, đổi lại dữ liệu nhân bản và schema là hợp đồng lớn (bài Event schema evolution).
 - **[[event-sourcing|Event sourcing]]** và **[[cqrs|CQRS]]**: lưu trạng thái dưới dạng chuỗi event, tách mô hình ghi và đọc. Là cách lưu dữ liệu trong một service, không bắt buộc đi cùng event-driven giữa các service (bài CQRS & Event Sourcing).
 
-**Broker**: Kafka giữ log theo partition, nhiều [[consumer-group|consumer group]] đọc độc lập và đọc lại được; queue cổ điển của RabbitMQ và SQS thì xoá message khi đã ack. Cần đọc lại lịch sử hoặc thêm bên nghe mới thường xuyên thì log hợp hơn (bài Kafka architecture).
+**Broker**: Kafka giữ log theo partition, nhiều [[consumer-group|consumer group]] đọc độc lập và đọc lại được; queue cổ điển của RabbitMQ và SQS thì xoá message khi đã ack. Cần đọc lại lịch sử hoặc thêm bên nghe mới thường xuyên thì log hợp hơn (bài Kiến trúc Kafka).
 
 **Bốn điều phải thiết kế**:
 - **Phát tin cậy**: ghi dữ liệu và phát event là [[dual-write|dual write]]; dùng [[outbox|outbox]] hoặc [[cdc|CDC]] (bài Transactional outbox & CDC).
-- **Trùng lặp**: giao ít nhất một lần, nên mọi bên nghe là [[idempotent-consumer|consumer idempotent]] (bài Messaging fundamentals).
+- **Trùng lặp**: giao ít nhất một lần, nên mọi bên nghe là [[idempotent-consumer|consumer idempotent]] (bài Messaging cơ bản).
 - **Thứ tự**: key của message là id của [[aggregate-root|aggregate]] (`orderId`) để mọi event của một đơn vào cùng [[kafka-partition|partition]]. Giữa các đơn, giữa các topic thì không có thứ tự.
 - **Lỗi**: message lỗi mãi vào [[dead-letter-queue|DLQ]] kèm cảnh báo, không chặn cả partition.
 

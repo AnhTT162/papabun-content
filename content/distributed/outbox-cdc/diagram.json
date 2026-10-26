@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Hai cách đưa dòng outbox ra Kafka",
+  "nodes": [
+    {"id": "order", "label": "Order service", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "db", "label": "orders + outbox", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "poller", "label": "Polling relay", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "wal", "label": "WAL", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.1, "y": 0.95},
+    {"id": "debezium", "label": "Debezium (Kafka Connect)", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "order-db", "from": "order", "to": "db", "label": "1 transaction"},
+    {"id": "poller-db", "from": "poller", "to": "db", "label": "chưa gửi, theo id"},
+    {"id": "poller-kafka", "from": "poller", "to": "kafka", "label": "ack rồi đánh dấu"},
+    {"id": "db-wal", "from": "db", "to": "wal", "label": "ghi khi commit"},
+    {"id": "wal-debezium", "from": "wal", "to": "debezium", "label": "replication slot"},
+    {"id": "debezium-kafka", "from": "debezium", "to": "kafka", "label": "key = aggregateid"}
+  ],
+  "steps": [
+    {"caption": "Order service vừa lưu đơn vừa phải báo cho các service khác, mà database và Kafka không chung transaction.", "show": ["order"]},
+    {"caption": "Trong một transaction: insert vào `orders` và insert một dòng `OrderPlaced` vào `outbox`. Commit thì cả hai có, rollback thì cả hai không.", "show": ["db", "order-db"], "highlight": ["order-db"]},
+    {"caption": "Cách 1, polling: relay đọc các dòng `published_at IS NULL`, không dùng `id > last` vì id cấp lúc insert, không theo thứ tự commit.", "show": ["poller", "poller-db"], "highlight": ["poller-db"]},
+    {"caption": "Relay gửi, chờ Kafka ack rồi mới đánh dấu. Chết giữa hai bước thì lần sau gửi lại: có thể trùng, không mất.", "show": ["kafka", "poller-kafka"], "highlight": ["poller-kafka"]},
+    {"caption": "Cách 2, CDC: mọi thay đổi đã nằm trong WAL theo thứ tự commit. Không cần poll bảng.", "show": ["wal", "db-wal"], "highlight": ["db-wal"]},
+    {"caption": "Debezium đọc WAL qua replication slot. Connector dừng lâu thì slot giữ WAL lại, đĩa của database đầy dần: phải có cảnh báo.", "show": ["debezium", "wal-debezium"], "highlight": ["wal-debezium"]},
+    {"caption": "Outbox Event Router chọn topic theo `aggregatetype`, key theo `aggregateid` (giữ thứ tự theo đơn) và đưa `id` vào header để consumer khử trùng.", "show": ["debezium-kafka"], "highlight": ["debezium-kafka"]}
+  ]
+}

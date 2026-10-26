@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "compensation-order",
+      "kind": "single",
+      "prompt": "Saga gồm: (1) tạo đơn, (2) giữ hàng, (3) giữ tiền, (4) tạo vận đơn. Bước (4) thất bại vĩnh viễn trước pivot. Orchestrator bù trừ theo thứ tự nào?",
+      "options": [
+        "Huỷ giữ tiền, rồi nhả hàng, rồi huỷ đơn",
+        "Huỷ đơn, rồi nhả hàng, rồi huỷ giữ tiền",
+        "Chạy cả ba bù trừ song song, không cần thứ tự",
+        "Chỉ huỷ đơn, các service khác tự dọn theo TTL"
+      ],
+      "answer": 0,
+      "explanation": "Bù trừ theo thứ tự ngược với các bước đã xong: bước gần nhất được hoàn tác trước. Huỷ đơn trước trong khi tiền và hàng vẫn đang giữ làm lộ trạng thái \"đơn huỷ mà tiền vẫn giữ\". Chạy song song đôi khi được khi các bước độc lập, nhưng không phải quy tắc chung. Dựa vào TTL của từng service làm mất kiểm soát và không có gì để đối soát."
+    },
+    {
+      "id": "pivot-placement",
+      "kind": "single",
+      "prompt": "Combo gồm: giữ chỗ máy bay (huỷ miễn phí), đặt khách sạn (huỷ miễn phí), xuất vé (không hoàn được), giữ tiền thẻ. Sắp thứ tự nào an toàn nhất?",
+      "options": [
+        "Giữ chỗ, đặt khách sạn, giữ tiền, rồi mới xuất vé",
+        "Xuất vé trước để chắc có chỗ, rồi đặt khách sạn và giữ tiền",
+        "Giữ tiền, xuất vé, rồi giữ chỗ và đặt khách sạn",
+        "Đặt khách sạn, xuất vé, rồi giữ chỗ và giữ tiền"
+      ],
+      "answer": 0,
+      "explanation": "Xuất vé là pivot vì không bù trừ được, nên đứng sau mọi bước bù trừ được, kể cả giữ tiền. Xuất vé sớm thì bước sau lỗi là công ty mất tiền vé. Giữ tiền trước nhưng xuất vé trước khi có khách sạn vẫn để lại vé không hoàn được khi khách sạn hết phòng."
+    },
+    {
+      "id": "timeout-handling",
+      "kind": "single",
+      "prompt": "Orchestrator gọi `ChargePayment` và nhận timeout sau 10 giây. Bước tiếp theo đúng là gì?",
+      "options": [
+        "Tra cứu giao dịch ở Payment theo idempotency key rồi mới quyết",
+        "Bù trừ ngay: nhả hàng và huỷ đơn, vì timeout là thất bại",
+        "Gửi lại `ChargePayment` với idempotency key mới cho chắc",
+        "Coi như thành công vì Payment thường xử lý xong dù client timeout"
+      ],
+      "answer": 0,
+      "explanation": "Timeout nghĩa là không biết kết quả: tiền có thể đã trừ hoặc chưa. Bù trừ ngay có thể tạo đơn huỷ mà tiền vẫn bị trừ. Key mới có thể trừ tiền hai lần; gửi lại chỉ an toàn với **cùng** key. Đoán là thành công thì có thể giao hàng khi chưa thu được tiền."
+    },
+    {
+      "id": "isolation-anomaly",
+      "kind": "single",
+      "prompt": "Loyalty cộng điểm ngay khi thấy event `OrderCreated`, trước khi saga thanh toán xong. Vài đơn sau đó bị huỷ nhưng điểm vẫn còn. Đây là hiện tượng gì và sửa thế nào?",
+      "options": [
+        "Dirty read do saga thiếu isolation; chỉ cộng điểm khi đơn qua pivot (event `OrderApproved`)",
+        "Lost update do hai consumer ghi cùng một dòng; thêm optimistic locking ở Loyalty",
+        "Event bị trùng; thêm bảng khử trùng theo `eventId` ở Loyalty",
+        "Thứ tự event bị đảo; đổi key của message sang `customerId`"
+      ],
+      "answer": 0,
+      "explanation": "Loyalty đọc trạng thái dở dang của một saga chưa xong rồi hành động theo nó: tương đương dirty read. Sửa bằng cách chỉ phản ứng với trạng thái sau pivot, hoặc coi `PENDING` là semantic lock. Khử trùng event hay đổi key không giải quyết được, vì mỗi đơn chỉ có một event `OrderCreated` và nó đến đúng thứ tự."
+    },
+    {
+      "id": "choreography-smell",
+      "kind": "single",
+      "prompt": "Luồng đặt hàng dùng choreography với 7 service. Dấu hiệu nào cho thấy nên chuyển sang orchestration?",
+      "options": [
+        "Không ai biết đơn kẹt ở bước nào nếu không đọc log mọi service",
+        "Mỗi service trong luồng đều có database riêng của nó",
+        "Event được gửi qua Kafka thay vì gửi qua RabbitMQ",
+        "Các consumer trong luồng đều phải được viết idempotent"
+      ],
+      "answer": 0,
+      "explanation": "Choreography rải luồng ra mọi service; khi luồng dài, không còn chỗ nào mô tả nó, việc theo dõi, đặt deadline và đổi thứ tự bước trở nên khó. Database riêng, chọn broker, consumer idempotent là điều kiện chung của mọi saga, không phải dấu hiệu chọn sai cách phối hợp."
+    }
+  ]
+}

@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns", "consistency-cap"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns", "consistency-cap", "outbox-cdc"]
     },
     {
       "id": "savepoint",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
     },
     {
       "id": "datasource",
@@ -1389,7 +1389,7 @@
       "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
       "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
       "related": ["pessimistic-locking", "lock-timeout"],
-      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview"]
+      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc"]
     },
     {
       "id": "lock-timeout",
@@ -1413,7 +1413,7 @@
       "meaning": "Khoá do ứng dụng đặt tên (một số hoặc chuỗi) và database quản lý, không gắn với dòng hay bảng nào. Database không tự dùng nó; ứng dụng tự quy ước.",
       "example": "PostgreSQL `SELECT pg_advisory_xact_lock(42)`: chỉ một transaction giữ được khoá 42, tự nhả khi commit.",
       "related": ["pessimistic-locking"],
-      "topics": ["optimistic-pessimistic-locking", "connection-pool", "locking-deadlock-db"]
+      "topics": ["optimistic-pessimistic-locking", "connection-pool", "locking-deadlock-db", "outbox-cdc"]
     },
     {
       "id": "max-connections",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
     },
     {
       "id": "security-definer",
@@ -1698,10 +1698,10 @@
     {
       "id": "outbox",
       "term": "Transactional outbox",
-      "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
+      "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc"]
     },
     {
       "id": "replication-slot",
@@ -1709,7 +1709,7 @@
       "meaning": "Cơ chế PostgreSQL ghi nhớ một bên nhận (replica, Debezium) đã đọc WAL tới đâu và giữ lại WAL chưa được đọc. Bên nhận dừng lâu thì WAL tích tụ, có thể làm đầy đĩa.",
       "example": "`SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) FROM pg_replication_slots;`",
       "related": ["cdc", "wal"],
-      "topics": ["views-procedures-triggers", "backup-restore", "mvcc-vacuum", "replication-ha"]
+      "topics": ["views-procedures-triggers", "backup-restore", "mvcc-vacuum", "replication-ha", "outbox-cdc"]
     },
     {
       "id": "hot-row",
@@ -1877,7 +1877,7 @@
       "meaning": "Binary log của MySQL: ghi lại mọi thay đổi dữ liệu theo thứ tự commit, dùng cho replication và PITR.",
       "example": "`mysqlbinlog --stop-datetime='2026-10-24 14:05:11' binlog.000042 | mysql` (thời gian hiểu theo múi giờ của máy chạy `mysqlbinlog`).",
       "related": ["pitr", "cdc"],
-      "topics": ["backup-restore", "replication-ha", "postgres-vs-mysql", "cache-patterns"]
+      "topics": ["backup-restore", "replication-ha", "postgres-vs-mysql", "cache-patterns", "outbox-cdc"]
     },
     {
       "id": "wal-archiving",
@@ -2109,7 +2109,7 @@
       "meaning": "Global Transaction ID của MySQL: mã duy nhất `uuid:số` cho mỗi transaction, giúp replica biết chính xác đã áp tới đâu và failover không cần tính vị trí file binlog.",
       "example": "`Executed_Gtid_Set: 3e1f5a2c-...:1-88231003`.",
       "related": ["binlog", "failover"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "outbox-cdc"]
     },
     {
       "id": "read-your-writes",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
     },
     {
       "id": "dead-letter-queue",
@@ -4589,7 +4589,7 @@
       "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
       "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
       "related": ["eventual-consistency", "outbox"],
-      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs"]
+      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "saga"]
     },
     {
       "id": "jpms",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga"]
     },
     {
       "id": "jitter",
@@ -4997,7 +4997,7 @@
       "meaning": "Cách phối hợp nhiều service mà không có bên điều khiển: mỗi service nghe event và tự quyết bước tiếp theo, phát event mới.",
       "example": "Inventory nghe `OrderPlaced` rồi phát `StockReserved`; Payment nghe `StockReserved` rồi thu tiền.",
       "related": ["saga", "event-driven-architecture"],
-      "topics": ["event-driven-architecture"]
+      "topics": ["event-driven-architecture", "saga"]
     },
     {
       "id": "integration-event",
@@ -5046,6 +5046,70 @@
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
       "topics": ["event-driven-architecture"]
+    },
+    {
+      "id": "compensating-transaction",
+      "term": "Compensating transaction",
+      "meaning": "Hành động nghiệp vụ mới làm mất tác dụng của một bước saga đã commit, như hoàn tiền hay nhả hàng; khác rollback vì bước gốc đã xảy ra và có thể đã được người khác nhìn thấy.",
+      "example": "Thu tiền thất bại: gửi `ReleaseStock` để nhả số hàng đã giữ cho đơn.",
+      "related": ["saga", "pivot-transaction"],
+      "topics": ["saga"]
+    },
+    {
+      "id": "orchestration",
+      "term": "Orchestration",
+      "meaning": "Cách phối hợp nhiều service trong đó một orchestrator giữ trạng thái, gửi lệnh cho từng bên và quyết định bước tiếp theo hoặc bù trừ.",
+      "example": "Orchestrator của đơn gửi `ReserveStock`, nhận `StockReserved`, rồi gửi `ChargePayment`.",
+      "related": ["choreography", "saga"],
+      "topics": ["saga"]
+    },
+    {
+      "id": "pivot-transaction",
+      "term": "Pivot transaction",
+      "meaning": "Bước không quay lại được trong saga: trước nó các bước có bù trừ, sau nó các bước chỉ được retry tới khi thành công.",
+      "example": "Xuất vé máy bay không hoàn được là pivot; gửi email xác nhận sau đó là bước retriable.",
+      "related": ["compensating-transaction", "saga"],
+      "topics": ["saga"]
+    },
+    {
+      "id": "semantic-lock",
+      "term": "Semantic lock",
+      "meaning": "Trạng thái nghiệp vụ đánh dấu một bản ghi đang nằm trong saga chưa xong, để bên khác không dùng nó như kết quả cuối; thay cho isolation mà saga không có.",
+      "example": "Đơn ở `PENDING` cho tới khi giữ hàng và thanh toán xong; Loyalty chỉ cộng điểm khi đơn `APPROVED`.",
+      "related": ["saga"],
+      "topics": ["saga"]
+    },
+    {
+      "id": "polling-publisher",
+      "term": "Polling publisher",
+      "meaning": "Relay của outbox định kỳ query các dòng chưa gửi, gửi lên broker, chờ ack rồi đánh dấu hoặc xoá chúng.",
+      "example": "`select ... from outbox where published_at is null order by id limit 500` mỗi 200 ms.",
+      "related": ["outbox", "cdc"],
+      "topics": ["outbox-cdc"]
+    },
+    {
+      "id": "debezium",
+      "term": "Debezium",
+      "meaning": "Nền tảng CDC mã nguồn mở, chạy như connector của Kafka Connect, đọc log giao dịch (WAL của PostgreSQL, binlog của MySQL...) và phát mỗi thay đổi thành message.",
+      "example": "Connector PostgreSQL của Debezium đọc bảng `outbox` qua `pgoutput` và đẩy vào topic `outbox.event.order`.",
+      "related": ["cdc", "kafka-connect"],
+      "topics": ["outbox-cdc"]
+    },
+    {
+      "id": "kafka-connect",
+      "term": "Kafka Connect",
+      "meaning": "Framework chạy connector để đưa dữ liệu vào Kafka (source) hoặc từ Kafka ra hệ khác (sink), tự lưu offset và chia việc trên một cụm worker.",
+      "example": "Debezium là source connector; một sink connector ghi topic vào Elasticsearch.",
+      "related": ["debezium"],
+      "topics": ["outbox-cdc"]
+    },
+    {
+      "id": "logical-decoding",
+      "term": "Logical decoding",
+      "meaning": "Cơ chế PostgreSQL giải mã WAL thành các thay đổi theo dòng (insert, update, delete) theo thứ tự commit cho bên ngoài đọc, qua một replication slot và một plugin như `pgoutput`.",
+      "example": "`wal_level = logical` rồi tạo slot cho Debezium.",
+      "related": ["wal", "replication-slot", "cdc"],
+      "topics": ["outbox-cdc"]
     }
   ]
 }

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Outbox có rồi mà vẫn mất event lúc cao điểm",
+  "context": "Order service ghi đơn và một dòng `outbox` trong cùng transaction. Bảng `outbox` có `id bigint GENERATED ALWAYS AS IDENTITY`. Một relay chạy trong service (chỉ một instance được bật relay) poll 200 ms một lần, nhớ id lớn nhất đã gửi trong bảng `relay_state`, và chờ Kafka ack trước khi ghi lại id đó. PostgreSQL 16, `READ COMMITTED`.",
+  "buggyCode": "@Scheduled(fixedDelay = 200)\nvoid publishOutbox() {\n    long lastId = relayState.lastPublishedId();\n    List<OutboxRow> rows = jdbc.query(\"\"\"\n            select id, aggregateid, type, payload\n            from outbox\n            where id > ?\n            order by id\n            limit 500\"\"\", OUTBOX_ROW, lastId);\n    for (OutboxRow row : rows) {\n        kafka.send(\"orders\", row.aggregateId(), row.payload()).get(5, SECONDS); // chờ ack\n        relayState.saveLastPublishedId(row.id());\n        log.info(\"published id={} lastId={}\", row.id(), row.id());\n    }\n}",
+  "symptom": {
+    "description": "Job đối soát hằng ngày tìm thấy khoảng 0,05% đơn có trong database nhưng Inventory chưa từng nhận `OrderPlaced`, hầu hết rơi vào giờ cao điểm. Không có lỗi gửi Kafka nào trong log. Lần theo đơn `88231`:",
+    "output": "10:15:00.100 [relay] published id=1041 lastId=1041\n10:15:00.312 [relay] published id=1043 lastId=1043\n10:15:00.515 [relay] published id=1044 lastId=1044\n10:15:00.717 [relay] (không có dòng mới)\n\n10:14:59.990 [order] begin tx order=88231\n10:15:00.470 [order] commit order=88231 (chờ lock tồn kho 480 ms)\n\n=> select id, aggregateid, published from outbox o\n     left join kafka_audit k using (id) where id between 1041 and 1044;\n  id  | aggregateid | published\n------+-------------+-----------\n 1041 | 88230       | t\n 1042 | 88231       | f\n 1043 | 88232       | t\n 1044 | 88233       | t"
+  },
+  "diagnosis": {
+    "question": "Vì sao dòng 1042 không bao giờ được gửi?",
+    "options": [
+      "Id được cấp lúc insert nhưng transaction 1042 commit sau 1043; relay đã nhảy qua 1043 nên `id > lastId` không bao giờ thấy 1042 nữa",
+      "Kafka làm mất message 1042 vì producer không đặt `acks=all`, và relay không thấy lỗi vì gửi bất đồng bộ",
+      "Transaction của đơn 88231 bị rollback nên id 1042 là khoảng trống bình thường của sequence",
+      "`READ COMMITTED` làm query của relay đọc snapshot cũ được giữ trong connection pool, nên không thấy dòng mới"
+    ],
+    "answer": 0,
+    "explanation": "PostgreSQL cấp giá trị identity ngay lúc `INSERT`, không theo thứ tự commit. Transaction của đơn 88231 lấy id 1042 lúc 10:14:59.99 nhưng chờ lock tới 10:15:00.47 mới commit. Lúc 10:15:00.312 relay chỉ thấy 1043 (1042 chưa commit nên chưa hiện ra), gửi nó và ghi `lastId = 1043`. Từ đó `where id > 1043` không bao giờ trả lại 1042. Không phải lỗi Kafka: log không có dòng `published id=1042`, và relay chờ ack bằng `.get()`. Không phải rollback: dòng 1042 vẫn nằm trong bảng. `READ COMMITTED` lấy snapshot mới cho mỗi câu lệnh, không có snapshot nào bị giữ giữa các lần poll."
+  },
+  "fix": {
+    "code": "@Scheduled(fixedDelay = 200)\n@Transactional\nvoid publishOutbox() {\n    // chỉ một instance làm relay; lock tự nhả khi transaction kết thúc\n    Boolean leader = jdbc.queryForObject(\"select pg_try_advisory_xact_lock(42)\", Boolean.class);\n    if (!Boolean.TRUE.equals(leader)) return;\n\n    // đọc theo trạng thái, không theo high-water mark: dòng commit muộn vẫn được thấy ở lần sau\n    List<OutboxRow> rows = jdbc.query(\"\"\"\n            select id, aggregateid, type, payload\n            from outbox\n            where published_at is null\n            order by id\n            limit 500\"\"\", OUTBOX_ROW);\n    for (OutboxRow row : rows) {\n        kafka.send(\"orders\", row.aggregateId(), row.payload()).get(5, SECONDS); // ack rồi mới đánh dấu\n    }\n    jdbc.batchUpdate(\"update outbox set published_at = now() where id = ?\",\n            rows.stream().map(r -> new Object[] { r.id() }).toList());\n}\n\n// index cho query của relay:\n// create index outbox_unpublished on outbox (id) where published_at is null;",
+    "explanation": "Relay không còn dựa vào id tăng dần mà đọc mọi dòng **chưa gửi**. Dòng 1042 commit muộn thì lần poll kế tiếp vẫn thấy nó (gửi sau 1043, nhưng hai dòng thuộc hai đơn khác nhau nên thứ tự giữa chúng không quan trọng; event của cùng một đơn không bị đảo vì service khoá đơn trước khi ghi outbox). Gửi và chờ ack xong mới đánh dấu, nên relay chết giữa chừng thì lần sau gửi lại: event có thể trùng nhưng không mất, consumer khử trùng theo id. Advisory lock giữ đúng một relay active để không đảo thứ tự giữa các instance. Partial index giữ query nhanh khi bảng lớn; một job xoá các dòng đã gửi quá 7 ngày. Cách khác là Debezium đọc WAL theo thứ tự commit, không có vấn đề high-water mark."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "saga",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Saga",
+  "summary": "Chuỗi transaction cục bộ và bù trừ; choreography và orchestration; bước compensatable, pivot, retriable; bù trừ idempotent và không được thất bại; thiếu isolation và semantic lock; timeout không phải thất bại; orchestrator bền với outbox, workflow engine, deadline, kết quả đến muộn, bất thường và countermeasure, bước không hoàn lại được, khi nào chuyển từ choreography sang orchestration, saga và giao diện người dùng.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 16,
+  "prerequisites": ["data-consistency-services", "event-driven-architecture", "idempotency"],
+  "terms": ["saga", "compensating-transaction", "choreography", "orchestration", "pivot-transaction", "semantic-lock", "outbox", "reconciliation"],
+  "references": [
+    { "title": "microservices.io: Pattern: Saga", "url": "https://microservices.io/patterns/data/saga.html" },
+    { "title": "Hector Garcia-Molina, Kenneth Salem: Sagas (SIGMOD 1987)", "url": "https://dl.acm.org/doi/10.1145/38713.38742" },
+    { "title": "Microsoft Learn: Saga distributed transactions pattern", "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/saga" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bước bù trừ cũng lỗi thì sao?\" Câu trả lời senior: bù trừ phải idempotent và được retry tới khi thành công, saga ở lại trạng thái bù trừ chứ không tự kết thúc; quá ngưỡng thì cảnh báo cho người xử lý, và đối soát là lưới an toàn cuối. Người phỏng vấn hay hỏi tiếp \"saga thiếu chữ nào trong ACID\": isolation, kèm cách che (semantic lock, đổi thứ tự bước, đặt bước không bù trừ được sau pivot)." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng coi timeout là thất bại rồi bù trừ ngay. Gọi Payment hết giờ thì tiền có thể đã trừ; nhả hàng và huỷ đơn lúc đó tạo ra đơn huỷ mà khách vẫn mất tiền. Tra cứu theo idempotency key trước, và luôn có nhánh hoàn tiền cho kết quả đến muộn." }
+  ]
+}

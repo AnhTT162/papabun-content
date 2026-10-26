@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "outbox-cdc",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Transactional outbox & CDC",
+  "summary": "Bảng outbox ghi cùng transaction; polling publisher và CDC với Debezium (logical decoding, binlog, replication slot, Outbox Event Router); trùng lặp là chắc chắn; commit order khác id order và lỗi high-water mark; đánh dấu sau ack; thứ tự khi nhiều relay; dọn bảng, `pg_logical_emit_message`, slot giữ WAL, heartbeat, MySQL binlog, snapshot lần đầu, CDC thô và outbox, trace context, consumer khử trùng, giải pháp có sẵn.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 16,
+  "prerequisites": ["data-consistency-services", "messaging-fundamentals", "replication-ha", "optimistic-pessimistic-locking"],
+  "terms": ["outbox", "dual-write", "polling-publisher", "cdc", "debezium", "kafka-connect", "wal", "logical-decoding", "replication-slot", "binlog", "skip-locked", "advisory-lock", "gtid", "idempotent-consumer"],
+  "references": [
+    { "title": "microservices.io: Pattern: Transactional outbox", "url": "https://microservices.io/patterns/data/transactional-outbox.html" },
+    { "title": "Debezium: Outbox Event Router", "url": "https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html" },
+    { "title": "Debezium: PostgreSQL connector", "url": "https://debezium.io/documentation/reference/stable/connectors/postgresql.html" },
+    { "title": "PostgreSQL: Logical Decoding Concepts", "url": "https://www.postgresql.org/docs/current/logicaldecoding-explanation.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Polling hay Debezium, bạn chọn gì?\" Trả lời theo điều kiện: vài trăm event mỗi giây, độ trễ một giây chấp nhận được, đội chưa vận hành Kafka Connect thì polling (đọc theo trạng thái, một relay active) là đủ và dễ debug. Lưu lượng lớn, cần độ trễ thấp, nhiều service cùng dùng thì CDC, kèm cảnh báo độ trễ replication slot. Người phỏng vấn hay hỏi tiếp \"event có bị trùng không\": có, cả hai cách đều at-least-once, consumer khử trùng theo id event." },
+    { "type": "callout", "style": "warning", "markdown": "Tạo replication slot cho Debezium là tạo một thứ có thể làm đầy đĩa database chính. Trước khi lên production: cảnh báo theo dung lượng WAL bị slot giữ, runbook xoá slot khi bỏ connector, và kiểm tra slot sau failover." }
+  ]
+}

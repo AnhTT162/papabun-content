@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "what", "front": "Transactional outbox giải bài toán gì?", "back": "Dual write: ghi event vào bảng outbox cùng transaction với dữ liệu nghiệp vụ, nên event có khi và chỉ khi transaction commit." },
+    { "id": "two-relays", "front": "Hai cách đưa dòng outbox ra broker là gì?", "back": "Polling publisher query bảng định kỳ; CDC (Debezium) đọc log giao dịch (WAL, binlog) của database." },
+    { "id": "at-least-once", "front": "Outbox đảm bảo giao event mấy lần?", "back": "Ít nhất một lần: relay có thể gửi lại sau crash, nên consumer phải khử trùng theo id event." },
+    { "id": "high-water-mark", "front": "Vì sao relay không được đọc `WHERE id > lastId`?", "back": "Id cấp lúc insert, transaction commit theo thứ tự khác; dòng commit muộn có id nhỏ hơn `lastId` bị bỏ qua vĩnh viễn." },
+    { "id": "mark-after-ack", "front": "Relay đánh dấu đã gửi lúc nào?", "back": "Sau khi broker ack. Đánh dấu trước rồi chết là mất event." },
+    { "id": "poller-order", "front": "Nhiều instance poller cùng chạy thì sao?", "back": "Có thể đảo thứ tự event của cùng một aggregate; giữ một relay active bằng advisory lock, hoặc chia việc theo aggregate." },
+    { "id": "slot-wal", "front": "Debezium dừng mấy giờ thì PostgreSQL bị gì?", "back": "Replication slot giữ mọi WAL chưa đọc, đĩa đầy dần. Theo dõi độ trễ của slot; `max_slot_wal_keep_size` giới hạn nhưng có thể vô hiệu slot." },
+    { "id": "heartbeat", "front": "Vì sao bật heartbeat cho Debezium khi bảng outbox ít ghi?", "back": "Slot chỉ tiến khi connector xác nhận sự kiện; database bận ở bảng khác vẫn tích WAL. Heartbeat ghi định kỳ để vị trí slot tiến đều." },
+    { "id": "router", "front": "Outbox Event Router của Debezium dùng cột nào làm gì?", "back": "`aggregatetype` chọn topic, `aggregateid` làm key, `id` vào header để khử trùng, `payload` làm nội dung message." },
+    { "id": "raw-cdc", "front": "Khi nào dùng CDC thô trên bảng nghiệp vụ thay vì outbox?", "back": "Đồng bộ cache, search, kho dữ liệu trong cùng đội; event cho đội khác nên qua outbox vì CDC thô lộ schema nội bộ." }
+  ]
+}

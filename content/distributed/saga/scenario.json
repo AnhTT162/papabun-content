@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Saga đặt combo vé máy bay và khách sạn",
+  "prompt": "Ứng dụng du lịch bán combo: vé máy bay, phòng khách sạn và bảo hiểm chuyến đi. Mỗi phần do một đối tác xử lý qua API: hãng bay cho giữ chỗ 30 phút miễn phí, nhưng đã xuất vé thì không hoàn tiền; khách sạn đặt và huỷ miễn phí trong 24 giờ; bảo hiểm phát hành hợp đồng ngay và huỷ được trong ngày. Thanh toán qua cổng hỗ trợ idempotency key, có pre-authorization (giữ tiền) và capture (trừ thật). API đối tác chậm 2–8 giây, đôi khi timeout. Khoảng 50 combo mỗi phút lúc cao điểm. Yêu cầu: khách không bao giờ bị trừ tiền cho combo không đủ phần, công ty không bao giờ xuất vé mà không thu được tiền. Thiết kế saga.",
+  "hints": [
+    "Bước nào không bù trừ được? Nó phải đứng ở đâu trong chuỗi?",
+    "Giữ tiền (pre-authorization) và trừ tiền (capture) giúp gì cho thứ tự các bước?",
+    "Choreography hay orchestration cho 5–6 bước gọi đối tác bên ngoài?",
+    "Đối tác timeout ở bước giữ phòng thì làm gì trước khi bù trừ?"
+  ],
+  "solution": "**Orchestration**: 5–6 bước, nhiều đối tác bên ngoài, cần deadline và trả lời được \"combo đang ở đâu\", nên một orchestrator trong Booking service (hoặc workflow engine như Temporal) giữ trạng thái từng saga trong database, gửi lệnh qua outbox.\n\n**Thứ tự bước** (bước dễ bù trừ trước, bước không hoàn được sau cùng):\n1. Tạo booking `PENDING` (semantic lock: giao diện hiện \"đang xác nhận\").\n2. Giữ chỗ máy bay (miễn phí 30 phút). Bù trừ: huỷ giữ chỗ.\n3. Đặt phòng khách sạn. Bù trừ: huỷ phòng (miễn phí trong 24 giờ).\n4. Pre-authorize toàn bộ số tiền. Bù trừ: void authorization.\n5. **Pivot: xuất vé máy bay.** Không hoàn được, nên chỉ chạy khi mọi bước trước đã xong và tiền đã được giữ.\n6. Retriable: capture tiền ngay, phát hành bảo hiểm, gửi email xác nhận. Capture vẫn có thể lỗi (authorization hết hạn, bị huỷ): đó là rủi ro còn lại của thứ tự này, nên capture ngay sau pivot, theo dõi tỉ lệ capture lỗi và có quy trình thu hồi. Muốn loại hẳn rủi ro thì capture trước pivot và hoàn tiền nếu xuất vé lỗi, đổi lại tốn phí hoàn tiền. Retry tới khi xong; bảo hiểm lỗi kéo dài thì hoàn phần tiền bảo hiểm và báo khách, không huỷ cả chuyến.\n\n**Bù trừ**: lỗi ở bước 2–4 thì bù trừ các bước đã xong theo thứ tự ngược (void tiền, huỷ phòng, huỷ giữ chỗ). Mỗi lệnh bù trừ idempotent theo `bookingId` và retry tới khi thành công; quá ngưỡng thì cảnh báo cho đội vận hành.\n\n**Timeout**: hết giờ khi gọi khách sạn thì không huỷ ngay. Gọi API tra cứu của đối tác theo mã tham chiếu do mình sinh (gửi kèm lệnh đặt), hoặc gửi lại lệnh đặt với cùng mã nếu đối tác hỗ trợ idempotency. Chỉ bù trừ khi chắc chắn đối tác không giữ phòng; nếu phòng xuất hiện muộn sau khi đã huỷ combo thì job đối soát huỷ nó.\n\n**Deadline**: giữ chỗ máy bay hết hạn sau 30 phút, nên cả saga trước pivot phải xong trong khoảng 20 phút; quá hạn thì orchestrator tự bù trừ. Pre-authorization cũng có hạn (thường vài ngày), capture ngay sau khi xuất vé.\n\n**Bất thường**: hai saga tranh phòng cuối cùng thì đối tác quyết; giá thay đổi giữa lúc báo giá và lúc đặt thì đọc lại giá (reread value) trước pivot và hỏi khách nếu chênh.\n\n**Vận hành**: dashboard số saga theo trạng thái, cảnh báo saga ở một trạng thái quá 10 phút, correlation id `bookingId` trên mọi lời gọi đối tác, đối soát hằng ngày với từng đối tác.",
+  "tradeoffs": [
+    {
+      "option": "Orchestrator tự viết, trạng thái trong database + outbox",
+      "pros": [
+        "Không thêm hạ tầng mới, đội hiểu từng dòng code",
+        "Trạng thái saga truy vấn được bằng SQL"
+      ],
+      "cons": [
+        "Tự làm retry, timer, deadline, khôi phục sau crash",
+        "Dễ có lỗi ở các nhánh hiếm gặp"
+      ]
+    },
+    {
+      "option": "Workflow engine (Temporal, Camunda, Step Functions)",
+      "pros": [
+        "Retry, timer, lịch sử từng bước có sẵn",
+        "Code workflow đọc như code tuần tự"
+      ],
+      "cons": [
+        "Thêm một hệ thống phải vận hành hoặc trả phí",
+        "Ràng buộc riêng (code deterministic, version workflow khi đổi logic)"
+      ]
+    },
+    {
+      "option": "Choreography bằng event giữa các service",
+      "pros": [
+        "Không có thành phần điều khiển trung tâm",
+        "Thêm bên nghe không sửa service khác"
+      ],
+      "cons": [
+        "Không ai giữ deadline 30 phút của cả combo",
+        "Khó biết combo đang kẹt ở bước nào"
+      ]
+    }
+  ]
+}

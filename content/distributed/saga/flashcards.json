@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Saga là gì?", "back": "Chuỗi transaction cục bộ ở nhiều service; bước sau lỗi thì chạy bù trừ cho các bước đã xong theo thứ tự ngược." },
+    { "id": "compensation-not-rollback", "front": "Bù trừ khác rollback thế nào?", "back": "Rollback xoá như chưa từng xảy ra; bù trừ là hành động nghiệp vụ mới (hoàn tiền, nhả hàng) sau khi bước gốc đã commit và người khác có thể đã thấy." },
+    { "id": "choreo-vs-orch", "front": "Khi nào chọn orchestration thay vì choreography?", "back": "Khi có nhiều bước, cần deadline, timeout, bù trừ rõ ràng và cần trả lời \"saga đang ở bước nào\"; choreography hợp với 2–3 bước." },
+    { "id": "pivot", "front": "Pivot transaction là gì?", "back": "Bước không quay lại được của saga: xong nó thì các bước sau chỉ retry tới khi thành công. Bước không bù trừ được nên đặt ở đây hoặc sau đây." },
+    { "id": "compensation-rules", "front": "Lệnh bù trừ phải có tính chất gì?", "back": "Idempotent, retry tới khi thành công (không được thất bại vĩnh viễn), và chạy được cả khi bước gốc chưa từng chạy." },
+    { "id": "no-isolation", "front": "Saga thiếu tính chất nào của ACID?", "back": "Isolation: trạng thái dở dang hiện ra cho bên khác. Che bằng semantic lock, cập nhật giao hoán, đọc lại giá trị, đổi thứ tự bước." },
+    { "id": "semantic-lock", "front": "Semantic lock là gì?", "back": "Trạng thái nghiệp vụ như `PENDING` đánh dấu bản ghi đang trong một saga chưa xong, để bên khác không coi nó là kết quả cuối." },
+    { "id": "timeout", "front": "Gọi Payment bị timeout thì orchestrator nên làm gì?", "back": "Không bù trừ ngay vì tiền có thể đã trừ; tra cứu theo idempotency key hoặc chờ webhook, rồi mới đi tiếp hay bù trừ." },
+    { "id": "durable-orchestrator", "front": "Orchestrator chết giữa saga thì sao?", "back": "Trạng thái saga và lệnh gửi đi nằm trong database (qua outbox) cùng transaction; khởi động lại thì đọc trạng thái và gửi lại lệnh, bên nhận khử trùng." },
+    { "id": "late-result", "front": "Đơn đã huỷ rồi mới nhận được \"đã trừ tiền\" thì xử lý thế nào?", "back": "Không mở lại đơn: phát lệnh hoàn tiền và ghi nhận cho đối soát. Mỗi trạng thái, kể cả trạng thái cuối, phải chịu được kết quả muộn." }
+  ]
+}
