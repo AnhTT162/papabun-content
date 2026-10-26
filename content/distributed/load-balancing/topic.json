@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "load-balancing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Load balancing",
+  "summary": "L4 và L7; round robin, least outstanding requests, power of two choices, hash theo key; health check chủ động và bị động, readiness và liveness; deploy không rơi request (draining, graceful shutdown, `preStop`); sticky session và cái giá của nó; kết nối lâu dài không tự cân bằng lại, retry ở LB, slow start, cache DNS của JVM, `X-Forwarded-For`, client-side load balancing.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 13,
+  "prerequisites": ["service-communication", "http-request-lifecycle"],
+  "terms": ["load-balancer", "round-robin", "least-connections", "health-check", "connection-draining", "sticky-session", "tls-termination", "keep-alive", "client-side-load-balancing"],
+  "references": [
+    { "title": "Envoy: Supported load balancers", "url": "https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers" },
+    { "title": "Kubernetes: Configure Liveness, Readiness and Startup Probes", "url": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/" },
+    { "title": "Spring Boot Reference: Graceful Shutdown", "url": "https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html" },
+    { "title": "Java SE 21: Networking Properties (networkaddress.cache.ttl)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/net/doc-files/net-properties.html" },
+    { "title": "Kubernetes: Pod Lifecycle, Termination of Pods", "url": "https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination" },
+    { "title": "Spring Boot Reference: Kubernetes Probes", "url": "https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes" },
+    { "title": "Spring Boot How-to: Running Behind a Front-end Proxy Server", "url": "https://docs.spring.io/spring-boot/how-to/webserver.html#howto.webserver.use-behind-a-proxy-server" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Load balancer biết instance chết bằng cách nào, và trong lúc nó chưa biết thì sao?\" Nêu cả health check chủ động (khoảng 5–10 giây, cần vài lần lỗi liên tiếp mới loại) và bị động (theo dõi lỗi của request thật, loại nhanh hơn). Trong khoảng chưa phát hiện, request vẫn tới instance chết, nên client cần timeout và retry có giới hạn cho thao tác idempotent." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để liveness probe gọi tới database, Redis hay service khác. Dependency dùng chung chậm là mọi pod cùng bị restart, và đợt khởi động đồng loạt sau đó (mở lại connection pool, cache rỗng) thường làm sự cố kéo dài hơn. Readiness cũng nên cẩn thận với dependency dùng chung: database lỗi là mọi pod cùng bị rút khỏi load balancer. Spring Boot mặc định không đưa `db` vào nhóm `/actuator/health/readiness`; chỉ thêm khi chắc rằng rút pod là phản ứng đúng." }
+  ]
+}

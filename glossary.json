@@ -71,7 +71,7 @@
       "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
       "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
       "related": ["tcp-handshake", "connection-pool"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "load-balancing"]
     },
     {
       "id": "load-balancer",
@@ -79,7 +79,7 @@
       "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
       "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
       "related": ["reverse-proxy", "tls-termination"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "load-balancing"]
     },
     {
       "id": "reverse-proxy",
@@ -95,7 +95,7 @@
       "meaning": "Giải mã HTTPS tại load balancer hoặc reverse proxy; đoạn phía sau đi bằng HTTP thường hoặc được mã hoá lại.",
       "example": "Chứng chỉ cài trên load balancer, các app server chỉ nghe HTTP trong mạng nội bộ.",
       "related": ["tls-handshake", "load-balancer"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "load-balancing"]
     },
     {
       "id": "connection-pool",
@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns", "consistency-cap"]
     },
     {
       "id": "savepoint",
@@ -1829,7 +1829,7 @@
       "meaning": "Cho phép chọn số replica phải xác nhận cho từng lần đọc hoặc ghi, đánh đổi giữa độ nhất quán, độ trễ và khả năng chịu lỗi.",
       "example": "Cassandra RF = 3: ghi `QUORUM` thành công và đọc `QUORUM` luôn thấy bản mới nhất vì R + W > N; nhiều data center thì thường dùng `LOCAL_QUORUM`.",
       "related": ["wide-column-store"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "consistency-cap"]
     },
     {
       "id": "single-table-design",
@@ -2093,7 +2093,7 @@
       "meaning": "Độ trễ giữa lúc thay đổi commit trên primary và lúc replica áp xong nó. Đọc từ replica trong khoảng này thấy dữ liệu cũ.",
       "example": "`pg_stat_replication.replay_lag = 00:00:04.2`; MySQL `Seconds_Behind_Source: 9612`.",
       "related": ["read-your-writes", "streaming-replication"],
-      "topics": ["replication-ha", "schema-migration"]
+      "topics": ["replication-ha", "schema-migration", "consistency-cap"]
     },
     {
       "id": "relay-log",
@@ -2117,7 +2117,7 @@
       "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
       "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
       "related": ["replica-lag", "monotonic-reads"],
-      "topics": ["replication-ha", "redis-ha-cluster"]
+      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap"]
     },
     {
       "id": "monotonic-reads",
@@ -2125,7 +2125,7 @@
       "meaning": "Đảm bảo một người dùng không thấy dữ liệu \"đi lùi\": đã thấy bản mới thì lần đọc sau không thấy bản cũ hơn.",
       "example": "Gắn mỗi người dùng với một replica cố định thay vì chọn ngẫu nhiên mỗi request.",
       "related": ["read-your-writes", "replica-lag"],
-      "topics": ["replication-ha"]
+      "topics": ["replication-ha", "consistency-cap"]
     },
     {
       "id": "failover",
@@ -2685,7 +2685,7 @@
       "meaning": "Cấu hình producer Kafka quyết định chờ xác nhận tới đâu: `0` không chờ, `1` chờ leader, `all` chờ mọi replica trong ISR (mặc định từ 3.0).",
       "example": "`acks=all` cộng `min.insync.replicas=2`: message được xác nhận khi đã nằm ở ít nhất hai broker.",
       "related": ["isr", "min-insync-replicas"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "consistency-cap"]
     },
     {
       "id": "min-insync-replicas",
@@ -2693,7 +2693,7 @@
       "meaning": "Số replica tối thiểu trong ISR để broker chấp nhận ghi với `acks=all`; thiếu thì từ chối bằng `NotEnoughReplicasException`.",
       "example": "RF 3 với `min.insync.replicas=2` chịu được mất một broker mà vẫn ghi được.",
       "related": ["kafka-acks", "isr"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "consistency-cap"]
     },
     {
       "id": "high-watermark",
@@ -3477,7 +3477,7 @@
       "meaning": "Caller tự giữ danh sách instance và tự chọn instance cho mỗi request, thay vì đi qua một load balancer ở giữa.",
       "example": "Spring Cloud LoadBalancer chọn round-robin trong danh sách instance lấy từ Eureka, có cache 35 giây (nên tắt khi dùng với Eureka vì client Eureka đã cache).",
       "related": ["service-discovery", "load-balancer"],
-      "topics": ["spring-cloud"]
+      "topics": ["spring-cloud", "load-balancing"]
     },
     {
       "id": "circuit-breaker",
@@ -3701,7 +3701,7 @@
       "meaning": "Mô hình trong đó mọi thao tác của mọi thread như thể xếp thành một hàng duy nhất, và lệnh của mỗi thread giữ đúng thứ tự trong code. Java chỉ hứa điều này cho chương trình không có data race (DRF-SC).",
       "example": "Hai thread `x = 1; r1 = y;` và `y = 1; r2 = x;` dưới sequential consistency không thể ra `r1 == r2 == 0`; thiếu `volatile` thì Java cho phép.",
       "related": ["jmm", "data-race", "happens-before"],
-      "topics": ["java-memory-model"]
+      "topics": ["java-memory-model", "consistency-cap"]
     },
     {
       "id": "store-buffer",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical", "service-communication"]
+      "topics": ["ddd-tactical", "service-communication", "consistency-cap"]
     },
     {
       "id": "event-publication-registry",
@@ -4653,7 +4653,7 @@
       "meaning": "Mạng chia các node thành nhóm không liên lạc được với nhau trong khi từng node vẫn chạy.",
       "example": "Hai data center mất đường kết nối; mỗi bên vẫn nhận request của người dùng gần nó.",
       "related": ["partial-failure", "split-brain"],
-      "topics": ["distributed-fundamentals"]
+      "topics": ["distributed-fundamentals", "consistency-cap"]
     },
     {
       "id": "grpc",
@@ -4702,6 +4702,110 @@
       "example": "Client gRPC phân giải `inventory-headless` ra 6 IP pod và dùng chính sách `round_robin`.",
       "related": ["grpc", "service-discovery"],
       "topics": ["service-communication"]
+    },
+    {
+      "id": "linearizability",
+      "term": "Linearizability",
+      "meaning": "Mức nhất quán mạnh nhất cho một object: hệ thống trông như chỉ có một bản dữ liệu, mỗi thao tác có hiệu lực tại một thời điểm giữa lúc gọi và lúc trả về, nên đọc luôn thấy lần ghi đã xác nhận gần nhất.",
+      "example": "Sau khi etcd xác nhận ghi `leader=node-2`, mọi client đọc sau đó đều thấy `node-2`.",
+      "related": ["cap-theorem", "eventual-consistency"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "cap-theorem",
+      "term": "CAP",
+      "meaning": "Định lý: khi có network partition, hệ thống nhiều bản sao phải chọn giữa linearizability (Consistency) và việc mọi node còn sống đều trả lời (Availability).",
+      "example": "Mất kết nối giữa hai data center: etcd ở phía thiểu số từ chối ghi (chọn C); Cassandra vẫn nhận ghi ở cả hai phía (chọn A).",
+      "related": ["pacelc", "linearizability", "network-partition"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "pacelc",
+      "term": "PACELC",
+      "meaning": "Mở rộng của CAP: nếu có Partition thì chọn Availability hay Consistency; nếu không (Else) thì chọn Latency hay Consistency.",
+      "example": "PostgreSQL replication bất đồng bộ chọn latency thấp (EL); replication đồng bộ chọn nhất quán (EC).",
+      "related": ["cap-theorem"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "quorum",
+      "term": "Quorum",
+      "meaning": "Số bản sao tối thiểu phải tham gia một lần đọc (R) hoặc ghi (W) trong N bản sao; R + W > N thì tập đọc và tập ghi luôn giao nhau.",
+      "example": "N = 3, W = 2, R = 2: lần đọc luôn hỏi ít nhất một node đã nhận lần ghi gần nhất.",
+      "related": ["tunable-consistency", "linearizability"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "round-robin",
+      "term": "Round robin",
+      "meaning": "Thuật toán cân bằng tải gửi request lần lượt cho từng instance theo vòng; có thể kèm trọng số khi instance không đều.",
+      "example": "Request 1 tới A, 2 tới B, 3 tới C, 4 lại tới A.",
+      "related": ["least-connections", "load-balancer"],
+      "topics": ["load-balancing"]
+    },
+    {
+      "id": "least-connections",
+      "term": "Least connections",
+      "meaning": "Thuật toán cân bằng tải gửi request tới instance đang có ít kết nối (hoặc ít request chưa xong) nhất; hợp khi chi phí request chênh lệch.",
+      "example": "A đang chạy 3 báo cáo nặng, B chỉ có 1 request; request mới đi tới B.",
+      "related": ["round-robin", "load-balancer"],
+      "topics": ["load-balancing"]
+    },
+    {
+      "id": "health-check",
+      "term": "Health check",
+      "meaning": "Cách load balancer hay orchestrator kiểm tra instance còn phục vụ được không: chủ động (gọi endpoint định kỳ) hoặc bị động (đếm lỗi của request thật).",
+      "example": "LB gọi `/actuator/health/readiness` mỗi 5 giây, ba lần lỗi liên tiếp thì rút instance khỏi vòng quay.",
+      "related": ["load-balancer", "connection-draining"],
+      "topics": ["load-balancing"]
+    },
+    {
+      "id": "connection-draining",
+      "term": "Connection draining",
+      "meaning": "Rút một instance khỏi load balancer để không nhận request mới, nhưng vẫn cho nó xử lý nốt request đang chạy trước khi tắt.",
+      "example": "Rolling deploy: pod cũ bị gỡ khỏi endpoint, chờ `preStop` 5 giây, rồi graceful shutdown tối đa 30 giây; `terminationGracePeriodSeconds` đặt 45 giây để không bị SIGKILL giữa chừng.",
+      "related": ["health-check"],
+      "topics": ["load-balancing"]
+    },
+    {
+      "id": "sticky-session",
+      "term": "Sticky session",
+      "meaning": "Load balancer gắn một client với cùng một instance (thường qua cookie), để dùng session lưu trong bộ nhớ instance đó.",
+      "example": "Cookie `AWSALB` khiến người dùng luôn về instance B; B chết thì mất giỏ hàng trong `HttpSession`.",
+      "related": ["load-balancer"],
+      "topics": ["load-balancing"]
+    },
+    {
+      "id": "causal-consistency",
+      "term": "Causal consistency",
+      "meaning": "Mức nhất quán đảm bảo ai thấy một sự kiện thì cũng đã thấy các sự kiện là nguyên nhân của nó; các sự kiện không liên quan có thể được thấy theo thứ tự khác nhau.",
+      "example": "Ai thấy câu trả lời \"Đồng ý\" thì cũng thấy câu hỏi mà nó trả lời.",
+      "related": ["linearizability", "eventual-consistency"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "sloppy-quorum",
+      "term": "Sloppy quorum",
+      "meaning": "Khi node chính của một key không liên lạc được, lần ghi tạm được nhận bởi node khác ngoài danh sách bản sao (rồi chuyển lại sau, gọi là hinted handoff); tăng khả dụng nhưng R + W > N không còn đảm bảo đọc thấy lần ghi.",
+      "example": "Cassandra với hinted handoff ghi tạm vào node D khi node B của key đang mất kết nối.",
+      "related": ["quorum"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "last-write-wins",
+      "term": "Last-write-wins",
+      "meaning": "Cách giải quyết xung đột giữ bản ghi có timestamp lớn nhất và bỏ các bản còn lại; đơn giản nhưng âm thầm mất lần ghi khi đồng hồ các máy lệch nhau.",
+      "example": "Hai region cùng sửa địa chỉ giao hàng; bản có timestamp lớn hơn thắng, bản kia biến mất không báo lỗi.",
+      "related": ["crdt", "eventual-consistency"],
+      "topics": ["consistency-cap"]
+    },
+    {
+      "id": "crdt",
+      "term": "CRDT",
+      "meaning": "Conflict-free replicated data type: kiểu dữ liệu có phép gộp được chứng minh luôn hội tụ, nên các bản sao sửa độc lập vẫn gộp được mà không mất dữ liệu.",
+      "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
+      "related": ["last-write-wins", "eventual-consistency"],
+      "topics": ["consistency-cap"]
     }
   ]
 }

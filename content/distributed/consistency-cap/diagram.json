@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Ghi vào primary, đọc từ replica",
+  "nodes": [
+    {"id": "user", "label": "Người dùng", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "app", "label": "Profile service", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "primary", "label": "PostgreSQL primary", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "replica", "label": "Replica (async)", "kind": "database", "x": 0.1, "y": 0.5},
+    {"id": "partition", "label": "Mất kết nối", "kind": "generic", "x": 0.1, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "user-app", "from": "user", "to": "app", "label": "đổi tên, rồi tải lại"},
+    {"id": "app-primary", "from": "app", "to": "primary", "label": "UPDATE, commit"},
+    {"id": "primary-replica", "from": "primary", "to": "replica", "label": "WAL, trễ 800ms"},
+    {"id": "app-replica", "from": "app", "to": "replica", "label": "SELECT"},
+    {"id": "replica-partition", "from": "replica", "to": "partition", "label": "không thấy primary"}
+  ],
+  "steps": [
+    {"caption": "Người dùng đổi tên hiển thị rồi tải lại trang ngay.", "show": ["user", "app", "user-app"], "highlight": ["user-app"]},
+    {"caption": "Service ghi vào primary và commit. Primary trả lời thành công mà không chờ replica: replication bất đồng bộ, chọn latency thấp (phần EL của PACELC).", "show": ["primary", "app-primary"], "highlight": ["app-primary"]},
+    {"caption": "[[wal|WAL]] được gửi sang replica, nhưng replica đang trễ khoảng 800 ms vì một transaction lớn.", "show": ["replica", "primary-replica"], "highlight": ["primary-replica"]},
+    {"caption": "Lần tải lại đọc từ replica và thấy tên cũ: vi phạm read-your-writes. Sửa bằng đọc từ primary trong vài giây sau khi ghi, hoặc chờ replica áp tới LSN của lần ghi.", "show": ["app-replica"], "highlight": ["app-replica"]},
+    {"caption": "Nếu replica mất kết nối hẳn với primary (partition), nó vẫn có thể trả lời đọc bằng dữ liệu cũ (chọn A) hoặc từ chối (chọn C). Ghi thì chỉ primary nhận, nên phía không có primary không ghi được.", "show": ["partition", "replica-partition"], "highlight": ["replica-partition"]}
+  ]
+}

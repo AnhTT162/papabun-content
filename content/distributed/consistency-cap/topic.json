@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "consistency-cap",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Consistency, CAP & PACELC",
+  "summary": "Các mức nhất quán: linearizable, causal, đảm bảo theo phiên, eventual; CAP thật sự nói gì và vì sao không có hệ \"CA\"; PACELC và replication đồng bộ hay bất đồng bộ; linearizable khác serializable; quorum R + W > N và giới hạn của nó; tunable consistency, Kafka `acks=all`, Redis replication; CRDT, last-write-wins; chọn mức nhất quán theo từng loại dữ liệu.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 14,
+  "prerequisites": ["distributed-fundamentals", "replication-ha"],
+  "terms": ["linearizability", "eventual-consistency", "cap-theorem", "pacelc", "read-your-writes", "monotonic-reads", "quorum", "tunable-consistency", "network-partition", "causal-consistency", "sloppy-quorum", "last-write-wins", "crdt", "replica-lag", "kafka-acks", "min-insync-replicas", "wal", "sequential-consistency"],
+  "references": [
+    { "title": "Martin Kleppmann: Please stop calling databases CP or AP", "url": "https://martin.kleppmann.com/2015/05/11/please-stop-calling-databases-cp-or-ap.html" },
+    { "title": "Jepsen: Consistency Models", "url": "https://jepsen.io/consistency" },
+    { "title": "Daniel Abadi: Consistency Tradeoffs in Modern Distributed Database System Design (PACELC)", "url": "https://www.cs.umd.edu/~abadi/papers/abadi-pacelc.pdf" },
+    { "title": "Seth Gilbert, Nancy Lynch: Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services", "url": "https://users.ece.cmu.edu/~adrian/731-sp04/readings/GL-cap.pdf" },
+    { "title": "Redis: WAIT", "url": "https://redis.io/docs/latest/commands/wait/" },
+    { "title": "Apache Cassandra: Lightweight transactions", "url": "https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống của bạn là CP hay AP?\" Đừng gắn nhãn cho cả hệ thống. Trả lời theo từng loại dữ liệu và thao tác: thanh toán và giữ hàng ghi vào primary, chờ xác nhận (chọn C); trang sản phẩm đọc từ cache và replica, chấp nhận cũ vài giây (chọn A và latency thấp). Rồi nói điều gì xảy ra với mỗi loại khi có partition hay failover." },
+    { "type": "callout", "style": "warning", "markdown": "Đọc từ replica để giảm tải cho primary là đổi nhất quán lấy hiệu năng. Kiểm tra mọi luồng \"ghi rồi đọc lại ngay\" (đăng ký rồi đăng nhập, cập nhật hồ sơ rồi hiển thị, thanh toán rồi xem trạng thái đơn): các luồng này phải đọc từ primary hoặc chờ replica bắt kịp." }
+  ]
+}

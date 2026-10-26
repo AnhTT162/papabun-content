@@ -332,8 +332,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 |---|---|---|---|---|---|---|
 | 1 | `distributed-fundamentals` | ✚ Vì sao hệ phân tán khó | foundation | Partial failure, mạng không tin cậy, 8 ngộ nhận về hệ phân tán, timeout không phân biệt được chậm và chết | A L D | ✅ |
 | 2 | `service-communication` | Giao tiếp giữa service | junior | REST, gRPC, GraphQL, async; đồng bộ và bất đồng bộ; service discovery | L D Sc | ✅ |
-| 3 | `load-balancing` | ✚ Load balancing | mid | Thuật toán (round robin, least connections, consistent hashing), L4 và L7, health check, sticky session | A L D | ⬜ |
-| 4 | `consistency-cap` | Consistency, CAP & PACELC | mid | Linearizable, causal, eventual; CAP và PACELC thật sự nói gì | A L D | ⬜ |
+| 3 | `load-balancing` | ✚ Load balancing | mid | Thuật toán (round robin, least connections, consistent hashing), L4 và L7, health check, sticky session | A L D | ✅ |
+| 4 | `consistency-cap` | Consistency, CAP & PACELC | mid | Linearizable, causal, eventual; CAP và PACELC thật sự nói gì | A L D | ✅ |
 | 5 | `idempotency` | Idempotency | mid | Idempotency key, dedup, exactly-once là gì thật sự | A L B Sc | ⬜ |
 | 6 | `data-consistency-services` | ✚ Nhất quán dữ liệu giữa các service | mid | Không có transaction chung, eventual consistency, dual write; tổng quan saga, outbox, đối soát | A L D | ⬜ |
 | 7 | `resilience-patterns` | Timeout, retry, circuit breaker, bulkhead | mid | Timeout, retry với backoff + jitter, circuit breaker, bulkhead, fallback, load shedding và backpressure | L S B | ⬜ |

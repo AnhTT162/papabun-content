@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "liveness-db",
+      "kind": "single",
+      "prompt": "Liveness probe của mọi pod gọi `/actuator/health`, endpoint này kiểm tra cả kết nối database. Database bị chậm 2 phút do một query nặng. Điều gì dễ xảy ra nhất?",
+      "options": [
+        "Kubernetes restart hàng loạt pod, ứng dụng sập hẳn dù database đã hồi phục",
+        "Pod được rút khỏi load balancer, chờ database hồi phục rồi nhận traffic lại",
+        "Không có gì xảy ra, vì liveness probe chỉ kiểm tra process còn chạy",
+        "Database tự được restart vì Kubernetes thấy nó không khoẻ"
+      ],
+      "answer": 0,
+      "explanation": "Liveness lỗi thì kubelet restart container. Khi lỗi đến từ dependency dùng chung, mọi pod lỗi cùng lúc và bị restart cùng lúc; khi khởi động lại, tất cả cùng mở connection pool, có thể làm database chậm tiếp. Liveness chỉ nên kiểm tra trạng thái của chính process. Rút khỏi LB là việc của readiness. Spring Boot tách sẵn `/actuator/health/liveness` và `/actuator/health/readiness`."
+    },
+    {
+      "id": "algorithm-mixed-cost",
+      "kind": "single",
+      "prompt": "API có hai loại request: tra cứu mất khoảng 10 ms, xuất báo cáo mất khoảng 5 giây. Dùng round robin, một số instance thỉnh thoảng có latency rất cao. Đổi thuật toán nào giúp nhiều nhất?",
+      "options": [
+        "Least outstanding requests: gửi tới instance đang có ít request chưa xong nhất",
+        "Round robin có trọng số, đặt trọng số bằng nhau cho mọi instance",
+        "Hash theo IP client để mỗi client luôn về cùng một instance",
+        "Random hoàn toàn, vì về lâu dài chia đều hơn round robin"
+      ],
+      "answer": 0,
+      "explanation": "Round robin chia đều số request, không chia đều công việc: instance đang chạy vài báo cáo vẫn nhận tra cứu theo lượt và làm chúng chậm. Least outstanding requests nhìn số việc đang dở nên tránh instance đang bận. Trọng số bằng nhau chính là round robin; hash theo IP và random cũng không nhìn tải hiện tại. Tốt hơn nữa là tách báo cáo ra pool hoặc hàng đợi riêng."
+    },
+    {
+      "id": "deploy-502",
+      "kind": "single",
+      "prompt": "Mỗi lần rolling deploy trên Kubernetes, client nhận vài chục lỗi `502` trong khoảng 1–2 giây. Ứng dụng chạy Spring Boot 3.4 (graceful shutdown bật mặc định). Nguyên nhân hay gặp nhất?",
+      "options": [
+        "Pod ngừng nhận kết nối trước khi LB và kube-proxy gỡ nó khỏi danh sách",
+        "Graceful shutdown làm Spring Boot từ chối mọi request đang chạy ngay lập tức",
+        "Readiness probe của pod mới chạy quá nhanh nên pod mới chưa nhận được traffic",
+        "Kubernetes không hỗ trợ rolling deploy cho ứng dụng có HTTP keep-alive"
+      ],
+      "answer": 0,
+      "explanation": "Kubernetes gửi SIGTERM và gỡ pod khỏi endpoint gần như cùng lúc, nhưng thay đổi endpoint cần thời gian để tới mọi node và LB. Trong khoảng đó, request mới vẫn tới pod đang tắt. Thêm `preStop` chờ vài giây (`sleep 5`, hoặc `preStop.sleep` ở Kubernetes 1.30+) để việc gỡ lan xong trước khi ứng dụng bắt đầu tắt. Graceful shutdown làm nốt request đang chạy chứ không từ chối chúng."
+    },
+    {
+      "id": "sticky-tradeoff",
+      "kind": "single",
+      "prompt": "Ứng dụng cũ giữ giỏ hàng trong `HttpSession` ở bộ nhớ. Bật sticky session ở load balancer giải quyết được việc mất giỏ hàng khi có nhiều instance. Cái giá chính là gì?",
+      "options": [
+        "Instance chết là mất giỏ hàng của mọi người dính vào nó, và tải lệch khi scale",
+        "Mỗi request phải đọc session từ database nên chậm hơn đáng kể",
+        "Không dùng được HTTPS vì LB phải đọc cookie trong request",
+        "Không có cái giá đáng kể, nên đây là cách được khuyến nghị"
+      ],
+      "answer": 0,
+      "explanation": "Sticky session giữ trạng thái trong bộ nhớ một instance, nên deploy hay instance chết là mất session, và instance mới thêm vào chỉ nhận người dùng mới. LB L7 kết thúc TLS nên đọc được cookie. Cách bền hơn là đưa session ra kho dùng chung (Spring Session với Redis) hoặc lưu giỏ hàng như dữ liệu nghiệp vụ."
+    }
+  ]
+}

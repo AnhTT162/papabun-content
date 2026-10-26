@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "linearizable", "front": "Linearizability hứa gì?", "back": "Hệ thống trông như chỉ có một bản dữ liệu: mỗi thao tác có hiệu lực tại một thời điểm, đọc luôn thấy lần ghi đã xác nhận gần nhất." },
+    { "id": "eventual", "front": "Eventual consistency hứa gì?", "back": "Nếu không có lần ghi mới, cuối cùng mọi bản sao sẽ bằng nhau; không hứa khi nào." },
+    { "id": "cap", "front": "CAP thật sự nói gì?", "back": "Khi có network partition, phải chọn giữa linearizable và việc mọi node còn sống đều trả lời; không phải \"chọn 2 trong 3\"." },
+    { "id": "pacelc", "front": "PACELC bổ sung gì cho CAP?", "back": "Khi không có partition (Else), vẫn phải chọn giữa latency thấp và nhất quán mạnh." },
+    { "id": "causal", "front": "Causal consistency đảm bảo gì?", "back": "Ai thấy một sự kiện thì cũng đã thấy các sự kiện là nguyên nhân của nó; sự kiện không liên quan có thể thấy theo thứ tự khác." },
+    { "id": "serializable-diff", "front": "Serializable khác linearizable thế nào?", "back": "Serializable là isolation của transaction (như chạy tuần tự theo một thứ tự nào đó); linearizable là nhất quán của một object theo thời gian thực." },
+    { "id": "quorum", "front": "Điều kiện quorum để tập đọc và tập ghi giao nhau?", "back": "R + W > N, ví dụ N = 3 thì W = 2, R = 2; vẫn chưa đủ cho linearizable khi có sloppy quorum hay last-write-wins." },
+    { "id": "kafka-acks", "front": "`acks=all` cùng `min.insync.replicas=2` trong Kafka nghĩa là gì?", "back": "Lần ghi chỉ được xác nhận khi ít nhất hai replica đồng bộ đã có nó; thiếu replica thì producer nhận lỗi." }
+  ]
+}

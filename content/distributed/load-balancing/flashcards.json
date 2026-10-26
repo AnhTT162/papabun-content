@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "l4-vs-l7", "front": "Load balancer L4 khác L7 thế nào?", "back": "L4 chia theo kết nối TCP/UDP, không nhìn nội dung; L7 hiểu HTTP nên định tuyến theo path, header, kết thúc TLS, retry được." },
+    { "id": "least-requests", "front": "Khi nào least outstanding requests tốt hơn round robin?", "back": "Khi chi phí request chênh lệch nhiều; nó tránh gửi thêm việc cho instance đang bận." },
+    { "id": "p2c", "front": "Power of two choices là gì?", "back": "Chọn ngẫu nhiên hai instance rồi gửi tới cái ít việc hơn; gần bằng least connections mà không cần trạng thái toàn cục." },
+    { "id": "liveness-vs-readiness", "front": "Readiness và liveness probe khác nhau thế nào?", "back": "Readiness lỗi thì pod bị rút khỏi traffic; liveness lỗi thì container bị restart. Liveness không nên kiểm tra dependency." },
+    { "id": "draining", "front": "Làm sao deploy mà không rơi request?", "back": "Rút instance khỏi LB trước, chờ việc gỡ lan xong (`preStop`), rồi graceful shutdown để làm nốt request đang chạy." },
+    { "id": "long-lived", "front": "Vì sao scale thêm instance mà tải không lan sang?", "back": "Kết nối lâu dài (keep-alive, HTTP/2, gRPC) vẫn bám instance cũ; cần giới hạn tuổi kết nối hoặc LB L7." },
+    { "id": "lb-retry-post", "front": "Rủi ro khi LB tự retry request lỗi?", "back": "Request không idempotent như `POST` tạo đơn có thể bị thực hiện hai lần." },
+    { "id": "forwarded", "front": "Sau LB L7, lấy IP thật của client ở đâu?", "back": "Header `X-Forwarded-For` hoặc `Forwarded`, chỉ tin khi request chắc chắn đi qua LB của bạn; Spring Boot đọc qua `server.forward-headers-strategy`. Không lấy phần tử trái nhất, vì client giả mạo được." }
+  ]
+}

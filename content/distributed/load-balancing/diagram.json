@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Load balancer L7 trước ba instance",
+  "nodes": [
+    {"id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "lb", "label": "Load balancer L7", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "a", "label": "Instance A", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "b", "label": "Instance B", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "c", "label": "Instance C", "kind": "service", "x": 0.1, "y": 0.95},
+    {"id": "redis", "label": "Redis session", "kind": "cache", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "client-lb", "from": "client", "to": "lb", "label": "HTTPS"},
+    {"id": "lb-a", "from": "lb", "to": "a", "label": "3 request đang chạy"},
+    {"id": "lb-b", "from": "lb", "to": "b", "label": "1 request đang chạy"},
+    {"id": "lb-c", "from": "lb", "to": "c", "label": "health check lỗi"},
+    {"id": "b-redis", "from": "b", "to": "redis", "label": "đọc session"}
+  ],
+  "steps": [
+    {"caption": "Client gọi HTTPS tới load balancer L7. LB kết thúc TLS, đọc path và header, rồi chọn instance.", "show": ["client", "lb", "client-lb"], "highlight": ["client-lb"]},
+    {"caption": "Instance A đang xử lý 3 request (có một báo cáo nặng). Round robin vẫn gửi tiếp cho A theo lượt.", "show": ["a", "lb-a"], "highlight": ["lb-a"]},
+    {"caption": "Least outstanding requests gửi request mới tới B, đang chỉ có 1 request. Khi chi phí request chênh lệch, cách này giữ latency đều hơn.", "show": ["b", "lb-b"], "highlight": ["lb-b"]},
+    {"caption": "C trả lỗi readiness ba lần liên tiếp nên bị rút khỏi vòng quay; request đang chạy trên C được làm nốt. LB tiếp tục kiểm tra và đưa C trở lại khi nó khoẻ.", "show": ["c", "lb-c"], "highlight": ["lb-c"]},
+    {"caption": "Session của người dùng nằm ở Redis chứ không ở bộ nhớ instance, nên request tiếp theo đi tới instance nào cũng được. Không cần sticky session, và C chết không làm ai mất phiên đăng nhập.", "show": ["redis", "b-redis"], "highlight": ["b-redis"]}
+  ]
+}

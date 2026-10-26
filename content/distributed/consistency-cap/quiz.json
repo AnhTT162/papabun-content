@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cap-misconception",
+      "kind": "single",
+      "prompt": "Câu nào mô tả đúng định lý CAP?",
+      "options": [
+        "Khi có network partition, hệ thống phải chọn giữa linearizable và việc mọi node còn sống đều trả lời",
+        "Mọi hệ phân tán chọn được đúng 2 trong 3 tính chất, ví dụ hệ CA bỏ khả năng chịu partition",
+        "Hệ thống NoSQL luôn là AP, còn database quan hệ luôn là CP",
+        "Khi không có partition, hệ thống vẫn phải hy sinh khả dụng để giữ nhất quán"
+      ],
+      "answer": 0,
+      "explanation": "CAP chỉ nói về lúc có partition. Partition là điều sẽ xảy ra với hệ chạy qua mạng, nên \"CA\" không phải lựa chọn có thật cho hệ phân tán. Nhiều hệ NoSQL có chế độ nhất quán mạnh (MongoDB `majority`, etcd), và PostgreSQL với replica bất đồng bộ có thể trả dữ liệu cũ. Đánh đổi lúc không có partition (latency và nhất quán) là phần PACELC bổ sung, không phải CAP."
+    },
+    {
+      "id": "linearizable-vs-serializable",
+      "kind": "single",
+      "prompt": "Khác biệt chính giữa serializable và linearizable là gì?",
+      "options": [
+        "Serializable là isolation của transaction; linearizable là nhất quán theo thời gian thực",
+        "Hai từ cùng nghĩa, chỉ khác cách gọi giữa giới database và giới hệ phân tán",
+        "Serializable mạnh hơn linearizable vì áp dụng cho nhiều object cùng lúc",
+        "Linearizable chỉ áp dụng cho database một node, serializable cho nhiều node"
+      ],
+      "answer": 0,
+      "explanation": "Serializable đảm bảo kết quả như các transaction chạy tuần tự theo một thứ tự nào đó, thứ tự này không cần khớp thời gian thực. Linearizable đảm bảo mỗi thao tác trên một object có hiệu lực tại một thời điểm giữa lúc gọi và lúc trả về, nên ai đọc sau cũng thấy. Hai tính chất độc lập; có cả hai gọi là strict serializability."
+    },
+    {
+      "id": "quorum-math",
+      "kind": "single",
+      "prompt": "Cluster có replication factor N = 3. Cấu hình nào đảm bảo tập node được đọc luôn giao với tập node đã nhận lần ghi gần nhất (khi không có node nào chết)?",
+      "options": [
+        "W = 2, R = 2",
+        "W = 1, R = 1",
+        "W = 1, R = 2",
+        "W = 2, R = 1"
+      ],
+      "answer": 0,
+      "explanation": "Cần R + W > N để tập đọc và tập ghi luôn có ít nhất một node chung: 2 + 2 = 4 > 3. Các cấu hình còn lại có R + W ≤ 3, nên có thể đọc trúng toàn node chưa nhận lần ghi. Lưu ý quorum giao nhau vẫn chưa đủ cho linearizable khi có sloppy quorum hay giải quyết xung đột bằng last-write-wins."
+    },
+    {
+      "id": "choose-per-data",
+      "kind": "single",
+      "prompt": "Một ứng dụng thương mại điện tử cần dữ liệu nào nhất quán mạnh, dữ liệu nào chấp nhận eventual consistency?",
+      "options": [
+        "Mạnh: giữ hàng tồn kho khi thanh toán; eventual: số lượt xem sản phẩm",
+        "Mạnh: số lượt xem sản phẩm; eventual: giữ hàng tồn kho khi thanh toán",
+        "Mọi dữ liệu đều phải nhất quán mạnh để tránh sai sót",
+        "Mọi dữ liệu đều có thể eventual vì cuối cùng sẽ khớp"
+      ],
+      "answer": 0,
+      "explanation": "Giữ hàng sai dẫn tới bán vượt tồn kho, nên cần nhất quán mạnh (thường là một lần ghi có điều kiện vào nguồn sự thật duy nhất). Lượt xem lệch vài giây không ảnh hưởng nghiệp vụ, và nhất quán mạnh cho nó chỉ tốn latency và chi phí. Chọn mức nhất quán theo từng loại dữ liệu, không cho cả hệ thống."
+    }
+  ]
+}
