@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "testing-concurrency",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "concurrency",
+  "title": "Kiểm thử code đồng thời",
+  "summary": "Vì sao test đồng thời xanh không chứng minh code đúng; bốn kiểu test: stress test có barrier, test xen kẽ có điểm chặn, JCStress cho lỗi Java Memory Model, test bất đồng bộ bằng Awaitility và virtual time; test flaky là bug thật, cách đo và tái hiện (số core của CI), bẫy assert trong thread phụ, sleep, retry ở tầng build; Lincheck, timeout cho deadlock, nguồn flaky không phải race.",
+  "level": "senior",
+  "order": 17,
+  "minutes": 15,
+  "prerequisites": ["concurrency-basics", "java-memory-model"],
+  "terms": ["flaky-test", "jcstress", "race-condition", "jmm"],
+  "references": [
+    { "title": "OpenJDK: The Java Concurrency Stress tests (jcstress)", "url": "https://openjdk.org/projects/code-tools/jcstress/" },
+    { "title": "JUnit 5 User Guide: Timeouts and Parallel Execution", "url": "https://junit.org/junit5/docs/current/user-guide/" },
+    { "title": "Awaitility", "url": "https://github.com/awaitility/awaitility" },
+    { "title": "Lincheck", "url": "https://github.com/JetBrains/lincheck" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao biết bản sửa thật sự hết lỗi, khi lỗi vốn chỉ xảy ra 3%?\" Đo trước và sau: chạy lặp đủ nhiều để thấy tỉ lệ fail của bản cũ (ví dụ 30/1.000), rồi chạy cùng số lần với bản mới và kỳ vọng 0. Với tỉ lệ gốc 3%, 1.000 lần chạy sạch gần như loại trừ được may mắn. Tốt hơn nữa là có một test xen kẽ có điểm chặn làm bản cũ fail 100%: khi đó bằng chứng không còn là xác suất. Hỏi tiếp có thể là \"vậy có cần JCStress cho mọi class không\": không, chỉ cho phần tự viết đồng bộ cấp thấp (volatile, CAS, công bố object); phần còn lại nên dựa vào lớp có sẵn của `java.util.concurrent`." },
+    { "type": "breakLab", "file": "lab.json" }
+  ]
+}

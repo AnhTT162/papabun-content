@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "assert-in-thread",
+      "kind": "output",
+      "prompt": "`process()` có bug nên `assertEquals` bên dưới sai. Test này kết thúc thế nào trong JUnit 5?",
+      "code": "@Test\nvoid processesInBackground() throws Exception {\n    Thread worker = new Thread(() -> {\n        Result r = service.process(input);\n        assertEquals(Status.DONE, r.status());\n    });\n    worker.start();\n    worker.join();\n}",
+      "options": [
+        "Xanh; `AssertionError` chỉ được in ra stderr của `worker`",
+        "Đỏ, vì JUnit bắt mọi `AssertionError` trong mọi thread",
+        "Đỏ, vì `join()` ném lại exception của thread đã kết thúc",
+        "Treo mãi, vì thread `worker` chết trước khi `join()` trả về"
+      ],
+      "answer": 0,
+      "explanation": "`AssertionError` làm chết thread `worker`; uncaught exception handler mặc định in stack trace ra stderr, rồi `join()` trả về bình thường. JUnit chỉ thấy lỗi ném ra ở thread chạy test. Dùng `ExecutorService` và `future.get()`, hoặc lưu lỗi vào một `AtomicReference<Throwable>` rồi kiểm tra ở thread test."
+    },
+    {
+      "id": "deterministic",
+      "kind": "single",
+      "prompt": "Đã sửa một lỗi check-then-act trong `reserveSeat()` (hai người cùng giữ được một ghế). Cách nào cho regression test bắt lại lỗi này **mọi lần chạy**?",
+      "options": [
+        "Chèn điểm chặn sau bước kiểm tra để giữ thread A ở đó khi thread B chạy",
+        "Chạy hai thread gọi `reserveSeat()` bằng `@RepeatedTest(1000)` và chờ có lần đỏ",
+        "Thêm `Thread.sleep(50)` vào giữa bước kiểm tra và bước giữ ghế trong code chính",
+        "Chạy test với `-Xint` để tắt JIT, khiến hai thread xen kẽ nhau đều đặn hơn"
+      ],
+      "answer": 0,
+      "explanation": "Điểm chặn (latch hoặc hook chỉ dùng trong test) ép đúng lịch xen kẽ gây lỗi, nên bản code lỗi fail 100% số lần và bản sửa luôn xanh. Lặp 1.000 lần vẫn chỉ là xác suất và chậm. `sleep` trong code chính làm chậm production và vẫn không chắc chắn. `-Xint` không điều khiển được bộ lập lịch của hệ điều hành."
+    },
+    {
+      "id": "jcstress-when",
+      "kind": "single",
+      "prompt": "Bạn nghi một class công bố object qua field không `volatile`, và trên ARM thread khác có thể thấy object dựng dở. Công cụ nào hợp để chứng minh?",
+      "options": [
+        "JCStress, khai báo kết quả \"thấy object dựng dở\" là `FORBIDDEN` và chạy cả trên ARM",
+        "Unit test JUnit với 8 thread và `CyclicBarrier`, chạy trên laptop x86 của đội dev",
+        "Load test bằng Gatling với 1.000 request mỗi giây trong 10 phút trên môi trường staging",
+        "Bật `-XX:+UseCountedLoopSafepoints` để JVM xếp lịch thread công bằng hơn khi chạy test"
+      ],
+      "answer": 0,
+      "explanation": "Lỗi visibility và reordering hiếm tới mức stress test thường hầu như không bao giờ bắt được, nhất là trên x86 vốn giữ thứ tự ghi-ghi. JCStress chạy hàng triệu lần với nhiều cách xếp lịch và chế độ JIT, rồi đếm từng kết quả theo `@Outcome`. Load test đo hiệu năng, không đếm được kết quả của một đoạn code. Cờ safepoint không liên quan tới thứ tự bộ nhớ."
+    },
+    {
+      "id": "await-async",
+      "kind": "single",
+      "prompt": "Test gửi message vào một consumer chạy nền rồi kiểm tra database có bản ghi. Hiện dùng `Thread.sleep(2000)` trước khi query, và thỉnh thoảng đỏ trên CI. Cách sửa tốt nhất?",
+      "options": [
+        "Awaitility: `await().atMost(10, SECONDS).untilAsserted(() -> ...)` thay cho `sleep`",
+        "Tăng lên `Thread.sleep(5000)` cho CI, vì máy CI chậm hơn laptop khoảng hai đến ba lần",
+        "Bọc assert trong vòng `while` không giới hạn cho tới khi bản ghi xuất hiện trong database",
+        "Đánh dấu test bằng `@Disabled` trên CI và chỉ chạy nó trên máy dev khi cần kiểm tra"
+      ],
+      "answer": 0,
+      "explanation": "Awaitility hỏi lại theo chu kỳ và trả về ngay khi điều kiện đúng, nên test nhanh khi máy nhanh và vẫn có trần thời gian khi máy chậm. `sleep` dài hơn chỉ làm test chậm hơn mà vẫn có thể đỏ. Vòng `while` không giới hạn làm treo CI khi có bug. Tắt test trên CI là bỏ luôn chỗ duy nhất chạy nó đều đặn."
+    },
+    {
+      "id": "flaky-ci-only",
+      "kind": "single",
+      "prompt": "Một test đồng thời chỉ đỏ trên CI (container 2 vCPU), chưa từng đỏ trên laptop 10 core. Bước đầu tiên hợp lý để tái hiện ở máy local?",
+      "options": [
+        "Chạy lặp test với `-XX:ActiveProcessorCount=2` để JVM xếp lịch giống CI hơn",
+        "Bật `rerunFailingTestsCount` để xác nhận test có tự xanh lại sau vài lần chạy",
+        "Nâng CI lên 10 vCPU để giống laptop, vì máy yếu luôn cho kết quả kém tin cậy",
+        "Xoá `.m2` và build lại từ đầu, vì CI có thể dùng thư viện khác bản trên laptop"
+      ],
+      "answer": 0,
+      "explanation": "Số core ảnh hưởng tới số thread chạy thật sự song song, kích thước pool mặc định (common pool, scheduler của virtual thread) và cách hệ điều hành xếp lịch. Ép JVM thấy 2 core rồi chạy lặp là cách rẻ nhất để đưa điều kiện của CI về máy mình. Rerun chỉ che lỗi; nâng CI làm lỗi khó lộ hơn chứ không hết; thư viện khác bản là nghi vấn hợp lý nhưng không giải thích được lỗi chỉ thỉnh thoảng xảy ra."
+    }
+  ]
+}

@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive"]
     },
     {
       "id": "cpu-bound",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive"]
     },
     {
       "id": "pinning",
@@ -397,7 +397,7 @@
       "meaning": "Phần của JLS (chương 17) quy định khi nào một lần ghi của thread này chắc chắn được thread khác nhìn thấy, dựa trên quan hệ happens-before.",
       "example": "Không có `volatile` hay khoá, JMM cho phép thread đọc mãi giá trị cũ của một biến.",
       "related": ["happens-before", "visibility", "data-race"],
-      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model"]
+      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model", "testing-concurrency"]
     },
     {
       "id": "happens-before",
@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics"]
+      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency"]
     },
     {
       "id": "cas",
@@ -3533,7 +3533,7 @@
       "meaning": "Chuẩn cho luồng dữ liệu bất đồng bộ có backpressure, gồm `Publisher`, `Subscriber`, `Subscription`; Project Reactor (`Mono`, `Flux`) là một cài đặt.",
       "example": "Subscriber gọi `request(10)` để chỉ nhận 10 phần tử, producer không đẩy thêm khi chưa được yêu cầu.",
       "related": ["backpressure", "event-loop"],
-      "topics": ["spring-webflux"]
+      "topics": ["spring-webflux", "reactive"]
     },
     {
       "id": "blockhound",
@@ -3741,7 +3741,7 @@
       "meaning": "Java Concurrency Stress tests: công cụ của OpenJDK chạy một đoạn code đồng thời hàng triệu lần và đếm từng kết quả quan sát được, để kiểm tra code có đúng với JMM không.",
       "example": "Test hai thread `x = 1; r1 = y` / `y = 1; r2 = x` cho thấy kết quả `(0, 0)` xuất hiện trên x86, dù hiếm.",
       "related": ["jmm", "data-race"],
-      "topics": ["java-memory-model"]
+      "topics": ["java-memory-model", "testing-concurrency"]
     },
     {
       "id": "lock-support-park",
@@ -3878,6 +3878,38 @@
       "example": "Spliterator của `ArrayList` tách đôi theo chỉ số trong O(1); của `LinkedList` phải duyệt và chép từng lô ra mảng.",
       "related": ["parallel-stream"],
       "topics": ["forkjoin"]
+    },
+    {
+      "id": "mono",
+      "term": "Mono",
+      "meaning": "Kiểu của Project Reactor cho một chuỗi bất đồng bộ phát 0 hoặc 1 phần tử rồi kết thúc (hoặc báo lỗi). Tương tự `CompletableFuture` nhưng lười: chỉ chạy khi có subscribe.",
+      "example": "`Mono<User> user = webClient.get().uri(\"/users/42\").retrieve().bodyToMono(User.class);` chưa gửi request nào cho tới khi có subscribe.",
+      "related": ["flux", "reactive-streams"],
+      "topics": ["reactive"]
+    },
+    {
+      "id": "flux",
+      "term": "Flux",
+      "meaning": "Kiểu của Project Reactor cho một chuỗi bất đồng bộ phát 0 tới N phần tử (có thể vô hạn) rồi kết thúc bằng `onComplete` hoặc `onError`.",
+      "example": "`Flux.interval(Duration.ofSeconds(1))` phát 0, 1, 2... mỗi giây cho tới khi bị huỷ.",
+      "related": ["mono", "reactive-streams", "backpressure"],
+      "topics": ["reactive"]
+    },
+    {
+      "id": "reactor-scheduler",
+      "term": "Scheduler (Reactor)",
+      "meaning": "Nhóm thread mà Reactor dùng để chạy các bước của chuỗi khi được chỉ định bằng `publishOn` hoặc `subscribeOn`. Có sẵn `parallel()` cho việc CPU, `boundedElastic()` cho code blocking, `single()`, `immediate()`.",
+      "example": "`.publishOn(Schedulers.boundedElastic()).map(this::callLegacyJdbc)` đưa lời gọi blocking ra khỏi event loop.",
+      "related": ["mono", "flux", "event-loop"],
+      "topics": ["reactive"]
+    },
+    {
+      "id": "flaky-test",
+      "term": "Flaky test",
+      "meaning": "Test lúc xanh lúc đỏ dù code không đổi. Với code đồng thời, nguyên nhân thường là bug thật chỉ lộ ra khi các thread xen nhau theo một lịch nhất định.",
+      "example": "Test đếm từ hai thread đỏ khoảng 3% số lần chạy vì `hits++` không atomic; bật rerun chỉ che lỗi.",
+      "related": ["race-condition", "jcstress"],
+      "topics": ["testing-concurrency"]
     }
   ]
 }

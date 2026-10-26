@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "green-not-proof", "front": "Test đồng thời xanh có chứng minh code đúng không?", "back": "Không. Nó chỉ cho biết lần chạy đó không trúng lịch xen kẽ gây lỗi." },
+    { "id": "flaky-is-bug", "front": "Gặp test flaky thì làm gì trước?", "back": "Đo tỉ lệ flaky bằng cách chạy lặp, rồi tìm bug trong code chính. Không bật retry cho tới khi xanh." },
+    { "id": "stress", "front": "Stress test đồng thời cần những gì?", "back": "Nhiều thread, xuất phát cùng lúc (latch/barrier), lặp nhiều, và kiểm tra bất biến ở cuối. Vẫn chỉ là xác suất." },
+    { "id": "hooks", "front": "Làm sao tái hiện một race 100% số lần?", "back": "Chèn điểm chặn (latch, hook chỉ dùng trong test) giữa bước kiểm tra và bước làm, để ép đúng lịch xen kẽ." },
+    { "id": "jcstress", "front": "Khi nào dùng JCStress?", "back": "Cho lỗi tầng Java Memory Model: thiếu `volatile`, công bố không an toàn, reordering. Khai báo kết quả bằng `@Outcome` và chạy cả trên ARM." },
+    { "id": "no-sleep", "front": "Chờ kết quả bất đồng bộ trong test bằng gì?", "back": "`future.get(timeout)`, latch, hoặc Awaitility `await().atMost(...).untilAsserted(...)`; không dùng `Thread.sleep`." },
+    { "id": "assert-thread", "front": "Assert trong thread phụ có làm test đỏ không?", "back": "Không. `AssertionError` chỉ làm chết thread đó. Đưa kết quả về thread test qua `Future.get()`." },
+    { "id": "timeout", "front": "Làm sao để deadlock không làm treo CI?", "back": "`@Timeout` hoặc `assertTimeoutPreemptively`, và in thread dump hoặc `findDeadlockedThreads()` khi fail." },
+    { "id": "ci-cores", "front": "Test chỉ đỏ trên CI ít core, tái hiện thế nào?", "back": "Chạy lặp ở máy local với `-XX:ActiveProcessorCount=2` để JVM xếp lịch và chọn kích thước pool như CI." },
+    { "id": "virtual-time", "front": "Test code có timeout, retry, lịch chạy mà không chờ thật?", "back": "Tiêm `Clock` hoặc scheduler giả; với Reactor dùng `StepVerifier.withVirtualTime`." }
+  ]
+}

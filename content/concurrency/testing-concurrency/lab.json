@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Test flaky 3% và nút rerun",
+  "context": "Test dưới đây kiểm tra `HitCounter` dùng trong rate limiter. Trên CI nó thỉnh thoảng đỏ; đồng nghiệp đề xuất bật `rerunFailingTestsCount=2` của Surefire cho đỡ phiền. Trước khi đồng ý, bạn chạy lặp test 1.000 lần trên JDK 27 (vòng đầu như code dưới, vòng sau thêm `CountDownLatch` để hai thread xuất phát cùng lúc).",
+  "buggyCode": "class HitCounter {\n    private int hits;\n    void hit() { hits++; }\n    int hits() { return hits; }\n}\n\n@Test\nvoid countsHitsFromTwoThreads() throws Exception {\n    HitCounter counter = new HitCounter();\n    Thread a = new Thread(() -> { for (int i = 0; i < 1_000; i++) counter.hit(); });\n    Thread b = new Thread(() -> { for (int i = 0; i < 1_000; i++) counter.hit(); });\n    a.start(); b.start();\n    a.join(); b.join();\n    assertEquals(2_000, counter.hits());\n}",
+  "symptom": {
+    "description": "Trên laptop chạy riêng test này gần như lúc nào cũng xanh. Trên CI khoảng 3% số build đỏ với `expected: <2000> but was: <1601>`, `<1992>`, `<1917>`... (các giá trị lấy từ một lần chạy lặp thật). Kết quả chạy lặp 1.000 lần, hai đợt:",
+    "output": "không latch: 26/1000 lần fail\ncó latch:    32/1000 lần fail\n\nkhông latch: 35/1000 lần fail\ncó latch:    32/1000 lần fail"
+  },
+  "diagnosis": {
+    "question": "Kết luận đúng là gì?",
+    "options": [
+      "Bug thật: `hits++` không atomic; test chỉ bắt được khi hai thread tình cờ chạy chồng",
+      "CI chậm nên `join()` trả về khi thread chưa xong; thêm `Thread.sleep(100)` trước assert",
+      "JUnit chạy song song nhiều test, nên `counter` bị một test khác dùng chung và ghi đè",
+      "Thread sau không thấy giá trị thread trước ghi vì cache CPU; khai báo `hits` là `volatile`"
+    ],
+    "answer": 0,
+    "explanation": "`hits++` là đọc, cộng, ghi; hai thread cùng đọc một giá trị thì một lần cộng mất ([[race-condition]]). Test chỉ đỏ khi hai vòng lặp thật sự chạy chồng nhau, mà start thread tốn lâu hơn cả vòng lặp, nên chỉ khoảng 3%. Rerun sẽ làm build xanh và đưa bug lên production. `join()` chỉ trả về khi thread đã kết thúc, và tạo happens-before nên thread test thấy mọi lần ghi. `counter` là biến cục bộ của test. `volatile` không làm `++` atomic."
+  },
+  "fix": {
+    "code": "class HitCounter {\n    private final AtomicInteger hits = new AtomicInteger();\n    void hit() { hits.incrementAndGet(); }\n    int hits() { return hits.get(); }\n}\n\n@Test\n@Timeout(10)\nvoid countsHitsFromManyThreads() throws Exception {\n    int threads = 8, perThread = 10_000;\n    HitCounter counter = new HitCounter();\n    CyclicBarrier start = new CyclicBarrier(threads);\n    try (var executor = Executors.newFixedThreadPool(threads)) {\n        List<Future<?>> futures = new ArrayList<>();\n        for (int t = 0; t < threads; t++) {\n            futures.add(executor.submit(() -> {\n                start.await();                      // cùng xuất phát\n                for (int i = 0; i < perThread; i++) counter.hit();\n                return null;\n            }));\n        }\n        for (Future<?> f : futures) f.get();      // lỗi trong thread phụ bay ra đây\n    }\n    assertEquals(threads * perThread, counter.hits());\n}",
+    "explanation": "Sửa code chính trước: `AtomicInteger` (hoặc `LongAdder` nếu chỉ cần tổng). Chạy lại 1.000 lần: 0/1.000 lần fail ở cả hai vòng. Test cũng được làm chắc hơn: nhiều thread hơn, `CyclicBarrier` để cùng xuất phát, `Future.get()` để lỗi trong thread phụ không bị nuốt, `@Timeout` để deadlock làm test fail thay vì treo CI. Đây vẫn là test theo xác suất; nếu cần regression test chắc chắn cho một lịch xen kẽ cụ thể thì chèn điểm chặn vào code như phần Deep mô tả."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Tín hiệu của Reactive Streams",
+  "nodes": [
+    { "id": "sub", "label": "Subscriber", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "pub", "label": "Publisher (Flux)", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "subscription", "label": "Subscription", "kind": "queue", "x": 0.1, "y": 0.5 },
+    { "id": "source", "label": "Nguồn dữ liệu", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "done", "label": "Kết thúc", "kind": "generic", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "sub-pub", "from": "sub", "to": "pub", "label": "subscribe()" },
+    { "id": "pub-subscription", "from": "pub", "to": "subscription", "label": "onSubscribe" },
+    { "id": "subscription-source", "from": "subscription", "to": "source", "label": "request(2)" },
+    { "id": "source-sub", "from": "source", "to": "sub", "label": "onNext × 2" },
+    { "id": "sub-done", "from": "subscription", "to": "done", "label": "onComplete/onError" }
+  ],
+  "steps": [
+    { "caption": "Một chuỗi `Flux` đã dựng xong nhưng chưa chạy gì. Chỉ khi subscriber xuất hiện thì công việc mới bắt đầu.", "show": ["sub"] },
+    { "caption": "Subscriber gọi `subscribe()`. Với chuỗi nhiều operator, lời gọi này đi ngược từ operator cuối lên tới nguồn.", "show": ["pub", "sub-pub"], "highlight": ["sub-pub"] },
+    { "caption": "Publisher trả về một `Subscription` qua `onSubscribe`. Đây là kênh để subscriber đòi dữ liệu hoặc huỷ.", "show": ["subscription", "pub-subscription"], "highlight": ["pub-subscription"] },
+    { "caption": "Subscriber gọi `request(2)`: nó chỉ nhận được hai phần tử. Đó là backpressure, nguồn không được phát nhiều hơn số đã đòi.", "show": ["source", "subscription-source"], "highlight": ["subscription-source"] },
+    { "caption": "Nguồn phát đúng hai lần `onNext`, tuần tự, không bao giờ đồng thời. Xử lý xong, subscriber gọi `request` tiếp, hoặc `cancel()` để dừng.", "show": ["source-sub"], "highlight": ["source-sub"] },
+    { "caption": "Chuỗi kết thúc bằng đúng một `onComplete` hoặc một `onError`. Sau `onError` không còn phần tử nào nữa, nên lỗi phải được xử lý bằng operator như `onErrorResume`.", "show": ["done", "sub-done"], "highlight": ["sub-done"] }
+  ]
+}

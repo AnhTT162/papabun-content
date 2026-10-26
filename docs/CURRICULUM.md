@@ -170,8 +170,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 13 | `concurrent-hashmap` | ConcurrentHashMap bên trong | senior | CAS + khoá theo bin, resize đồng thời, `compute` | L S B | ✅ |
 | 14 | `virtual-threads` | Virtual Threads chuyên sâu | senior | Continuation, carrier, pinning, structured concurrency, khi nào không dùng | L D B | ✅ |
 | 15 | `forkjoin` | ForkJoinPool & work stealing | senior | Common pool, parallel stream, khi nào chậm hơn | L D | ✅ |
-| 16 | `reactive` | Reactive programming & Project Reactor | senior | Publisher/Subscriber, backpressure, operator, scheduler; so với virtual thread | L D Sc | ⬜ |
-| 17 | `testing-concurrency` | Kiểm thử code đồng thời | senior | jcstress, test flaky, tái hiện race condition | L B | ⬜ |
+| 16 | `reactive` | Reactive programming & Project Reactor | senior | Publisher/Subscriber, backpressure, operator, scheduler; so với virtual thread | L D Sc | ✅ |
+| 17 | `testing-concurrency` | Kiểm thử code đồng thời | senior | jcstress, test flaky, tái hiện race condition | L B | ✅ |
 
 ### 4. JVM (`jvm`)
 

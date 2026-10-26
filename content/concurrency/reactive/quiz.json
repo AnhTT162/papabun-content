@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "nothing-happens",
+      "kind": "output",
+      "prompt": "Service method dưới đây được gọi một lần và giá trị trả về bị bỏ qua. `sendEmail` có được gọi không, và `loadTemplate` thì sao?",
+      "code": "void notifyUser(User user) {\n    Mono.just(loadTemplate())                 // trả về String\n        .flatMap(t -> mailClient.sendEmail(user, t));  // trả về Mono<Void>\n}",
+      "options": [
+        "`loadTemplate` chạy; `sendEmail` không bao giờ được gọi",
+        "Cả hai đều chạy, vì `flatMap` tự subscribe khi có dữ liệu",
+        "Không cái nào chạy, vì chưa có ai subscribe vào chuỗi",
+        "Cả hai chạy trên `boundedElastic` vì có lời gọi mạng"
+      ],
+      "answer": 0,
+      "explanation": "`Mono.just(x)` tính `x` ngay lúc dựng chuỗi, nên `loadTemplate()` chạy trên thread hiện tại. Phần còn lại chỉ là mô tả, và không ai subscribe (giá trị trả về bị bỏ, method trả `void`), nên `sendEmail` không bao giờ được gọi. Sửa: trả `Mono<Void>` cho caller để framework subscribe, và dùng `Mono.fromCallable(this::loadTemplate)` để trì hoãn. Reactor không tự chuyển việc sang scheduler nào."
+    },
+    {
+      "id": "flatmap-order",
+      "kind": "single",
+      "prompt": "`Flux.just(1, 2, 3).flatMap(id -> client.fetch(id))`, mỗi lời gọi mất thời gian khác nhau. Kết quả về theo thứ tự nào, và muốn giữ thứ tự 1, 2, 3 mà vẫn gọi đồng thời thì dùng gì?",
+      "options": [
+        "Theo thứ tự lời gọi nào xong trước; dùng `flatMapSequential`",
+        "Luôn 1, 2, 3 vì `flatMap` giữ thứ tự gốc của nguồn",
+        "Theo thứ tự xong trước; dùng `concatMap` để vẫn gọi đồng thời",
+        "Ngẫu nhiên; chỉ có `sort()` ở cuối mới khôi phục được thứ tự"
+      ],
+      "answer": 0,
+      "explanation": "`flatMap` subscribe các nguồn con đồng thời và chuyển phần tử xuống ngay khi có, nên thứ tự đan xen. `flatMapSequential` vẫn subscribe đồng thời nhưng giữ kết quả để trả theo thứ tự gốc. `concatMap` giữ thứ tự bằng cách chạy tuần tự: lời gọi sau chỉ bắt đầu khi lời gọi trước xong. `sort()` phải chờ hết dữ liệu và không dùng được cho stream vô hạn."
+    },
+    {
+      "id": "subscribe-on",
+      "kind": "single",
+      "prompt": "Chuỗi: `Flux.fromIterable(ids).map(this::parse).publishOn(Schedulers.parallel()).map(this::score).subscribeOn(Schedulers.boundedElastic())`. `parse` và `score` chạy trên thread nào?",
+      "options": [
+        "`parse` trên `boundedElastic`, `score` trên `parallel`",
+        "Cả hai trên `boundedElastic` vì `subscribeOn` đặt cuối chuỗi",
+        "`parse` trên thread gọi `subscribe`, `score` trên `parallel`",
+        "Cả hai trên `parallel` vì `publishOn` áp dụng cho cả chuỗi"
+      ],
+      "answer": 0,
+      "explanation": "`subscribeOn` quyết định thread lúc subscribe, tức là thread mà nguồn phát và các bước phía trên `publishOn` chạy, bất kể nó đứng ở đâu trong chuỗi. `publishOn` chỉ chuyển các bước phía sau nó. Vì vậy `parse` chạy trên `boundedElastic`, `score` trên `parallel`."
+    },
+    {
+      "id": "context-order",
+      "kind": "single",
+      "prompt": "Cần truyền `tenantId` xuống mọi bước của chuỗi bằng Reactor `Context`. Đặt `contextWrite(Context.of(\"tenant\", id))` ở đâu?",
+      "options": [
+        "Ở cuối chuỗi, vì Context truyền ngược từ subscriber lên",
+        "Ở đầu chuỗi, ngay sau nguồn, để mọi bước phía sau đọc được",
+        "Ở bất kỳ đâu, vì Context là biến toàn cục của mỗi thread",
+        "Trước mỗi `publishOn`, vì đổi thread sẽ làm mất Context"
+      ],
+      "answer": 0,
+      "explanation": "Context gắn với subscription và đi theo chiều subscribe, từ dưới lên. `contextWrite` chỉ thấy được bởi các operator phía trên nó, nên thường đặt ở cuối (hoặc framework đặt giúp). Context không phải `ThreadLocal`, nên đổi thread bằng `publishOn` không làm mất nó."
+    },
+    {
+      "id": "reactive-vs-vt",
+      "kind": "single",
+      "prompt": "Một service REST mới: đọc database qua JDBC, gọi hai API khác, trả JSON; đội quen Spring MVC; chạy Java 21. Lựa chọn hợp lý nhất?",
+      "options": [
+        "Spring MVC trên virtual thread, giới hạn đồng thời bằng semaphore",
+        "WebFlux với Reactor, bọc JDBC trong `Mono.fromCallable` trên `parallel()`",
+        "WebFlux, vì reactive luôn cho throughput cao hơn thread-per-request",
+        "Spring MVC trên pool 200 platform thread, vì virtual thread chưa ổn định"
+      ],
+      "answer": 0,
+      "explanation": "JDBC là blocking, đội quen MVC, và virtual thread cho throughput I/O tương đương mà code vẫn tuần tự. Reactive đáng khi cần streaming, backpressure hay ghép luồng phức tạp. Bọc JDBC trên `parallel()` là sai: việc blocking phải lên `boundedElastic`, và cả chuỗi vẫn bị giới hạn bởi pool JDBC. Virtual thread đã chính thức từ Java 21."
+    }
+  ]
+}
