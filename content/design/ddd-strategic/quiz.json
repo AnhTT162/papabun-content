@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "customer-model",
+      "kind": "single",
+      "prompt": "Đội kiến trúc đề xuất một service `Customer` dùng chung với mô hình khách hàng đầy đủ cho mọi bộ phận (bán hàng, chăm sóc khách hàng, kế toán, marketing). Nhận xét nào đúng theo DDD chiến lược?",
+      "options": [
+        "Rủi ro: mỗi bộ phận hiểu \"khách hàng\" khác nhau, nên tách mô hình theo context",
+        "Đúng hướng: một nguồn sự thật duy nhất cho khách hàng giúp tránh dữ liệu trùng lặp",
+        "Đúng hướng, miễn là mô hình đủ trường cho mọi bộ phận dùng",
+        "Đúng hướng, nhưng nên chia sẻ qua thư viện entity `Customer` chung thay vì một service"
+      ],
+      "answer": 0,
+      "explanation": "Đây là anti-pattern \"entity service\": một mô hình cố phục vụ mọi context sẽ phình mãi, và mọi đội phải phối hợp mỗi lần đổi. Mỗi context giữ thông tin khách hàng theo nghĩa của mình (hạn mức tín dụng ở kế toán, sở thích ở marketing) và nối bằng id. Vẫn có thể có một context sở hữu thông tin định danh (tên, liên hệ), phát event khi đổi; \"nguồn sự thật\" là theo từng phần dữ liệu, không phải một object khổng lồ. Thư viện entity dùng chung chỉ chuyển cùng vấn đề vào thời điểm build: đổi một trường là mọi service phải nâng phiên bản."
+    },
+    {
+      "id": "relationship-choice",
+      "kind": "single",
+      "prompt": "Hệ thống của bạn phải tích hợp với API của một hãng vận chuyển lớn. API dùng mô hình lạ, mã trạng thái khó hiểu, và hãng đổi API mỗi năm. Luồng giao hàng là phần quan trọng của core domain. Quan hệ nào hợp lý nhất?",
+      "options": [
+        "Anti-corruption layer: dịch mô hình của hãng sang mô hình giao hàng của bạn",
+        "Conformist: dùng thẳng mô hình của hãng trong code nghiệp vụ cho đơn giản",
+        "Shared kernel: thống nhất với hãng một phần mô hình dùng chung",
+        "Customer–supplier: yêu cầu hãng thiết kế API theo nhu cầu của bạn"
+      ],
+      "answer": 0,
+      "explanation": "Mô hình bên ngoài xấu, hay đổi và chạm vào core domain là đúng trường hợp ACL đáng chi phí: thay đổi của hãng chỉ ảnh hưởng tầng dịch. Conformist hợp khi tích hợp nhỏ và mô hình upstream chấp nhận được. Shared kernel và customer–supplier đòi upstream hợp tác, điều một hãng lớn thường không làm cho một khách hàng."
+    },
+    {
+      "id": "core-vs-generic",
+      "kind": "single",
+      "prompt": "Startup cho vay tiêu dùng có các phần: chấm điểm tín dụng, xác thực người dùng, gửi SMS OTP, sổ cái kế toán, và quản lý nội dung trang giới thiệu. Phần nào là core domain?",
+      "options": [
+        "Chấm điểm tín dụng, vì đó là chỗ tạo khác biệt cạnh tranh",
+        "Xác thực người dùng, vì mọi chức năng đều cần nó",
+        "Sổ cái kế toán, vì sai số liệu là rủi ro pháp lý lớn nhất",
+        "Gửi SMS OTP, vì không có OTP thì khách không vay được"
+      ],
+      "answer": 0,
+      "explanation": "Core domain là phần làm doanh nghiệp khác đối thủ, không phải phần quan trọng hay rủi ro nhất. Xác thực và gửi SMS là generic: dùng dịch vụ có sẵn. Sổ cái kế toán bắt buộc phải đúng nhưng theo chuẩn chung, thường là generic hoặc supporting. Quản lý nội dung là generic."
+    },
+    {
+      "id": "context-vs-service",
+      "kind": "single",
+      "prompt": "Câu nào đúng về quan hệ giữa bounded context và microservice?",
+      "options": [
+        "Một service không nên trải qua nhiều context, nhưng một context có thể là module trong monolith",
+        "Mỗi bounded context bắt buộc phải là đúng một microservice riêng",
+        "Mỗi aggregate nên là một microservice để ranh giới nhỏ nhất có thể",
+        "Bounded context chỉ là khái niệm thiết kế, không ảnh hưởng cách chia service"
+      ],
+      "answer": 0,
+      "explanation": "Bounded context là ranh giới của mô hình và ngôn ngữ; service là đơn vị deploy. Một context có thể nằm trong modular monolith hay tách thành vài service vì lý do vận hành, nhưng một service chứa nhiều context sẽ trộn mô hình. Mỗi aggregate một service tạo ra rất nhiều lời gọi mạng cho một thao tác nghiệp vụ."
+    }
+  ]
+}

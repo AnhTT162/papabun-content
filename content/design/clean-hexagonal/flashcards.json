@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "dependency-rule", "front": "Dependency rule của Clean Architecture nói gì?", "back": "Phụ thuộc trong code chỉ hướng vào trong: vòng ngoài (framework, adapter) biết vòng trong, vòng trong (nghiệp vụ) không biết vòng ngoài." },
+    { "id": "port-adapter", "front": "Port và adapter là gì?", "back": "Port là interface do lõi định nghĩa; adapter là code hạ tầng cài đặt port (driven) hoặc gọi vào use case (driving)." },
+    { "id": "driving-driven", "front": "Driving port khác driven port thế nào?", "back": "Driving: bên ngoài gọi vào lõi (use case). Driven: lõi gọi ra ngoài (repository, payment, event publisher)." },
+    { "id": "vs-layered", "front": "Hexagonal khác kiến trúc phân lớp ở điểm cốt lõi nào?", "back": "Interface của hạ tầng (repository, gateway) nằm trong lõi, nên hạ tầng phụ thuộc nghiệp vụ thay vì ngược lại." },
+    { "id": "jpa-in-domain", "front": "Dùng chung domain model và JPA entity có được không?", "back": "Được nếu chấp nhận lõi phụ thuộc `jakarta.persistence`; đổi lại không phải map hai chiều và giữ được dirty checking." },
+    { "id": "overkill", "front": "Khi nào Hexagonal là quá tay?", "back": "Service CRUD gần như không có quy tắc: chỉ thêm lớp model và mapper mà không có gì để bảo vệ." },
+    { "id": "archunit-onion", "front": "Kiểm tra quy tắc phụ thuộc tự động bằng gì?", "back": "ArchUnit, ví dụ `onionArchitecture()` hoặc quy tắc `domain` không import `jakarta.persistence`, `org.springframework.web`." },
+    { "id": "test-speed", "front": "Lợi ích test cụ thể của Hexagonal?", "back": "Use case test bằng fake trong bộ nhớ cho driven port, không cần Spring hay database, chạy trong mili giây." }
+  ]
+}

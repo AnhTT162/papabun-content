@@ -321,8 +321,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 6 | `behavioral-patterns` | Behavioral patterns | mid | Strategy, Template Method, Observer, Chain of Responsibility, State | L B | ✅ |
 | 7 | `lld-ood-interview` | ✚ Low-level design (OOD) khi phỏng vấn | mid | Parking lot, LRU cache, elevator: mô hình lớp, áp dụng pattern, xử lý đồng thời | L B Sc | ✅ |
 | 8 | `refactoring-tech-debt` | Refactoring & nợ kỹ thuật | mid | Code smell, refactor an toàn, đo và trả nợ | L B | ✅ |
-| 9 | `clean-hexagonal` | Clean & Hexagonal Architecture | senior | Port/adapter, quy tắc phụ thuộc, khi nào quá tay | A L D Sc | ⬜ |
-| 10 | `ddd-strategic` | DDD chiến lược | senior | Bounded context, context map, ubiquitous language | A L D Sc | ⬜ |
+| 9 | `clean-hexagonal` | Clean & Hexagonal Architecture | senior | Port/adapter, quy tắc phụ thuộc, khi nào quá tay | A L D Sc | ✅ |
+| 10 | `ddd-strategic` | DDD chiến lược | senior | Bounded context, context map, ubiquitous language | A L D Sc | ✅ |
 | 11 | `ddd-tactical` | DDD chiến thuật | senior | Aggregate, entity, value object, domain event, kích thước aggregate | L B Sc | ⬜ |
 | 12 | `modular-monolith` | Modular monolith | senior | Ranh giới module, kiểm tra kiến trúc (ArchUnit), tách dần | L Sc | ⬜ |
 

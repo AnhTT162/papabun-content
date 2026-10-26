@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "bounded-context", "front": "Bounded context là gì?", "back": "Ranh giới mà bên trong đó một mô hình và một ngôn ngữ chung nhất quán; cùng một từ có thể mang nghĩa khác ở context khác." },
+    { "id": "ubiquitous-language", "front": "Ubiquitous language là gì?", "back": "Ngôn ngữ chung mà người nghiệp vụ và kỹ sư cùng dùng trong một context, xuất hiện cả trong code (tên class, method)." },
+    { "id": "subdomain-types", "front": "Ba loại subdomain và cách đầu tư?", "back": "Core: tự xây, người giỏi nhất. Supporting: tự xây, giữ đơn giản. Generic: mua hoặc dùng sản phẩm có sẵn." },
+    { "id": "acl", "front": "Khi nào dựng anti-corruption layer?", "back": "Khi mô hình upstream xấu, hay đổi hoặc là hệ thống cũ, và nó chạm vào core domain của bạn." },
+    { "id": "conformist", "front": "Conformist là gì và khi nào hợp?", "back": "Downstream dùng nguyên mô hình của upstream; hợp khi tích hợp nhỏ và mô hình upstream chấp nhận được." },
+    { "id": "ohs", "front": "Open host service với published language là gì?", "back": "Upstream mở API hoặc event có schema công bố, có quản lý phiên bản, cho nhiều downstream cùng dùng." },
+    { "id": "entity-service", "front": "Vì sao service `Customer` dùng chung cho cả công ty là anti-pattern?", "back": "Mỗi context hiểu khách hàng khác nhau; một mô hình chung phình mãi và buộc mọi đội phối hợp mỗi lần đổi." },
+    { "id": "conway", "front": "Conway's law liên quan gì tới bounded context?", "back": "Kiến trúc phản chiếu cách các đội giao tiếp, nên ranh giới context nên khớp với ranh giới đội." }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Tách monolith bán lẻ mà bảng `products` có 80 cột",
+  "prompt": "Một monolith Spring Boot 8 năm tuổi phục vụ website bán lẻ: 4 đội (nội dung sản phẩm, giá và khuyến mãi, kho, đơn hàng) cùng làm trên một repo và một database PostgreSQL. Bảng `products` có 80 cột mà cả 4 đội cùng sửa; mỗi lần đổi schema phải họp cả 4 đội, và lỗi của đội giá từng làm sập trang sản phẩm. Ban lãnh đạo muốn \"chuyển sang microservices trong 6 tháng\". Ràng buộc: không được dừng bán hàng, mùa sale cuối năm còn 4 tháng, đội vận hành chưa có kinh nghiệm chạy nhiều service. Đề xuất cách chia ranh giới, quan hệ giữa các phần và thứ tự thực hiện.",
+  "hints": [
+    "Liệt kê các nhóm cột của `products` theo đội nào sửa và vì lý do gì. Từ \"sản phẩm\" mang nghĩa gì với từng đội?",
+    "Đội nào làm nên khác biệt cho doanh nghiệp? Phần nào có thể mua sẵn?",
+    "Có cần tách thành service riêng ngay không, hay tách ranh giới trong code và dữ liệu trước?",
+    "Các context trao đổi dữ liệu thế nào khi không còn đọc chung một bảng?"
+  ],
+  "solution": "**Bounded context**: Catalog (tên, mô tả, ảnh, thuộc tính, danh mục), Pricing (giá niêm yết, quy tắc khuyến mãi, lịch giá), Inventory (tồn theo kho, giữ hàng), Ordering (giỏ hàng, đơn, thanh toán). Mỗi context có mô hình `Product` riêng, nối bằng `productId`. Bảng 80 cột được chia theo nhóm cột mà từng đội sở hữu.\n\n**Subdomain**: Pricing và Ordering là core (khuyến mãi linh hoạt là lợi thế cạnh tranh); Catalog và Inventory là supporting; thanh toán, gửi email, xác thực là generic: dùng nhà cung cấp, bọc bằng ACL.\n\n**Context map**: Catalog mở API đọc và phát event `ProductUpdated` (open host + published language); Ordering là customer của Inventory (giữ hàng có thời hạn) và của Pricing (giá tại thời điểm đặt được chép vào đơn, không tra lại sau); Ordering dựng ACL với cổng thanh toán.\n\n**Thứ tự (không vội microservices)**:\n1. *Tháng 1–2, modular monolith*: tách package theo 4 context, module này chỉ gọi API công khai của module kia; ArchUnit hoặc Spring Modulith chặn truy cập chéo (Spring Modulith cần Spring Boot 3; nếu còn Boot 2 thì dùng ArchUnit). Tách bảng `products` thành `catalog_products`, `prices`, `stock_items` theo [[expand-contract|expand-contract]], mỗi module chỉ đọc ghi bảng của mình (có thể dùng schema PostgreSQL riêng cho từng module).\n2. *Trước mùa sale*: đóng băng thay đổi kiến trúc, chỉ giữ ranh giới đã có. Lỗi của Pricing giờ đã nằm sau một API rõ ràng, có thể thêm timeout và fallback (dùng giá cache) cho trang sản phẩm.\n3. *Sau mùa sale*: tách service khi có lý do đo được, ví dụ Pricing cần scale riêng mùa khuyến mãi, hoặc cần deploy độc lập nhiều lần mỗi ngày. Module đã có ranh giới và dữ liệu riêng nên việc tách chủ yếu là đổi lời gọi trong JVM thành HTTP hay event, kèm [[outbox]].\n\n**Trả lời ban lãnh đạo**: mục tiêu thật là \"4 đội làm độc lập và lỗi một phần không làm sập phần khác\". Ranh giới context đạt phần lớn mục tiêu đó trong vài tháng mà không thêm rủi ro vận hành; microservice là bước sau, cho từng context có nhu cầu.",
+  "tradeoffs": [
+    {
+      "option": "Modular monolith theo bounded context trước, tách service sau",
+      "pros": [
+        "Ranh giới và quyền sở hữu dữ liệu rõ mà không thêm vận hành phân tán",
+        "An toàn trước mùa sale, đổi được nếu ranh giới sai"
+      ],
+      "cons": [
+        "Vẫn deploy chung, chưa scale riêng từng phần",
+        "Cần kỷ luật và kiểm tra tự động để ranh giới không bị phá"
+      ]
+    },
+    {
+      "option": "Tách 4 microservice ngay trong 6 tháng",
+      "pros": [
+        "Deploy và scale độc lập sớm",
+        "Đáp ứng đúng yêu cầu của ban lãnh đạo"
+      ],
+      "cons": [
+        "Đội vận hành chưa có kinh nghiệm, rủi ro cao ngay mùa sale",
+        "Ranh giới sai thì sửa giữa các service đắt hơn nhiều so với trong một repo"
+      ]
+    },
+    {
+      "option": "Giữ bảng `products` chung, chỉ tách code thành service",
+      "pros": [
+        "Không phải di chuyển dữ liệu"
+      ],
+      "cons": [
+        "Database chung vẫn buộc các đội phối hợp mỗi lần đổi schema",
+        "Có độ phức tạp của hệ phân tán mà không có lợi ích độc lập"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Lõi nghiệp vụ và các adapter cắm vào",
+  "nodes": [
+    {"id": "rest", "label": "REST adapter", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "listener", "label": "Kafka listener", "kind": "queue", "x": 0.85, "y": 0.05},
+    {"id": "core", "label": "Use case + domain", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "fake", "label": "Fake trong test", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "jpa", "label": "JPA adapter", "kind": "database", "x": 0.1, "y": 0.95},
+    {"id": "payment", "label": "Payment adapter", "kind": "external", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "rest-core", "from": "rest", "to": "core", "label": "gọi use case"},
+    {"id": "listener-core", "from": "listener", "to": "core", "label": "gọi cùng use case"},
+    {"id": "jpa-core", "from": "jpa", "to": "core", "label": "cài đặt port"},
+    {"id": "payment-core", "from": "payment", "to": "core", "label": "cài đặt port"},
+    {"id": "fake-core", "from": "fake", "to": "core", "label": "cài đặt port"}
+  ],
+  "steps": [
+    {"caption": "Lõi chứa use case `PlaceOrderUseCase` và domain (`Order`, quy tắc tồn kho). Nó định nghĩa các port: interface `OrderRepository`, `PaymentGateway`. Lõi không import Spring Web, JPA hay Kafka.", "show": ["core"]},
+    {"caption": "Driving adapter gọi vào lõi. REST controller đọc request, gọi use case, map kết quả ra HTTP.", "show": ["rest", "rest-core"], "highlight": ["rest-core"]},
+    {"caption": "Kafka listener là một driving adapter khác, gọi đúng use case đó. Quy tắc nghiệp vụ không bị viết lại lần hai.", "show": ["listener", "listener-core"], "highlight": ["listener-core"]},
+    {"caption": "Driven adapter cài đặt port do lõi định nghĩa. Mũi tên phụ thuộc trong code hướng **vào** lõi, dù lúc chạy lõi là bên gọi ra database.", "show": ["jpa", "jpa-core"], "highlight": ["jpa-core"]},
+    {"caption": "Adapter thanh toán dịch request và mã lỗi của đối tác. Đổi nhà cung cấp chỉ đổi adapter này.", "show": ["payment", "payment-core"], "highlight": ["payment-core"]},
+    {"caption": "Trong unit test, fake trong bộ nhớ cài đặt cùng port đó. Test use case chạy trong mili giây, không cần database hay Spring.", "show": ["fake", "fake-core"], "highlight": ["fake-core"]}
+  ]
+}

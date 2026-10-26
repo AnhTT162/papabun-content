@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "port-location",
+      "kind": "single",
+      "prompt": "Theo Hexagonal Architecture, interface `PaymentGateway` mà use case `PlaceOrder` cần nên nằm ở đâu?",
+      "options": [
+        "Trong lõi (application), cạnh use case, và adapter HTTP cài đặt nó",
+        "Trong module adapter cạnh HTTP client, để lõi import khi cần",
+        "Trong một module `common` mà cả lõi lẫn adapter cùng phụ thuộc",
+        "Không cần interface, use case gọi thẳng client do SDK cung cấp"
+      ],
+      "answer": 0,
+      "explanation": "Port thuộc về bên cần nó và nói ngôn ngữ của bên đó, nên adapter phụ thuộc vào lõi chứ không ngược lại. Đặt ở adapter thì lõi phụ thuộc hạ tầng. Module `common` tạo một điểm coupling mà mọi thứ đều phụ thuộc. Gọi thẳng SDK là bỏ hẳn ranh giới, test use case phải mock SDK."
+    },
+    {
+      "id": "driving-vs-driven",
+      "kind": "single",
+      "prompt": "Trong service đơn hàng, cái nào là driving (inbound) adapter?",
+      "options": [
+        "Kafka listener nhận event `CartCheckedOut` rồi gọi `PlaceOrderUseCase`",
+        "Class JPA cài đặt `OrderRepository` để lưu đơn",
+        "Client HTTP cài đặt `PaymentGateway` gọi cổng thanh toán",
+        "Class ghi bảng outbox cài đặt `OrderEventPublisher`"
+      ],
+      "answer": 0,
+      "explanation": "Driving adapter là bên kích hoạt lõi: nó nhận tín hiệu từ bên ngoài (HTTP, message, lịch) và gọi use case. Ba lựa chọn còn lại là driven adapter: lõi gọi chúng qua port khi cần lưu, thanh toán hay phát event. Listener đọc từ Kafka là driving, còn phần ghi ra Kafka (qua outbox) là driven."
+    },
+    {
+      "id": "when-overkill",
+      "kind": "single",
+      "prompt": "Một service quản lý danh mục tỉnh thành và đơn vị hành chính: đọc ghi bảng, không có quy tắc nghiệp vụ, hiếm khi đổi. Nhận xét nào hợp lý nhất về việc áp Hexagonal ở đây?",
+      "options": [
+        "Quá tay: thêm lớp và mapper mà không có quy tắc nào để bảo vệ; layered đơn giản là đủ",
+        "Nên áp, vì mọi service đều phải độc lập với database để dễ đổi database sau này",
+        "Nên áp, vì không có port thì không viết được unit test cho service",
+        "Nên áp, nhưng chỉ cho phần đọc, còn phần ghi để controller gọi thẳng repository"
+      ],
+      "answer": 0,
+      "explanation": "Giá trị của Hexagonal đến từ việc bảo vệ và test nghiệp vụ phức tạp tách khỏi hạ tầng. Không có nghiệp vụ thì chỉ còn chi phí. Đổi database là kịch bản hiếm; khi xảy ra, service CRUD nhỏ viết lại cũng rẻ. Service CRUD vẫn test được bằng test repository với Testcontainers."
+    },
+    {
+      "id": "domain-exception-http",
+      "kind": "single",
+      "prompt": "Use case ném `InsufficientStockException`. Ai quyết định API trả HTTP 409?",
+      "options": [
+        "Adapter web, qua `@RestControllerAdvice` map exception nghiệp vụ sang status",
+        "Chính exception, bằng cách đánh dấu `@ResponseStatus(HttpStatus.CONFLICT)` trong lõi",
+        "Use case, bằng cách trả `ResponseEntity` thay vì kết quả nghiệp vụ",
+        "Domain entity `Order`, vì nó biết khi nào hết hàng"
+      ],
+      "answer": 0,
+      "explanation": "HTTP là chi tiết của driving adapter web. Đặt `@ResponseStatus` hay `ResponseEntity` trong lõi làm lõi phụ thuộc Spring Web, và Kafka listener gọi cùng use case sẽ không biết làm gì với status code. Adapter web map exception sang HTTP; adapter Kafka có thể map cùng exception đó sang retry hay dead-letter."
+    }
+  ]
+}

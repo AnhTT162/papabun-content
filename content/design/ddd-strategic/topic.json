@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "ddd-strategic",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "DDD chiến lược",
+  "summary": "Subdomain core, supporting, generic và nơi đầu tư; bounded context và ubiquitous language; tìm ranh giới qua ngôn ngữ, event storming và Conway's law; các quan hệ trong context map (customer–supplier, conformist, ACL, open host service, shared kernel); bounded context và microservice; database dùng chung, entity service và cách tách dần một big ball of mud.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 16,
+  "prerequisites": ["clean-hexagonal", "layered-architecture"],
+  "terms": ["bounded-context", "ubiquitous-language", "context-map", "core-domain", "event-storming", "conways-law", "anti-corruption-layer", "modular-monolith", "strangler-fig", "value-object", "expand-contract", "outbox", "spring-modulith"],
+  "references": [
+    { "title": "Martin Fowler: Bounded Context", "url": "https://martinfowler.com/bliki/BoundedContext.html" },
+    { "title": "DDD Crew: Context Mapping", "url": "https://github.com/ddd-crew/context-mapping" },
+    { "title": "Eric Evans: Domain-Driven Design Reference", "url": "https://www.domainlanguage.com/ddd/reference/" },
+    { "title": "EventStorming (Alberto Brandolini)", "url": "https://www.eventstorming.com/" },
+    { "title": "Spring Modulith Reference", "url": "https://docs.spring.io/spring-modulith/reference/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn xác định ranh giới service trong dự án thế nào?\" Câu trả lời yếu là \"mỗi bảng một service\" hay \"theo màn hình\". Câu trả lời tốt dựa trên ngôn ngữ và quyền quyết định: chỗ từ ngữ đổi nghĩa, đội nào sở hữu quy tắc, dữ liệu nào luôn phải nhất quán cùng nhau. Hỏi tiếp \"nếu chia sai thì sao\": đó là lý do bắt đầu bằng module trong monolith, nơi dời ranh giới chỉ là refactor, rồi mới tách service." },
+    { "type": "callout", "style": "warning", "markdown": "Thư viện \"common-domain\" chứa entity dùng chung cho mọi service trông như tái sử dụng tốt, nhưng thật ra là shared kernel mất kiểm soát: đổi một trường là mọi service phải nâng phiên bản và deploy lại. Chỉ chia sẻ những thứ nhỏ và ổn định như value object `Money`; còn lại mỗi context tự mô hình hoá." }
+  ]
+}

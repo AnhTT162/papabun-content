@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Service đối soát thanh toán khó test, khó đổi ngân hàng",
+  "prompt": "Service đối soát mỗi đêm so giao dịch nội bộ với sao kê của 3 ngân hàng (mỗi ngân hàng một định dạng file và một API khác nhau), đánh dấu khớp, lệch hay thiếu, rồi tạo yêu cầu xử lý cho kế toán. Quy tắc khớp phức tạp: chênh phí, giao dịch tách đôi, lệch ngày do múi giờ và ngày nghỉ. Hiện trạng: Spring Boot kiểu layered, logic nằm trong service gọi thẳng Spring Data JPA, `RestTemplate` và đọc file; test chủ yếu là `@SpringBootTest` với Testcontainers, chạy 14 phút. Năm sau sẽ thêm 2 ngân hàng. Cùng service có một màn hình quản trị CRUD danh mục ngân hàng. Đội 5 người, không được dừng tính năng quá 2 sprint. Đề xuất kiến trúc và lộ trình.",
+  "hints": [
+    "Phần nào có nghiệp vụ phức tạp và thay đổi nhiều, phần nào chỉ là đọc ghi bảng?",
+    "Mỗi ngân hàng khác nhau ở đâu: quy tắc khớp hay chỉ cách lấy dữ liệu? Port đặt ở ranh giới nào?",
+    "Làm sao test được \"giao dịch tách đôi qua nửa đêm ngày nghỉ\" trong mili giây?",
+    "Chuyển dần thế nào mà vẫn giao tính năng mỗi sprint?"
+  ],
+  "solution": "**Phạm vi**: áp hexagonal cho phần đối soát; giữ layered cho CRUD danh mục ngân hàng, vì nó không có quy tắc để bảo vệ.\n\n**Lõi** (`reconciliation/domain`, `reconciliation/application`):\n- Domain: `Transaction`, `StatementLine` (đã chuẩn hoá, không phụ thuộc ngân hàng), `MatchResult`, các quy tắc khớp (chênh phí, tách đôi, lệch ngày theo lịch làm việc).\n- Use case: `ReconcileDayUseCase.reconcile(bankId, businessDate)`.\n- Driven port: `StatementSource` (trả `List<StatementLine>` đã chuẩn hoá), `TransactionLedger` (đọc giao dịch nội bộ), `MatchResultStore`, `DiscrepancyNotifier`, `BusinessCalendar`, và `Clock`.\n\n**Adapter**: mỗi ngân hàng một adapter cài đặt `StatementSource`, chịu trách nhiệm tải file hay gọi API rồi chuẩn hoá. Thêm ngân hàng thứ 4 và 5 là thêm adapter và contract test, lõi không đổi. JPA adapter cho ledger và kết quả. Driving adapter: job theo lịch và endpoint \"chạy lại ngày X\" cho kế toán, cùng gọi một use case.\n\n**Test**: quy tắc khớp được unit test với fake `StatementSource` và `BusinessCalendar` cố định; hàng trăm ca trong vài giây. Mỗi adapter ngân hàng có test với file mẫu thật (đã ẩn dữ liệu) và một contract test chung cho `StatementSource`. Giữ vài `@SpringBootTest` end-to-end. Thời gian CI giảm vì phần lớn ca chuyển sang unit test.\n\n**Lộ trình không dừng tính năng**:\n1. Sprint 1: viết [[characterization-test|characterization test]] cho đối soát hiện tại với dữ liệu thật của vài ngày; tạo `StatementSource` và chuyển ngân hàng đầu tiên sang adapter (code cũ làm cài đặt).\n2. Dần đưa quy tắc khớp từ service vào domain, mỗi PR một quy tắc, test xanh.\n3. Chuyển hai ngân hàng còn lại; thêm ArchUnit chặn `domain` import `jakarta.persistence`, `org.springframework.web`.\n4. Ngân hàng mới năm sau viết thẳng theo cấu trúc mới.\n\n**Thực dụng**: `@Transactional` trên application service; domain không có annotation JPA vì mô hình chuẩn hoá khác bảng lưu trữ, nên map ở adapter là xứng đáng.",
+  "tradeoffs": [
+    {
+      "option": "Hexagonal cho phần đối soát, layered cho CRUD",
+      "pros": [
+        "Quy tắc khó được test nhanh và tách khỏi định dạng từng ngân hàng",
+        "Thêm ngân hàng chỉ thêm adapter"
+      ],
+      "cons": [
+        "Hai kiểu tổ chức trong một service, cần quy ước rõ",
+        "Thêm mapping giữa mô hình chuẩn hoá và bảng"
+      ]
+    },
+    {
+      "option": "Hexagonal cho toàn bộ service, kể cả CRUD",
+      "pros": [
+        "Một kiểu cấu trúc thống nhất"
+      ],
+      "cons": [
+        "CRUD đi qua nhiều lớp model và mapper mà không thêm giá trị",
+        "Tốn thời gian của 2 sprint có hạn vào chỗ ít rủi ro"
+      ]
+    },
+    {
+      "option": "Giữ layered, chỉ tách mỗi ngân hàng thành một class Strategy",
+      "pros": [
+        "Thay đổi nhỏ nhất, làm được trong một sprint"
+      ],
+      "cons": [
+        "Quy tắc khớp vẫn dính JPA và `RestTemplate`, test vẫn chậm",
+        "Phụ thuộc hạ tầng vẫn hướng từ nghiệp vụ ra ngoài"
+      ]
+    }
+  ]
+}

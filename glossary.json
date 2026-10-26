@@ -1357,7 +1357,7 @@
       "meaning": "Hibernate so sánh trạng thái entity lúc flush với bản chụp lúc tải; field nào đổi thì tự sinh `UPDATE`, không cần gọi `save`.",
       "example": "Trong `@Transactional`, `order.setStatus(PAID)` tự được ghi khi commit.",
       "related": ["persistence-context"],
-      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking", "layered-architecture"]
+      "topics": ["acid-transactions-basics", "optimistic-pessimistic-locking", "layered-architecture", "clean-hexagonal"]
     },
     {
       "id": "dual-write",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic"]
     },
     {
       "id": "replication-slot",
@@ -2229,7 +2229,7 @@
       "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
       "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
       "related": ["schema-migration", "backfill", "rolling-deployment"],
-      "topics": ["schema-migration", "refactoring-tech-debt"]
+      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic"]
     },
     {
       "id": "rolling-deployment",
@@ -3245,7 +3245,7 @@
       "meaning": "Định dạng body lỗi chuẩn cho HTTP API theo RFC 9457, gồm `type`, `title`, `status`, `detail`, `instance`; Spring 6 có class `ProblemDetail` và `ErrorResponse`.",
       "example": "`ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, \"Đơn đã thanh toán\")`.",
       "related": ["dispatcher-servlet"],
-      "topics": ["spring-mvc-flow"]
+      "topics": ["spring-mvc-flow", "clean-hexagonal"]
     },
     {
       "id": "mass-assignment",
@@ -4013,7 +4013,7 @@
       "meaning": "Nguyên tắc I của SOLID: bên dùng không nên phụ thuộc vào method nó không gọi; tách interface lớn theo nhu cầu bên dùng.",
       "example": "`ReportService` chỉ phụ thuộc `OrderReader`, không phụ thuộc repository có `deleteAll()`.",
       "related": ["solid"],
-      "topics": ["solid"]
+      "topics": ["solid", "clean-hexagonal"]
     },
     {
       "id": "dependency-inversion",
@@ -4021,7 +4021,7 @@
       "meaning": "Nguyên tắc D của SOLID: module nghiệp vụ không phụ thuộc module hạ tầng; cả hai phụ thuộc abstraction do phía nghiệp vụ sở hữu.",
       "example": "Interface `OrderNotifier` nằm trong module `order`; `KafkaOrderNotifier` ở module hạ tầng cài đặt nó.",
       "related": ["solid", "dependency-injection", "ioc"],
-      "topics": ["solid", "structural-patterns"]
+      "topics": ["solid", "structural-patterns", "clean-hexagonal"]
     },
     {
       "id": "contract-test",
@@ -4053,7 +4053,7 @@
       "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
       "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
       "related": ["dependency-inversion", "coupling"],
-      "topics": ["design-principles", "solid", "layered-architecture"]
+      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal"]
     },
     {
       "id": "template-method",
@@ -4093,7 +4093,7 @@
       "meaning": "Kiến trúc port và adapter: lõi nghiệp vụ định nghĩa interface (port), còn database, broker, HTTP là adapter cài đặt hoặc gọi các port đó.",
       "example": "Port `OrderRepository` nằm trong lõi; `JpaOrderRepository` là adapter ở tầng hạ tầng.",
       "related": ["dependency-inversion"],
-      "topics": ["solid"]
+      "topics": ["solid", "clean-hexagonal"]
     },
     {
       "id": "layered-architecture",
@@ -4133,7 +4133,7 @@
       "meaning": "Mô hình mà entity chỉ có getter/setter còn mọi quy tắc nghiệp vụ nằm trong service; quy tắc dễ bị lặp và entity dễ rơi vào trạng thái sai.",
       "example": "Mọi service đều tự kiểm tra `order.getStatus() == PAID` trước khi huỷ, thay vì gọi `order.cancel()`.",
       "related": ["layered-architecture"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "clean-hexagonal"]
     },
     {
       "id": "mapstruct",
@@ -4237,7 +4237,7 @@
       "meaning": "Dự án Spring hỗ trợ modular monolith: coi mỗi package con trực tiếp của package gốc là một module, kiểm tra trong test rằng module khác chỉ dùng API công khai của nó, và hỗ trợ event giữa các module.",
       "example": "`ApplicationModules.of(ShopApplication.class).verify()` làm test đỏ khi `payment` gọi `shop.order.internal.OrderPricing`.",
       "related": ["modular-monolith", "archunit"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "ddd-strategic"]
     },
     {
       "id": "modular-monolith",
@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "ddd-strategic"]
     },
     {
       "id": "adapter-pattern",
@@ -4293,7 +4293,7 @@
       "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
       "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
       "related": ["adapter-pattern"],
-      "topics": ["structural-patterns"]
+      "topics": ["structural-patterns", "ddd-strategic"]
     },
     {
       "id": "strategy-pattern",
@@ -4405,7 +4405,7 @@
       "meaning": "Test ghi lại hành vi hiện tại của code cũ, kể cả chỗ trông như bug, để làm lưới an toàn trước khi refactor.",
       "example": "Chạy hàm tính phí cũ với 200 đơn hàng thật, lưu kết quả làm giá trị mong đợi.",
       "related": ["refactoring"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "clean-hexagonal"]
     },
     {
       "id": "strangler-fig",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4453,7 +4453,7 @@
       "meaning": "Object nhỏ, bất biến, được so sánh bằng giá trị thay vì danh tính, và tự kiểm tra tính hợp lệ khi tạo.",
       "example": "`record Money(BigDecimal amount, Currency currency)` hai đối tượng cùng số tiền và tiền tệ là bằng nhau.",
       "related": ["primitive-obsession"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic"]
     },
     {
       "id": "feature-flag",
@@ -4470,6 +4470,78 @@
       "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
       "related": ["technical-debt"],
       "topics": ["refactoring-tech-debt"]
+    },
+    {
+      "id": "port",
+      "term": "Port",
+      "meaning": "Interface do lõi nghiệp vụ định nghĩa trong Hexagonal Architecture: driving port là use case bên ngoài gọi vào, driven port là thứ lõi cần từ hạ tầng.",
+      "example": "`PlaceOrderUseCase` (driving), `OrderRepository` và `PaymentGateway` (driven).",
+      "related": ["hexagonal-architecture", "dependency-inversion"],
+      "topics": ["clean-hexagonal"]
+    },
+    {
+      "id": "clean-architecture",
+      "term": "Clean Architecture",
+      "meaning": "Kiến trúc của Robert C. Martin xếp code thành các vòng đồng tâm (entities, use cases, interface adapters, frameworks) và chỉ cho phụ thuộc hướng vào trong.",
+      "example": "Use case không import Spring Web hay JPA; controller và repository JPA ở vòng ngoài phụ thuộc vào use case.",
+      "related": ["dependency-rule", "hexagonal-architecture"],
+      "topics": ["clean-hexagonal"]
+    },
+    {
+      "id": "dependency-rule",
+      "term": "Dependency rule",
+      "meaning": "Quy tắc của Clean Architecture: phụ thuộc trong code chỉ hướng từ vòng ngoài (framework, adapter) vào vòng trong (nghiệp vụ), không bao giờ ngược lại.",
+      "example": "ArchUnit báo lỗi khi class trong `domain` import `jakarta.persistence.EntityManager`.",
+      "related": ["clean-architecture", "dependency-inversion"],
+      "topics": ["clean-hexagonal"]
+    },
+    {
+      "id": "bounded-context",
+      "term": "Bounded context",
+      "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
+      "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
+      "related": ["ubiquitous-language", "context-map"],
+      "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "ubiquitous-language",
+      "term": "Ubiquitous language",
+      "meaning": "Ngôn ngữ chung mà người nghiệp vụ và kỹ sư cùng dùng trong một bounded context, xuất hiện cả trong tên class và method.",
+      "example": "Nghiệp vụ nói \"giữ hàng\" thì code có `reserveStock()`, không phải `updateQty(-1)`.",
+      "related": ["bounded-context"],
+      "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "context-map",
+      "term": "Context map",
+      "meaning": "Bản đồ các bounded context và kiểu quan hệ giữa chúng (customer–supplier, conformist, anti-corruption layer, open host service...).",
+      "example": "Ordering là downstream của Inventory theo kiểu customer–supplier và dựng ACL với cổng thanh toán.",
+      "related": ["bounded-context", "anti-corruption-layer"],
+      "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "core-domain",
+      "term": "Core domain",
+      "meaning": "Phần nghiệp vụ làm doanh nghiệp khác đối thủ; nơi nên tự xây và đầu tư người giỏi nhất. Đối lập với supporting và generic subdomain.",
+      "example": "Với công ty cho vay, chấm điểm tín dụng là core; xác thực người dùng là generic.",
+      "related": ["bounded-context"],
+      "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "event-storming",
+      "term": "Event storming",
+      "meaning": "Buổi làm việc với người nghiệp vụ, dán các sự kiện nghiệp vụ (ở thì quá khứ) lên tường theo thời gian để khám phá luồng, điểm đau và ranh giới context.",
+      "example": "Chuỗi `Đã đặt hàng` → `Đã giữ hàng` → `Đã thanh toán` → `Đã xuất kho` lộ ra ranh giới giữa Ordering và Inventory.",
+      "related": ["bounded-context"],
+      "topics": ["ddd-strategic"]
+    },
+    {
+      "id": "conways-law",
+      "term": "Conway's law",
+      "meaning": "Quan sát rằng kiến trúc hệ thống phản chiếu cấu trúc giao tiếp của tổ chức xây dựng nó.",
+      "example": "Ba đội cùng sửa một module thì ranh giới trong module đó dần bị trộn lẫn.",
+      "related": ["bounded-context"],
+      "topics": ["ddd-strategic"]
     }
   ]
 }

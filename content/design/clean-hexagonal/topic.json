@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "clean-hexagonal",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "design",
+  "title": "Clean & Hexagonal Architecture",
+  "summary": "Port và adapter, driving và driven; dependency rule và khác biệt với kiến trúc phân lớp; cấu trúc package; domain model và JPA entity, transaction, tạo bean, port to hay nhỏ, lỗi và validate qua ranh giới; kiểm tra bằng ArchUnit; khi nào quá tay và cách chuyển dần từ layered.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 16,
+  "prerequisites": ["layered-architecture", "solid"],
+  "terms": ["hexagonal-architecture", "clean-architecture", "port", "dependency-rule", "dependency-inversion", "interface-segregation", "archunit", "anemic-domain-model", "dirty-checking", "problem-detail", "outbox", "characterization-test"],
+  "references": [
+    { "title": "Alistair Cockburn: Hexagonal Architecture", "url": "https://alistair.cockburn.us/hexagonal-architecture/" },
+    { "title": "Robert C. Martin: The Clean Architecture", "url": "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" },
+    { "title": "ArchUnit User Guide: Architectures (Onion Architecture)", "url": "https://www.archunit.org/userguide/html/000_Index.html#_onion_architecture" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn có dùng Hexagonal trong dự án không, có đáng không?\" Câu trả lời mạnh nhất có cả hai phía: chỗ nó đáng (module có quy tắc phức tạp và nhiều tích hợp, test nhanh hơn, đổi nhà cung cấp chỉ đổi adapter) và chỗ bạn **không** dùng (CRUD, service nhỏ). Hỏi tiếp \"domain có annotation JPA không\": nêu lựa chọn của bạn và cái giá của nó, không có đáp án duy nhất." },
+    { "type": "callout", "style": "warning", "markdown": "Cấu trúc thư mục `domain/`, `application/`, `adapter/` không tự làm nên Hexagonal. Nếu `domain` vẫn import `jakarta.persistence.EntityManager` hay class của Spring Web, quy tắc phụ thuộc đã bị phá. Thêm test ArchUnit ngay từ đầu, trước khi có ai viết import sai." }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Context map của một hệ thống bán lẻ",
+  "nodes": [
+    {"id": "catalog", "label": "Catalog", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "inventory", "label": "Inventory", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "ordering", "label": "Ordering", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "payment", "label": "Cổng thanh toán", "kind": "external", "x": 0.85, "y": 0.5},
+    {"id": "carrier", "label": "Đơn vị giao vận", "kind": "external", "x": 0.1, "y": 0.95},
+    {"id": "accounting", "label": "Accounting", "kind": "service", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "catalog-ordering", "from": "catalog", "to": "ordering", "label": "Open host service"},
+    {"id": "inventory-ordering", "from": "inventory", "to": "ordering", "label": "Customer–supplier"},
+    {"id": "payment-ordering", "from": "payment", "to": "ordering", "label": "ACL ở Ordering"},
+    {"id": "carrier-ordering", "from": "carrier", "to": "ordering", "label": "Conformist"},
+    {"id": "ordering-accounting", "from": "ordering", "to": "accounting", "label": "Published language"}
+  ],
+  "steps": [
+    {"caption": "Ordering là core domain: quy tắc đặt hàng, áp giá và khuyến mãi lúc đặt, điều phối việc giữ hàng và thanh toán. Mỗi context có mô hình riêng; \"sản phẩm\" ở đây chỉ là `productId`, tên và giá tại thời điểm đặt.", "show": ["ordering"]},
+    {"caption": "Catalog mở API đọc sản phẩm với schema công bố cho mọi bên (open host service + published language). Ordering chỉ lấy đúng các trường nó cần.", "show": ["catalog", "catalog-ordering"], "highlight": ["catalog-ordering"]},
+    {"caption": "Inventory là upstream của Ordering theo kiểu customer–supplier: đội Ordering nêu nhu cầu (giữ hàng 15 phút), đội Inventory đưa vào kế hoạch của họ. Mũi tên chỉ hướng mô hình đi từ upstream xuống downstream.", "show": ["inventory", "inventory-ordering"], "highlight": ["inventory-ordering"]},
+    {"caption": "Cổng thanh toán là hệ thống bên ngoài có mô hình riêng và hay đổi. Ordering dựng anti-corruption layer để dịch trạng thái và mã lỗi của cổng sang mô hình `Payment` của mình.", "show": ["payment", "payment-ordering"], "highlight": ["payment-ordering"]},
+    {"caption": "Đơn vị giao vận lớn không đổi API vì một khách hàng, và tích hợp chỉ có vài trường. Ordering chấp nhận dùng nguyên mô hình của họ (conformist): rẻ hơn dựng ACL.", "show": ["carrier", "carrier-ordering"], "highlight": ["carrier-ordering"]},
+    {"caption": "Accounting không gọi Ordering. Ordering phát event `OrderPaid` có schema công bố; Accounting lưu theo mô hình kế toán của mình. Hai đội deploy độc lập.", "show": ["accounting", "ordering-accounting"], "highlight": ["ordering-accounting"]}
+  ]
+}
