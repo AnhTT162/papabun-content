@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "main-benefit",
+      "kind": "single",
+      "prompt": "Lợi ích nào là lý do mạnh nhất để chọn microservices?",
+      "options": [
+        "Nhiều đội release và vận hành phần của mình độc lập",
+        "Code trong mỗi service ngắn hơn nên tổng số bug giảm đi",
+        "Hệ thống tự động nhanh hơn vì mỗi service nhỏ và nhẹ",
+        "Không cần thiết kế ranh giới module vì mạng đã tách các phần ra"
+      ],
+      "answer": 0,
+      "explanation": "Microservices chủ yếu giải bài toán tổ chức: độc lập release, scale và cô lập lỗi theo đội. Số bug không giảm tự động, lời gọi qua mạng thường làm chậm hơn chứ không nhanh hơn, và ranh giới sai giữa các service còn khó sửa hơn ranh giới sai trong một ứng dụng."
+    },
+    {
+      "id": "distributed-monolith-signal",
+      "kind": "single",
+      "prompt": "Dấu hiệu nào cho thấy hệ thống đang là distributed monolith?",
+      "options": [
+        "Mỗi tính năng mới phải sửa và deploy đồng thời bốn service",
+        "Mỗi service có database riêng và phát event khi dữ liệu đổi",
+        "Các service dùng chung một thư viện logging và tracing",
+        "Một service có nhiều instance chạy sau load balancer"
+      ],
+      "answer": 0,
+      "explanation": "Phải sửa và deploy cùng lúc nhiều service nghĩa là ranh giới không theo lý do thay đổi: có chi phí phân tán mà không có độc lập. Database riêng cùng event là cách làm đúng; thư viện hạ tầng dùng chung là bình thường; nhiều instance sau load balancer chỉ là scale ngang."
+    },
+    {
+      "id": "split-by",
+      "kind": "single",
+      "prompt": "Đội đề xuất tách hệ thống thành `UserService`, `ProductService`, `OrderService`, `ValidationService`, `NotificationService`, trong đó `ValidationService` kiểm tra dữ liệu cho mọi service khác. Vấn đề lớn nhất là gì?",
+      "options": [
+        "`ValidationService` là ranh giới kỹ thuật mà mọi service phụ thuộc",
+        "Thiếu API gateway đứng trước năm service để định tuyến request",
+        "Tên service phải kết thúc bằng `-api` theo quy ước REST",
+        "`NotificationService` nên được gộp vào `UserService`"
+      ],
+      "answer": 0,
+      "explanation": "Quy tắc validate thuộc về nghiệp vụ của từng service. Gom chúng vào một service riêng tạo một điểm mà mọi thay đổi phải đi qua và mọi lời gọi phụ thuộc vào, tức là coupling cao và một điểm lỗi chung. Số lượng service hay quy ước đặt tên không phải vấn đề chính."
+    },
+    {
+      "id": "availability-chain",
+      "kind": "single",
+      "prompt": "Luồng thanh toán gọi đồng bộ qua 5 service, mỗi service độc lập sẵn sàng 99,9%. Khả dụng của cả luồng xấp xỉ bao nhiêu, và hệ quả thiết kế là gì?",
+      "options": [
+        "Khoảng 99,5%: nên giảm số phụ thuộc đồng bộ trên đường chính",
+        "Khoảng 99,9%: khả dụng bằng service yếu nhất trong chuỗi",
+        "Khoảng 99,99%: nhiều service dự phòng cho nhau nên tăng lên",
+        "Khoảng 95%: mỗi service làm giảm khả dụng đi 1%"
+      ],
+      "answer": 0,
+      "explanation": "Cả 5 service phải cùng sống: 0,999^5 ≈ 0,995, tức thời gian lỗi tăng khoảng 5 lần (từ khoảng 43 phút lên khoảng 3,6 giờ mỗi tháng). Các service trong chuỗi không dự phòng cho nhau. Đây là lập luận định lượng để giữ đường chính ít phụ thuộc đồng bộ, chuyển phần không thiết yếu sang event, và nghi ngờ ranh giới khi một thao tác phải gọi qua nhiều service."
+    }
+  ]
+}

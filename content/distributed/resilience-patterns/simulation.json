@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Circuit breaker quanh lời gọi tới Payment",
+  "instructions": "Bấm \"Gọi lỗi\" hoặc \"Gọi chậm\" vài lần để breaker mở, thử gọi khi đang mở, rồi \"Hết thời gian chờ\" và xem cần bao nhiêu lời gọi thử thành công để đóng lại. Bản mô phỏng đếm số lỗi gần đây cho dễ theo dõi; Resilience4j thật tính tỉ lệ lỗi trong một cửa sổ trượt.",
+  "config": {
+    "states": [
+      { "id": "closed", "label": "CLOSED", "x": 0.1, "y": 0.5, "note": "Lời gọi đi qua bình thường. Breaker đếm lời gọi lỗi và lời gọi chậm; thành công thì bộ đếm về 0 (trong bản mô phỏng này)." },
+      { "id": "open", "label": "OPEN", "x": 0.9, "y": 0.5, "note": "Không gọi Payment nữa: trả lỗi `CallNotPermittedException` ngay, hoặc dùng fallback. Payment có thời gian hồi phục, và thread của bạn không bị giữ chờ timeout." },
+      { "id": "half-open", "label": "HALF_OPEN", "x": 0.5, "y": 0.1, "note": "Cho một số lời gọi thử đi qua (ở đây là 2). Đủ số lần thành công thì đóng lại; một lần lỗi hay chậm là mở lại. (Đơn giản hoá: Resilience4j chờ đủ số lời gọi thử rồi mới so tỉ lệ lỗi với ngưỡng.)" }
+    ],
+    "initial": "closed",
+    "events": [
+      { "id": "success", "label": "Gọi thành công" },
+      { "id": "fail", "label": "Gọi lỗi" },
+      { "id": "slow", "label": "Gọi chậm (> 2s)" },
+      { "id": "wait", "label": "Hết thời gian chờ" }
+    ],
+    "counters": [
+      { "id": "failures", "label": "Lỗi hoặc chậm gần đây", "initial": 0 },
+      { "id": "probes", "label": "Lời gọi thử thành công", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "closed-ok", "from": "closed", "event": "success", "to": "closed", "effects": [ { "counter": "failures", "set": 0 } ] },
+      { "id": "closed-fail", "from": "closed", "event": "fail", "to": "closed", "guard": { "counter": "failures", "lt": 2 }, "effects": [ { "counter": "failures", "add": 1 } ] },
+      { "id": "closed-slow", "from": "closed", "event": "slow", "to": "closed", "guard": { "counter": "failures", "lt": 2 }, "effects": [ { "counter": "failures", "add": 1 } ], "note": "Lời gọi chậm cũng bị đếm (`slowCallDurationThreshold`). Dependency treo giữ thread của bạn lâu hơn dependency trả lỗi nhanh." },
+      { "id": "trip-fail", "from": "closed", "event": "fail", "to": "open", "label": "vượt ngưỡng", "effects": [ { "counter": "failures", "set": 0 } ], "note": "Vượt ngưỡng lỗi: breaker mở. Từ giờ lời gọi tới Payment bị chặn ngay, không tốn thread và không dồn tải lên Payment." },
+      { "id": "trip-slow", "from": "closed", "event": "slow", "to": "open", "label": "vượt ngưỡng chậm", "effects": [ { "counter": "failures", "set": 0 } ], "note": "Quá nhiều lời gọi chậm: breaker mở dù Payment chưa trả lỗi nào." },
+      { "id": "open-call-ok", "from": "open", "event": "success", "to": "open", "label": "bị chặn", "note": "Đang mở nên lời gọi không được gửi đi, dù Payment có thể đã khoẻ. Breaker chỉ thử lại sau thời gian chờ." },
+      { "id": "open-call-fail", "from": "open", "event": "fail", "to": "open", "label": "bị chặn", "note": "Lời gọi bị chặn ngay, trả fallback (ví dụ: \"thanh toán đang bận, vui lòng thử lại sau\")." },
+      { "id": "open-call-slow", "from": "open", "event": "slow", "to": "open", "label": "bị chặn" },
+      { "id": "to-half", "from": "open", "event": "wait", "to": "half-open", "label": "hết chờ", "effects": [ { "counter": "probes", "set": 0 } ], "note": "Hết `waitDurationInOpenState`: chuyển sang thử nghiệm với số lời gọi giới hạn." },
+      { "id": "probe-ok", "from": "half-open", "event": "success", "to": "half-open", "guard": { "counter": "probes", "lt": 1 }, "effects": [ { "counter": "probes", "add": 1 } ], "note": "Một lời gọi thử thành công. Cần thêm một lần nữa." },
+      { "id": "recover", "from": "half-open", "event": "success", "to": "closed", "label": "thử đủ, đóng", "effects": [ { "counter": "probes", "set": 0 } ], "note": "Đủ lời gọi thử thành công: Payment đã hồi phục, breaker đóng lại." },
+      { "id": "retrip-fail", "from": "half-open", "event": "fail", "to": "open", "label": "thử lỗi", "note": "Lời gọi thử lỗi: mở lại và chờ thêm một chu kỳ." },
+      { "id": "retrip-slow", "from": "half-open", "event": "slow", "to": "open", "label": "thử chậm" }
+    ],
+    "invalidNote": "Sự kiện này không đổi trạng thái ở đây."
+  }
+}

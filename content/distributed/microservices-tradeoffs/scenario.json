@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Monolith 6 năm, 5 đội, deploy mỗi tuần một lần",
+  "prompt": "Một nền tảng đặt phòng khách sạn chạy trên một monolith Spring Boot 6 năm tuổi, một PostgreSQL. 5 đội (khoảng 35 kỹ sư): tìm kiếm, đặt phòng, thanh toán, đối tác khách sạn, khuyến mãi. Đau hiện tại: deploy chung mỗi thứ Năm, hàng đợi merge kéo dài; lỗi ở module khuyến mãi từng làm sập cả trang đặt phòng; tìm kiếm chiếm 70% CPU giờ cao điểm và buộc scale cả ứng dụng; build và test mất 50 phút. CTO muốn \"chuyển hết sang microservices trong năm nay\". Đội platform 3 người, đã có Kubernetes và CI/CD cơ bản, chưa có tracing. Đề xuất nên tách gì, theo thứ tự nào, và cái gì nên giữ lại.",
+  "hints": [
+    "Mỗi nỗi đau có giải pháp rẻ hơn microservices không? Nỗi đau nào thật sự cần tách deploy?",
+    "Phần nào có tải, nhịp thay đổi hoặc yêu cầu khả dụng khác hẳn phần còn lại?",
+    "Trước khi tách service đầu tiên, nền tảng cần có những gì?",
+    "Dữ liệu của phần được tách hiện đang bị ai đọc ghi?"
+  ],
+  "solution": "**Tách theo lý do, không tách hết**:\n- *Tìm kiếm*: tải khác hẳn (70% CPU), chủ yếu đọc, chấp nhận dữ liệu trễ vài giây. Tách đầu tiên: service riêng đọc từ index tìm kiếm (Elasticsearch/OpenSearch) được cập nhật bằng event từ phần đặt phòng và đối tác (qua outbox hoặc CDC). Scale riêng, lỗi không ảnh hưởng đặt phòng.\n- *Khuyến mãi*: lỗi từng làm sập đặt phòng và thay đổi rất thường xuyên. Trước tiên cô lập ngay trong monolith (bulkhead, timeout, fallback \"không áp khuyến mãi\"); tách thành service khi ranh giới đã rõ.\n- *Đặt phòng và thanh toán*: lõi nghiệp vụ, cần nhất quán cao, phụ thuộc chặt nhau. Giữ trong phần còn lại, chia module rõ ràng; tách thanh toán sau nếu có lý do (chuẩn bảo mật thẻ, nhịp release).\n- *Đối tác khách sạn*: tích hợp với nhiều hệ thống bên ngoài, giữ trong monolith dưới dạng module có anti-corruption layer.\n\n**Song song, giải các nỗi đau không cần tách**:\n- Chia monolith thành module theo đội với kiểm tra ranh giới tự động (Spring Modulith hoặc ArchUnit); tách schema theo module.\n- Build nhanh hơn: test theo module thay đổi, cache build. Deploy hằng ngày bằng feature flag thay vì đợi thứ Năm.\n\n**Nền tảng trước service đầu tiên**: tracing (OpenTelemetry), log tập trung có correlation id, template service với health check và metric chuẩn, contract test trong CI. Đội platform 3 người nên làm phần này trước khi có service thứ hai.\n\n**Thứ tự**: quý 1: module hoá và tracing; quý 2: tách tìm kiếm; quý 3: đánh giá lại, tách khuyến mãi nếu ranh giới đã ổn. Thành công đo bằng tần suất deploy của từng đội, số sự cố lan từ module này sang module khác, và chi phí hạ tầng giờ cao điểm.\n\n**Trả lời CTO**: mục tiêu là 5 đội release độc lập và lỗi không lan. Tách 2–3 phần có lý do rõ đạt phần lớn mục tiêu đó với rủi ro thấp; tách cả hệ thống trong một năm với đội platform 3 người dễ tạo ra distributed monolith.",
+  "tradeoffs": [
+    {
+      "option": "Tách có chọn lọc (tìm kiếm trước), module hoá phần còn lại",
+      "pros": [
+        "Giải đúng nỗi đau lớn nhất (tải tìm kiếm) sớm",
+        "Rủi ro thấp, nền tảng lớn dần theo nhu cầu"
+      ],
+      "cons": [
+        "Vẫn còn một khối lớn deploy chung",
+        "Cần kỷ luật giữ ranh giới module"
+      ]
+    },
+    {
+      "option": "Tách toàn bộ thành 10–12 microservices trong năm",
+      "pros": [
+        "Mỗi đội độc lập hoàn toàn nếu ranh giới đúng"
+      ],
+      "cons": [
+        "Đội platform 3 người, chưa có tracing: vận hành quá tải",
+        "Ranh giới đặt phòng và thanh toán dễ chia sai, cần saga phức tạp"
+      ]
+    },
+    {
+      "option": "Giữ nguyên monolith, chỉ tăng máy và tối ưu build",
+      "pros": [
+        "Không có rủi ro kiến trúc"
+      ],
+      "cons": [
+        "Không giải được deploy chung và lỗi lan giữa các module",
+        "Scale cả ứng dụng vì một phần tốn chi phí"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Ba đặc điểm cốt lõi của một microservice?", "back": "Deploy độc lập, gắn với một năng lực nghiệp vụ, sở hữu dữ liệu riêng (và có một đội chủ quản)." },
+    { "id": "real-benefit", "front": "Lợi ích chính của microservices nằm ở đâu?", "back": "Ở tổ chức: nhiều đội release, scale và vận hành phần của mình độc lập." },
+    { "id": "costs", "front": "Bốn nhóm chi phí của microservices?", "back": "Lời gọi mạng không tin cậy, không có transaction chung, vận hành nhân theo số service, và test end-to-end khó." },
+    { "id": "split", "front": "Nên chia service theo gì?", "back": "Theo năng lực nghiệp vụ và bounded context, khớp với đội; không theo tầng kỹ thuật hay theo entity." },
+    { "id": "not-when", "front": "Khi nào không nên chọn microservices?", "back": "Đội nhỏ, nghiệp vụ chưa ổn định, chưa có nền tảng deploy và giám sát tự động." },
+    { "id": "prereq", "front": "Điều kiện tiên quyết trước khi có nhiều service?", "back": "Deploy tự động nhanh, giám sát và cảnh báo, log và tracing tập trung, đội làm chủ service tới production." },
+    { "id": "contract-test", "front": "Consumer-driven contract test giữa service giải quyết gì?", "back": "Bắt lỗi phá hợp đồng API ngay trong CI của provider, thay cho nhiều test end-to-end chậm và giòn." },
+    { "id": "merge-ok", "front": "Gộp các microservice lại có phải là thất bại không?", "back": "Không; gộp các service luôn deploy cùng nhau hay gọi nhau liên tục là quyết định kiến trúc hợp lệ." }
+  ]
+}

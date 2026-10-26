@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Database chập 30 giây, cả hệ thống sập 40 phút",
+  "context": "Luồng đặt hàng: API gateway gọi Order service, Order gọi Inventory, Inventory đọc PostgreSQL. Ba nhóm khác nhau, mỗi nhóm tự thêm retry \"cho chắc\". Bình thường Inventory nhận khoảng 450 request mỗi giây. Một đêm, PostgreSQL của Inventory failover mất khoảng 30 giây.",
+  "buggyCode": "# API gateway (route tới Order)\nretry:\n  attempts: 3            # gồm lần đầu\n  retryOn: [502, 503, 504, connect-failure]\n\n# Order service (application.yml, Resilience4j)\nresilience4j.retry.instances.inventory:\n  maxAttempts: 5          # gồm lần đầu\n  waitDuration: 100ms     # chờ cố định\n  retryExceptions:\n    - java.io.IOException\n    - org.springframework.web.client.HttpServerErrorException\n\n# Inventory service: SDK gọi PostgreSQL qua connection pool,\n# thêm một vòng retry riêng khi lấy connection thất bại\ninventory.db.retry.attempts: 3",
+  "symptom": {
+    "description": "Database hồi phục sau khoảng 30 giây, nhưng Inventory tiếp tục lỗi, rồi Order cạn thread, rồi gateway trả `503` cho mọi request. Metric của Inventory trong sự cố:",
+    "output": "02:14:00  inventory rps=452    db_pool_active=18/50   p99=40ms\n02:14:10  inventory rps=6810   db_pool_active=50/50   p99=timeout   (DB failover bắt đầu)\n02:14:40  inventory rps=19870  db_pool_active=50/50   p99=timeout   (DB đã hồi phục)\n02:15:00  inventory rps=20120  db_pool_pending=4100   cpu=100%\n02:30:00  inventory rps=18950  db_pool_pending=3870   cpu=100%\n02:54:00  inventory rps=470    db_pool_active=21/50   p99=45ms      (sau khi tắt retry ở gateway và Order)"
+  },
+  "diagnosis": {
+    "question": "Vì sao hệ thống không tự hồi phục khi database đã chạy lại?",
+    "options": [
+      "Retry ở ba tầng nhân với nhau (tới 45 lời gọi cho một request) và chờ cố định không jitter, nên tải dồn giữ Inventory quá tải",
+      "Connection pool 50 connection quá nhỏ; tăng lên 500 là Inventory chịu được tải sau failover",
+      "PostgreSQL sau failover chạy ở chế độ chỉ đọc nên mọi lần ghi của Inventory đều thất bại",
+      "Gateway cache lại response `503` của Inventory nên client tiếp tục nhận lỗi sau khi đã hồi phục"
+    ],
+    "answer": 0,
+    "explanation": "Mỗi request gốc có thể thành 3 × 5 × 3 = 45 lời gọi xuống database. Trong lúc failover, mọi lần thử đều lỗi nên số lời gọi phình lên khoảng 20.000 mỗi giây, gấp khoảng 45 lần bình thường. Khi database hồi phục, nó gặp ngay đợt tải đó: request chờ connection quá lâu nên timeout, timeout lại sinh retry, và vòng lặp tự duy trì ([[metastable-failure|metastable failure]]). `waitDuration` cố định 100 ms không jitter làm các lần retry dồn thành đợt. Tắt retry ở hai tầng trên là đủ để tải về 470 rps và hệ thống hồi phục, nên pool 50 không phải nguyên nhân; tăng lên 500 chỉ đẩy thêm tải vào database. Không có dấu hiệu database ở chế độ chỉ đọc hay gateway cache lỗi."
+  },
+  "fix": {
+    "code": "# API gateway: không retry request ghi, retry đọc tối đa 1 lần và chỉ khi lỗi kết nối\nretry:\n  attempts: 2\n  methods: [GET]\n  retryOn: [connect-failure]\n\n# Order service: retry ở đây là tầng duy nhất retry Inventory\nresilience4j.retry.instances.inventory:\n  maxAttempts: 3\n  waitDuration: 100ms\n  # Resilience4j 2.x: hai cờ backoff và randomized wait kết hợp thành exponential random backoff\n  enableExponentialBackoff: true\n  exponentialBackoffMultiplier: 2\n  enableRandomizedWait: true          # jitter\n  randomizedWaitFactor: 0.5\n  retryExceptions: [org.springframework.web.client.ResourceAccessException]   # lỗi I/O của RestClient\n  ignoreExceptions: [io.github.resilience4j.circuitbreaker.CallNotPermittedException]\nresilience4j.circuitbreaker.instances.inventory:\n  slidingWindowType: TIME_BASED\n  slidingWindowSize: 10               # giây\n  minimumNumberOfCalls: 20\n  failureRateThreshold: 50\n  slowCallDurationThreshold: 1s\n  slowCallRateThreshold: 50\n  waitDurationInOpenState: 10s\n\n# Inventory: không retry trong SDK; khi pool chờ quá lâu thì từ chối sớm\nspring.datasource.hikari.connection-timeout: 500   # ms\ninventory.load-shedding.max-in-flight: 200   # vượt thì trả 503 + Retry-After",
+    "explanation": "Chỉ một tầng (Order, gần lỗi nhất mà vẫn biết ngữ cảnh nghiệp vụ) được retry, với exponential backoff và jitter, nên hệ số khuếch đại tối đa là 3 thay vì 45. Circuit breaker mở sau vài giây lỗi; các lần thử tiếp theo bị từ chối bằng `CallNotPermittedException`, và Retry được cấu hình bỏ qua exception này nên dừng ngay thay vì chờ hết các lượt backoff. Inventory tự bảo vệ bằng load shedding: lấy connection quá 500 ms hay đang xử lý quá 200 request thì trả `503` ngay, thay vì xếp hàng 4.000 request đã hết hạn. Gateway không retry request ghi. Cuối cùng, kiểm tra lại cấu hình bằng một bài diễn tập failover có đo tải."
+  }
+}

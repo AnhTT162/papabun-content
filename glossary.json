@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive", "resilience-patterns"]
     },
     {
       "id": "cpu-bound",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns"]
     },
     {
       "id": "hash-spreading",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns"]
     },
     {
       "id": "idempotency-key",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một tiến trình khác (thường là CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs"]
     },
     {
       "id": "replication-slot",
@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs"]
     },
     {
       "id": "chunk-processing",
@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs"]
     },
     {
       "id": "adapter-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs"]
     },
     {
       "id": "ubiquitous-language",
@@ -4541,7 +4541,7 @@
       "meaning": "Quan sát rằng kiến trúc hệ thống phản chiếu cấu trúc giao tiếp của tổ chức xây dựng nó.",
       "example": "Ba đội cùng sửa một module thì ranh giới trong module đó dần bị trộn lẫn.",
       "related": ["bounded-context"],
-      "topics": ["ddd-strategic"]
+      "topics": ["ddd-strategic", "microservices-tradeoffs"]
     },
     {
       "id": "ddd-entity",
@@ -4589,7 +4589,7 @@
       "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
       "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
       "related": ["eventual-consistency", "outbox"],
-      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services"]
+      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs"]
     },
     {
       "id": "jpms",
@@ -4613,7 +4613,7 @@
       "meaning": "Hệ thống tách thành nhiều service nhưng vẫn phải deploy và thay đổi cùng nhau vì ranh giới sai; mang chi phí của hệ phân tán mà không có lợi ích độc lập.",
       "example": "Đổi một trường trong service đơn hàng buộc năm service khác cùng release.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith"]
+      "topics": ["modular-monolith", "microservices-tradeoffs"]
     },
     {
       "id": "partial-failure",
@@ -4629,7 +4629,7 @@
       "meaning": "Giới hạn thời gian chờ một thao tác qua mạng; hết giờ thì bỏ chờ. Timeout không cho biết bên kia chậm, chết hay đã làm xong.",
       "example": "`HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(2))`; không đặt thì JDK `HttpClient` chờ vô hạn.",
       "related": ["partial-failure"],
-      "topics": ["distributed-fundamentals"]
+      "topics": ["distributed-fundamentals", "resilience-patterns"]
     },
     {
       "id": "fallacies-of-distributed-computing",
@@ -4822,6 +4822,70 @@
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
       "topics": ["data-consistency-services"]
+    },
+    {
+      "id": "jitter",
+      "term": "Jitter",
+      "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
+      "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
+      "related": ["retry-backoff", "retry-budget"],
+      "topics": ["resilience-patterns"]
+    },
+    {
+      "id": "fallback",
+      "term": "Fallback",
+      "meaning": "Kết quả thay thế khi lời gọi tới dependency lỗi hoặc bị circuit breaker chặn, như dữ liệu cache cũ hay ẩn tính năng phụ.",
+      "example": "Gợi ý sản phẩm lỗi thì hiển thị danh sách bán chạy đã cache từ hôm qua.",
+      "related": ["circuit-breaker"],
+      "topics": ["resilience-patterns"]
+    },
+    {
+      "id": "load-shedding",
+      "term": "Load shedding",
+      "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
+      "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
+      "related": ["backpressure", "circuit-breaker"],
+      "topics": ["resilience-patterns"]
+    },
+    {
+      "id": "retry-budget",
+      "term": "Retry budget",
+      "meaning": "Giới hạn tổng số retry theo tỉ lệ với số request (ví dụ không quá 10%), để retry không nhân tải lên một dependency đang quá tải.",
+      "example": "Trong 10 giây có 1.000 request thì cho tối đa 100 lần retry; vượt thì trả lỗi ngay.",
+      "related": ["retry-backoff", "jitter"],
+      "topics": ["resilience-patterns"]
+    },
+    {
+      "id": "microservices",
+      "term": "Microservices",
+      "meaning": "Kiến trúc chia hệ thống thành các service deploy độc lập, mỗi service gắn với một năng lực nghiệp vụ, sở hữu dữ liệu riêng và do một đội chủ quản.",
+      "example": "Service tìm kiếm scale riêng mùa cao điểm và release nhiều lần mỗi ngày, độc lập với service đặt phòng.",
+      "related": ["bounded-context", "distributed-monolith", "modular-monolith"],
+      "topics": ["microservices-tradeoffs"]
+    },
+    {
+      "id": "consumer-driven-contract",
+      "term": "Consumer-driven contract test",
+      "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
+      "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
+      "related": ["contract-test", "microservices"],
+      "topics": ["microservices-tradeoffs"]
+    },
+    {
+      "id": "sidecar",
+      "term": "Sidecar",
+      "meaning": "Container chạy cạnh container ứng dụng trong cùng pod, đảm nhận việc hạ tầng như mTLS, retry, metric, để ứng dụng không phải tự làm.",
+      "example": "Envoy sidecar của service mesh mã hoá mọi kết nối giữa các pod bằng mTLS mà code không đổi.",
+      "related": ["microservices"],
+      "topics": ["microservices-tradeoffs"]
+    },
+    {
+      "id": "metastable-failure",
+      "term": "Metastable failure",
+      "meaning": "Trạng thái hỏng tự duy trì: sau khi nguyên nhân ban đầu đã hết, tải phát sinh (retry, timeout, hàng đợi dồn) vẫn giữ hệ thống quá tải cho tới khi có can thiệp.",
+      "example": "Database hồi phục sau 30 giây, nhưng retry ở ba tầng giữ tải gấp 45 lần nên hệ thống vẫn sập thêm 40 phút.",
+      "related": ["retry-budget", "load-shedding"],
+      "topics": ["resilience-patterns"]
     }
   ]
 }

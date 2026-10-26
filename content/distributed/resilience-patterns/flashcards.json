@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "retry-rules", "front": "Bốn điều kiện để retry an toàn?", "back": "Lỗi tạm thời, thao tác idempotent, backoff tăng dần có jitter, và giới hạn (số lần, deadline, retry budget)." },
+    { "id": "full-jitter", "front": "Full jitter tính thời gian chờ thế nào?", "back": "Ngẫu nhiên trong khoảng `[0, min(cap, base × 2^n)]`, với n là số lần đã thử." },
+    { "id": "one-layer", "front": "Vì sao chỉ nên retry ở một tầng?", "back": "Retry ở nhiều tầng nhân với nhau: 3 tầng, mỗi tầng thử 3 lần, là tới 27 lời gọi cho một request." },
+    { "id": "breaker-states", "front": "Ba trạng thái của circuit breaker?", "back": "CLOSED: gọi bình thường và đếm lỗi. OPEN: chặn lời gọi, fail fast. HALF_OPEN: cho vài lời gọi thử để quyết định đóng hay mở lại." },
+    { "id": "slow-calls", "front": "Vì sao breaker nên đếm cả lời gọi chậm?", "back": "Dependency treo giữ thread lâu hơn dependency trả lỗi nhanh, và có thể không bao giờ trả lỗi." },
+    { "id": "bulkhead", "front": "Bulkhead bảo vệ điều gì?", "back": "Giới hạn tài nguyên (số lời gọi đồng thời hay thread pool) cho từng dependency, để một dependency chậm không chiếm hết tài nguyên của service." },
+    { "id": "r4j-order", "front": "Thứ tự mặc định của các lớp bọc trong Resilience4j?", "back": "Retry(CircuitBreaker(RateLimiter(TimeLimiter(Bulkhead(call))))); breaker mở thì từng lần thử bị từ chối ngay, và muốn Retry dừng hẳn thì bỏ qua `CallNotPermittedException`." },
+    { "id": "load-shedding", "front": "Load shedding là gì?", "back": "Server tự từ chối sớm (`503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, thay vì nhận hết rồi xử lý tất cả chậm." }
+  ]
+}

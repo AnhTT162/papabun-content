@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "retry-multiplication",
+      "kind": "output",
+      "prompt": "Ba tầng gọi nhau theo chuỗi A → B → C. Mỗi tầng retry lời gọi xuống tầng dưới theo cấu hình sau. C đang chết hẳn. Một request gửi tới A tạo ra tối đa bao nhiêu lời gọi tới C?",
+      "code": "# A gọi B\nmaxAttempts: 3   # gồm lần đầu\n# B gọi C\nmaxAttempts: 4   # gồm lần đầu",
+      "options": [
+        "12",
+        "7",
+        "4",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lần A gọi B, B thử gọi C tối đa 4 lần rồi trả lỗi; A thử B tối đa 3 lần. Tổng là 3 × 4 = 12 lời gọi tới C cho một request. Hệ số này nhân thêm với mỗi tầng có retry, nên chỉ một tầng nên retry, và cần retry budget hoặc circuit breaker để dừng hẳn khi dependency đã chết."
+    },
+    {
+      "id": "jitter-why",
+      "kind": "single",
+      "prompt": "Mọi client cùng retry theo exponential backoff 100 ms, 200 ms, 400 ms nhưng không có jitter. Vấn đề là gì?",
+      "options": [
+        "Các client lỗi cùng lúc sẽ retry cùng nhịp, dồn thành các đợt tải trùng nhau",
+        "Backoff tăng quá nhanh nên request luôn hết deadline trước lần retry thứ hai",
+        "Không có jitter thì Resilience4j không đếm được lời gọi lỗi cho circuit breaker",
+        "Không có vấn đề gì; jitter chỉ giúp log dễ đọc hơn"
+      ],
+      "answer": 0,
+      "explanation": "Khi một sự cố làm hàng nghìn request lỗi cùng lúc, backoff cố định theo cùng một dãy khiến chúng retry đúng cùng những thời điểm, và dependency vừa hồi phục nhận các đợt tải đột biến. Jitter rải thời điểm retry ngẫu nhiên trong khoảng chờ, làm tải đều hơn. Jitter không liên quan đến việc breaker đếm lỗi."
+    },
+    {
+      "id": "low-traffic-breaker",
+      "kind": "single",
+      "prompt": "Service gọi API của đối tác khoảng 10 lần mỗi phút, dùng circuit breaker của Resilience4j với cửa sổ đếm theo số lời gọi và `minimumNumberOfCalls` mặc định. Đối tác chết hẳn, mỗi lời gọi timeout sau 5 giây. Breaker hành xử thế nào?",
+      "options": [
+        "Mở rất muộn: phải chờ đủ khoảng 100 lời gọi (gần 10 phút) mới tính tỉ lệ lỗi",
+        "Mở ngay sau lời gọi lỗi đầu tiên, vì tỉ lệ lỗi là 100%",
+        "Không bao giờ mở, vì timeout không được tính là lỗi",
+        "Mở sau đúng 60 giây, bằng `waitDurationInOpenState` mặc định"
+      ],
+      "answer": 0,
+      "explanation": "`minimumNumberOfCalls` mặc định là 100: chưa đủ số lời gọi đó thì breaker chưa tính tỉ lệ lỗi. Với 10 lời gọi mỗi phút, phải gần 10 phút breaker mới có cơ hội mở. Timeout có được tính là lỗi (exception được ghi nhận). `waitDurationInOpenState` là thời gian ở trạng thái mở trước khi thử lại, không phải thời gian để mở. Với lưu lượng thấp, đặt `minimumNumberOfCalls` nhỏ hoặc dùng cửa sổ theo thời gian."
+    },
+    {
+      "id": "timelimiter-blocking",
+      "kind": "single",
+      "prompt": "Một lời gọi JDBC blocking được bọc bằng `TimeLimiter` 2 giây của Resilience4j qua `CompletableFuture`. Query thật chạy 30 giây. Điều gì xảy ra?",
+      "options": [
+        "Bên gọi nhận lỗi sau 2 giây, nhưng thread vẫn chạy query tới khi xong hay hết socket timeout",
+        "Query bị huỷ ở database sau 2 giây và connection trả về pool ngay",
+        "Bên gọi chờ đủ 30 giây vì `TimeLimiter` chỉ áp dụng cho code reactive",
+        "Thread bị kill sau 2 giây và connection bị đánh dấu hỏng"
+      ],
+      "answer": 0,
+      "explanation": "`TimeLimiter` chỉ thôi chờ `CompletableFuture`; huỷ future (hay interrupt thread) không dừng được một lời gọi JDBC đang chặn trên socket. Thread và connection vẫn bị giữ tới khi query xong hoặc hết timeout của driver. Timeout thật phải đặt ở tầng dưới: `statement_timeout` của PostgreSQL, `socketTimeout` của driver, hay timeout của HTTP client."
+    }
+  ]
+}

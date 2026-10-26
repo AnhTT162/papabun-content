@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "microservices-tradeoffs",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "distributed",
+  "title": "Microservices: khi nào và chia thế nào",
+  "summary": "Microservices giải bài toán tổ chức; lợi ích thật và cái giá; chia theo năng lực nghiệp vụ và bounded context, không theo tầng hay entity; khi nào không nên; dấu hiệu distributed monolith; điều kiện tiên quyết, nền tảng nội bộ, kích thước service, thư viện dùng chung, contract test, dữ liệu và báo cáo, chi phí hạ tầng, gộp service lại và cách tách từ monolith.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 15,
+  "prerequisites": ["service-communication", "data-consistency-services", "ddd-strategic", "modular-monolith"],
+  "terms": ["microservices", "bounded-context", "modular-monolith", "conways-law", "distributed-monolith", "strangler-fig", "consumer-driven-contract", "sidecar", "circuit-breaker", "outbox", "saga"],
+  "references": [
+    { "title": "Martin Fowler, James Lewis: Microservices", "url": "https://martinfowler.com/articles/microservices.html" },
+    { "title": "Martin Fowler: Microservice Prerequisites", "url": "https://martinfowler.com/bliki/MicroservicePrerequisites.html" },
+    { "title": "Martin Fowler: Microservice Trade-Offs", "url": "https://martinfowler.com/articles/microservice-trade-offs.html" },
+    { "title": "Martin Fowler: MonolithFirst", "url": "https://martinfowler.com/bliki/MonolithFirst.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Dự án của bạn có bao nhiêu service, nếu làm lại bạn có chia như vậy không?\" Người phỏng vấn SA muốn nghe bạn tự đánh giá: chỗ nào ranh giới đúng (đội làm độc lập được), chỗ nào sai (hai service luôn deploy cùng nhau, gọi nhau cho mọi thao tác), và bạn sẽ gộp hay tách ra sao. Dùng ví dụ và số liệu thật của dự án; câu trả lời \"chia đúng hết\" thường bị hỏi vặn." },
+    { "type": "callout", "style": "warning", "markdown": "Tách code thành service mà giữ chung database là có thêm lời gọi mạng, thêm điểm lỗi, nhưng không có thêm độc lập: đổi schema vẫn phải phối hợp mọi đội. Tách dữ liệu trước hoặc cùng lúc với code." }
+  ]
+}
