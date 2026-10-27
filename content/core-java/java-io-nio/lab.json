@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "File đối soát thiếu đơn ở cuối",
+  "context": "Job đêm xuất danh sách đơn ra CSV cho ngân hàng đối soát. Ngân hàng báo file thiếu đơn và dòng cuối bị cắt giữa chừng; số đơn thiếu mỗi đêm một khác. Job không có lỗi trong log, kết thúc bằng `System.exit(0)` sau khi gửi email báo xong.",
+  "buggyCode": "void export(List<Order> orders, Path out) throws IOException {\n    BufferedWriter writer = Files.newBufferedWriter(out);\n    for (Order o : orders) {\n        writer.write(o.id() + \",\" + o.amount() + \"\\n\");\n    }\n    // không close\n}\n\n// Mô phỏng 5.000 đơn, đọc file ngay sau vòng lặp\nPath out = Path.of(\"orders.csv\");\nexport(orders, out);\nSystem.out.println(Files.size(out) + \" bytes, \" + Files.readAllLines(out).size() + \" lines\");",
+  "symptom": {
+    "description": "Chạy trên JDK 27: ghi 5.000 dòng (khoảng 74 KB) nhưng file trên đĩa thiếu gần 900 dòng. Với 1.000 dòng, file rỗng hoàn toàn.",
+    "output": "65536 bytes, 4166 lines\n\n// với 1.000 đơn:\n0 bytes, 0 lines"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "Writer không được đóng nên phần dữ liệu còn trong buffer bị bỏ",
+      "Đĩa chưa fsync nên OS chưa ghi các dòng cuối xuống đĩa",
+      "OS ghi bất đồng bộ nên process thoát trước khi kịp ghi",
+      "Ký tự xuống dòng `\\n` không được ghi nếu thiếu `newLine()`"
+    ],
+    "answer": 0,
+    "explanation": "Dữ liệu chỉ rời khỏi buffer của Java khi buffer đầy, khi `flush()` hoặc `close()`. Không đóng thì phần cuối nằm trong bộ nhớ của process và mất khi process thoát; vì ghi theo từng khối nên dòng cuối bị cắt giữa chừng. Fsync là chuyện khác: nó liên quan mất điện, còn ở đây dữ liệu chưa bao giờ được giao cho OS (đọc lại ngay trong cùng process cũng thiếu)."
+  },
+  "fix": {
+    "code": "void export(List<Order> orders, Path out) throws IOException {\n    Path dir = out.toAbsolutePath().getParent();\n    Path tmp = Files.createTempFile(dir, \"orders\", \".tmp\");\n    try (BufferedWriter writer = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {\n        for (Order o : orders) {\n            writer.write(o.id() + \",\" + o.amount());\n            writer.newLine();\n        }\n    }\n    try (FileChannel ch = FileChannel.open(tmp, StandardOpenOption.WRITE)) {\n        ch.force(true); // xuống đĩa trước khi đổi tên\n    }\n    Files.move(tmp, out, StandardCopyOption.ATOMIC_MOVE);\n}",
+    "explanation": "Try-with-resources đảm bảo `close()` (kèm `flush`) chạy kể cả khi có exception. Ghi vào file tạm rồi đổi tên nguyên tử giúp bên đọc không bao giờ lấy phải file ghi dở; `force(true)` trước khi đổi tên để mất điện cũng không để lại file rỗng. Với `ATOMIC_MOVE`, các option khác bị bỏ qua và việc thay file đích đã có là tuỳ hệ điều hành (Linux, macOS thay được). `createTempFile` tạo file quyền `rw-------`, bên nhận khác user thì cần đặt lại quyền. Thêm một dòng tổng số đơn ở cuối file hoặc file checksum để bên nhận tự kiểm."
+  }
+}

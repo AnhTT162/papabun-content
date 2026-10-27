@@ -358,14 +358,14 @@
       "meaning": "Cây nhị phân tìm kiếm tự cân bằng: mỗi node tô đỏ hoặc đen theo quy tắc giữ chiều cao cỡ O(log n), nên tìm, thêm, xoá đều O(log n).",
       "example": "`TreeMap` và các bucket đã treeify của `HashMap` dùng cây đỏ-đen.",
       "related": ["treeify"],
-      "topics": ["hashmap-internals", "collections-overview", "data-structures"]
+      "topics": ["hashmap-internals", "collections-overview", "data-structures", "sorted-collections-internals"]
     },
     {
       "id": "fail-fast",
       "term": "Fail-fast iterator",
       "meaning": "Iterator phát hiện collection bị sửa cấu trúc trong lúc duyệt (qua bộ đếm `modCount`) và ném `ConcurrentModificationException` ngay, thay vì chạy tiếp với dữ liệu sai. Chỉ là cố gắng phát hiện, không đảm bảo.",
       "example": "Gọi `map.remove(key)` bên trong vòng `for (var e : map.entrySet())` làm lần lặp sau ném `ConcurrentModificationException`.",
-      "topics": ["hashmap-internals", "collections-overview", "comparable-comparator"]
+      "topics": ["hashmap-internals", "collections-overview", "comparable-comparator", "sorted-collections-internals"]
     },
     {
       "id": "monitor",
@@ -661,7 +661,7 @@
       "meaning": "Cú pháp `try (var r = ...)` (Java 7) tự gọi `close()` cho resource khi rời khối, theo thứ tự ngược với lúc mở.",
       "example": "`try (var in = Files.newInputStream(path)) { ... }` không cần `finally` để đóng file.",
       "related": ["suppressed-exception"],
-      "topics": ["exceptions", "jdbc-basics"]
+      "topics": ["exceptions", "jdbc-basics", "java-io-nio"]
     },
     {
       "id": "suppressed-exception",
@@ -1581,7 +1581,7 @@
       "meaning": "Lời gọi hệ thống buộc dữ liệu đã ghi thật sự xuống thiết bị lưu trữ, không chỉ nằm trong cache của OS. Database fsync WAL trước khi báo commit thành công. Trên Linux, PostgreSQL mặc định dùng biến thể `fdatasync` (`wal_sync_method`).",
       "example": "Trên ổ mạng cloud, mỗi lần fsync thường mất 1–3ms, nên giới hạn số commit tuần tự mỗi giây.",
       "related": ["wal", "group-commit"],
-      "topics": ["storage-engine", "redis-internals"]
+      "topics": ["storage-engine", "redis-internals", "java-io-nio"]
     },
     {
       "id": "checkpoint",
@@ -2389,7 +2389,7 @@
       "meaning": "Least Recently Used: chính sách eviction bỏ mục lâu nhất chưa được dùng.",
       "example": "Đọc lần lượt 2 triệu sản phẩm một lần đẩy hết các mục nóng ra khỏi cache LRU.",
       "related": ["lfu", "cache-eviction"],
-      "topics": ["caching-basics", "redis-internals", "lld-ood-interview"]
+      "topics": ["caching-basics", "redis-internals", "lld-ood-interview", "sorted-collections-internals"]
     },
     {
       "id": "lfu",
@@ -2733,7 +2733,7 @@
       "meaning": "Chuyển dữ liệu từ file (page cache) ra socket ngay trong kernel, không chép qua bộ nhớ của ứng dụng, bằng lời gọi như `sendfile`.",
       "example": "Broker Kafka gửi dữ liệu cho consumer qua `sendfile`; bật TLS thì mất tối ưu này.",
       "related": ["kafka-partition"],
-      "topics": ["kafka-architecture", "io-models"]
+      "topics": ["kafka-architecture", "io-models", "java-io-nio"]
     },
     {
       "id": "amqp-exchange",
@@ -5949,7 +5949,7 @@
       "meaning": "`ByteBuffer` nằm ngoài heap, cấp bằng `ByteBuffer.allocateDirect`, dùng cho I/O không cần chép qua heap. Tổng bị giới hạn bởi `-XX:MaxDirectMemorySize` (mặc định bằng `-Xmx`).",
       "example": "Netty và NIO dùng direct buffer; metric `jvm.buffer.memory.used{id=direct}` đo phần cấp qua `allocateDirect`.",
       "related": ["native-memory-tracking", "zero-copy"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "java-io-nio"]
     },
     {
       "id": "dominator-tree",
@@ -6397,7 +6397,7 @@
       "meaning": "Phần RAM kernel dùng để cache nội dung file. Mọi lần đọc ghi file thường đều đi qua nó; kernel thu hồi khi process cần bộ nhớ.",
       "example": "`free -h` báo `buff/cache` 23 GB trên máy Kafka: dữ liệu mới được consumer đọc thẳng từ RAM, không chạm đĩa.",
       "related": ["zero-copy", "fsync"],
-      "topics": ["os-process-memory", "linux-troubleshooting", "io-models"]
+      "topics": ["os-process-memory", "linux-troubleshooting", "io-models", "java-io-nio"]
     },
     {
       "id": "file-descriptor",
@@ -6405,7 +6405,7 @@
       "meaning": "Số nguyên process dùng để chỉ một file, socket hay pipe đang mở. Mỗi process có giới hạn số descriptor, hết thì mọi thao tác mở mới đều lỗi.",
       "example": "`ls /proc/<pid>/fd | wc -l` ra 65.000 và Java ném `SocketException: Too many open files`.",
       "related": ["ulimit"],
-      "topics": ["os-process-memory"]
+      "topics": ["os-process-memory", "java-io-nio"]
     },
     {
       "id": "ulimit",
@@ -6466,10 +6466,10 @@
     {
       "id": "binary-heap",
       "term": "Binary heap",
-      "meaning": "Cây nhị phân đầy đủ lưu trong mảng, node cha luôn nhỏ hơn (min-heap) hoặc lớn hơn (max-heap) node con. Lấy phần tử nhỏ nhất O(1), thêm và lấy ra O(log n).",
+      "meaning": "Cây nhị phân hoàn chỉnh lưu trong mảng, node cha luôn nhỏ hơn (min-heap) hoặc lớn hơn (max-heap) node con. Lấy phần tử nhỏ nhất O(1), thêm và lấy ra O(log n).",
       "example": "`PriorityQueue` của Java; bộ hẹn giờ và top-k dùng min-heap cỡ k.",
       "related": ["big-o"],
-      "topics": ["data-structures"]
+      "topics": ["data-structures", "sorted-collections-internals"]
     },
     {
       "id": "graph",
@@ -7774,6 +7774,62 @@
       "example": "`mapper.activateDefaultTyping(validator, DefaultTyping.NON_FINAL)`.",
       "related": ["polymorphic-deserialization"],
       "topics": ["json-jackson"]
+    },
+    {
+      "id": "tree-rotation",
+      "term": "Rotation",
+      "meaning": "Phép xoay cây: đổi vị trí một node với con của nó mà vẫn giữ thứ tự của cây nhị phân tìm kiếm, dùng để giảm chiều cao khi cân bằng cây đỏ đen hay AVL.",
+      "example": "Chèn 1, 2, 3 vào cây đỏ đen: xoay trái tại 1 để 2 thành gốc.",
+      "related": ["red-black-tree"],
+      "topics": ["sorted-collections-internals"]
+    },
+    {
+      "id": "navigable-map",
+      "term": "NavigableMap",
+      "meaning": "Interface của map có thứ tự hỗ trợ truy vấn theo vị trí: `floorKey`, `ceilingEntry`, `headMap`, `tailMap`, `subMap`, `pollFirstEntry`. `TreeMap` và `ConcurrentSkipListMap` cài đặt nó.",
+      "example": "`priceTiers.floorEntry(orderTotal)` lấy bậc giá áp dụng cho tổng đơn.",
+      "related": ["red-black-tree"],
+      "topics": ["sorted-collections-internals"]
+    },
+    {
+      "id": "buffered-io",
+      "term": "Buffered I/O",
+      "meaning": "Đọc ghi qua vùng đệm trong bộ nhớ để gom nhiều thao tác nhỏ thành ít system call lớn. Dữ liệu ghi chỉ xuống OS khi buffer đầy, `flush()` hoặc `close()`.",
+      "example": "Bọc `FileInputStream` bằng `BufferedInputStream` làm đọc 10 MB từng byte nhanh từ 3,3 s xuống 43 ms.",
+      "related": ["try-with-resources"],
+      "topics": ["java-io-nio"]
+    },
+    {
+      "id": "byte-buffer",
+      "term": "ByteBuffer",
+      "meaning": "Vùng nhớ byte của NIO với ba chỉ số `position`, `limit`, `capacity`; ghi vào rồi `flip()` để đọc ra. Có bản trên heap và bản direct ngoài heap.",
+      "example": "`channel.read(buf); buf.flip(); while (buf.hasRemaining()) process(buf.get());`",
+      "related": ["direct-buffer"],
+      "topics": ["java-io-nio"]
+    },
+    {
+      "id": "atomic-move",
+      "term": "Atomic move",
+      "meaning": "Đổi tên file nguyên tử: người đọc thấy hoặc file cũ hoặc file mới hoàn chỉnh, không bao giờ thấy file ghi dở. Chỉ áp dụng trong cùng một filesystem.",
+      "example": "Ghi `config.json.tmp` rồi `Files.move(tmp, target, ATOMIC_MOVE)`.",
+      "related": ["fsync"],
+      "topics": ["java-io-nio"]
+    },
+    {
+      "id": "path-traversal",
+      "term": "Path traversal",
+      "meaning": "Lỗ hổng dùng `../` trong tên file người dùng gửi để đọc ghi ra ngoài thư mục cho phép.",
+      "example": "Tên file `../../etc/passwd` ghép vào `/data/uploads` thành `/etc/passwd`.",
+      "related": [],
+      "topics": ["java-io-nio"]
+    },
+    {
+      "id": "memory-mapped-file",
+      "term": "Memory-mapped file",
+      "meaning": "File được OS ánh xạ vào bộ nhớ ảo của process (mmap), đọc ghi như một mảng mà không gọi `read`/`write`; trang được nạp khi truy cập.",
+      "example": "Kafka map file index của mỗi segment bằng `FileChannel.map`.",
+      "related": ["zero-copy", "page-cache"],
+      "topics": ["java-io-nio"]
     }
   ]
 }

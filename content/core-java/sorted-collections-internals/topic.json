@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sorted-collections-internals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "TreeMap, LinkedHashMap, PriorityQueue bên trong",
+  "summary": "TreeMap là cây đỏ đen giữ chiều cao O(log n) thế nào và chậm hơn HashMap bao nhiêu, view `headMap`/`subMap`, LinkedHashMap làm LRU và bẫy `get` đổi cấu trúc, PriorityQueue là heap trong mảng nên duyệt không có thứ tự, phần tử bị sửa sau khi thêm.",
+  "level": "mid",
+  "order": 20,
+  "minutes": 12,
+  "prerequisites": ["hashmap-internals", "comparable-comparator", "data-structures"],
+  "terms": ["red-black-tree", "tree-rotation", "navigable-map", "lru", "binary-heap", "fail-fast"],
+  "references": [
+    { "title": "Javadoc TreeMap (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/TreeMap.html" },
+    { "title": "Javadoc LinkedHashMap (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/LinkedHashMap.html" },
+    { "title": "Javadoc PriorityQueue (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/PriorityQueue.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Tự viết LRU cache trong buổi phỏng vấn?\" Câu trả lời nhanh: `LinkedHashMap(capacity, 0.75f, true)` và override `removeEldestEntry` trả `size() > capacity`. Nếu người phỏng vấn muốn tự cài: `HashMap<K, Node>` cộng danh sách liên kết đôi, `get` chuyển node về đầu, `put` vượt sức chứa thì bỏ node cuối, mọi thao tác O(1). Đa luồng thì không dùng cả hai; production dùng Caffeine (bài Local & multi-level cache)." },
+    { "type": "callout", "style": "warning", "markdown": "`PriorityQueue` chỉ đảm bảo phần tử **đầu** là nhỏ nhất. `toString()` và vòng `for` in theo thứ tự mảng heap: hàng đợi `[5,1,4,2,3]` in ra `[1, 2, 4, 5, 3]`. Muốn duyệt theo thứ tự thì `poll()` lần lượt (huỷ hàng đợi) hoặc sắp xếp một bản sao." }
+  ]
+}

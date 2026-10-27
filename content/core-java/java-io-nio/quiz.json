@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "flip-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "ByteBuffer bb = ByteBuffer.allocate(8);\nbb.put((byte) 1).put((byte) 2);\nSystem.out.println(bb.position() + \" \" + bb.limit());\nbb.flip();\nSystem.out.println(bb.position() + \" \" + bb.limit());",
+      "options": ["2 8 / 0 2", "2 8 / 2 8", "0 8 / 0 2", "2 2 / 0 8"],
+      "answer": 0,
+      "explanation": "Ghi hai byte đưa `position` lên 2, `limit` vẫn bằng capacity 8. `flip()` đặt `limit = 2`, `position = 0` để đọc đúng hai byte vừa ghi."
+    },
+    {
+      "id": "traversal-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Path p = Path.of(\"/data/uploads\").resolve(\"../../etc/passwd\").normalize();\nSystem.out.println(p + \" \" + p.startsWith(\"/data/uploads\"));",
+      "options": ["/etc/passwd false", "/data/uploads/etc/passwd true", "/data/uploads/../../etc/passwd true", "InvalidPathException"],
+      "answer": 0,
+      "explanation": "`resolve` ghép nguyên văn, `normalize` xử lý `..` và thoát ra ngoài `/data/uploads`. Kiểm `startsWith` sau `normalize` là cách phát hiện."
+    },
+    {
+      "id": "big-file",
+      "kind": "single",
+      "prompt": "Đếm dòng chứa `ERROR` trong file log 20 GB, heap 2 GB. Cách nào đúng?",
+      "options": ["`Files.lines(path)` trong try-with-resources", "`Files.readAllLines(path)` rồi stream lọc từng dòng", "`Files.readString(path).split(\"\\n\")`", "`Files.readAllBytes(path)` rồi đếm `\\n`"],
+      "answer": 0,
+      "explanation": "`lines` đọc lười từng dòng nên bộ nhớ chỉ cỡ buffer. Ba cách còn lại nạp cả 20 GB vào heap và ném `OutOfMemoryError` (`readAllBytes` còn giới hạn mảng khoảng 2 GB)."
+    },
+    {
+      "id": "charset-error",
+      "kind": "single",
+      "prompt": "File UTF-8 chứa `Nguyễn Văn An`. Đọc bằng `Files.readAllLines(path, US_ASCII)` thì sao?",
+      "options": ["Ném `MalformedInputException`", "Ra `Nguyn Vn An`, bỏ ký tự lạ", "Ra chữ vỡ kiểu `Nguyá»n`", "Tự nhận ra UTF-8 và đọc đúng"],
+      "answer": 0,
+      "explanation": "`Files.readAllLines` dùng decoder báo lỗi với byte không hợp lệ. Chữ vỡ chỉ xuất hiện với API thay thế âm thầm như `new String(bytes, ISO_8859_1)`."
+    }
+  ]
+}

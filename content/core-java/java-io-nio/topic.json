@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-io-nio",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "I/O & NIO",
+  "summary": "Byte stream và character stream, vì sao đọc từng byte không có buffer chậm hàng trăm lần, quên đóng writer làm mất dữ liệu, `Files` API và đọc file lớn, `ByteBuffer` và `flip`, ghi file nguyên tử, path traversal, và NIO channel khác `java.io` ở đâu.",
+  "level": "mid",
+  "order": 21,
+  "minutes": 12,
+  "prerequisites": ["exceptions", "time-encoding"],
+  "terms": ["buffered-io", "byte-buffer", "try-with-resources", "file-descriptor", "fsync", "atomic-move", "path-traversal", "memory-mapped-file", "zero-copy", "direct-buffer", "page-cache"],
+  "references": [
+    { "title": "Javadoc java.nio.file.Files (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Files.html" },
+    { "title": "Javadoc java.nio.ByteBuffer (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/ByteBuffer.html" },
+    { "title": "OWASP: Path Traversal", "url": "https://owasp.org/www-community/attacks/Path_Traversal" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đọc file log 20 GB để đếm dòng lỗi thế nào?\" Không `readAllLines`/`readAllBytes` (nạp cả file vào heap). Dùng `Files.lines(path)` trong try-with-resources hoặc `BufferedReader.readLine()`, xử lý từng dòng rồi bỏ; bộ nhớ chỉ cỡ buffer. Cần nhanh hơn nữa thì đọc theo khối bằng `FileChannel` vào `ByteBuffer` lớn, hoặc chia file theo offset cho nhiều thread, chú ý cắt đúng ranh giới dòng." },
+    { "type": "callout", "style": "warning", "markdown": "Ghép đường dẫn từ input người dùng (`uploads.resolve(fileName)`) mà không kiểm cho phép `../../etc/passwd` thoát khỏi thư mục gốc. Sau `resolve`, gọi `normalize()` rồi kiểm `startsWith(baseDir)`; tốt hơn là không dùng tên file của người dùng, tự sinh tên (UUID) và lưu tên gốc trong DB." }
+  ]
+}

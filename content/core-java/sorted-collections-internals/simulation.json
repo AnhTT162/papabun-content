@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Cân bằng cây đỏ đen sau khi chèn",
+  "instructions": "Node mới luôn được tô đỏ. Bấm tình huống của cây quanh node đó (màu của cha và của chú, tức anh em của cha) để xem `TreeMap` sửa cây thế nào. Ba nút về chú đều giả định cha đỏ; chú rỗng (`null`) tính là đen. Thử bấm \"Cha đỏ, chú đỏ\" nhiều lần để thấy việc đổi màu lan dần lên gốc, rồi thử \"Cha đỏ, chú đen, lệch\" để thấy vì sao cần hai lần xoay.",
+  "config": {
+    "states": [
+      { "id": "insert", "label": "Chèn node đỏ", "x": 0.1, "y": 0.05, "note": "Node mới được gắn vào vị trí lá như cây nhị phân tìm kiếm thường, tô **đỏ** để không làm đổi số node đen trên mọi đường. Chỉ có thể vi phạm luật \"đỏ không có con đỏ\"." },
+      { "id": "recolor", "label": "Đổi màu", "x": 0.85, "y": 0.05, "note": "Cha và chú đều đỏ: tô cha và chú **đen**, ông **đỏ**. Số node đen trên mọi đường giữ nguyên, nhưng ông đỏ có thể vi phạm với cụ của nó, nên xét lại từ ông." },
+      { "id": "triangle", "label": "Xoay cha", "x": 0.1, "y": 0.5, "note": "Chú đen và node nằm \"lệch\" (con phải của cha trái, hoặc ngược lại): xoay tại cha để node và cha thẳng hàng, rồi xử lý như trường hợp thẳng hàng." },
+      { "id": "line", "label": "Xoay ông", "x": 0.85, "y": 0.5, "note": "Chú đen và node thẳng hàng với cha: xoay tại ông, đổi màu cha (thành đen) và ông (thành đỏ). Cha lên thay chỗ ông nên cây cân bằng lại; không cần xét tiếp." },
+      { "id": "root", "label": "Tô gốc đen", "x": 0.85, "y": 0.95, "note": "Node đầu tiên của cây, hoặc ông bị tô đỏ khi đổi màu lan tới gốc: gốc luôn được tô lại **đen**. Nếu gốc đang đỏ thì việc này tăng số node đen trên mọi đường thêm một như nhau, nên cây vẫn hợp lệ." },
+      { "id": "done", "label": "Cây hợp lệ", "x": 0.1, "y": 0.95, "note": "Mọi luật được giữ: chiều cao không quá 2·log₂(n+1). Mỗi lần chèn tốn tối đa **2 lần xoay**; đổi màu có thể lan O(log n) bước nhưng mỗi bước rất rẻ." }
+    ],
+    "initial": "insert",
+    "events": [
+      { "id": "parent-black", "label": "Cha đen" },
+      { "id": "uncle-red", "label": "Cha đỏ, chú đỏ" },
+      { "id": "uncle-black-inner", "label": "Cha đỏ, chú đen, lệch" },
+      { "id": "uncle-black-outer", "label": "Cha đỏ, chú đen, thẳng" },
+      { "id": "reached-root", "label": "Đã tới gốc" },
+      { "id": "next", "label": "Chèn khoá mới" }
+    ],
+    "counters": [
+      { "id": "rotations", "label": "Số lần xoay (lần chèn này)", "initial": 0 },
+      { "id": "recolors", "label": "Số lần đổi màu cha/chú", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "insert-ok", "from": "insert", "event": "parent-black", "to": "done", "label": "cha đen", "note": "Cha đen thì node đỏ mới không vi phạm luật nào. Đây là trường hợp phổ biến nhất." },
+      { "id": "insert-root", "from": "insert", "event": "reached-root", "to": "root", "label": "cây rỗng", "note": "Node đầu tiên là gốc." },
+      { "id": "insert-recolor", "from": "insert", "event": "uncle-red", "to": "recolor", "label": "chú đỏ", "effects": [ { "counter": "recolors", "add": 1 } ] },
+      { "id": "insert-triangle", "from": "insert", "event": "uncle-black-inner", "to": "triangle", "label": "lệch", "effects": [ { "counter": "rotations", "add": 1 } ] },
+      { "id": "insert-line", "from": "insert", "event": "uncle-black-outer", "to": "line", "label": "thẳng hàng", "effects": [ { "counter": "rotations", "add": 1 } ] },
+      { "id": "recolor-again", "from": "recolor", "event": "uncle-red", "to": "recolor", "label": "lan lên", "effects": [ { "counter": "recolors", "add": 1 } ], "note": "Ông vừa thành đỏ lại có cha đỏ và chú đỏ: đổi màu tiếp, lên thêm hai tầng; coi ông như node mới vừa chèn." },
+      { "id": "recolor-ok", "from": "recolor", "event": "parent-black", "to": "done", "label": "cha của ông đen" },
+      { "id": "recolor-root", "from": "recolor", "event": "reached-root", "to": "root", "label": "ông là gốc" },
+      { "id": "recolor-triangle", "from": "recolor", "event": "uncle-black-inner", "to": "triangle", "label": "lệch", "effects": [ { "counter": "rotations", "add": 1 } ] },
+      { "id": "recolor-line", "from": "recolor", "event": "uncle-black-outer", "to": "line", "label": "thẳng hàng", "effects": [ { "counter": "rotations", "add": 1 } ] },
+      { "id": "triangle-line", "from": "triangle", "event": "uncle-black-outer", "to": "line", "label": "đã thẳng hàng", "effects": [ { "counter": "rotations", "add": 1 } ], "note": "Sau lần xoay đầu, node và cha thẳng hàng; lần xoay thứ hai tại ông kết thúc việc sửa." },
+      { "id": "line-done", "from": "line", "event": "next", "to": "insert", "label": "chèn tiếp", "effects": [ { "counter": "rotations", "set": 0 }, { "counter": "recolors", "set": 0 } ] },
+      { "id": "root-done", "from": "root", "event": "next", "to": "insert", "label": "chèn tiếp", "effects": [ { "counter": "rotations", "set": 0 }, { "counter": "recolors", "set": 0 } ] },
+      { "id": "done-next", "from": "done", "event": "next", "to": "insert", "label": "chèn tiếp", "effects": [ { "counter": "rotations", "set": 0 }, { "counter": "recolors", "set": 0 } ] }
+    ],
+    "invalidNote": "Tình huống này không xảy ra ở bước hiện tại. Ví dụ: sau khi xoay cha (trường hợp lệch), node luôn thẳng hàng với cha nên chỉ còn bước xoay ông."
+  }
+}

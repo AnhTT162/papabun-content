@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "treemap-structure", "front": "`TreeMap` được cài bằng cấu trúc gì?", "back": "Cây đỏ đen: cây nhị phân tìm kiếm tự cân bằng, chiều cao ≤ 2·log₂(n+1), mọi thao tác O(log n)." },
+    { "id": "rb-insert", "front": "Node mới chèn vào cây đỏ đen được tô màu gì, vì sao?", "back": "Đỏ, để không đổi số node đen trên mọi đường; chỉ còn có thể vi phạm luật đỏ không có con đỏ (hoặc luật gốc đen nếu nó là node đầu)." },
+    { "id": "navigable", "front": "Khi nào chọn `TreeMap` thay `HashMap`?", "back": "Khi cần truy vấn theo thứ tự: `floorKey`, `ceilingEntry`, `subMap`, phần tử nhỏ nhất. Chỉ tra theo key thì `HashMap` nhanh hơn nhiều lần với map lớn." },
+    { "id": "lru", "front": "Tạo LRU cache bằng `LinkedHashMap` thế nào?", "back": "`new LinkedHashMap<>(cap, 0.75f, true)` (thứ tự truy cập) và override `removeEldestEntry` trả `size() > cap`." },
+    { "id": "access-order-cme", "front": "Vì sao `get` trong lúc duyệt `LinkedHashMap` thứ tự truy cập ném CME?", "back": "Ở chế độ truy cập, `get` chuyển entry xuống cuối danh sách, tức là đổi cấu trúc." },
+    { "id": "pq-iteration", "front": "Duyệt `PriorityQueue` bằng `for` có theo thứ tự không?", "back": "Không, theo thứ tự mảng heap. Chỉ phần tử đầu là nhỏ nhất; muốn có thứ tự thì `poll` lần lượt." },
+    { "id": "pq-contains", "front": "Độ phức tạp của `PriorityQueue.contains` và `remove(Object)`?", "back": "O(n), vì phải quét cả mảng heap." },
+    { "id": "top-k", "front": "Lấy k phần tử lớn nhất từ luồng n phần tử thế nào cho ít bộ nhớ?", "back": "Giữ min-heap cỡ k: phần tử mới lớn hơn đỉnh thì thay đỉnh. O(n log k) thời gian, O(k) bộ nhớ." }
+  ]
+}

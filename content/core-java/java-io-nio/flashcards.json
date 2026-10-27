@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "byte-vs-char", "front": "`InputStream` khác `Reader` thế nào?", "back": "`InputStream` đọc byte; `Reader` đọc ký tự, cần charset để giải mã byte thành ký tự." },
+    { "id": "why-buffer", "front": "Vì sao `FileInputStream.read()` từng byte rất chậm?", "back": "Mỗi lần gọi là một system call. Có buffer thì một lần gọi lấy cả khối 8 KB." },
+    { "id": "unclosed-writer", "front": "Quên `close()` `BufferedWriter` thì sao?", "back": "Dữ liệu còn trong buffer không được ghi và mất khi process thoát; file thiếu phần cuối." },
+    { "id": "close-vs-fsync", "front": "`close()` có đảm bảo dữ liệu đã xuống đĩa không?", "back": "Không, chỉ xuống page cache của OS. Cần `FileChannel.force(true)` để chống mất khi mất điện." },
+    { "id": "flip", "front": "`ByteBuffer.flip()` làm gì?", "back": "Chuyển buffer từ chế độ ghi sang đọc: `limit = position`, `position = 0`." },
+    { "id": "atomic-write", "front": "Ghi file sao cho người đọc không thấy file ghi dở?", "back": "Ghi vào file tạm cùng thư mục rồi `Files.move(tmp, target, ATOMIC_MOVE)`." },
+    { "id": "files-lines-close", "front": "Vì sao `Files.lines(path)` phải nằm trong try-with-resources?", "back": "Stream giữ file mở tới khi bị đóng; không đóng thì rò file descriptor." },
+    { "id": "path-traversal", "front": "Chặn path traversal khi ghép tên file người dùng thế nào?", "back": "`base.resolve(name).normalize()` rồi kiểm `startsWith(base)`; tốt hơn là tự sinh tên file." }
+  ]
+}

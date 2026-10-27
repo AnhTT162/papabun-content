@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pq-tostring",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "PriorityQueue<Integer> pq = new PriorityQueue<>(List.of(5, 1, 4, 2, 3));\nSystem.out.println(pq + \" \" + pq.peek());",
+      "options": ["[1, 2, 4, 5, 3] 1", "[1, 2, 3, 4, 5] 1", "[5, 1, 4, 2, 3] 5", "[5, 4, 3, 2, 1] 5"],
+      "answer": 0,
+      "explanation": "`toString` in theo thứ tự mảng heap; chỉ phần tử đầu chắc chắn nhỏ nhất. Thứ tự cụ thể của phần còn lại phụ thuộc cách heap được dựng."
+    },
+    {
+      "id": "lru-output",
+      "kind": "output",
+      "prompt": "`Lru` là `LinkedHashMap` thứ tự truy cập, sức chứa 3, `removeEldestEntry` trả `size() > 3`. Đoạn code in ra gì?",
+      "code": "lru.put(\"a\", 1); lru.put(\"b\", 2); lru.put(\"c\", 3);\nlru.get(\"a\");\nlru.put(\"d\", 4);\nSystem.out.println(lru.keySet());",
+      "options": ["[c, a, d]", "[b, c, d]", "[a, b, c]", "[a, c, d]"],
+      "answer": 0,
+      "explanation": "`get(\"a\")` chuyển `a` xuống cuối nên thứ tự là `b, c, a`. Thêm `d` vượt sức chứa, entry cũ nhất (`b`) bị bỏ, còn `c, a, d`."
+    },
+    {
+      "id": "headmap-view",
+      "kind": "output",
+      "prompt": "`prices` là `TreeMap` có key 100, 200, 500. Đoạn code in ra gì?",
+      "code": "SortedMap<Integer, String> head = prices.headMap(300);\nprices.put(150, \"X\");\nSystem.out.println(head.keySet());",
+      "options": ["[100, 150, 200]", "[100, 200]", "[100, 150, 200, 500]", "ConcurrentModificationException"],
+      "answer": 0,
+      "explanation": "`headMap` là view sống theo map gốc, không phải bản sao; key 150 thêm sau vẫn nằm trong khoảng nhỏ hơn 300 nên hiện ra. Không có iterator nào đang chạy nên không có CME."
+    },
+    {
+      "id": "mutated-priority",
+      "kind": "single",
+      "prompt": "Ba task trong `PriorityQueue` theo `prio`: 5, 3, 4. Đổi `prio` của task 5 thành 1 sau khi đã thêm. `peek()` trả task nào?",
+      "options": ["Task có `prio` 3", "Task vừa đổi thành 1", "Task có `prio` 4", "Task có `prio` 5 vì chưa `poll`"],
+      "answer": 0,
+      "explanation": "Heap chỉ sắp lại khi `offer`/`poll`; đổi field không làm phần tử nổi lên. Muốn đổi độ ưu tiên thì `remove` rồi `offer` lại."
+    }
+  ]
+}
