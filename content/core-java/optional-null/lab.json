@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đăng nhập lần nào cũng INSERT user mới",
+  "context": "Đăng nhập bằng Google tìm user theo email, chưa có thì tạo. Bảng `users` không có unique constraint trên `email` (dữ liệu cũ có trùng). Sau một tuần, mỗi user cũ có vài chục bản ghi, ghi DB tăng vọt.",
+  "buggyCode": "Optional<User> findByEmail(String email) {\n    return Optional.ofNullable(db.get(email));\n}\n\nUser createUser(String email) {\n    System.out.println(\"INSERT user \" + email);\n    User user = new User(email);\n    // ghi vào bảng users\n    return user;\n}\n\n// user an@example.com đã tồn tại\nUser user = findByEmail(\"an@example.com\")\n    .orElse(createUser(\"an@example.com\"));\nSystem.out.println(\"Đăng nhập: \" + user.email());",
+  "symptom": {
+    "description": "User đã tồn tại và được trả về đúng, nhưng log vẫn có lệnh INSERT ở mỗi lần đăng nhập.",
+    "output": "INSERT user an@example.com\nĐăng nhập: an@example.com"
+  },
+  "diagnosis": {
+    "question": "Vì sao `createUser` chạy dù đã tìm thấy user?",
+    "options": [
+      "`orElse` nhận giá trị đã tính, nên `createUser` chạy trước khi gọi",
+      "`ofNullable` coi user có field `null` là rỗng nên trả `empty()`",
+      "`findByEmail` gọi hai lần do `Optional` không cache kết quả",
+      "Thiếu `@Transactional` nên INSERT không được rollback lại"
+    ],
+    "answer": 0,
+    "explanation": "Java tính đối số trước khi gọi method. `orElse(createUser(...))` vì vậy luôn gọi `createUser`, rồi mới xem `Optional` có giá trị hay không. User trả về vẫn đúng nên test chỉ kiểm kết quả sẽ không thấy lỗi; chỉ log hoặc đếm số lần ghi DB mới lộ ra."
+  },
+  "fix": {
+    "code": "User user = findByEmail(\"an@example.com\")\n    .orElseGet(() -> createUser(\"an@example.com\"));\n\n// và chặn ở DB (PostgreSQL), sau khi dọn bản ghi trùng:\n// CREATE UNIQUE INDEX ux_users_email ON users (lower(email));",
+    "explanation": "`orElseGet` nhận `Supplier`, chỉ gọi khi rỗng. Quy tắc: `orElse` chỉ dùng với hằng hoặc giá trị đã có sẵn. Ngoài ra thêm unique index để DB chặn bản ghi trùng; khi hai request đăng nhập lần đầu chạy song song, `orElseGet` vẫn có thể INSERT hai lần nếu không có ràng buộc này. Phải dọn dữ liệu trùng trước khi tạo index, và khi có index thì request thua cuộc nhận lỗi unique: bắt lỗi rồi đọc lại, hoặc dùng `INSERT ... ON CONFLICT DO NOTHING`."
+  }
+}

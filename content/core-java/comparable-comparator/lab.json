@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thông báo cũ nhảy lên đầu danh sách",
+  "context": "Màn hình thông báo sắp xếp theo thời gian tạo (epoch mili giây) tăng dần trong bộ nhớ. Test dùng dữ liệu tạo cùng ngày nên luôn đúng. Trên production, user lâu năm thấy thứ tự lộn xộn, thỉnh thoảng API trả 500.",
+  "buggyCode": "record Event(String name, long createdAt) {}\n\nlong day = 86_400_000L;\nlong now = 1_790_000_000_000L;\nList<Event> events = new ArrayList<>(List.of(\n    new Event(\"A\", now - 30 * day),\n    new Event(\"B\", now),\n    new Event(\"C\", now - 10 * day)));\n\nevents.sort((x, y) -> (int) (x.createdAt() - y.createdAt()));\nSystem.out.println(events.stream().map(Event::name).toList());",
+  "symptom": {
+    "description": "Mong đợi `[A, C, B]` (cũ nhất trước). Với danh sách vài nghìn thông báo, log còn có lỗi từ `List.sort`.",
+    "output": "[C, B, A]\n\n// Danh sách 2.000 phần tử trải trong 60 ngày:\njava.lang.IllegalArgumentException: Comparison method violates its general contract!\n\tat java.base/java.util.TimSort.mergeLo(TimSort.java:781)"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "Hiệu số quá 2³¹ ms bị ép sang `int` thì tràn, đổi dấu so sánh",
+      "TimSort không ổn định nên hai phần tử bằng nhau bị đổi chỗ",
+      "`events.sort` sắp trên bản sao nên list gốc không đổi",
+      "Epoch mili giây phải đổi sang giây trước khi so với nhau"
+    ],
+    "answer": 0,
+    "explanation": "30 ngày là 2.592.000.000 ms, lớn hơn `Integer.MAX_VALUE`, nên `(int)` cho số dương 1.702.967.296: A bị coi là mới hơn B. Cặp lệch 10 và 20 ngày vẫn vừa `int` nên đúng dấu. Kết quả là thứ tự vòng A < C < B < A, phá tính bắc cầu. TimSort phát hiện mâu thuẫn ở danh sách dài thì ném lỗi; danh sách ngắn thì chỉ sắp sai."
+  },
+  "fix": {
+    "code": "events.sort(Comparator.comparingLong(Event::createdAt));\n\n// Hoặc tự viết:\nevents.sort((x, y) -> Long.compare(x.createdAt(), y.createdAt()));",
+    "explanation": "`Long.compare` so trực tiếp nên không tràn. Quy tắc chung: không bao giờ viết comparator bằng phép trừ, kể cả trên `int`. Thêm test sắp xếp với dữ liệu trải rộng (hơn 25 ngày, có giá trị âm, có `Integer.MIN_VALUE`) để bắt lỗi kiểu này."
+  }
+}

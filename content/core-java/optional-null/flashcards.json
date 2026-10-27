@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "optional-purpose", "front": "`Optional` được thiết kế để dùng ở đâu?", "back": "Làm kiểu trả về của method có thể không có kết quả. Không dùng cho field, tham số hay phần tử collection." },
+    { "id": "orelse-vs-orelseget", "front": "`orElse(x)` khác `orElseGet(() -> x)` thế nào?", "back": "`orElse` luôn tính `x` trước khi gọi; `orElseGet` chỉ gọi supplier khi `Optional` rỗng." },
+    { "id": "of-vs-ofnullable", "front": "`Optional.of(null)` cho kết quả gì?", "back": "Ném NPE ngay. Giá trị có thể `null` thì dùng `Optional.ofNullable`." },
+    { "id": "get-vs-orelsethrow", "front": "Nên dùng gì thay `optional.get()`?", "back": "`orElseThrow()` (Java 10): cùng hành vi nhưng tên nói rõ có thể ném lỗi; hoặc `map`/`orElse` để khỏi ném." },
+    { "id": "empty-list", "front": "Method trả danh sách có thể trống nên trả `Optional<List<T>>` không?", "back": "Không. Trả list rỗng; list rỗng đã biểu diễn được \"không có kết quả\"." },
+    { "id": "null-collections", "front": "Kể vài collection ném NPE khi thêm `null`.", "back": "`List.of`, `Map.of`, `List.copyOf`, `ConcurrentHashMap`, `ArrayDeque`, `TreeMap` dùng thứ tự tự nhiên (key `null`)... `HashMap`, `ArrayList` thì nhận." },
+    { "id": "nullmarked", "front": "`@NullMarked` của JSpecify làm gì?", "back": "Đánh dấu mọi kiểu trong phạm vi (package, class) là không-null theo mặc định; chỉ chỗ có `@Nullable` mới được `null`." },
+    { "id": "helpful-npe-local", "front": "Vì sao helpful NPE đôi khi in `<local5>` thay vì tên biến?", "back": "Class được biên dịch không có thông tin biến cục bộ (thiếu `javac -g`)." }
+  ]
+}

@@ -365,7 +365,7 @@
       "term": "Fail-fast iterator",
       "meaning": "Iterator phát hiện collection bị sửa cấu trúc trong lúc duyệt (qua bộ đếm `modCount`) và ném `ConcurrentModificationException` ngay, thay vì chạy tiếp với dữ liệu sai. Chỉ là cố gắng phát hiện, không đảm bảo.",
       "example": "Gọi `map.remove(key)` bên trong vòng `for (var e : map.entrySet())` làm lần lặp sau ném `ConcurrentModificationException`.",
-      "topics": ["hashmap-internals", "collections-overview"]
+      "topics": ["hashmap-internals", "collections-overview", "comparable-comparator"]
     },
     {
       "id": "monitor",
@@ -2349,7 +2349,7 @@
       "meaning": "Quy tắc so sánh và sắp xếp chuỗi của database: có phân biệt hoa thường, có phân biệt dấu hay không, thứ tự chữ cái. Ảnh hưởng tới `=`, `ORDER BY`, `LIKE` và unique index.",
       "example": "MySQL `utf8mb4_0900_ai_ci` coi `Nam`, `nam` và `Năm` là bằng nhau khi so sánh; PostgreSQL mặc định phân biệt.",
       "related": ["expression-index"],
-      "topics": ["postgres-vs-mysql", "time-encoding"]
+      "topics": ["postgres-vs-mysql", "time-encoding", "comparable-comparator"]
     },
     {
       "id": "cache",
@@ -3837,7 +3837,7 @@
       "meaning": "Kiểu iterator của các collection đồng thời: không ném `ConcurrentModificationException`, mỗi phần tử được trả tối đa một lần, và thay đổi xảy ra trong lúc duyệt có thể thấy hoặc không.",
       "example": "Duyệt `ConcurrentHashMap.entrySet()` trong khi thread khác `put` không lỗi, nhưng không bảo đảm thấy key vừa thêm.",
       "related": ["fail-fast"],
-      "topics": ["concurrent-hashmap"]
+      "topics": ["concurrent-hashmap", "comparable-comparator"]
     },
     {
       "id": "carrier-thread",
@@ -7205,7 +7205,7 @@
       "meaning": "Compiler tự chuyển giữa primitive và wrapper: boxing gọi `valueOf`, unboxing gọi `xxxValue()`. Unboxing một `null` ném `NullPointerException`.",
       "example": "`int n = map.get(key);` biên dịch thành `map.get(key).intValue()`.",
       "related": ["wrapper-class", "integer-cache"],
-      "topics": ["java-basics-types"]
+      "topics": ["java-basics-types", "optional-null"]
     },
     {
       "id": "integer-cache",
@@ -7229,7 +7229,7 @@
       "meaning": "Tràn số: kết quả vượt phạm vi của `int`/`long` thì quay vòng sang giá trị khác mà không báo lỗi. `Math.addExact`, `multiplyExact` ném `ArithmeticException` thay vì tràn im lặng.",
       "example": "`Integer.MAX_VALUE + 1` ra `-2147483648`.",
       "related": ["primitive-type"],
-      "topics": ["java-basics-types"]
+      "topics": ["java-basics-types", "comparable-comparator"]
     },
     {
       "id": "compile-time-constant",
@@ -7318,6 +7318,86 @@
       "example": "`sealed interface Shape permits Circle, Square {}`.",
       "related": ["enum-type"],
       "topics": ["oop-java"]
+    },
+    {
+      "id": "comparable",
+      "term": "Comparable",
+      "meaning": "Interface cho class tự định nghĩa thứ tự tự nhiên qua `compareTo`, trả số âm, 0 hoặc dương. `String`, `Integer`, `BigDecimal`, `LocalDate` đều implement.",
+      "example": "`Collections.sort(names)` dùng `String.compareTo` mà không cần truyền comparator.",
+      "related": ["comparator", "total-order"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "comparator",
+      "term": "Comparator",
+      "meaning": "Object so sánh hai phần tử từ bên ngoài class, cho phép nhiều cách sắp xếp; ghép được bằng `comparing`, `thenComparing`, `reversed`, `nullsLast`.",
+      "example": "`Comparator.comparing(Order::status).thenComparing(Order::createdAt)`.",
+      "related": ["comparable", "total-order"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "total-order",
+      "term": "Total order",
+      "meaning": "Thứ tự toàn phần: mọi cặp phần tử so được, đảo chỗ thì đảo dấu, và có tính bắc cầu. Thuật toán sắp xếp và `TreeMap` dựa vào giả định này.",
+      "example": "Comparator trừ hai `long` rồi ép `int` có thể cho A < C < B < A, không còn là thứ tự toàn phần.",
+      "related": ["comparator", "timsort"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "timsort",
+      "term": "TimSort",
+      "meaning": "Thuật toán sắp xếp ổn định mà Java dùng cho mảng object và `List.sort`: tìm các đoạn đã có thứ tự rồi merge. Phát hiện comparator mâu thuẫn thì ném `IllegalArgumentException`.",
+      "example": "`Comparison method violates its general contract!` khi sắp xếp vài nghìn phần tử với comparator viết bằng phép trừ.",
+      "related": ["stable-sort", "total-order"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "stable-sort",
+      "term": "Stable sort",
+      "meaning": "Sắp xếp ổn định: các phần tử bằng nhau theo comparator giữ nguyên thứ tự ban đầu.",
+      "example": "Sắp theo ngày tạo rồi sắp theo trạng thái thì trong cùng trạng thái vẫn theo ngày tạo.",
+      "related": ["timsort"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "iterator",
+      "term": "Iterator",
+      "meaning": "Object duyệt lần lượt phần tử của collection qua `hasNext`, `next` và có thể `remove`. Vòng `for-each` được biên dịch thành lời gọi iterator.",
+      "example": "Xoá phần tử khi duyệt bằng `iterator.remove()` thay vì `list.remove(x)`.",
+      "related": ["fail-fast", "weakly-consistent"],
+      "topics": ["comparable-comparator"]
+    },
+    {
+      "id": "optional",
+      "term": "Optional",
+      "meaning": "Kiểu bọc một giá trị có thể vắng (Java 8), dùng làm kiểu trả về để buộc bên gọi xử lý trường hợp không có kết quả.",
+      "example": "`repository.findById(id).orElseThrow(() -> new NotFoundException(id))`.",
+      "related": ["helpful-npe", "jspecify"],
+      "topics": ["optional-null"]
+    },
+    {
+      "id": "helpful-npe",
+      "term": "Helpful NPE",
+      "meaning": "Message chi tiết của `NullPointerException` (JEP 358, mặc định từ Java 15) nêu rõ biểu thức nào là `null` và thao tác nào thất bại.",
+      "example": "`Cannot invoke \"String.toUpperCase()\" because \"this.region\" is null`.",
+      "related": ["optional"],
+      "topics": ["optional-null"]
+    },
+    {
+      "id": "jspecify",
+      "term": "JSpecify",
+      "meaning": "Bộ annotation null-safety chuẩn chung (1.0, 2024): `@NullMarked` cho mặc định không-null, `@Nullable` cho chỗ được `null`. Spring Framework 7 dùng nó; NullAway và IntelliJ kiểm lúc biên dịch.",
+      "example": "`@NullMarked` trên `package-info.java`, rồi `@Nullable String middleName()` cho getter có thể trả `null`.",
+      "related": ["optional"],
+      "topics": ["optional-null"]
+    },
+    {
+      "id": "value-based-class",
+      "term": "Value-based class",
+      "meaning": "Class mà instance chỉ được dùng theo giá trị, không theo danh tính: không so bằng `==`, không `synchronized` trên nó. `Optional`, `Integer`, `LocalDate` là ví dụ.",
+      "example": "`synchronized (Integer.valueOf(1))` bị javac cảnh báo `[synchronization]` từ Java 16.",
+      "related": ["optional", "wrapper-class"],
+      "topics": ["optional-null", "java-basics-types"]
     }
   ]
 }

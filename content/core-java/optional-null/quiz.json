@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "getordefault-null",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Map<String, Integer> stock = new HashMap<>();\nstock.put(\"SKU-1\", null);\nSystem.out.println(stock.containsKey(\"SKU-1\"));\nSystem.out.println(stock.getOrDefault(\"SKU-1\", 0));",
+      "options": ["true / null", "true / 0", "false / 0", "false / null"],
+      "answer": 0,
+      "explanation": "Key có mặt (giá trị là `null`) nên `containsKey` là `true`. `getOrDefault` chỉ trả mặc định khi key vắng, nên trả đúng giá trị đang lưu là `null`."
+    },
+    {
+      "id": "tomap-null",
+      "kind": "single",
+      "prompt": "`users.stream().collect(Collectors.toMap(User::email, User::phone))` với một user có `phone` là `null` cho kết quả gì?",
+      "options": ["Ném `NullPointerException`", "Map có entry với value `null`", "Bỏ qua user đó, không ném lỗi", "Ném `IllegalStateException`"],
+      "answer": 0,
+      "explanation": "`toMap` từ chối value `null` (từ Java 9 bên trong kiểm `Objects.requireNonNull`), dù `HashMap` đích nhận được `null`. `IllegalStateException` là lỗi khi trùng key."
+    },
+    {
+      "id": "orelse-eager",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "static String load() { System.out.println(\"load\"); return \"db\"; }\n\nString a = Optional.of(\"cache\").orElse(load());\nString b = Optional.of(\"cache\").orElseGet(() -> load());\nSystem.out.println(a + \" \" + b);",
+      "options": ["load / cache cache", "cache cache", "load / load / cache cache", "load / db cache"],
+      "answer": 0,
+      "explanation": "Đối số của `orElse` được tính trước nên `load` chạy một lần dù không dùng kết quả. `orElseGet` không gọi supplier vì `Optional` có giá trị. Cả hai đều trả `cache`."
+    },
+    {
+      "id": "optional-field",
+      "kind": "single",
+      "prompt": "Entity có field `private Optional<String> middleName;`. Vấn đề chính là gì?",
+      "options": ["JPA không có ánh xạ sẵn cho `Optional`", "`Optional` không lưu được chuỗi rỗng", "Field `Optional` làm entity mất `equals`", "JPA tự chuyển nó thành cột kiểu JSON"],
+      "answer": 0,
+      "explanation": "`Optional` được thiết kế làm kiểu trả về nên JPA không ánh xạ field kiểu này (nó cũng không `Serializable`, gây rắc rối nếu entity được serialize). Để field là `String` có thể `null`, và nếu muốn thì cho getter trả `Optional.ofNullable(middleName)`."
+    }
+  ]
+}

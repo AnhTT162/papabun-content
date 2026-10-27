@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "comparable-vs-comparator", "front": "`Comparable` khác `Comparator` thế nào?", "back": "`Comparable` là thứ tự tự nhiên do chính class định nghĩa; `Comparator` là thứ tự đặt từ bên ngoài, có thể có nhiều cái." },
+    { "id": "no-subtraction", "front": "Vì sao không viết comparator bằng `a - b`?", "back": "Phép trừ có thể tràn số và đổi dấu, làm thứ tự sai và phá tính bắc cầu. Dùng `Integer.compare`/`Long.compare`." },
+    { "id": "timsort-error", "front": "Lỗi `Comparison method violates its general contract!` nghĩa là gì?", "back": "TimSort phát hiện comparator mâu thuẫn (không bắc cầu hoặc không đảo dấu). Phải sửa comparator, không tắt TimSort." },
+    { "id": "reversed-trap", "front": "`comparing(A).thenComparing(B).reversed()` đảo khoá nào?", "back": "Đảo cả chuỗi, tức cả A lẫn B. Muốn chỉ đảo B thì `thenComparing(B, Comparator.reverseOrder())`." },
+    { "id": "treeset-zero", "front": "`TreeSet` dựa vào đâu để coi hai phần tử là trùng?", "back": "`compare` trả 0, không dùng `equals`. Comparator thiếu khoá sẽ làm mất phần tử." },
+    { "id": "null-key", "front": "Sắp xếp theo khoá có thể `null` thế nào cho khỏi NPE?", "back": "Bọc comparator của khoá: `Comparator.comparing(P::name, Comparator.nullsLast(Comparator.naturalOrder()))`." },
+    { "id": "remove-while-iterating", "front": "Xoá phần tử khi đang duyệt list thế nào cho đúng?", "back": "Dùng `iterator.remove()` hoặc `list.removeIf(...)`; xoá bằng `list.remove` trong `for-each` thường ném `ConcurrentModificationException`." }
+  ]
+}

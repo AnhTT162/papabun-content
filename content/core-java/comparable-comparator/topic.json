@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "comparable-comparator",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Comparable, Comparator & Iterator",
+  "summary": "Contract của `compareTo`, vì sao comparator viết bằng phép trừ sắp sai và làm TimSort ném lỗi, nhất quán với `equals`, ghép comparator và bẫy `reversed()`, null khi sắp xếp, `Iterator` và cách xoá an toàn khi duyệt.",
+  "level": "junior",
+  "order": 5,
+  "minutes": 10,
+  "prerequisites": ["java-basics-types", "equals-hashcode"],
+  "terms": ["comparable", "comparator", "total-order", "timsort", "stable-sort", "iterator", "fail-fast", "integer-overflow", "collation", "weakly-consistent"],
+  "references": [
+    { "title": "Javadoc Comparable (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Comparable.html" },
+    { "title": "Javadoc Comparator (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Comparator.html" },
+    { "title": "Javadoc Iterator (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Iterator.html" },
+    { "title": "Javadoc java.text.Collator (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/text/Collator.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"`compareTo` có bắt buộc nhất quán với `equals` không?\" Javadoc chỉ **khuyến nghị mạnh**, không bắt buộc. Nhưng `TreeSet`, `TreeMap` coi `compare` trả 0 là trùng, còn `HashSet` dùng `equals`. `BigDecimal` là ví dụ trong JDK: `1.0` và `1.00` khác nhau theo `equals` nhưng bằng nhau theo `compareTo`, nên `HashSet` giữ 2 phần tử còn `TreeSet` giữ 1." }
+  ]
+}

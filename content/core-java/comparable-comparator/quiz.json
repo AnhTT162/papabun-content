@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "subtraction-overflow",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Comparator<Integer> bySubtraction = (a, b) -> a - b;\nSystem.out.println(bySubtraction.compare(Integer.MIN_VALUE, 1) > 0);\nSystem.out.println(Integer.compare(Integer.MIN_VALUE, 1) > 0);",
+      "options": ["true / false", "false / false", "true / true", "false / true"],
+      "answer": 0,
+      "explanation": "`Integer.MIN_VALUE - 1` tràn thành `Integer.MAX_VALUE`, nên comparator trừ coi số nhỏ nhất là lớn hơn 1. `Integer.compare` so trực tiếp nên trả số âm."
+    },
+    {
+      "id": "reversed-chain",
+      "kind": "output",
+      "prompt": "List ban đầu là `[An 30, Binh 25, An 20]`. Sau lệnh sort, list là gì?",
+      "code": "people.sort(Comparator.comparing(Person::name)\n    .thenComparingInt(Person::age)\n    .reversed());",
+      "options": ["[Binh 25, An 30, An 20]", "[An 30, An 20, Binh 25]", "[Binh 25, An 20, An 30]", "[An 20, An 30, Binh 25]"],
+      "answer": 0,
+      "explanation": "`reversed()` đảo toàn bộ comparator đã ghép: tên giảm dần rồi tuổi giảm dần. Muốn tên tăng dần, tuổi giảm dần thì viết `thenComparing(Person::age, Comparator.reverseOrder())`."
+    },
+    {
+      "id": "bigdecimal-sets",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "List<BigDecimal> prices = List.of(new BigDecimal(\"1.0\"), new BigDecimal(\"1.00\"));\nSystem.out.println(new HashSet<>(prices).size());\nSystem.out.println(new TreeSet<>(prices).size());",
+      "options": ["2 / 1", "1 / 1", "2 / 2", "1 / 2"],
+      "answer": 0,
+      "explanation": "`BigDecimal.equals` so cả scale nên `1.0` khác `1.00`, `HashSet` giữ 2. `compareTo` chỉ so giá trị nên trả 0, `TreeSet` coi là trùng và giữ 1."
+    },
+    {
+      "id": "short-list-no-error",
+      "kind": "single",
+      "prompt": "Comparator vi phạm tính bắc cầu, nhưng test sắp xếp 10 phần tử không bao giờ ném lỗi. Vì sao?",
+      "options": ["List ngắn không có bước merge để phát hiện lỗi", "Contract chỉ được kiểm khi JVM chạy với cờ `-ea`", "JIT tự sửa comparator sau vài nghìn lần gọi", "Lỗi chỉ xảy ra khi sắp xếp song song nhiều thread"],
+      "answer": 0,
+      "explanation": "Với danh sách dưới 32 phần tử (ngưỡng của cài đặt TimSort trong JDK từ Java 7), TimSort dùng binary insertion sort và không có bước merge để phát hiện mâu thuẫn, nên chỉ sắp sai mà không ném. Lỗi chỉ hiện với dữ liệu lớn như production."
+    }
+  ]
+}

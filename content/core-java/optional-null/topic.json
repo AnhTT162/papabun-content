@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "optional-null",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Null, Optional & xử lý vắng giá trị",
+  "summary": "NPE đến từ đâu và đọc helpful NPE, `Optional` dùng đúng chỗ và các anti-pattern (`orElse` chạy sớm, `get`, field `Optional`), annotation `@Nullable` với JSpecify, collection nào nhận `null`, `null` trong map và JSON.",
+  "level": "junior",
+  "order": 6,
+  "minutes": 10,
+  "prerequisites": ["java-basics-types"],
+  "terms": ["optional", "helpful-npe", "jspecify", "autoboxing", "value-based-class"],
+  "references": [
+    { "title": "Javadoc Optional (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" },
+    { "title": "JEP 358: Helpful NullPointerExceptions", "url": "https://openjdk.org/jeps/358" },
+    { "title": "JSpecify 1.0 user guide", "url": "https://jspecify.dev/docs/user-guide/" },
+    { "title": "Javadoc java.util.Objects (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Objects.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sao không dùng `Optional` cho field và tham số?\" `Optional` được thiết kế làm **kiểu trả về** để buộc bên gọi xử lý trường hợp vắng. Làm field thì không `Serializable`, tốn thêm một object, và JPA/Jackson cần cấu hình riêng. Làm tham số thì bên gọi vẫn truyền `null` được, thành ba trạng thái thay vì hai. Field và tham số có thể vắng thì đánh dấu `@Nullable` và để công cụ phân tích tĩnh kiểm." },
+    { "type": "callout", "style": "warning", "markdown": "`map.get(k) == null` không phân biệt được \"không có key\" với \"key có giá trị `null`\". `getOrDefault(k, 0)` cũng trả `null` nếu key có mặt với giá trị `null` (đã chạy JDK 27). Tốt nhất là không đưa `null` vào map; `ConcurrentHashMap` cấm hẳn để tránh sự mơ hồ này." }
+  ]
+}

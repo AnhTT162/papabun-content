@@ -130,8 +130,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 2 | `oop-java` | OOP trong Java | junior | Kế thừa và composition, dynamic dispatch, interface và abstract class, inner/nested class, enum (EnumMap, enum singleton), sealed | A L B | ✅ |
 | 3 | `string-pool` | String & String Pool | junior | Immutable, intern, compact strings, ghép chuỗi | L D B | ✅ |
 | 4 | `equals-hashcode` | equals & hashCode | junior | Contract, record | A L B | ✅ |
-| 5 | `comparable-comparator` | ✚ Comparable, Comparator & Iterator | junior | Contract của `compareTo`, nhất quán với `equals`, comparator kết hợp, `Iterator` và fail-fast | L B | ⬜ |
-| 6 | `optional-null` | ✚ Null, Optional & xử lý vắng giá trị | junior | NPE và helpful NPE, `Optional` dùng đúng/sai, `@Nullable`, null trong collection và JSON | L B | ⬜ |
+| 5 | `comparable-comparator` | ✚ Comparable, Comparator & Iterator | junior | Contract của `compareTo`, nhất quán với `equals`, comparator kết hợp, `Iterator` và fail-fast | L B | ✅ |
+| 6 | `optional-null` | ✚ Null, Optional & xử lý vắng giá trị | junior | NPE và helpful NPE, `Optional` dùng đúng/sai, `@Nullable`, null trong collection và JSON | L B | ✅ |
 | 7 | `collections-overview` | Collections Overview | junior | Chọn cài đặt theo Big-O, bất biến và view, đa luồng | A L Sc | ✅ |
 | 8 | `date-time-api` | java.time | junior | `Instant`, `ZonedDateTime`, DST, lưu thời gian đúng cách | L B | ⬜ |
 | 9 | `bigdecimal-money` | Số thực & tiền tệ | junior | Sai số `double`, `BigDecimal` equals và compareTo, rounding | L B | ⬜ |
