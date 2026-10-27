@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Reactor: một event loop phục vụ nhiều kết nối",
+  "nodes": [
+    { "id": "clients", "label": "10.000 kết nối", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "kernel", "label": "Kernel (epoll)", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "loop", "label": "Event loop", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "handler", "label": "Handler non-blocking", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "pool", "label": "Pool cho việc chặn", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "db", "label": "Database", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "clients-kernel", "from": "clients", "to": "kernel", "label": "socket non-blocking" },
+    { "id": "kernel-loop", "from": "kernel", "to": "loop", "label": "50 socket sẵn sàng" },
+    { "id": "loop-handler", "from": "loop", "to": "handler", "label": "đọc, giải mã" },
+    { "id": "handler-pool", "from": "handler", "to": "pool", "label": "chuyển việc chặn" },
+    { "id": "pool-db", "from": "pool", "to": "db", "label": "JDBC 50 ms" },
+    { "id": "pool-loop", "from": "pool", "to": "loop", "label": "kết quả, ghi socket" }
+  ],
+  "steps": [
+    { "caption": "Mọi socket được đặt non-blocking và đăng ký một lần với epoll; kernel theo dõi chúng, không thread nào ngồi chờ từng socket.", "show": ["clients", "kernel", "clients-kernel"], "highlight": ["clients-kernel"] },
+    { "caption": "Event loop gọi epoll_wait và chỉ nhận về những socket có dữ liệu, ví dụ 50 trong 10.000, nên chi phí theo số sự kiện chứ không theo số kết nối.", "show": ["loop", "kernel-loop"], "highlight": ["kernel-loop"] },
+    { "caption": "Với mỗi socket sẵn sàng, loop đọc phần đã có, giải mã và gọi handler. Handler phải trả về nhanh, vì cả 10.000 kết nối đang dùng chung thread này.", "show": ["handler", "loop-handler"], "highlight": ["loop-handler"] },
+    { "caption": "Việc chặn như JDBC được chuyển sang một pool riêng; event loop quay lại epoll_wait ngay để phục vụ các kết nối khác.", "show": ["pool", "db", "handler-pool", "pool-db"], "highlight": ["handler-pool", "pool-db"] },
+    { "caption": "Xong, kết quả được gửi lại cho đúng event loop của kết nối đó để ghi socket; mỗi kết nối luôn được một loop xử lý nên không cần khoá.", "show": ["pool-loop"], "highlight": ["pool-loop"] },
+    { "caption": "Nếu handler gọi thẳng JDBC 50 ms trên loop, 20 request đến cùng lúc xếp hàng nối đuôi: request cuối chờ khoảng 1 giây (đã đo).", "show": [], "highlight": ["loop", "handler"] }
+  ]
+}

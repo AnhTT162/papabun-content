@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "bloom-overfill-output",
+      "kind": "output",
+      "prompt": "Guava 33.6, JDK 27. Filter được tạo cho 10.000 phần tử với tỉ lệ sai 1%, nhưng bị nạp 20.000 phần tử. Chương trình in ra gì?",
+      "code": "BloomFilter<Integer> filter = BloomFilter.create(Funnels.integerFunnel(), 10_000, 0.01);\nfor (int id = 0; id < 20_000; id++) filter.put(id);          // nạp gấp đôi dự kiến\nint falsePositives = 0;\nfor (int id = 1_000_000; id < 1_100_000; id++) {\n    if (filter.mightContain(id)) falsePositives++;\n}\nSystem.out.println(filter.mightContain(5) + \" \" + falsePositives * 100 / 100_000 + \"%\");",
+      "options": ["true 15%", "true 1%", "false 15%", "true 2%"],
+      "answer": 0,
+      "explanation": "Bloom filter không có false negative, nên phần tử đã thêm (5) luôn trả `true`. Nhưng tỉ lệ sai không tăng tuyến tính theo số phần tử: nạp gấp đôi làm nhiều bit bật hơn hẳn, và với k = 7 hàm hash, tỉ lệ báo nhầm nhảy từ 1% lên khoảng 15% (đã chạy). Filter không tự lớn lên; phải ước lượng dư, hoặc dùng loại co giãn được."
+    },
+    {
+      "id": "hll-which",
+      "kind": "single",
+      "prompt": "Cần đếm số người dùng phân biệt mỗi ngày (khoảng 50 triệu) cho dashboard, rồi gộp thành số theo tuần và tháng; sai khoảng 1% là chấp nhận được. Cách hợp lý nhất?",
+      "options": [
+        "Một HyperLogLog mỗi ngày, gộp bằng `PFMERGE` cho tuần và tháng",
+        "Một Bloom filter mỗi ngày, đếm số bit đang bật để ra số người",
+        "Count-Min Sketch theo user id, cộng mọi ô để ra số người dùng",
+        "Một `SET` Redis mỗi ngày chứa user id, `SUNION` cho tuần và tháng"
+      ],
+      "answer": 0,
+      "explanation": "HyperLogLog đếm phân biệt với 12 KB mỗi bản, sai khoảng 0,81%, và gộp được bằng cách lấy max từng thanh ghi, nên tuần và tháng tính từ các bản theo ngày. `SET` cho số chính xác nhưng 50 triệu id mỗi ngày tốn hàng GB, và `SUNION` cả tháng rất nặng. Bloom filter trả lời \"có hay không\", không được thiết kế để đếm. Count-Min đếm tần suất từng phần tử; cộng mọi ô ra tổng số sự kiện nhân với số hàng, không ra số phần tử phân biệt."
+    },
+    {
+      "id": "cms-rare-keys",
+      "kind": "single",
+      "prompt": "Count-Min Sketch (4 × 2.000 ô) đếm lượt xem của 100.000 sản phẩm trên 1 triệu lượt. Sản phẩm được xem nhiều nhất: thật 82.706, ước 82.844. Một sản phẩm hiếm: thật 2, ước 205. Vì sao sai lệch khác nhau như vậy?",
+      "options": [
+        "Sai số cộng thêm tỉ lệ với tổng số sự kiện, nên nhỏ so với khoá phổ biến",
+        "Hash của sản phẩm hiếm phân bố kém hơn nên rơi vào cùng một ô",
+        "Count-Min đếm thiếu khoá phổ biến và đếm dư khoá hiếm để cân bằng",
+        "Sản phẩm hiếm bị bỏ qua ở hàng đầu tiên nên các hàng sau đếm sai"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi ô cộng dồn mọi khoá va chạm vào nó; lấy min qua các hàng chỉ giảm phần dư chứ không loại hết. Cận của phần dư là (e/w)·N với N là tổng số sự kiện, ở đây khoảng 1.360 với xác suất 98%; thực tế dư khoảng 150–200: nhỏ so với 82.706 nhưng gấp trăm lần 2. Count-Min không bao giờ đếm thiếu. Vì vậy nó hợp cho heavy hitter và top-k, không hợp để đếm chính xác khoá hiếm (đã chạy)."
+    },
+    {
+      "id": "skiplist-why",
+      "kind": "single",
+      "prompt": "Vì sao memtable của RocksDB và `ConcurrentSkipListMap` của Java chọn skip list thay vì cây đỏ-đen?",
+      "options": [
+        "Không phải xoay cây, chèn chỉ sửa vài con trỏ cục bộ, dễ làm đồng thời",
+        "Skip list có độ phức tạp xấu nhất O(1) còn cây đỏ-đen là O(log n)",
+        "Skip list không cần so sánh khoá nên nhanh hơn với khoá dạng chuỗi",
+        "Skip list đảm bảo O(log n) ở ca xấu nhất, cây đỏ-đen chỉ ở trung bình"
+      ],
+      "answer": 0,
+      "explanation": "Cả hai đều O(log n) trung bình (skip list chỉ là kỳ vọng, không đảm bảo xấu nhất). Lợi thế của skip list là chèn và xoá chỉ sửa con trỏ của vài node lân cận, không có phép xoay lan ra cả cây, nên viết lock-free bằng CAS dễ hơn nhiều, và duyệt theo khoảng rất đơn giản. Nó vẫn so sánh khoá. Và ngược với một hiểu lầm hay gặp: cây đỏ-đen mới đảm bảo O(log n) ở ca xấu nhất, skip list chỉ đảm bảo theo kỳ vọng."
+    },
+    {
+      "id": "bloom-range",
+      "kind": "single",
+      "prompt": "Bảng Cassandra lưu sự kiện theo `(device_id, ts)`. Query `WHERE device_id = ? AND ts > ?` vẫn đọc nhiều SSTable dù đã có Bloom filter. Lý do?",
+      "options": [
+        "Bloom filter theo partition key chỉ biết device có trong file hay không",
+        "Bloom filter bị tắt khi query có điều kiện trên clustering column",
+        "Tỉ lệ false positive của Bloom filter tăng theo số cột trong query",
+        "Bloom filter chỉ dùng khi đọc ở consistency level `ONE`"
+      ],
+      "answer": 0,
+      "explanation": "Bloom filter trả lời \"khoá này có trong file không\". Với Cassandra, khoá đó là partition key: thiết bị ghi liên tục thì partition của nó có mặt ở gần như mọi SSTable, nên filter nói \"có thể có\" với tất cả, và điều kiện theo khoảng `ts` phải xem trong từng file. Giảm số file phải đọc bằng chiến lược compaction theo thời gian (TWCS) hoặc thiết kế partition theo khoảng thời gian (bucket theo ngày)."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "skip-list-how", "front": "Skip list tìm kiếm O(log n) thế nào?", "back": "Mỗi node được lên tầng trên với xác suất cố định (1/2 hay 1/4); tìm từ tầng cao nhất, nhảy xa rồi đi xuống dần." },
+    { "id": "bloom-answers", "front": "Bloom filter trả lời được gì?", "back": "\"Chắc chắn không có\" hoặc \"có thể có\": có false positive, không có false negative." },
+    { "id": "bloom-bits", "front": "Bloom filter 1% sai tốn bao nhiêu bộ nhớ mỗi phần tử?", "back": "Khoảng 9,6 bit (1 triệu phần tử khoảng 1,2 MB); giảm sai 10 lần tốn thêm khoảng 4,8 bit." },
+    { "id": "bloom-overfill", "front": "Nạp Bloom filter vượt số phần tử dự kiến thì sao?", "back": "Tỉ lệ sai tăng rất nhanh: filter 1% nạp gấp đôi lên khoảng 15%. Filter không tự lớn lên." },
+    { "id": "bloom-in-lsm", "front": "LSM tree dùng Bloom filter để làm gì?", "back": "Mỗi SSTable có một filter trong RAM; lệnh đọc bỏ qua các file chắc chắn không chứa khoá, không tốn lần đọc đĩa." },
+    { "id": "hll-error", "front": "HyperLogLog của Redis tốn bao nhiêu và sai bao nhiêu?", "back": "16.384 thanh ghi, tối đa 12 KB, sai chuẩn khoảng 0,81% (1,04/√m)." },
+    { "id": "hll-merge", "front": "HyperLogLog gộp được không?", "back": "Được: lấy max từng thanh ghi (`PFMERGE`), nên gộp ngày thành tuần. Không trừ được hai tập." },
+    { "id": "cms-direction", "front": "Count-Min Sketch sai theo chiều nào?", "back": "Chỉ đếm dư, không đếm thiếu; sai số tỉ lệ với tổng số sự kiện nên khoá hiếm bị lệch nhiều." },
+    { "id": "trie-use", "front": "Trie và radix tree dùng cho gì?", "back": "Tìm theo tiền tố: gợi ý tìm kiếm, bảng định tuyến khớp tiền tố dài nhất, router URL." },
+    { "id": "merkle-use", "front": "Merkle tree giúp hai bản sao đồng bộ thế nào?", "back": "So hash gốc; khác thì đi xuống nhánh có hash khác, chỉ trao đổi phần dữ liệu lệch." }
+  ]
+}

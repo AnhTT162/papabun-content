@@ -119,8 +119,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 13 | `rest-api-design` | Thiết kế REST API | mid | Method idempotent, status code, phân trang, versioning và tương thích ngược, ETag, lỗi theo RFC 9457 | L B Sc | ✅ |
 | 14 | `algorithms-interview` | Thuật toán hay gặp khi phỏng vấn | mid | Hai con trỏ, sliding window, BFS/DFS, binary search, DP cơ bản | L B | ✅ |
 | 15 | `linux-troubleshooting` | Lệnh Linux để điều tra sự cố | mid | `top`, `vmstat`, `iostat`, `ss`, `lsof`, `strace`, `tcpdump` | L T | ✅ |
-| 16 | `advanced-data-structures` | ✚ Cấu trúc dữ liệu trong hệ thống lớn | senior | Skip list, Bloom filter, LSM tree, HyperLogLog, Count-Min Sketch, trie; Redis, Cassandra, Kafka dùng chúng ở đâu | L D | ⬜ |
-| 17 | `io-models` | Mô hình I/O | senior | Blocking/non-blocking, epoll, reactor, Netty, zero-copy | L D | ⬜ |
+| 16 | `advanced-data-structures` | ✚ Cấu trúc dữ liệu trong hệ thống lớn | senior | Skip list, Bloom filter, LSM tree, HyperLogLog, Count-Min Sketch, trie; Redis, Cassandra, Kafka dùng chúng ở đâu | L D | ✅ |
+| 17 | `io-models` | Mô hình I/O | senior | Blocking/non-blocking, epoll, reactor, Netty, zero-copy | L D | ✅ |
 
 ### 2. Core Java (`core-java`)
 

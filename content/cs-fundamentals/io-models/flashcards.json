@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-models", "front": "Ba mô hình chờ I/O chính?", "back": "Blocking (mỗi kết nối một thread), multiplexing (một thread hỏi kernel socket nào sẵn sàng: epoll, kqueue), async (kernel làm xong rồi báo: io_uring, IOCP)." },
+    { "id": "c10k", "front": "Bài toán C10K là gì?", "back": "Giữ 10.000 kết nối đồng thời trên một máy; thread-per-connection tốn quá nhiều stack, bộ nhớ kernel và context switch, nên cần multiplexing." },
+    { "id": "epoll-cost", "front": "Chi phí của `epoll_wait` tỉ lệ với gì?", "back": "Số socket có sự kiện, không phải tổng số socket như `select`/`poll`." },
+    { "id": "java-selector", "front": "Java NIO `Selector` dùng gì bên dưới?", "back": "epoll trên Linux, kqueue trên macOS (`KQueueSelectorImpl`), ở chế độ level-triggered." },
+    { "id": "reactor-rule", "front": "Quy tắc quan trọng nhất của reactor?", "back": "Không chặn event loop: mọi kết nối của loop đứng chờ khi handler chặn; việc chặn chuyển sang pool riêng." },
+    { "id": "edge-vs-level", "front": "Edge-triggered khác level-triggered thế nào?", "back": "Level báo lại mỗi lần khi còn dữ liệu; edge chỉ báo khi có dữ liệu mới tới, nên phải đọc tới `EAGAIN`, đọc thiếu là treo." },
+    { "id": "vt-poller", "front": "Virtual thread đọc socket chưa có dữ liệu thì sao?", "back": "Nó unmount khỏi carrier, socket được đăng ký với poller của JDK (epoll/kqueue); có dữ liệu thì được lên lịch chạy tiếp." },
+    { "id": "file-io-pool", "front": "Vì sao I/O file thường chạy trên thread pool trong mô hình event loop?", "back": "epoll từ chối file thường, `poll` luôn báo sẵn sàng, còn `read` vẫn chặn chờ đĩa; trên Linux, io_uring mới làm file I/O bất đồng bộ thật." },
+    { "id": "sendfile", "front": "`sendfile` (zero-copy) bỏ được gì?", "back": "Hai lần chép qua bộ nhớ ứng dụng: dữ liệu đi thẳng từ page cache ra socket. TLS phá tối ưu này trừ khi có kTLS." },
+    { "id": "io-uring-caveat", "front": "Cần lưu ý gì trước khi dùng io_uring?", "back": "Nhiều lỗ hổng kernel; seccomp mặc định của Docker chặn các syscall io_uring. Kiểm tra môi trường, epoll vẫn là lựa chọn an toàn." }
+  ]
+}

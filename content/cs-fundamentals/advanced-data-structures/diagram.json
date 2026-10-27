@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lệnh đọc trong LSM tree đi qua skip list và Bloom filter",
+  "nodes": [
+    { "id": "get", "label": "GET user:881", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "memtable", "label": "Memtable (skip list)", "kind": "cache", "x": 0.85, "y": 0.05 },
+    { "id": "bloom-new", "label": "Bloom của SSTable mới", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "sst-new", "label": "SSTable mới", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "bloom-old", "label": "Bloom của SSTable cũ", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "sst-old", "label": "SSTable cũ", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "get-memtable", "from": "get", "to": "memtable", "label": "tìm O(log n)" },
+    { "id": "get-bloom-new", "from": "get", "to": "bloom-new", "label": "chắc chắn không có" },
+    { "id": "bloom-new-sst-new", "from": "bloom-new", "to": "sst-new", "label": "bỏ qua, không đọc" },
+    { "id": "get-bloom-old", "from": "get", "to": "bloom-old", "label": "có thể có" },
+    { "id": "bloom-old-sst-old", "from": "bloom-old", "to": "sst-old", "label": "đọc 1 block" }
+  ],
+  "steps": [
+    { "caption": "Lệnh đọc xem memtable trước: dữ liệu mới nhất nằm trong RAM, sắp xếp bằng skip list nên tìm O(log n) và ghi đồng thời không cần khoá cả cấu trúc.", "show": ["get", "memtable", "get-memtable"], "highlight": ["get-memtable"] },
+    { "caption": "Không có trong memtable. Mỗi SSTable trên đĩa có một Bloom filter nằm trong RAM; hỏi filter của file mới nhất trước.", "show": ["bloom-new", "get-bloom-new"], "highlight": ["get-bloom-new"] },
+    { "caption": "Một trong k bit đang tắt: khoá chắc chắn không có trong file này, nên bỏ qua mà không tốn lần đọc đĩa nào.", "show": ["sst-new", "bloom-new-sst-new"], "highlight": ["bloom-new-sst-new"] },
+    { "caption": "Filter của file cũ trả có thể có: cả k bit đều bật. Với khoảng 10 bit mỗi khoá, khoảng 1% số lần hỏi một khoá không có trong file vẫn nhận câu trả lời này.", "show": ["bloom-old", "get-bloom-old"], "highlight": ["get-bloom-old"] },
+    { "caption": "Lúc này mới dùng index của SSTable để đọc đúng một block chứa khoá. Không có filter, lệnh đọc phải tra index và block của mọi file.", "show": ["sst-old", "bloom-old-sst-old"], "highlight": ["bloom-old-sst-old"] },
+    { "caption": "Compaction gộp hai SSTable thành một file mới và dựng lại Bloom filter cho nó, vì filter không xoá được khoá đã bị ghi đè hay xoá.", "show": [], "highlight": ["sst-new", "sst-old"] }
+  ]
+}

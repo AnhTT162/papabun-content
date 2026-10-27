@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "io-models",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Mô hình I/O",
+  "summary": "Blocking và thread-per-connection, bài toán C10K; I/O multiplexing với `select`, `poll`, epoll, kqueue và Java NIO `Selector`; reactor và event loop của Netty, số đo khi chặn loop; level-triggered và edge-triggered; file không multiplex được; async với io_uring và lưu ý bảo mật; virtual thread trên poller của JDK; zero-copy với `sendfile`, `mmap`, kTLS; backpressure, quan sát và chọn mô hình.",
+  "level": "senior",
+  "order": 17,
+  "minutes": 15,
+  "prerequisites": ["os-process-memory", "tcp-deep"],
+  "terms": ["blocking-io", "io-multiplexing", "epoll", "reactor-pattern", "event-loop", "io-uring", "c10k", "virtual-thread", "zero-copy", "backpressure", "blockhound", "page-cache", "context-switch"],
+  "references": [
+    { "title": "Linux man-pages: epoll(7)", "url": "https://man7.org/linux/man-pages/man7/epoll.7.html" },
+    { "title": "Java SE API: java.nio.channels.Selector", "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/channels/Selector.html" },
+    { "title": "JEP 444: Virtual Threads", "url": "https://openjdk.org/jeps/444" },
+    { "title": "Linux man-pages: io_uring(7)", "url": "https://man7.org/linux/man-pages/man7/io_uring.7.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Có virtual thread rồi thì còn cần reactive không?\" Trả lời: với service CRUD gọi database và vài API, virtual thread cho cùng quy mô mà giữ code tuần tự, stack trace và debug dễ, nên là lựa chọn mặc định trên Java 21+. Reactive vẫn có chỗ khi cần backpressure tường minh trên luồng dữ liệu (streaming, Kafka, SSE), ghép nhiều nguồn bất đồng bộ bằng operator, hoặc đã có stack Netty. Cả hai đều không giúp khi nút cổ chai là database: connection pool vẫn là trần." },
+    { "type": "callout", "style": "warning", "markdown": "Event loop không có timeout cho handler của bạn. Một lời gọi chặn bị quên (JDBC, `RestTemplate`, đọc file, log đồng bộ ra đĩa chậm) làm mọi kết nối của loop đó đứng chờ, CPU thấp mà latency tăng vọt. Bắt sớm bằng BlockHound trong test, và theo dõi số task đang chờ trong hàng đợi của event loop." }
+  ]
+}

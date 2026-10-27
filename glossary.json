@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive", "resilience-patterns", "thread-pool-exhaustion", "realtime-rpc-protocols"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive", "resilience-patterns", "thread-pool-exhaustion", "realtime-rpc-protocols", "io-models"]
     },
     {
       "id": "cpu-bound",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion", "os-process-memory"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion", "os-process-memory", "io-models"]
     },
     {
       "id": "pinning",
@@ -1597,7 +1597,7 @@
       "meaning": "Log-Structured Merge-tree: cấu trúc lưu trữ ghi vào bảng trong RAM rồi đổ ra các file đã sắp xếp không sửa được, gộp dần ở nền. Tối ưu cho ghi.",
       "example": "RocksDB, Cassandra, ScyllaDB, LevelDB dùng LSM-tree.",
       "related": ["compaction", "bloom-filter", "b-tree"],
-      "topics": ["storage-engine", "nosql-overview"]
+      "topics": ["storage-engine", "nosql-overview", "advanced-data-structures"]
     },
     {
       "id": "compaction",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine", "cache-failures", "data-structures"]
+      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures"]
     },
     {
       "id": "group-commit",
@@ -2733,7 +2733,7 @@
       "meaning": "Chuyển dữ liệu từ file (page cache) ra socket ngay trong kernel, không chép qua bộ nhớ của ứng dụng, bằng lời gọi như `sendfile`.",
       "example": "Broker Kafka gửi dữ liệu cho consumer qua `sendfile`; bật TLS thì mất tối ưu này.",
       "related": ["kafka-partition"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "io-models"]
     },
     {
       "id": "amqp-exchange",
@@ -3525,7 +3525,7 @@
       "meaning": "Thread chạy vòng lặp nhận sự kiện I/O (có dữ liệu, ghi xong) và gọi callback tương ứng, nhờ đó vài thread phục vụ được rất nhiều kết nối. Chặn thread này là chặn mọi kết nối của nó.",
       "example": "Reactor Netty có `max(số core, 4)` thread event loop; một lời gọi JDBC trên đó làm đứng mọi request cùng thread.",
       "related": ["reactive-streams", "blockhound"],
-      "topics": ["spring-webflux"]
+      "topics": ["spring-webflux", "io-models"]
     },
     {
       "id": "reactive-streams",
@@ -3541,7 +3541,7 @@
       "meaning": "Java agent của Reactor phát hiện lời gọi blocking (I/O, `sleep`, lock) trên thread non-blocking và ném lỗi, thường bật trong test; trên JDK 13+ cần cờ `-XX:+AllowRedefinitionToAddDeleteMethods`.",
       "example": "`BlockHound.install()` làm test đỏ khi handler WebFlux gọi repository JPA trên event loop.",
       "related": ["event-loop"],
-      "topics": ["spring-webflux"]
+      "topics": ["spring-webflux", "io-models"]
     },
     {
       "id": "check-then-act",
@@ -5277,7 +5277,7 @@
       "meaning": "Cây băm: lá là hash của từng khoảng dữ liệu, nút cha là hash của các con. Hai bản sao so gốc trước, chỉ đi xuống nhánh có hash khác, nên tìm phần lệch mà không chuyển toàn bộ dữ liệu.",
       "example": "Hai node có cùng hash gốc thì khớp hoàn toàn; khác thì so hai nhánh con, lặp lại tới khoảng dữ liệu cần chép.",
       "related": ["anti-entropy"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "advanced-data-structures"]
     },
     {
       "id": "token-bucket",
@@ -6373,7 +6373,7 @@
       "meaning": "Kernel dừng một thread, lưu trạng thái thanh ghi rồi cho thread khác chạy trên core đó. Tốn vài micro giây trực tiếp, cộng thêm cache CPU và TLB bị nguội.",
       "example": "`pidstat -w` cho thấy `nvcswch/s` cao: thread bị giành CPU liên tục vì quá nhiều thread chạy được trên ít core.",
       "related": ["process", "virtual-thread"],
-      "topics": ["os-process-memory"]
+      "topics": ["os-process-memory", "io-models"]
     },
     {
       "id": "virtual-memory",
@@ -6397,7 +6397,7 @@
       "meaning": "Phần RAM kernel dùng để cache nội dung file. Mọi lần đọc ghi file thường đều đi qua nó; kernel thu hồi khi process cần bộ nhớ.",
       "example": "`free -h` báo `buff/cache` 23 GB trên máy Kafka: dữ liệu mới được consumer đọc thẳng từ RAM, không chạm đĩa.",
       "related": ["zero-copy", "fsync"],
-      "topics": ["os-process-memory", "linux-troubleshooting"]
+      "topics": ["os-process-memory", "linux-troubleshooting", "io-models"]
     },
     {
       "id": "file-descriptor",
@@ -7062,6 +7062,118 @@
       "example": "`kubectl debug -it booking-7d9f --image=nicolaka/netshoot --target=app` rồi chạy `ss -tanp` thấy socket của app.",
       "related": ["cgroup"],
       "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "skip-list",
+      "term": "Skip list",
+      "meaning": "Danh sách liên kết có thứ tự với nhiều tầng: mỗi node được đưa lên tầng trên theo xác suất cố định, tìm kiếm nhảy xa ở tầng cao rồi đi xuống, trung bình O(log n). Chèn chỉ sửa vài con trỏ nên dễ làm đồng thời.",
+      "example": "Sorted set của Redis, memtable mặc định của RocksDB và `ConcurrentSkipListMap` của Java đều là skip list.",
+      "related": ["lsm-tree", "binary-search-tree"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "trie",
+      "term": "Trie",
+      "meaning": "Cây tiền tố: mỗi cạnh là một ký tự, các khoá chung tiền tố dùng chung đường đi, nên tìm mọi khoá bắt đầu bằng một tiền tố trong thời gian theo độ dài tiền tố.",
+      "example": "Gợi ý tìm kiếm: gõ `iph` thì đi 3 node rồi trả các từ trong nhánh đó như `iphone`, `iphone 17`.",
+      "related": ["radix-tree"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "radix-tree",
+      "term": "Radix tree",
+      "meaning": "Trie đã nén: các chuỗi node chỉ có một con được gộp thành một cạnh mang cả đoạn ký tự, tiết kiệm bộ nhớ. Dùng cho bảng định tuyến, router URL, page cache của Linux.",
+      "example": "Hai route `/orders/{id}` và `/orders/search` dùng chung một cạnh `/orders/` rồi mới tách nhánh.",
+      "related": ["trie", "route-table"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "probabilistic-data-structure",
+      "term": "Cấu trúc dữ liệu xác suất",
+      "meaning": "Cấu trúc trả lời gần đúng với sai số biết trước, đổi lấy bộ nhớ nhỏ hơn rất nhiều so với lưu chính xác. Ví dụ: Bloom filter, HyperLogLog, Count-Min Sketch.",
+      "example": "Đếm 50 triệu người dùng phân biệt bằng HyperLogLog 12 KB thay vì một set hàng GB, chấp nhận sai khoảng 0,81%.",
+      "related": ["bloom-filter", "hyperloglog", "count-min-sketch"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "false-positive",
+      "term": "False positive",
+      "meaning": "Kết quả báo \"có\" trong khi thật ra \"không\". Bloom filter chỉ có false positive, không bao giờ báo \"không có\" cho phần tử đã thêm (không có false negative).",
+      "example": "Bloom filter 1% trả \"có thể có\" cho khoảng 1 trong 100 username chưa ai dùng, nên phải tra database để chắc.",
+      "related": ["bloom-filter"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "hyperloglog",
+      "term": "HyperLogLog",
+      "meaning": "Cấu trúc xác suất ước lượng số phần tử khác nhau: băm từng phần tử, ghi độ dài chuỗi bit 0 dẫn đầu lớn nhất vào m thanh ghi, sai số chuẩn 1,04/√m. Gộp được bằng cách lấy max từng thanh ghi.",
+      "example": "Redis `PFADD visitors:2026-10-27 user:881`, `PFCOUNT`, rồi `PFMERGE` bảy ngày thành một tuần; mỗi khoá tối đa 12 KB.",
+      "related": ["probabilistic-data-structure"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "count-min-sketch",
+      "term": "Count-Min Sketch",
+      "meaning": "Ma trận d hàng × w bộ đếm, mỗi hàng một hàm hash; ghi tăng một ô mỗi hàng, đọc lấy ô nhỏ nhất. Ước lượng tần suất từng phần tử, chỉ đếm dư, sai số tỉ lệ với tổng số sự kiện.",
+      "example": "4 × 2.000 ô (62 KB) đếm 1 triệu lượt xem: sản phẩm hot thật 82.706 ước 82.844, sản phẩm hiếm thật 2 ước 205.",
+      "related": ["heavy-hitter", "probabilistic-data-structure"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "heavy-hitter",
+      "term": "Heavy hitter",
+      "meaning": "Phần tử xuất hiện rất nhiều lần trong luồng dữ liệu, ví dụ key nóng, IP gửi nhiều request nhất. Thường tìm bằng Count-Min Sketch cộng một heap giữ top-k ứng viên.",
+      "example": "Phát hiện 10 key Redis được đọc nhiều nhất trong 1 phút để cache cục bộ, không cần đếm chính xác mọi key.",
+      "related": ["count-min-sketch", "hot-key"],
+      "topics": ["advanced-data-structures"]
+    },
+    {
+      "id": "blocking-io",
+      "term": "Blocking I/O",
+      "meaning": "Kiểu I/O mà thread gọi `read`/`write` bị dừng tới khi thao tác xong. Dễ viết, mỗi kết nối cần một thread đang chờ.",
+      "example": "`InputStream.read()` trên socket của Tomcat: thread `http-nio-8080-exec-*` nằm chờ tới khi client gửi dữ liệu.",
+      "related": ["io-multiplexing", "virtual-thread"],
+      "topics": ["io-models"]
+    },
+    {
+      "id": "io-multiplexing",
+      "term": "I/O multiplexing",
+      "meaning": "Một thread theo dõi nhiều file descriptor non-blocking cùng lúc và hỏi kernel cái nào đang sẵn sàng (`select`, `poll`, epoll, kqueue), rồi chỉ đọc ghi những cái đó.",
+      "example": "Một event loop gọi `epoll_wait` nhận về 50 socket có dữ liệu trong 10.000 kết nối đang mở.",
+      "related": ["epoll", "reactor-pattern", "event-loop"],
+      "topics": ["io-models"]
+    },
+    {
+      "id": "epoll",
+      "term": "epoll",
+      "meaning": "Cơ chế multiplexing của Linux: `epoll_ctl` đăng ký fd một lần, `epoll_wait` trả các fd có sự kiện với chi phí theo số sự kiện. Có chế độ level-triggered (mặc định) và edge-triggered.",
+      "example": "Java NIO `Selector` trên Linux là `EPollSelectorImpl`; Netty có transport epoll native dùng edge-triggered.",
+      "related": ["io-multiplexing", "event-loop"],
+      "topics": ["io-models"]
+    },
+    {
+      "id": "reactor-pattern",
+      "term": "Reactor pattern",
+      "meaning": "Mô hình một hay vài event loop chờ sự kiện I/O rồi gọi handler non-blocking tương ứng; mỗi kết nối gắn với một loop. Dùng trong Netty, Nginx, Node.js, Redis.",
+      "example": "Netty: boss group nhận kết nối, worker group đọc, giải mã, gọi handler; việc chặn chuyển sang executor riêng.",
+      "related": ["event-loop", "io-multiplexing"],
+      "topics": ["io-models"]
+    },
+    {
+      "id": "io-uring",
+      "term": "io_uring",
+      "meaning": "Giao diện I/O bất đồng bộ của Linux (từ 5.1): hai ring buffer chia sẻ với kernel, ứng dụng ghi yêu cầu vào submission queue và đọc kết quả ở completion queue, ít syscall, làm được cả I/O file.",
+      "example": "Netty có transport io_uring; nhiều môi trường container chặn nó bằng seccomp vì đã có nhiều lỗ hổng kernel.",
+      "related": ["epoll", "io-multiplexing"],
+      "topics": ["io-models"]
+    },
+    {
+      "id": "c10k",
+      "term": "C10K",
+      "meaning": "Bài toán giữ 10.000 kết nối đồng thời trên một máy, đặt ra cuối những năm 1990; thread-per-connection không chịu nổi, dẫn tới epoll, kqueue và kiến trúc event loop.",
+      "example": "Nginx giữ hàng chục nghìn kết nối với vài worker process thay vì hàng chục nghìn thread.",
+      "related": ["io-multiplexing", "reactor-pattern"],
+      "topics": ["io-models"]
     }
   ]
 }

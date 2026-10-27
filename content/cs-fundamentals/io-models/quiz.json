@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "event-loop-blocked-output",
+      "kind": "output",
+      "prompt": "Một event loop NIO duy nhất. Mỗi request làm việc 50 ms ngay trên loop rồi mới trả lời. 20 client gửi request cùng lúc, mỗi client đo thời gian chờ của mình. Kết quả gần nhất với lần chạy thật trên JDK 27?",
+      "code": "// trên event loop, khi socket readable\nchannel.read(buffer);\nsleep(50);                       // giả lập JDBC 50 ms ngay trên loop\nchannel.write(ByteBuffer.wrap(\"ok\\n\".getBytes()));\n\n// 20 client gửi cùng lúc, in min/p50/max\nSystem.out.println(\"min=\" + lat[0] + \"ms p50=\" + lat[10] + \"ms max=\" + lat[19] + \"ms\");",
+      "options": [
+        "min=63ms p50=640ms max=1166ms",
+        "min=58ms p50=65ms max=70ms",
+        "min=50ms p50=50ms max=50ms",
+        "min=1000ms p50=1000ms max=1000ms"
+      ],
+      "answer": 0,
+      "explanation": "Một loop xử lý tuần tự: request thứ n chờ n − 1 request trước, mỗi cái 50 ms, nên latency rải từ khoảng 50 ms tới khoảng 1 giây (20 × 50 ms) và p50 khoảng nửa giây (đã chạy: 63, 640, 1166 ms). Chuyển phần 50 ms sang pool 32 thread thì mọi request xong trong khoảng 58–70 ms. Không có kết quả nào là 50 ms đều nhau, vì chỉ có một thread làm việc."
+    },
+    {
+      "id": "epoll-vs-poll",
+      "kind": "single",
+      "prompt": "Server giữ 10.000 kết nối, mỗi lúc chỉ khoảng 50 kết nối có dữ liệu. Vì sao epoll tốt hơn `poll` ở quy mô này?",
+      "options": [
+        "epoll giữ danh sách trong kernel và chỉ trả 50 socket có sự kiện",
+        "epoll đọc dữ liệu thay ứng dụng nên không cần gọi `read` nữa",
+        "`poll` chỉ hỗ trợ tối đa 1024 file descriptor trên Linux",
+        "epoll dùng nhiều thread trong kernel nên xử lý song song được"
+      ],
+      "answer": 0,
+      "explanation": "`poll` mỗi lần gọi phải chép cả 10.000 fd vào kernel và kernel quét hết, O(tổng số kết nối). epoll đăng ký một lần bằng `epoll_ctl`, và `epoll_wait` chỉ trả các socket sẵn sàng, O(số sự kiện). epoll chỉ báo sẵn sàng, ứng dụng vẫn tự `read`. Giới hạn 1024 (`FD_SETSIZE`) là của `select`, không phải `poll`."
+    },
+    {
+      "id": "edge-triggered-hang",
+      "kind": "single",
+      "prompt": "Server dùng epoll ở chế độ edge-triggered. Mỗi lần có sự kiện, nó gọi `read` một lần với buffer 4 KB. Client gửi một request 10 KB rồi chờ trả lời; toàn bộ 10 KB đã nằm sẵn trong receive buffer khi server thức dậy. Chuyện gì xảy ra?",
+      "options": [
+        "Kết nối treo: 6 KB còn lại không được báo lại",
+        "Kernel tự gọi `read` thêm hai lần cho đủ 10 KB",
+        "epoll báo lại ngay ở lần `epoll_wait` sau vì còn dữ liệu",
+        "Kernel bỏ 6 KB thừa và client nhận lỗi `RST`"
+      ],
+      "answer": 0,
+      "explanation": "Edge-triggered chỉ báo khi có dữ liệu mới tới. Cả 10 KB đã tới, server đọc 4 KB, phần còn lại vẫn nằm trong buffer nhưng không có cạnh mới nên không được báo; client chờ trả lời nên không gửi thêm, kết nối treo. Phải đọc lặp tới khi `read` trả `EAGAIN`. Báo lại mỗi lần khi còn dữ liệu là hành vi level-triggered (mặc định của epoll và Java NIO)."
+    },
+    {
+      "id": "virtual-thread-vs-reactive",
+      "kind": "single",
+      "prompt": "Service Spring MVC trên Java 21 gọi PostgreSQL và hai API nội bộ, cao điểm 3.000 request đồng thời, thread pool Tomcat 200 bị cạn. Thay đổi ít rủi ro nhất để tăng số request đồng thời?",
+      "options": [
+        "Bật virtual thread và giới hạn truy cập database bằng connection pool",
+        "Viết lại toàn bộ sang WebFlux và R2DBC cho non-blocking từ đầu tới cuối",
+        "Tăng `server.tomcat.threads.max` lên 3.000 platform thread",
+        "Chạy JDBC trên event loop của Netty để bỏ hẳn thread pool"
+      ],
+      "answer": 0,
+      "explanation": "Virtual thread giữ nguyên code blocking, mỗi request một virtual thread, khi chờ socket thì nhả carrier; Spring Boot 3.2+ bật bằng `spring.threads.virtual.enabled=true`. Connection pool vẫn giới hạn số truy vấn đồng thời tới database. Viết lại sang WebFlux được nhưng tốn công và rủi ro hơn nhiều. 3.000 platform thread tốn bộ nhớ và context switch. JDBC trên event loop là chặn loop."
+    },
+    {
+      "id": "file-io-epoll",
+      "kind": "single",
+      "prompt": "Vì sao Netty và Node.js đẩy việc đọc file thường sang thread pool thay vì dùng epoll như với socket?",
+      "options": [
+        "File thường luôn coi là sẵn sàng (epoll từ chối, poll báo ngay), `read` vẫn chặn",
+        "File thường đọc qua page cache nên `read` không bao giờ chặn thread",
+        "Đọc file qua epoll làm hỏng page cache của hệ điều hành",
+        "epoll chỉ hỗ trợ UDP và TCP, không hỗ trợ bất kỳ loại fd nào khác"
+      ],
+      "answer": 0,
+      "explanation": "Với file thường không có trạng thái \"chưa sẵn sàng\": `epoll_ctl` từ chối đăng ký (`EPERM`), còn `select`/`poll` luôn báo đọc được. Nhưng `read` khi dữ liệu chưa có trong page cache vẫn chặn thread chờ đĩa, nên multiplexing không giúp được và thư viện dùng thread pool cho file. Page cache chỉ giúp khi dữ liệu đã có sẵn. epoll hỗ trợ pipe, eventfd, timerfd, không chỉ socket. Trên Linux, io_uring mới làm file I/O bất đồng bộ thật."
+    }
+  ]
+}
