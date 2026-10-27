@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "algorithms-interview",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Thuật toán hay gặp khi phỏng vấn",
+  "summary": "Cách làm một bài coding từ ràng buộc tới độ phức tạp; năm mẫu chính: hai con trỏ, sliding window, binary search trên điều kiện đơn điệu, BFS/DFS, quy hoạch động; bẫy tràn số ở `mid`, sliding window với số âm, BFS đánh dấu sai lúc, `StackOverflowError` khi DFS đệ quy, `%` âm trong Java; memoization và bảng, greedy và phản ví dụ, nối sang system design.",
+  "level": "mid",
+  "order": 14,
+  "minutes": 14,
+  "prerequisites": ["data-structures"],
+  "terms": ["two-pointers", "sliding-window-technique", "binary-search", "bfs", "dfs", "dynamic-programming", "memoization", "backtracking", "prefix-sum", "topological-sort", "big-o"],
+  "references": [
+    { "title": "Google Research blog: Nearly All Binary Searches and Mergesorts are Broken", "url": "https://research.google/blog/extra-extra-read-all-about-it-nearly-all-binary-searches-and-mergesorts-are-broken/" },
+    { "title": "Java SE API: Arrays.binarySearch", "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/Arrays.html#binarySearch(int%5B%5D,int)" },
+    { "title": "Java SE API: ArrayDeque", "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/ArrayDeque.html" },
+    { "title": "JDK-5045582: binarySearch() fails for size larger than 1<<30", "url": "https://bugs.openjdk.org/browse/JDK-5045582" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lời giải của bạn O(n log n), làm được O(n) không?\" Đừng đoán: hỏi lại tính chất của dữ liệu. Giá trị nằm trong khoảng nhỏ thì đếm bằng mảng (counting sort) thay vì sắp xếp; chỉ cần k phần tử lớn nhất thì heap cỡ k hoặc quickselect trung bình O(n); cần tra nhiều lần thì hash map. Rồi nói cái giá: thêm bộ nhớ, trường hợp xấu nhất, code khó đọc hơn." },
+    { "type": "callout", "style": "warning", "markdown": "Viết xong đừng nói \"xong\" ngay. Chạy tay với ví dụ của đề, rồi các ca biên: mảng rỗng, một phần tử, mọi phần tử giống nhau, số âm, giá trị ở biên `Integer.MAX_VALUE`. Phần lớn lỗi bị người phỏng vấn bắt (tràn số, lệch một, vòng lặp không dừng) lộ ra ở các ca này." }
+  ]
+}

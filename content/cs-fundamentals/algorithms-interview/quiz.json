@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sliding-window-negative-output",
+      "kind": "output",
+      "prompt": "Tìm độ dài mảng con liên tiếp ngắn nhất có tổng ≥ k bằng sliding window. Chương trình in ra gì?",
+      "code": "int[] nums = {1, -1, 5};\nint k = 5;\nint best = Integer.MAX_VALUE, sum = 0, left = 0;\nfor (int right = 0; right < nums.length; right++) {\n    sum += nums[right];\n    while (sum >= k) {\n        best = Math.min(best, right - left + 1);\n        sum -= nums[left++];\n    }\n}\nSystem.out.println(best);",
+      "options": ["3", "1", "2", "2147483647"],
+      "answer": 0,
+      "explanation": "Tới `right = 2`, tổng là 5 nên ghi nhận độ dài 3, rồi bỏ `1` ở bên trái: tổng còn 4, dưới k nên dừng co, và cửa sổ không bao giờ thử chỉ `{5}`. Đáp án đúng là 1, nhưng code in 3 (đã chạy). Co cửa sổ chỉ đúng khi bỏ phần tử bên trái làm tổng giảm, tức mọi số không âm; có số âm thì dùng prefix sum với deque đơn điệu."
+    },
+    {
+      "id": "bfs-shortest-unweighted",
+      "kind": "single",
+      "prompt": "Mạng xã hội: tìm số bước kết bạn ít nhất giữa hai người (mỗi quan hệ bạn bè như nhau). Cách nào cho đáp án đúng và hiệu quả?",
+      "options": [
+        "BFS từ người thứ nhất, dừng khi gặp người thứ hai",
+        "DFS từ người thứ nhất, ghi lại độ sâu khi gặp người kia",
+        "Dijkstra với heap, vì đây là bài đường đi ngắn nhất",
+        "Sắp xếp topo rồi duyệt theo thứ tự đã sắp xếp"
+      ],
+      "answer": 0,
+      "explanation": "Đồ thị không trọng số: BFS đi theo từng lớp, nên lần đầu gặp đích là số bước ít nhất, O(V + E). DFS có thể gặp đích theo đường vòng dài trước. Dijkstra đúng nhưng thừa: heap thêm log, chỉ cần khi cạnh có trọng số khác nhau. Sắp xếp topo chỉ dành cho đồ thị có hướng không vòng, còn quan hệ bạn bè là vô hướng."
+    },
+    {
+      "id": "binary-search-on-answer",
+      "kind": "single",
+      "prompt": "Có 500 kiện hàng theo thứ tự cố định, khối lượng từng kiện cho trước. Mỗi ngày xe chở các kiện liên tiếp miễn tổng không vượt tải trọng. Tìm tải trọng nhỏ nhất để chở hết trong 5 ngày. Vì sao binary search dùng được?",
+      "options": [
+        "Tải trọng chở được trong 5 ngày thì mọi tải trọng lớn hơn cũng được",
+        "Khối lượng các kiện phải được sắp xếp tăng dần trước khi tìm",
+        "Binary search trên chỉ số kiện cho ra ngày bắt đầu chở mỗi kiện",
+        "Số ngày cần dùng tỉ lệ nghịch chính xác với tải trọng của xe"
+      ],
+      "answer": 0,
+      "explanation": "Điều kiện \"chở hết trong 5 ngày với tải trọng x\" đơn điệu theo x, nên tìm x nhỏ nhất thoả bằng binary search trên khoảng [kiện nặng nhất, tổng khối lượng]; mỗi lần kiểm tra là một lượt tham lam O(n). Không được sắp xếp kiện vì thứ tự cố định. Số ngày giảm dần theo tải trọng nhưng không tỉ lệ nghịch chính xác; chỉ cần đơn điệu là đủ."
+    },
+    {
+      "id": "greedy-coins",
+      "kind": "single",
+      "prompt": "Mệnh giá {1, 3, 4}, cần trả 6 với ít đồng nhất. Thuật toán tham lam (luôn chọn mệnh giá lớn nhất còn vừa) cho kết quả gì?",
+      "options": [
+        "3 đồng (4+1+1), trong khi tối ưu là 2 đồng (3+3)",
+        "2 đồng (3+3), vì tham lam luôn tối ưu với bài đổi tiền",
+        "Không trả được, vì sau khi lấy 4 thì còn 2 không có mệnh giá",
+        "6 đồng (1×6), vì tham lam bắt đầu từ mệnh giá nhỏ nhất"
+      ],
+      "answer": 0,
+      "explanation": "Tham lam lấy 4, còn 2, rồi 1 và 1: 3 đồng. Tối ưu là 3+3. Tham lam chỉ đúng với một số hệ mệnh giá (như tiền thật thường có); tổng quát phải dùng quy hoạch động: `dp[s] = 1 + min(dp[s - c])` trên mọi mệnh giá c, O(số tiền × số mệnh giá)."
+    },
+    {
+      "id": "floor-mod",
+      "kind": "single",
+      "prompt": "Ring buffer 8 ô, chỉ số tính bằng `(head - offset) % 8`. Với `head = 2`, `offset = 5`, Java cho ra chỉ số nào?",
+      "options": [
+        "-3, nên truy cập mảng ném `ArrayIndexOutOfBoundsException`",
+        "5, vì `%` trong Java luôn trả số không âm như toán học",
+        "3, vì Java lấy giá trị tuyệt đối của kết quả phép chia dư",
+        "0, vì số âm chia dư cho 8 luôn được làm tròn về 0"
+      ],
+      "answer": 0,
+      "explanation": "`%` trong Java lấy dấu của số bị chia: `-3 % 8` là `-3`. Muốn kết quả trong [0, 8) thì dùng `Math.floorMod(head - offset, 8)`, ra 5. Cùng lỗi này hay gặp khi lấy `hashCode() % n` làm chỉ số bucket, vì `hashCode()` có thể âm."
+    }
+  ]
+}

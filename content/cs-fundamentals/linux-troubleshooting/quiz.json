@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "vmstat-first-line",
+      "kind": "single",
+      "prompt": "Chạy `vmstat 1 5` lúc đang có sự cố. Dòng số liệu đầu tiên cho `wa` 1%, các dòng sau cho `wa` 38%. Nên tin dòng nào?",
+      "options": [
+        "Các dòng sau; dòng đầu là trung bình từ lúc máy khởi động",
+        "Dòng đầu; các dòng sau bị chính `vmstat` làm sai lệch",
+        "Trung bình cả năm dòng, vì mỗi dòng là một mẫu ngẫu nhiên",
+        "Dòng đầu; nó là trung bình của 5 giây sắp đo tiếp theo"
+      ],
+      "answer": 0,
+      "explanation": "Dòng đầu của `vmstat` (và báo cáo đầu của `iostat`, bỏ được bằng `-y`) tính từ lúc khởi động, nên với máy chạy 41 ngày nó gần như không phản ánh hiện tại. Các dòng sau là số liệu của từng khoảng 1 giây. `vmstat` gần như không tốn tài nguyên."
+    },
+    {
+      "id": "iostat-util-ssd",
+      "kind": "single",
+      "prompt": "Volume NVMe của database có `%util` 100% suốt giờ cao điểm, `r_await` 0,3 ms như mọi khi, `aqu-sz` 1,2, throughput bằng 30% giới hạn của volume. Kết luận hợp lý nhất?",
+      "options": [
+        "Chưa bão hoà: đĩa song song, `%util` chỉ cho biết luôn có I/O",
+        "Đĩa bão hoà vì `%util` đã chạm 100%, cần nâng IOPS ngay",
+        "Đĩa sắp hỏng, `%util` 100% kéo dài là dấu hiệu lỗi phần cứng",
+        "`iostat` đọc sai trên NVMe, phải dùng `iotop` để đo lại"
+      ],
+      "answer": 0,
+      "explanation": "Tài liệu `iostat` ghi rõ: với thiết bị phục vụ nhiều request song song như SSD, RAID, `%util` 100% không phải giới hạn hiệu năng, chỉ là lúc nào cũng có ít nhất một I/O đang chạy. Độ trễ mỗi I/O không đổi, hàng đợi ngắn, throughput còn xa giới hạn: đĩa chưa bão hoà. Dấu hiệu bão hoà là `await` và `aqu-sz` tăng, hoặc chạm giới hạn throughput hay IOPS của volume."
+    },
+    {
+      "id": "df-du-deleted",
+      "kind": "single",
+      "prompt": "`df -h /var` báo 100%, nhưng `du -sh /var` chỉ cộng ra 40% dung lượng. Hôm qua có người đã `rm` các file log lớn của service Java đang chạy. Giải thích và cách xác nhận?",
+      "options": [
+        "Java còn mở file đã xoá nên chưa trả chỗ; xác nhận bằng `lsof +L1`",
+        "`du` không đếm file ẩn; xác nhận bằng `ls -la` trong thư mục",
+        "Filesystem cần `fsck` để cập nhật lại; xác nhận bằng `dmesg`",
+        "Ext4 giữ chỗ cho root 50%; xác nhận bằng `tune2fs -l`"
+      ],
+      "answer": 0,
+      "explanation": "Xoá file chỉ bỏ tên của nó; dữ liệu được trả khi không còn process nào mở. `du` đi theo tên nên không thấy, `df` đếm block thật nên vẫn đầy. `lsof +L1` liệt kê file có số liên kết bằng 0 nhưng vẫn mở (`(deleted)`). Trả chỗ bằng cách để ứng dụng mở lại file log, hoặc cắt ngắn qua `/proc/<pid>/fd/<n>`. `du` có đếm file ẩn; ext4 mặc định giữ 5% cho root, không phải 50%."
+    },
+    {
+      "id": "strace-production",
+      "kind": "single",
+      "prompt": "Service Java đang chậm trên production, bạn muốn biết nó chờ syscall nào. Cách nào ít rủi ro nhất cho chính service đó?",
+      "options": [
+        "`strace -c -w -f -p <pid>` vài giây, hoặc công cụ eBPF",
+        "`strace -f -tt -p <pid>` chạy suốt tới khi sự cố hết",
+        "`strace -f -o /tmp/all.log -p <pid>` rồi đọc file log sau",
+        "Restart service với `strace -f java ...` để bắt từ đầu"
+      ],
+      "answer": 0,
+      "explanation": "`strace` dựa trên ptrace, dừng process ở mỗi lần vào và ra syscall; với JVM có hàng trăm thread, gắn lâu có thể làm service chậm đi nhiều lần. `-c -w` chỉ đếm và cộng thời gian thực theo syscall (thiếu `-w` thì chỉ là thời gian CPU, syscall đang chờ trông như bằng 0), chạy vài giây là đủ thấy syscall nào chiếm thời gian; eBPF chạy trong kernel, overhead thấp hơn nhiều. Ghi mọi syscall ra file vẫn chịu cùng overhead, cộng thêm I/O ghi log."
+    },
+    {
+      "id": "container-free",
+      "kind": "single",
+      "prompt": "Pod có memory limit 2 GiB. Bạn `kubectl exec` vào container và chạy `free -m`, thấy `total` 31872 MB, `available` 18000 MB. Container có đang an toàn về bộ nhớ không?",
+      "options": [
+        "Chưa biết: `free` hiện RAM của node, phải xem cgroup",
+        "An toàn, vì còn 18 GB `available` cho container",
+        "Nguy hiểm, vì container đang dùng gần 14 GB của node",
+        "An toàn, vì Kubernetes tự tăng limit khi container cần"
+      ],
+      "answer": 0,
+      "explanation": "`free`, `top` đọc `/proc/meminfo` của cả node, không biết tới cgroup. Giới hạn thật của container là `/sys/fs/cgroup/memory.max` (2 GiB), lượng đang dùng là `memory.current`; vượt limit thì bị OOM kill dù node còn trống. 14 GB đang dùng là của cả node. Kubernetes không tự tăng limit (trừ khi có VPA cấu hình riêng)."
+    }
+  ]
+}

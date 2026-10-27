@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Binary search qua mọi test nhỏ rồi treo với n lớn",
+  "context": "Vòng coding: \"Có n phiên bản build đánh số 1..n; từ một phiên bản nào đó trở đi build nào cũng lỗi. Hàm `isBadVersion(v)` gọi sang hệ thống CI và khá đắt. Tìm phiên bản lỗi đầu tiên với ít lần gọi nhất.\" Ràng buộc ghi `1 ≤ n ≤ 2³¹ − 1`. Ứng viên viết lời giải binary search, chạy đúng với mọi ví dụ nhỏ. Người phỏng vấn thử `n = 2126753390`, phiên bản lỗi đầu tiên là `1702766719` (JDK 27).",
+  "buggyCode": "int firstBadVersion(int n) {\n    int lo = 1, hi = n;\n    while (lo < hi) {\n        int mid = (lo + hi) / 2;\n        if (isBadVersion(mid)) {\n            hi = mid;          // mid lỗi: phiên bản đầu tiên ở mid hoặc trước đó\n        } else {\n            lo = mid + 1;      // mid tốt: phiên bản đầu tiên ở sau mid\n        }\n    }\n    return lo;\n}",
+  "symptom": {
+    "description": "Với n = 5 hàm trả đúng 4. Với n = 2126753390 hàm không trả về; binary search đúng chỉ cần khoảng 31 lần gọi. Thêm log vào vòng lặp và dừng ở lần gọi thứ 50 triệu:",
+    "output": "lo=1 hi=2126753390 mid=1063376695\nlo=1063376696 hi=2126753390 mid=-552418605\nlo=-552418604 hi=2126753390 mid=787167393\nlo=787167394 hi=2126753390 mid=-690523256\nlo=-690523255 hi=2126753390 mid=718115067\nlo=718115068 hi=2126753390 mid=-725049419\n... sau 50000000 lần gọi isBadVersion: lo=-736558138 hi=2126753390"
+  },
+  "diagnosis": {
+    "question": "Vì sao vòng lặp không bao giờ dừng?",
+    "options": [
+      "`lo + hi` vượt `Integer.MAX_VALUE` nên tràn thành số âm, `mid` âm làm `lo` nhảy lùi",
+      "`hi = mid` thay vì `hi = mid - 1` nên khoảng tìm không thu hẹp khi `hi = lo + 1`",
+      "Chia số nguyên làm tròn xuống nên `mid` có thể bằng `lo` và lặp lại mãi",
+      "Binary search cần mảng đã sắp xếp, còn `isBadVersion` không trả về mảng nào"
+    ],
+    "answer": 0,
+    "explanation": "Lần lặp thứ hai, `1063376696 + 2126753390 = 3190130086`, vượt `Integer.MAX_VALUE` (2147483647) nên tràn thành số âm và `mid = -552418605`. Phiên bản âm bị coi là tốt, nên `lo = mid + 1` nhảy lùi về số âm, rồi lần sau lại tràn; `hi` không bao giờ giảm vì mọi `mid` dương đều nhỏ hơn phiên bản lỗi đầu tiên. `hi = mid` là đúng cho dạng tìm vị trí đầu tiên: `mid` làm tròn xuống nên luôn nhỏ hơn `hi`, khoảng vẫn thu hẹp, và log cho thấy `lo`, `hi` không kẹt cạnh nhau mà `mid` là số âm. Điều kiện đơn điệu (từ một điểm trở đi đều lỗi) là đủ cho binary search, không cần mảng."
+  },
+  "fix": {
+    "code": "int firstBadVersion(int n) {\n    int lo = 1, hi = n;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;   // hoặc (lo + hi) >>> 1\n        if (isBadVersion(mid)) {\n            hi = mid;\n        } else {\n            lo = mid + 1;\n        }\n    }\n    return lo;\n}\n// n = 2126753390 -> 1702766719 sau 31 lần gọi isBadVersion (đã chạy)",
+    "explanation": "`hi - lo` luôn nằm trong `int` vì cả hai dương và `lo ≤ hi`, nên `lo + (hi - lo) / 2` không tràn. `(lo + hi) >>> 1` cũng đúng khi cả hai không âm: tổng tràn thành số âm nhưng dịch phải không dấu đọc lại đúng 32 bit đó như số không dấu (cách `Arrays.binarySearch` dùng). Với ràng buộc có `2³¹ − 1`, luôn thử test ở biên trên; và khi người phỏng vấn đưa ràng buộc lớn, đó thường là gợi ý về tràn số."
+  }
+}

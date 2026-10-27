@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "linux-troubleshooting",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Lệnh Linux để điều tra sự cố",
+  "summary": "Checklist một phút theo USE method: `uptime`, `dmesg`, `vmstat`, `mpstat`, `pidstat`, `iostat`, `free`, `ss`; đọc `us sy wa st`, vì sao bỏ dòng đầu của `vmstat`, `%util` lừa trên SSD và EBS, `df` đầy mà `du` không thấy; `lsof`, `strace` và overhead của ptrace, eBPF, `tcpdump` an toàn; debug trong Kubernetes bằng ephemeral container và `nsenter`, `/proc` và PSI, `sar` cho sự cố đã qua.",
+  "level": "mid",
+  "order": 15,
+  "minutes": 15,
+  "prerequisites": ["os-process-memory", "tcp-deep"],
+  "terms": ["use-method", "saturation", "load-average", "vmstat", "iostat", "iowait", "steal-time", "page-cache", "strace", "tcpdump", "ebpf", "ephemeral-container", "cpu-throttling", "iops", "tcp-retransmission", "async-appender"],
+  "references": [
+    { "title": "Netflix TechBlog: Linux Performance Analysis in 60,000 Milliseconds", "url": "https://netflixtechblog.com/linux-performance-analysis-in-60-000-milliseconds-accc10403c55" },
+    { "title": "sysstat: iostat manual", "url": "https://man7.org/linux/man-pages/man1/iostat.1.html" },
+    { "title": "Kubernetes: Debug Running Pods (ephemeral containers)", "url": "https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/" },
+    { "title": "Linux kernel: PSI - Pressure Stall Information", "url": "https://docs.kernel.org/accounting/psi.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Load average 40 trên máy 8 core, máy có quá tải không?\" Trả lời: chưa chắc. Trên Linux load đếm cả thread chờ CPU lẫn thread ở trạng thái `D` chờ I/O. Xem `vmstat 1`: `r` lớn hơn số core là thiếu CPU; `b` lớn với `wa` cao là chờ đĩa hay NFS, và thêm CPU không giúp gì. Rồi xem xu hướng của ba con số 1, 5, 15 phút để biết đang tăng hay đang giảm, và PSI (`/proc/pressure/*`) để biết thời gian thật sự phải chờ." },
+    { "type": "callout", "style": "warning", "markdown": "Trước khi sửa gì trên máy đang có sự cố, lưu lại bằng chứng kèm thời gian: vài dòng `vmstat 1`, `iostat -xz 1`, `ss -s`, `dmesg -T | tail`, thread dump. Restart hay kill process sẽ xoá phần lớn những gì cần cho postmortem, và nếu nguyên nhân nằm ngoài process (đĩa, cron, node láng giềng) thì nó quay lại ngay." }
+  ]
+}

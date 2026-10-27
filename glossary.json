@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting"]
     },
     {
       "id": "full-gc",
@@ -589,7 +589,7 @@
       "meaning": "Cách mô tả thời gian (hoặc bộ nhớ) tăng thế nào khi dữ liệu tăng, bỏ qua hằng số.",
       "example": "`ArrayList.get(i)` là O(1); `LinkedList.get(i)` là O(n): list gấp đôi thì chậm gấp đôi.",
       "related": ["amortized-complexity"],
-      "topics": ["collections-overview", "data-structures"]
+      "topics": ["collections-overview", "data-structures", "algorithms-interview"]
     },
     {
       "id": "amortized-complexity",
@@ -5629,7 +5629,7 @@
       "meaning": "Kiểm tra mỗi tài nguyên bằng ba câu hỏi: Utilization (bận bao nhiêu), Saturation (bao nhiêu việc đang chờ), Errors (có lỗi không). Do Brendan Gregg đề xuất.",
       "example": "Hikari pool: 10/10 connection đang dùng, 40 thread chờ, 0 timeout.",
       "related": ["red-method", "saturation"],
-      "topics": ["perf-methodology"]
+      "topics": ["perf-methodology", "linux-troubleshooting"]
     },
     {
       "id": "saturation",
@@ -5637,7 +5637,7 @@
       "meaning": "Mức độ tài nguyên có nhiều việc hơn khả năng xử lý, đo bằng lượng việc đang phải chờ. Dấu hiệu nút cổ chai rõ hơn utilization.",
       "example": "Run queue CPU dài, thread chờ connection, message tồn trong queue.",
       "related": ["use-method", "bottleneck"],
-      "topics": ["perf-methodology"]
+      "topics": ["perf-methodology", "linux-troubleshooting"]
     },
     {
       "id": "amdahls-law",
@@ -5781,7 +5781,7 @@
       "meaning": "Appender của Logback đưa event vào hàng đợi cho một thread riêng ghi. Mặc định bỏ TRACE, DEBUG, INFO khi hàng đợi còn dưới 20% chỗ trống và chặn thread gọi khi đầy.",
       "example": "`<queueSize>8192</queueSize><discardingThreshold>0</discardingThreshold>` để không bỏ INFO.",
       "related": ["log-level"],
-      "topics": ["production-logging"]
+      "topics": ["production-logging", "linux-troubleshooting"]
     },
     {
       "id": "loki",
@@ -5877,7 +5877,7 @@
       "meaning": "TCP gửi lại gói khi không nhận được ACK trong thời gian chờ (RTO). Trên Linux RTO tối thiểu khoảng 200ms; gói SYN đầu tiên bị mất được gửi lại sau 1 giây, rồi thêm 2 giây.",
       "example": "Latency gom thành cụm ở 1 giây và 3 giây khi gói SYN bị rớt.",
       "related": ["tcp-handshake", "rtt"],
-      "topics": ["slow-api", "tcp-deep"]
+      "topics": ["slow-api", "tcp-deep", "linux-troubleshooting"]
     },
     {
       "id": "conntrack",
@@ -6325,7 +6325,7 @@
       "meaning": "Số thao tác đọc/ghi một ổ đĩa làm được mỗi giây. Phụ thuộc cả latency mỗi lần lẫn số request chạy song song (queue depth).",
       "example": "Mỗi lần đọc 100 µs, đọc lần lượt thì tối đa 10.000 IOPS; EBS gp3 cho mặc định 3.000 IOPS.",
       "related": ["latency", "throughput"],
-      "topics": ["computer-architecture"]
+      "topics": ["computer-architecture", "linux-troubleshooting"]
     },
     {
       "id": "forward-proxy",
@@ -6397,7 +6397,7 @@
       "meaning": "Phần RAM kernel dùng để cache nội dung file. Mọi lần đọc ghi file thường đều đi qua nó; kernel thu hồi khi process cần bộ nhớ.",
       "example": "`free -h` báo `buff/cache` 23 GB trên máy Kafka: dữ liệu mới được consumer đọc thẳng từ RAM, không chạm đĩa.",
       "related": ["zero-copy", "fsync"],
-      "topics": ["os-process-memory"]
+      "topics": ["os-process-memory", "linux-troubleshooting"]
     },
     {
       "id": "file-descriptor",
@@ -6485,7 +6485,7 @@
       "meaning": "Sắp các node của graph có hướng sao cho mọi cạnh đi từ node đứng trước tới node đứng sau. Chỉ làm được khi graph không có vòng.",
       "example": "Maven tính thứ tự build module theo phụ thuộc; có vòng thì báo lỗi `The projects in the reactor contain a cyclic reference`.",
       "related": ["graph", "circular-dependency"],
-      "topics": ["data-structures"]
+      "topics": ["data-structures", "algorithms-interview"]
     },
     {
       "id": "utc",
@@ -6918,6 +6918,150 @@
       "example": "Đơn chưa giao trả `\"_links\": {\"cancel\": {\"href\": \"/orders/881/cancellation\"}}`; đơn đã giao không có link `cancel`.",
       "related": ["rest"],
       "topics": ["rest-api-design"]
+    },
+    {
+      "id": "two-pointers",
+      "term": "Hai con trỏ (two pointers)",
+      "meaning": "Kỹ thuật dùng hai chỉ số di chuyển trên mảng (thường đã sắp xếp), mỗi bước dịch một trong hai theo điều kiện, để thay hai vòng lặp lồng nhau O(n²) bằng một lượt O(n).",
+      "example": "Tìm cặp có tổng 10 trong `{1, 3, 4, 6, 9}`: `1+9` bằng 10 ngay; nếu nhỏ hơn thì dịch con trỏ trái lên, lớn hơn thì dịch con trỏ phải xuống.",
+      "related": ["sliding-window-technique", "binary-search"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "sliding-window-technique",
+      "term": "Sliding window (kỹ thuật)",
+      "meaning": "Kỹ thuật xử lý đoạn con liên tiếp: mở rộng cửa sổ bên phải, co bên trái khi điều kiện bị vi phạm, mỗi phần tử vào và ra một lần nên O(n). Chỉ đúng khi co cửa sổ làm điều kiện thay đổi đơn điệu.",
+      "example": "Chuỗi con dài nhất không lặp ký tự của `abcabcbb` là `abc`: gặp `a` lần hai thì dịch đầu trái qua `a` cũ.",
+      "related": ["two-pointers", "prefix-sum"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "binary-search",
+      "term": "Binary search",
+      "meaning": "Tìm kiếm bằng cách mỗi bước bỏ một nửa khoảng, O(log n). Dùng được trên mảng đã sắp xếp và trên bất kỳ điều kiện đơn điệu nào (từ một điểm trở đi đều đúng).",
+      "example": "Tìm phiên bản lỗi đầu tiên trong 2 tỉ phiên bản chỉ cần khoảng 31 lần kiểm tra; tính `mid = lo + (hi - lo) / 2` để không tràn `int`.",
+      "related": ["two-pointers"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "bfs",
+      "term": "BFS (duyệt theo chiều rộng)",
+      "meaning": "Breadth-first search: duyệt đồ thị theo từng lớp bằng hàng đợi, nên lần đầu gặp một node là qua số cạnh ít nhất. Dùng cho đường đi ngắn nhất trên đồ thị không trọng số.",
+      "example": "Số bước kết bạn ít nhất giữa hai người: BFS từ người thứ nhất bằng `ArrayDeque`, đánh dấu đã thăm khi đưa vào hàng đợi.",
+      "related": ["dfs", "graph", "topological-sort"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "dfs",
+      "term": "DFS (duyệt theo chiều sâu)",
+      "meaning": "Depth-first search: đi sâu theo một nhánh tới cùng rồi quay lui, bằng đệ quy hoặc stack. Dùng để tìm vùng liên thông, phát hiện vòng, duyệt mọi tổ hợp.",
+      "example": "Đếm số đảo trên bản đồ lưới: gặp ô đất chưa thăm thì DFS loang hết các ô đất kề nó, mỗi lần bắt đầu là một đảo.",
+      "related": ["bfs", "backtracking", "graph"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "dynamic-programming",
+      "term": "Quy hoạch động (dynamic programming)",
+      "meaning": "Giải bài toán bằng cách chia thành bài toán con trùng nhau, giải mỗi bài con một lần rồi dùng lại. Cần định nghĩa trạng thái, công thức chuyển và ca cơ sở.",
+      "example": "Đổi tiền: `dp[s] = 1 + min(dp[s - c])` với mọi mệnh giá c, `dp[0] = 0`; mệnh giá {1, 3, 4} và 6 ra 2 đồng.",
+      "related": ["memoization", "backtracking"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "memoization",
+      "term": "Memoization",
+      "meaning": "Cài quy hoạch động theo kiểu đệ quy có cache: lần đầu tính thì lưu kết quả theo tham số, lần sau trả lại ngay.",
+      "example": "Fibonacci đệ quy thuần với n = 40 gọi hàm hơn 331 triệu lần; có cache thì mỗi giá trị chỉ tính một lần.",
+      "related": ["dynamic-programming"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "backtracking",
+      "term": "Backtracking",
+      "meaning": "DFS trên cây các lựa chọn: thử một lựa chọn, đi tiếp, rồi huỷ lựa chọn đó để thử cái khác; cắt nhánh sớm khi biết nhánh không thể ra lời giải.",
+      "example": "Sinh mọi tổ hợp 3 món từ thực đơn 10 món, bỏ nhánh khi tổng tiền đã vượt ngân sách.",
+      "related": ["dfs", "dynamic-programming"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "prefix-sum",
+      "term": "Prefix sum",
+      "meaning": "Mảng tổng cộng dồn `prefix[i] = a[0] + ... + a[i-1]`, nên tổng đoạn `[l, r)` là `prefix[r] - prefix[l]` trong O(1). Kết hợp với hash map để đếm đoạn con có tổng bằng k kể cả khi có số âm.",
+      "example": "Đếm đoạn con tổng bằng 0 trong `{3, -3, 2, -2}`: các prefix 0, 3, 0, 2, 0 lặp lại giá trị 0 ba lần nên có 3 đoạn.",
+      "related": ["sliding-window-technique"],
+      "topics": ["algorithms-interview"]
+    },
+    {
+      "id": "load-average",
+      "term": "Load average",
+      "meaning": "Trung bình số thread đang chạy, chờ CPU, hoặc (trên Linux) ở trạng thái `D` chờ I/O, trong 1, 5 và 15 phút. Phải so với số core và xem đang tăng hay giảm.",
+      "example": "`load average: 5.81, 3.12, 1.40` trên máy 8 core: đang tăng, nhưng chưa nói được là thiếu CPU hay chờ đĩa.",
+      "related": ["vmstat", "iowait"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "vmstat",
+      "term": "vmstat",
+      "meaning": "Lệnh in số liệu toàn máy theo từng khoảng: thread chờ CPU (`r`), chờ I/O (`b`), swap (`si`, `so`), I/O khối (`bi`, `bo`), context switch (`cs`) và phân bổ CPU (`us sy id wa st`). Dòng đầu là trung bình từ lúc khởi động.",
+      "example": "`vmstat 1 5`: bỏ dòng đầu, đọc 4 dòng sau; `b` 4 và `wa` 38% là đang chờ đĩa.",
+      "related": ["load-average", "iowait", "iostat"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "iostat",
+      "term": "iostat",
+      "meaning": "Lệnh của gói sysstat in số liệu I/O theo thiết bị; `iostat -xz 1` có `r/s`, `w/s`, `rkB/s`, `wkB/s`, `r_await`, `w_await` (ms mỗi I/O), `aqu-sz` (hàng đợi) và `%util`.",
+      "example": "`w_await` từ 1 ms lên 871 ms và `aqu-sz` 264 trong khi throughput chạm 125 MiB/s của volume: đĩa bão hoà.",
+      "related": ["vmstat", "iops", "saturation"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "iowait",
+      "term": "iowait (`wa`)",
+      "meaning": "Phần thời gian CPU rảnh trong khi có I/O đang chờ hoàn tất. Chỉ là dấu hiệu gián tiếp; không đo độ bận của đĩa và có thể thấp dù đĩa nghẽn khi CPU đang bận việc khác.",
+      "example": "`top` hiện `38.2 wa`: CPU không làm gì mà vẫn có thread chờ đĩa; xác nhận bằng `iostat -x`.",
+      "related": ["vmstat", "load-average"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "steal-time",
+      "term": "Steal time (`st`)",
+      "meaning": "Thời gian máy ảo muốn chạy nhưng hypervisor đang dùng CPU vật lý cho máy khác. Cao khi có máy láng giềng ồn hay instance burstable hết CPU credit.",
+      "example": "`vmstat` hiện `st` 25 trên instance loại burstable lúc chiều: credit đã cạn, CPU bị giới hạn về baseline.",
+      "related": ["vmstat", "cpu-throttling"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "strace",
+      "term": "strace",
+      "meaning": "Công cụ in các lời gọi hệ thống (syscall) của một process qua ptrace, kèm tham số, kết quả và thời gian (`-T`). Overhead rất cao, nên trên production chỉ dùng ngắn và lọc hẹp.",
+      "example": "`strace -c -f -p 2841` trong 5 giây cho bảng: phần lớn thời gian nằm ở `write` và `futex`.",
+      "related": ["ebpf", "tcpdump"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "tcpdump",
+      "term": "tcpdump",
+      "meaning": "Công cụ bắt gói tin trên một interface theo bộ lọc, in ra hoặc ghi file pcap để đọc bằng Wireshark. Thấy được handshake, RST, retransmit và thời gian giữa các gói, kể cả với TLS.",
+      "example": "`tcpdump -i any -nn -w /tmp/db.pcap -C 100 -W 5 host 10.0.3.15 and port 5432` ghi traffic tới database, xoay vòng 5 file 100 MB.",
+      "related": ["strace", "tcp-retransmission"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "ebpf",
+      "term": "eBPF",
+      "meaning": "Cơ chế chạy chương trình nhỏ đã kiểm tra an toàn bên trong kernel Linux, gắn vào sự kiện (syscall, hàm kernel, gói tin). Nền của các công cụ quan sát overhead thấp như `bpftrace`, `bcc`, nhiều agent observability.",
+      "example": "`biolatency` (bcc) in phân bố độ trễ I/O đĩa theo dạng histogram mà không phải dừng process nào.",
+      "related": ["strace"],
+      "topics": ["linux-troubleshooting"]
+    },
+    {
+      "id": "ephemeral-container",
+      "term": "Ephemeral container",
+      "meaning": "Container tạm được thêm vào một pod đang chạy để debug (`kubectl debug`), dùng image có đủ công cụ và có thể chia sẻ namespace process của container đích; không restart pod, biến mất khi pod bị xoá.",
+      "example": "`kubectl debug -it booking-7d9f --image=nicolaka/netshoot --target=app` rồi chạy `ss -tanp` thấy socket của app.",
+      "related": ["cgroup"],
+      "topics": ["linux-troubleshooting"]
     }
   ]
 }

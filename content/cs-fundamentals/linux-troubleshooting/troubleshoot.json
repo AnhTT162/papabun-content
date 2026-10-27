@@ -1,0 +1,208 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Đêm nào cũng chậm vài phút trên một máy",
+  "symptom": "Từ khoảng 00:00 tới 00:06 mỗi đêm, p99 của booking-api trên máy vm-03 tăng từ 90 ms lên 4–6 giây và có timeout ở phía client. Hai máy còn lại (vm-01, vm-02) sau cùng load balancer không bị. Lượng request lúc nửa đêm thấp hơn ban ngày. Bạn được gọi lúc 00:03 và SSH vào được vm-03.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "vm-03: EC2 8 vCPU, 32 GB RAM, Ubuntu 24.04\nbooking-api: JDK 21, Spring Boot 3.3, Tomcat max 200 thread, Logback ghi file /var/log/booking/app.log\nVolume /var/log: EBS gp3 500 GB, giới hạn 3000 IOPS, 125 MiB/s\n\ntime   p99     RPS   CPU (máy)\n23:55  88ms    310   21%\n00:01  3.9s    305   14%\n00:03  5.7s    300   10%\n\n$ uptime\n 00:03:41 up 41 days,  load average: 5.81, 3.12, 1.40",
+      "evidenceFormat": "monospace",
+      "question": "Việc đầu tiên bạn làm là gì?",
+      "choices": [
+        {
+          "label": "Chạy `vmstat 1` vài giây để xem CPU, thread chờ I/O và swap",
+          "quality": "good",
+          "feedback": "Đúng: CPU thấp hơn bình thường mà latency tăng, nên cần biết máy đang chờ cái gì. `vmstat 1` cho thấy cùng lúc hàng đợi CPU, thread ở trạng thái `D`, swap và phân bổ CPU, tốn gần như không gì.",
+          "next": "vmstat"
+        },
+        {
+          "label": "Chụp thread dump của booking-api để xem thread đang làm gì",
+          "quality": "ok",
+          "feedback": "Thread dump sẽ có ích, nhưng chưa biết máy có tài nguyên nào bão hoà thì dễ nhìn thấy thread chờ mà không biết chờ gì. Vài giây `vmstat` trước sẽ cho biết nên đọc dump theo hướng nào.",
+          "next": "thread-dump-early"
+        },
+        {
+          "label": "Restart booking-api trên vm-03 cho hết chậm",
+          "quality": "poor",
+          "feedback": "Chưa biết nguyên nhân mà restart thì mất hiện trường, và nếu nguyên nhân nằm ngoài JVM thì app mới khởi động cũng chậm như cũ.",
+          "next": "restarted"
+        },
+        {
+          "label": "Tăng số thread Tomcat lên 400 vì request đang xếp hàng",
+          "quality": "poor",
+          "feedback": "Load thấp, CPU rảnh: chưa có bằng chứng nào là thiếu thread. Thêm thread khi chúng đang chờ cùng một thứ chỉ làm hàng đợi dài hơn.",
+          "next": "restarted"
+        }
+      ]
+    },
+    {
+      "id": "restarted",
+      "evidence": "Trưởng ca nhắn trong kênh sự cố trước khi bạn kịp làm:\n\n\"Khoan restart. Ghi chú on-call đêm qua: 00:02 đã restart booking-api trên vm-03, app khởi động mất 41 giây (bình thường 18 giây), p99 vẫn 5 giây tới 00:06 rồi tự hết. Đêm trước nữa đã thử tăng max-threads lên 400, cũng không đỡ, còn tốn thêm bộ nhớ.\"",
+      "evidenceFormat": "monospace",
+      "question": "Restart và thêm thread đều đã thử mà không giúp. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Chạy `vmstat 1` để xem máy đang chờ cái gì",
+          "quality": "good",
+          "feedback": "Restart không giúp và khởi động cũng chậm hơn bình thường: dấu hiệu nguyên nhân nằm ở máy chứ không ở trạng thái của JVM. Quay lại checklist, lần này trên tiến trình đang chạy.",
+          "next": "vmstat"
+        },
+        {
+          "label": "Gỡ vm-03 khỏi load balancer rồi điều tra sau",
+          "quality": "ok",
+          "feedback": "Cầm máu hợp lý khi hai máy còn lại chịu được tải. Nhưng sự cố lặp lại mỗi đêm, và nguyên nhân không phụ thuộc traffic nên số liệu của máy vẫn còn nguyên để điều tra ngay bây giờ.",
+          "next": "vmstat"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump-early",
+      "evidence": "$ jcmd 2841 Thread.print | grep -c 'http-nio-8080-exec'\n200\n$ jcmd 2841 Thread.print | grep -A1 'http-nio-8080-exec' | grep 'java.lang.Thread.State' | sort | uniq -c\n    187    java.lang.Thread.State: WAITING (parking)\n     12    java.lang.Thread.State: RUNNABLE\n      1    java.lang.Thread.State: TIMED_WAITING (parking)\n\nCả 200 thread Tomcat đang bận; phần lớn đang chờ một lock.",
+      "evidenceFormat": "monospace",
+      "question": "Thread chờ lock rất nhiều. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem máy có tài nguyên nào bão hoà bằng `vmstat 1`",
+          "quality": "good",
+          "feedback": "Thread chờ lock thường là triệu chứng: người giữ lock đang chậm vì chờ thứ khác. Biết máy đang chờ gì sẽ chỉ ra vì sao người giữ lock chậm.",
+          "next": "vmstat"
+        },
+        {
+          "label": "Đọc stack của các thread đang chờ để biết lock nào",
+          "quality": "ok",
+          "feedback": "Bạn sẽ thấy lock của Logback, nhưng chưa biết vì sao thread giữ lock lại ghi chậm. Cần số liệu của máy để trả lời.",
+          "next": "vmstat"
+        }
+      ]
+    },
+    {
+      "id": "vmstat",
+      "evidence": "$ vmstat 1 5\nprocs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----\n r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st\n 1  0      0 412208 201344 24187220  0    0    61   180  710 1490 18  2 79  1  0\n 1  4      0 398612 201344 24203876  0    0 63488 64212 2876 5210  6  3 53 38  0\n 2  5      0 391044 201344 24210552  0    0 64012 63880 2911 5388  6  3 52 39  0\n 1  4      0 386120 201344 24216008  0    0 63740 64104 2864 5197  5  3 54 38  0\n 1  4      0 380992 201344 24221344  0    0 63904 63992 2890 5302  6  3 53 38  0",
+      "evidenceFormat": "monospace",
+      "question": "Bạn đọc được gì, và làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Bỏ dòng đầu: `b` 4–5, `wa` gần 40%, đọc ghi ~62 MiB/s mỗi chiều; xem `iostat`",
+          "quality": "good",
+          "feedback": "Đúng cách đọc: dòng đầu là trung bình từ lúc khởi động. Các dòng sau cho thấy CPU rảnh, không swap, nhưng luôn có 4–5 thread chờ I/O và tổng đọc ghi khoảng 125 MiB/s, đúng bằng giới hạn throughput của volume gp3. `iostat` sẽ cho biết thiết bị nào và độ trễ mỗi I/O.",
+          "next": "iostat"
+        },
+        {
+          "label": "`free` chỉ còn khoảng 380 MB: máy đang thiếu RAM, cần thêm bộ nhớ",
+          "quality": "poor",
+          "feedback": "`free` thấp là bình thường: 24 GB nằm trong page cache và trả lại được. `si`/`so` bằng 0, không có dấu hiệu thiếu bộ nhớ. Số liệu đáng chú ý là `b`, `wa` và `bi`/`bo`.",
+          "next": "iostat"
+        },
+        {
+          "label": "CPU chỉ dùng khoảng 9%, nên chạy `top` để tìm process đang ăn CPU",
+          "quality": "poor",
+          "feedback": "CPU đang rảnh hơn bình thường, nên không có process nào ăn CPU cần tìm. Thời gian đang đi vào chờ I/O.",
+          "next": "top"
+        }
+      ]
+    },
+    {
+      "id": "top",
+      "evidence": "$ top -b -n 2 -d 1   (lần cập nhật thứ hai, rút gọn cột)\ntop - 00:04:52 up 41 days,  load average: 5.92, 3.61, 1.68\nTasks: 231 total,   1 running, 230 sleeping\n%Cpu(s):  6.1 us,  2.9 sy,  0.0 ni, 52.7 id, 38.2 wa,  0.0 hi,  0.1 si,  0.0 st\nMiB Mem :  31872.4 total,    372.1 free,   7650.0 used,  23850.3 buff/cache\n\n    PID USER      PR  NI    VIRT    RES  S  %CPU  %MEM     TIME+ COMMAND\n   2841 booking   20   0   12.1g   5.2g  S  58.4  16.4   9012:44 java\n 918213 root      20   0    8432   3104  D   3.9   0.0   0:11.07 logrotate\n    731 root      20   0       0      0  D   0.7   0.0  14:22.51 jbd2/nvme1n1p1-",
+      "evidenceFormat": "monospace",
+      "question": "Không có process nào ăn CPU. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem I/O theo thiết bị bằng `iostat -xz 1`",
+          "quality": "good",
+          "feedback": "`wa` 38% và hai process ở trạng thái `D` (`logrotate`, `jbd2` là journal của ext4) đều chỉ về đĩa. Xác nhận bằng `iostat`.",
+          "next": "iostat"
+        },
+        {
+          "label": "Chạy `strace -f -p 2841` để xem Java đang chờ syscall nào",
+          "quality": "poor",
+          "feedback": "`strace -f` gắn vào mọi thread của JVM và có thể làm process chậm đi nhiều lần, trên một service đang có sự cố. Số liệu tổng của máy còn chưa đọc xong.",
+          "next": "iostat"
+        }
+      ]
+    },
+    {
+      "id": "iostat",
+      "evidence": "$ iostat -xyz 1 2   (lần đo thứ hai, rút gọn cột)\nDevice   r/s  rkB/s     r_await  rareq-sz   w/s   wkB/s    w_await  wareq-sz  aqu-sz  %util\nnvme0n1  0.0  0.0       0.00     0.0       3.0   36.0     0.92     12.0      0.00    0.4\nnvme1n1  248  63488.0   182.40   256.0     251   64256.0  871.35    256.0     264.0   100.0\n\nBình thường lúc 23:55: nvme1n1 w/s 45, wkB/s 180, w_await 1.10, aqu-sz 0.05",
+      "evidenceFormat": "monospace",
+      "question": "Volume /var/log đang thế nào, và bạn tìm thủ phạm bằng gì?",
+      "choices": [
+        {
+          "label": "Bão hoà: chạm 125 MiB/s, `w_await` 871 ms; tìm process bằng `pidstat -d`",
+          "quality": "good",
+          "feedback": "Đúng: tổng `rkB/s + wkB/s` khoảng 125 MiB/s là trần throughput của gp3, nên I/O xếp hàng và mỗi lần ghi mất gần 0,9 giây so với 1 ms lúc bình thường. Kết luận dựa vào `await` và `aqu-sz`, không phải `%util`. `pidstat -d` cho biết process nào sinh ra lượng I/O đó.",
+          "next": "pidstat"
+        },
+        {
+          "label": "`%util` 100% nghĩa là đĩa đã hỏng hoặc lỗi, cần thay volume ngay",
+          "quality": "poor",
+          "feedback": "`%util` 100% với volume mạng hay SSD không nói lên đĩa hỏng hay bão hoà. Ở đây đĩa đang chạy đúng giới hạn của nó; câu hỏi là ai đang dùng hết.",
+          "next": "pidstat"
+        },
+        {
+          "label": "Dùng `lsof +D /var/log` xem process nào đang mở file ở đó",
+          "quality": "ok",
+          "feedback": "Sẽ thấy cả java lẫn logrotate mở file, nhưng không biết ai ghi bao nhiêu. `pidstat -d` trả lời trực tiếp.",
+          "next": "pidstat"
+        }
+      ]
+    },
+    {
+      "id": "pidstat",
+      "evidence": "$ pidstat -d 1 3   (dòng Average, rút gọn)\n UID     PID   kB_rd/s   kB_wr/s kB_ccwr/s iodelay  Command\n   0     731      0.00   1680.00      0.00      95  jbd2/nvme1n1p1-\n1001    2841      0.00    214.00      0.00      88  java\n   0  918213  61840.00  62004.00      0.00     100  logrotate\n\n$ ls -l /var/log/booking/\n-rw-r----- 1 booking booking 19211845632 Oct 27 00:04 app.log\n-rw-r----- 1 booking booking 14882406400 Oct 27 00:04 app.log.1\n\n$ cat /etc/logrotate.d/booking\n/var/log/booking/app.log {\n    daily\n    rotate 7\n    compress\n    copytruncate\n}",
+      "evidenceFormat": "monospace",
+      "question": "logrotate đang chép file log 19 GB. Nhưng java chỉ ghi khoảng 0,2 MB/s. Vì sao request của booking-api lại chậm?",
+      "choices": [
+        {
+          "label": "Chụp thread dump, xem thread Tomcat chờ gì trong lúc ghi log",
+          "quality": "good",
+          "feedback": "Đúng câu hỏi: lượng ghi của java nhỏ, nhưng nếu lần ghi nào đó bị kernel bắt chờ trong khi các thread khác chờ nó, latency sẽ đúng như đang thấy. Thread dump cho biết ai chờ ai.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Hạ ưu tiên I/O của logrotate ngay bằng `ionice -c3 -p 918213`",
+          "quality": "ok",
+          "feedback": "Cầm máu hợp lý nhưng khó hiệu quả: `ionice` chỉ có tác dụng khi I/O scheduler hỗ trợ (BFQ, `mq-deadline` từ kernel 5.14), NVMe trên EC2 mặc định `none`; phần ghi đi qua page cache do flusher của kernel đẩy xuống chứ không mang ưu tiên của logrotate; và trần 125 MiB/s nằm ở phía EBS. Vẫn chưa giải thích vì sao 0,2 MB/s ghi log làm hỏng latency.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Chuyển booking-api sang instance lớn hơn với nhiều CPU hơn",
+          "quality": "poor",
+          "feedback": "CPU đang rảnh hơn một nửa. Nút cổ chai là throughput của volume, instance lớn hơn với cùng volume vẫn chậm như cũ.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump",
+      "evidence": "$ jcmd 2841 Thread.print -l   (trích)\n\"http-nio-8080-exec-117\" #241 daemon prio=5 os_prio=0 cpu=48211.32ms elapsed=3542987.11s tid=0x00007f3a2c1b9000 nid=2954 runnable\n   java.lang.Thread.State: RUNNABLE\n\tat java.io.FileOutputStream.writeBytes(java.base@21.0.4/Native Method)\n\tat java.io.FileOutputStream.write(java.base@21.0.4/FileOutputStream.java:367)\n\tat java.io.BufferedOutputStream.flushBuffer(java.base@21.0.4/BufferedOutputStream.java:125)\n\tat java.io.BufferedOutputStream.flush(java.base@21.0.4/BufferedOutputStream.java:203)\n\tat ch.qos.logback.core.recovery.ResilientOutputStreamBase.flush(ResilientOutputStreamBase.java:79)\n\tat ch.qos.logback.core.OutputStreamAppender.writeByteArrayToOutputStreamWithPossibleFlush(OutputStreamAppender.java:268)\n\tat ch.qos.logback.core.OutputStreamAppender.writeBytes(OutputStreamAppender.java:247)\n\tat com.example.booking.BookingController.create(BookingController.java:58)\n\t...\n\n   Locked ownable synchronizers:\n\t- <0x00000006c1d2e8a0> (a java.util.concurrent.locks.ReentrantLock$NonfairSync)\n\n\"http-nio-8080-exec-42\" #166 daemon prio=5 ... nid=2879 waiting on condition\n   java.lang.Thread.State: WAITING (parking)\n\tat jdk.internal.misc.Unsafe.park(java.base@21.0.4/Native Method)\n\t- parking to wait for  <0x00000006c1d2e8a0> (a java.util.concurrent.locks.ReentrantLock$NonfairSync)\n\tat java.util.concurrent.locks.ReentrantLock.lock(java.base@21.0.4/ReentrantLock.java:322)\n\tat ch.qos.logback.core.OutputStreamAppender.writeBytes(OutputStreamAppender.java:245)\n\tat com.example.booking.BookingController.create(BookingController.java:58)\n\n... 186 thread khác cùng chờ <0x00000006c1d2e8a0>\n\n# nid in thập phân từ JDK 18, chính là TID\n$ awk '{print $3}' /proc/2841/task/2954/stat\nD\n$ sudo cat /proc/2841/task/2954/stack | head -3\n[<0>] balance_dirty_pages+0x2f1/0xd40\n[<0>] balance_dirty_pages_ratelimited_flags+0x2a6/0x3a0\n[<0>] generic_perform_write+0x170/0x250\n$ grep -E '^(Dirty|Writeback):' /proc/meminfo\nDirty:           4812344 kB\nWriteback:        262016 kB",
+      "evidenceFormat": "monospace",
+      "question": "Nguyên nhân gốc là gì?",
+      "choices": [
+        {
+          "label": "logrotate làm đĩa chạm trần; `write()` của Logback bị chặn khi giữ lock",
+          "quality": "good",
+          "feedback": "Đúng chuỗi nhân quả: copytruncate chép file 19 GB, dùng hết 125 MiB/s của volume. Dirty page lên gần 4,8 GB, chạm ngưỡng `vm.dirty_ratio`, nên kernel bắt mọi process đang ghi phải chờ (`balance_dirty_pages` trong stack kernel của thread 2954, trạng thái `D`). Logback ghi đồng bộ dưới một `ReentrantLock`, nên một thread bị chặn thì mọi thread khác cần ghi log chờ theo.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Deadlock trong Logback: 187 thread chờ cùng một lock và không ai nhả",
+          "quality": "poor",
+          "feedback": "Không có vòng chờ: thread giữ lock đang `RUNNABLE` trong `writeBytes` và ở trạng thái `D` của kernel, tức đang chờ đĩa, không chờ thread khác. Lượng request vẫn được xử lý, chỉ chậm.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tomcat thiếu thread vì cả 200 thread đều bận, cần tăng pool",
+          "quality": "ok",
+          "feedback": "Đúng là pool đã cạn, nhưng đó là hậu quả: thread bận vì chờ lock ghi log. Thêm thread chỉ thêm người chờ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: logrotate chạy lúc 00:00 với `copytruncate` và `compress`, chép file log 19 GB của ngày trước sang `app.log.1` trên cùng volume với log đang ghi (khoảng 5 phút), rồi mới nén. Lượng đọc ghi chạm trần 125 MiB/s của gp3, I/O xếp hàng (`aqu-sz` 264, `w_await` 871 ms). Dirty page tăng tới ngưỡng `vm.dirty_ratio` nên kernel bắt mọi process đang ghi vào page cache phải chờ (`balance_dirty_pages`), kể cả process chỉ ghi vài trăm KB/s. Logback `FileAppender` ghi đồng bộ dưới `streamWriteLock`, nên thread đang ghi log chờ đĩa mà vẫn giữ lock, và gần như mọi request (đều ghi log) xếp hàng sau nó. Còn phải so với vm-01, vm-02 (kích thước log, lịch logrotate, loại volume) để biết vì sao chỉ vm-03 bị.\n\n**Sửa ngay**: tách nhỏ việc rotate (`size 1G` hoặc `hourly`, và đổi `logrotate.timer` sang chạy mỗi giờ vì `size` chỉ được kiểm tra mỗi lần logrotate chạy), bỏ `copytruncate` (vừa chép gấp đôi I/O, vừa có thể mất dòng log ghi trong lúc chép) và để Logback tự xoay file bằng `RollingFileAppender` với `SizeAndTimeBasedRollingPolicy`, nén bất đồng bộ; hoặc đặt `delaycompress` và chạy nén ngoài giờ.\n\n**Phòng ngừa**:\n- Bọc appender bằng [[async-appender|`AsyncAppender`]] với `neverBlock=true`, để chờ đĩa không chặn thread request (đổi lại có thể mất log khi hàng đợi đầy; bài Log cho production).\n- Giảm lượng log: 19 GB mỗi ngày trên một máy cho thấy có log ở mức `DEBUG` hay log lặp từng request; ship log ra hệ thống tập trung thay vì giữ file lớn trên máy.\n- Cảnh báo theo `await` và throughput so với giới hạn của volume (CloudWatch `VolumeReadBytes` và `VolumeWriteBytes`, hoặc node exporter), không chỉ theo CPU.\n- Khi latency có chu kỳ cố định theo giờ, việc đầu tiên là xem cron và timer chạy lúc đó (`systemctl list-timers`, `/etc/cron.daily`).",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "use-per-resource", "front": "USE method hỏi gì với mỗi tài nguyên?", "back": "Utilization (dùng bao nhiêu), Saturation (có xếp hàng không), Errors (có lỗi không), cho CPU, bộ nhớ, đĩa, mạng." },
+    { "id": "vmstat-r-b", "front": "Cột `r` và `b` của `vmstat` là gì?", "back": "`r`: thread đang chạy hoặc chờ CPU, so với số core; `b`: thread chờ I/O ở trạng thái `D`." },
+    { "id": "cpu-wa", "front": "`wa` (iowait) cao nghĩa là gì?", "back": "CPU rảnh trong khi có I/O chưa xong. Không đo được độ bận của đĩa; phải xác nhận bằng `iostat`." },
+    { "id": "cpu-st", "front": "`st` (steal) cao nghĩa là gì?", "back": "Máy ảo bị hypervisor lấy CPU cho máy khác, hoặc instance burstable đã hết CPU credit." },
+    { "id": "iostat-await", "front": "Dấu hiệu đĩa bão hoà trong `iostat -x`?", "back": "`r_await`/`w_await` tăng so với bình thường, `aqu-sz` lớn, hoặc throughput/IOPS chạm giới hạn của volume. Không dựa vào `%util` với SSD." },
+    { "id": "free-available", "front": "Trong `free`, nên nhìn cột nào để biết còn bao nhiêu RAM?", "back": "`available`: ước lượng bộ nhớ dùng được mà không swap, đã tính page cache trả lại được." },
+    { "id": "lsof-deleted", "front": "`df` đầy mà `du` không thấy: kiểm tra gì?", "back": "File đã xoá nhưng process vẫn mở: `lsof +L1`. Hoặc inode cạn: `df -i`." },
+    { "id": "strace-cost", "front": "Vì sao cẩn thận với `strace` trên production?", "back": "Nó dựa trên ptrace, dừng process ở mỗi syscall, có thể làm chậm nhiều lần; dùng `-c` vài giây hoặc công cụ eBPF." },
+    { "id": "tcpdump-safe", "front": "Ghi `tcpdump` an toàn thế nào?", "back": "Luôn có bộ lọc host/port, ghi ra file `-w`, xoay vòng `-C`/`-W`, và `-nn` để không tra DNS ngược." },
+    { "id": "container-tools", "front": "Container không có công cụ debug thì làm sao?", "back": "`kubectl debug` thêm ephemeral container có đủ công cụ dùng chung namespace, hoặc `nsenter` từ node; đọc thẳng `/proc` và `/sys/fs/cgroup`." }
+  ]
+}

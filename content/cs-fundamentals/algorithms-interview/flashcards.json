@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "constraint-to-complexity", "front": "n tới 10⁵ thì cần độ phức tạp cỡ nào?", "back": "O(n log n) hoặc O(n); O(n²) là khoảng 10¹⁰ phép tính, quá chậm." },
+    { "id": "two-pointers-when", "front": "Hai con trỏ dùng khi nào?", "back": "Mảng đã sắp xếp (hoặc sắp xếp được mà không cần giữ chỉ số gốc), tìm cặp hay đoạn thoả điều kiện bằng cách dịch hai đầu vào trong, O(n)." },
+    { "id": "sliding-window-condition", "front": "Điều kiện để sliding window co bên trái đúng?", "back": "Bỏ phần tử bên trái phải làm điều kiện \"dễ thoả hơn\" theo một chiều, như tổng giảm khi mọi số không âm. Có số âm thì dùng prefix sum." },
+    { "id": "binary-search-monotonic", "front": "Binary search cần gì ngoài mảng đã sắp xếp?", "back": "Chỉ cần một điều kiện đơn điệu: nếu x thoả thì mọi giá trị lớn hơn x cũng thoả. Khi đó tìm được ranh giới trên cả khoảng giá trị." },
+    { "id": "mid-overflow", "front": "Tính `mid` thế nào để không tràn số?", "back": "`lo + (hi - lo) / 2` hoặc `(lo + hi) >>> 1`; `(lo + hi) / 2` tràn khi tổng vượt `Integer.MAX_VALUE`." },
+    { "id": "bfs-vs-dfs", "front": "Khi nào dùng BFS, khi nào dùng DFS?", "back": "BFS cho đường ít bước nhất trên đồ thị không trọng số; DFS cho vùng liên thông, phát hiện vòng, duyệt mọi tổ hợp." },
+    { "id": "bfs-mark-enqueue", "front": "BFS nên đánh dấu đã thăm lúc nào?", "back": "Khi đưa vào hàng đợi; đánh dấu khi lấy ra thì một node bị đưa vào nhiều lần, tốn bộ nhớ và thời gian." },
+    { "id": "dfs-stack-overflow", "front": "DFS đệ quy trên dữ liệu sâu gặp lỗi gì?", "back": "`StackOverflowError`, từ vài nghìn tới vài chục nghìn tầng tuỳ kích thước stack và frame; dùng `ArrayDeque` làm stack tường minh." },
+    { "id": "dp-ingredients", "front": "Quy hoạch động gồm những phần nào?", "back": "Trạng thái, công thức chuyển từ trạng thái nhỏ hơn, ca cơ sở; cài bằng memoization (đệ quy có cache) hoặc bảng từ dưới lên." },
+    { "id": "greedy-proof", "front": "Khi nào được dùng tham lam?", "back": "Khi chứng minh được lựa chọn tốt nhất tại mỗi bước dẫn tới tối ưu; đổi tiền với {1, 3, 4} và 6 là phản ví dụ, phải dùng DP." }
+  ]
+}
