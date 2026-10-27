@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "mref-null",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "String name = null;\nSupplier<String> lam = () -> name.toUpperCase();\nSystem.out.println(\"lambda created\");\ntry {\n    Supplier<String> ref = name::toUpperCase;\n    System.out.println(\"ref created\");\n} catch (NullPointerException e) {\n    System.out.println(\"ref NPE\");\n}",
+      "options": [
+        "lambda created / ref NPE",
+        "lambda created / ref created",
+        "NPE ngay dòng tạo lambda",
+        "Lỗi biên dịch vì `name` là `null`"
+      ],
+      "answer": 0,
+      "explanation": "Lambda chỉ đọc `name` khi `get()` được gọi, nên tạo được. Method reference `name::toUpperCase` kiểm receiver ngay lúc tạo và ném NPE."
+    },
+    {
+      "id": "var-diamond-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "var list = new ArrayList<>();\nlist.add(1);\nlist.add(\"x\");\nSystem.out.println(list);",
+      "options": [
+        "[1, x]",
+        "Lỗi biên dịch ở `list.add(\"x\")`",
+        "ClassCastException lúc chạy",
+        "Lỗi biên dịch vì `var` thiếu kiểu"
+      ],
+      "answer": 0,
+      "explanation": "Diamond không có thông tin nên suy ra `ArrayList<Object>`; thêm cả `Integer` lẫn `String` đều hợp lệ. Đây là lý do không nên kết hợp `var` với `<>` rỗng."
+    },
+    {
+      "id": "capture-counter",
+      "kind": "single",
+      "prompt": "`int count = 0; list.forEach(x -> count++);` cho kết quả gì?",
+      "options": [
+        "Lỗi biên dịch: `count` phải effectively final",
+        "Chạy được, `count` bằng kích thước list",
+        "Chạy được nhưng `count` vẫn bằng 0",
+        "Ném `ConcurrentModificationException`"
+      ],
+      "answer": 0,
+      "explanation": "Lambda chỉ capture được biến local không bị gán lại. Đếm bằng `list.size()`, `stream().filter(...).count()`, hoặc `AtomicInteger` nếu thật sự cần."
+    },
+    {
+      "id": "this-anon",
+      "kind": "single",
+      "prompt": "Trong method instance của `OrderService`, `Runnable r = () -> System.out.println(this);` in ra gì khi chạy?",
+      "options": [
+        "Object `OrderService` đang chạy method đó",
+        "Object lambda vừa tạo ra",
+        "Object anonymous class sinh cho lambda",
+        "Object `Runnable` mà lambda cài đặt"
+      ],
+      "answer": 0,
+      "explanation": "Lambda không tạo phạm vi `this` mới: `this` là object bao ngoài, dù lúc chạy lambda được cài bằng một class ẩn. Anonymous class thì ngược lại, `this` là chính object anonymous."
+    },
+    {
+      "id": "upgrade-jaxb",
+      "kind": "single",
+      "prompt": "Nâng từ Java 8 lên 11, lúc chạy gặp `ClassNotFoundException: javax.xml.bind.JAXBContext`. Vì sao?",
+      "options": [
+        "JAXB bị xoá khỏi JDK từ Java 11",
+        "JAXB bị đóng gói chặt từ Java 11",
+        "Thiếu `--add-opens java.xml.bind`",
+        "JAXB đổi tên thành `jakarta` trong JDK 11"
+      ],
+      "answer": 0,
+      "explanation": "JEP 320 xoá các module Java EE và CORBA (JAXB, JAX-WS...) khỏi JDK 11. Thêm dependency JAXB riêng; với Jakarta EE 9+ thì package là `jakarta.xml.bind` nằm ngoài JDK."
+    }
+  ]
+}

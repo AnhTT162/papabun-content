@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã reconnect mà job vẫn gửi qua kết nối cũ",
+  "context": "Client gửi số liệu lên hệ thống giám sát giữ kết nối trong field `conn`. Khi kết nối hỏng, `reconnect()` gán `conn` sang kết nối mới. Job định kỳ được đăng ký một lần lúc khởi động. Sau lần reconnect đầu tiên, log báo gửi thành công nhưng bên nhận không thấy số liệu mới; chỉ restart service mới hết.",
+  "buggyCode": "class MetricsClient {\n    private volatile Conn conn = new Conn(1);\n\n    void start(ScheduledExecutorService scheduler) {\n        scheduler.scheduleAtFixedRate(conn::send, 0, 10, TimeUnit.SECONDS);\n    }\n\n    void reconnect() {\n        conn = new Conn(conn.id + 1);\n    }\n}\n\n// Mô phỏng: tạo task, reconnect, rồi chạy task\nRunnable task = client.conn::send;\nclient.reconnect();\ntask.run();",
+  "symptom": {
+    "description": "Chạy trên JDK 27: sau `reconnect()`, task vẫn dùng kết nối số 1 (đã đóng, bộ đệm của nó âm thầm bỏ dữ liệu).",
+    "output": "send via conn#1"
+  },
+  "diagnosis": {
+    "question": "Vì sao task không dùng kết nối mới dù `conn` là `volatile`?",
+    "options": [
+      "`conn::send` đánh giá `conn` lúc tạo và giữ object đó mãi",
+      "Thiếu `synchronized` nên thread của scheduler thấy giá trị cũ",
+      "Scheduler cache `Runnable` cũ, chỉ nạp lại khi `shutdown`",
+      "`volatile` không có tác dụng với field kiểu object"
+    ],
+    "answer": 0,
+    "explanation": "Method reference dạng `expr::method` tính `expr` một lần lúc tạo và lưu kết quả làm receiver (JLS §15.13.3). Task giữ đúng object kết nối 1; đổi field sau đó không ảnh hưởng. `volatile` chỉ giúp ai **đọc lại field** thấy giá trị mới, mà task không đọc field nữa. Lambda `() -> conn.send()` thì đọc field `conn` mỗi lần chạy."
+  },
+  "fix": {
+    "code": "void start(ScheduledExecutorService scheduler) {\n    scheduler.scheduleAtFixedRate(() -> conn.send(), 0, 10, TimeUnit.SECONDS);\n}\n// hoặc: scheduleAtFixedRate(this::sendCurrent, ...) với\n// void sendCurrent() { conn.send(); }",
+    "explanation": "Lambda đọc field `conn` lúc chạy, cùng `volatile` nên thấy kết nối mới ngay. `this::sendCurrent` cũng đúng vì receiver là `this` (không đổi), còn `sendCurrent` đọc field mỗi lần. Quy tắc: method reference trên một field có thể bị gán lại là dấu hiệu cần xem lại."
+  }
+}

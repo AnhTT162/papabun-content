@@ -629,7 +629,7 @@
       "meaning": "Nhóm interface của Java 21 (JEP 431) cho collection có thứ tự xác định, thêm `getFirst()`, `getLast()`, `reversed()`.",
       "example": "`orders.getLast()` thay cho `orders.get(orders.size() - 1)`.",
       "related": ["collection-framework"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "java-17-21-features"]
     },
     {
       "id": "checked-exception",
@@ -4597,7 +4597,7 @@
       "meaning": "Java Platform Module System (Java 9+): khai báo module bằng `module-info.java` với `requires` và `exports`, chặn truy cập package không được export ở cả lúc biên dịch lẫn lúc chạy.",
       "example": "`module shop.payment { exports shop.payment.api; }` thì `shop.payment.internal` không dùng được từ module khác.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith"]
+      "topics": ["modular-monolith", "java-17-21-features"]
     },
     {
       "id": "big-ball-of-mud",
@@ -7285,7 +7285,7 @@
       "meaning": "Method có thân trong interface (Java 8), để thêm method vào interface mà không làm hỏng các class đã implement. Không có trạng thái instance.",
       "example": "`Collection.stream()` là default method được thêm ở Java 8.",
       "related": ["abstract-class"],
-      "topics": ["oop-java"]
+      "topics": ["oop-java", "java-8-11-features"]
     },
     {
       "id": "inner-class",
@@ -7317,7 +7317,7 @@
       "meaning": "Class hoặc interface chỉ cho phép đúng các lớp con được liệt kê trong `permits` (Java 17), để compiler biết đủ mọi biến thể khi `switch`.",
       "example": "`sealed interface Shape permits Circle, Square {}`.",
       "related": ["enum-type"],
-      "topics": ["oop-java"]
+      "topics": ["oop-java", "java-17-21-features"]
     },
     {
       "id": "comparable",
@@ -7605,7 +7605,7 @@
       "meaning": "Class dữ liệu (Java 16): khai báo các component, compiler sinh field `private final`, constructor, accessor, `equals`, `hashCode`, `toString`. Luôn `final` và chỉ bất biến nông.",
       "example": "`record Money(BigDecimal amount, Currency currency) {}`.",
       "related": ["compact-constructor", "immutable", "value-object"],
-      "topics": ["immutability-records"]
+      "topics": ["immutability-records", "java-17-21-features"]
     },
     {
       "id": "compact-constructor",
@@ -7614,6 +7614,94 @@
       "example": "`Order { items = List.copyOf(items); }`.",
       "related": ["record-class"],
       "topics": ["immutability-records"]
+    },
+    {
+      "id": "lambda-expression",
+      "term": "Lambda",
+      "meaning": "Biểu thức hàm ẩn danh (Java 8) cài đặt một functional interface, như `x -> x * 2`. Được dựng lúc chạy qua `invokedynamic`, `this` là object bao ngoài.",
+      "example": "`orders.removeIf(o -> o.status() == CANCELLED);`",
+      "related": ["functional-interface", "method-reference", "effectively-final"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "functional-interface",
+      "term": "Functional interface",
+      "meaning": "Interface có đúng một method abstract, nên cài đặt được bằng lambda hay method reference. `@FunctionalInterface` để compiler kiểm.",
+      "example": "`Function<T, R>`, `Supplier<T>`, `Predicate<T>`, `Runnable`, `Comparator<T>`.",
+      "related": ["lambda-expression"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "method-reference",
+      "term": "Method reference",
+      "meaning": "Cách viết gọn lambda chỉ gọi một method: `Class::staticMethod`, `obj::method`, `Class::instanceMethod`, `Class::new`. Với `obj::method`, `obj` được tính ngay lúc tạo.",
+      "example": "`names.forEach(System.out::println);`",
+      "related": ["lambda-expression"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "effectively-final",
+      "term": "Effectively final",
+      "meaning": "Biến local không bị gán lại sau khi khởi tạo, dù không khai báo `final`. Lambda và inner class chỉ capture được biến loại này.",
+      "example": "`String prefix = \"A-\"; ids.map(id -> prefix + id)` hợp lệ; thêm `prefix = \"B-\";` ở dưới thì lỗi biên dịch.",
+      "related": ["lambda-expression"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "invokedynamic",
+      "term": "invokedynamic",
+      "meaning": "Lệnh bytecode (Java 7) để chỗ gọi được liên kết lúc chạy bởi một bootstrap method. Java dùng nó cho lambda (`LambdaMetafactory`) và ghép chuỗi (Java 9+).",
+      "example": "`javap -c` một class có lambda thấy `invokedynamic #0:run`.",
+      "related": ["lambda-expression"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "local-variable-type-inference",
+      "term": "var",
+      "meaning": "Suy luận kiểu biến local (Java 10): `var` lấy kiểu tĩnh từ vế phải lúc biên dịch; không dùng cho field, tham số hay kiểu trả về.",
+      "example": "`var orders = new ArrayList<Order>();` có kiểu `ArrayList<Order>`.",
+      "related": ["lambda-expression"],
+      "topics": ["java-8-11-features"]
+    },
+    {
+      "id": "switch-expression",
+      "term": "Switch expression",
+      "meaning": "`switch` dùng như biểu thức trả giá trị (Java 14): phải đủ nhánh, khối nhiều lệnh trả giá trị bằng `yield`; thường đi với nhãn `->` không rơi xuống nhánh dưới.",
+      "example": "`int days = switch (month) { case FEB -> 28; default -> 30; };`",
+      "related": ["pattern-matching"],
+      "topics": ["java-17-21-features"]
+    },
+    {
+      "id": "pattern-matching",
+      "term": "Pattern matching",
+      "meaning": "Kiểm tra cấu trúc và tách dữ liệu trong một bước: `instanceof` có biến (Java 16), `switch` theo kiểu với `when` (Java 21).",
+      "example": "`if (o instanceof String s && !s.isBlank()) use(s);`",
+      "related": ["record-pattern", "switch-expression", "sealed-class"],
+      "topics": ["java-17-21-features"]
+    },
+    {
+      "id": "record-pattern",
+      "term": "Record pattern",
+      "meaning": "Mẫu tách component của record ngay trong `instanceof` hoặc `case` (Java 21), lồng nhau được.",
+      "example": "`case Line(Point(var x1, var y1), Point p2) -> ...`",
+      "related": ["pattern-matching"],
+      "topics": ["java-17-21-features"]
+    },
+    {
+      "id": "text-block",
+      "term": "Text block",
+      "meaning": "Chuỗi nhiều dòng bằng `\"\"\"` (Java 15): cắt phần thụt đầu dòng chung và khoảng trắng cuối dòng; `\\s` giữ khoảng trắng, `\\` cuối dòng để nối dòng.",
+      "example": "Viết câu SQL nhiều dòng trong `@Query` mà không cần `+` và `\\n`.",
+      "related": ["switch-expression"],
+      "topics": ["java-17-21-features"]
+    },
+    {
+      "id": "strong-encapsulation",
+      "term": "Strong encapsulation",
+      "meaning": "Từ Java 17 (JEP 403), code ngoài JDK không reflection được vào package nội bộ chưa `opens`; vi phạm ném `InaccessibleObjectException`, chỉ mở lại bằng `--add-opens`.",
+      "example": "Thư viện cũ gọi `setAccessible(true)` trên `ArrayList.elementData` hỏng khi nâng lên Java 17.",
+      "related": ["jpms"],
+      "topics": ["java-17-21-features"]
     }
   ]
 }

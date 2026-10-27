@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pattern-switch-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "sealed interface Pay permits Card, Cash {}\nrecord Card(String last4) implements Pay {}\nrecord Cash(long amount) implements Pay {}\n\nPay p = new Cash(5000);\nString d = switch (p) {\n    case Card(var l4) -> \"card \" + l4;\n    case Cash(long amt) when amt > 1000 -> \"big cash\";\n    case Cash c -> \"cash\";\n};\nSystem.out.println(d);",
+      "options": [
+        "big cash",
+        "cash",
+        "Lỗi biên dịch: thiếu `default`",
+        "MatchException"
+      ],
+      "answer": 0,
+      "explanation": "Nhánh được thử theo thứ tự; `Cash(5000)` khớp record pattern và điều kiện `when`. `Pay` là `sealed` với đủ hai lớp con được xử lý nên không cần `default`."
+    },
+    {
+      "id": "switch-null",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Object n = null;\ntry {\n    switch (n) {\n        case String s -> System.out.println(s);\n        default -> System.out.println(\"default\");\n    }\n} catch (NullPointerException e) {\n    System.out.println(\"NPE\");\n}",
+      "options": [
+        "NPE",
+        "default",
+        "null",
+        "Lỗi biên dịch"
+      ],
+      "answer": 0,
+      "explanation": "`default` không bắt `null`. Không có `case null` thì `switch` ném NPE; muốn xử lý thì viết `case null, default ->`."
+    },
+    {
+      "id": "text-block-trailing",
+      "kind": "single",
+      "prompt": "Text block có dòng `\"id\": 1,   ` (ba khoảng trắng ở cuối). Chuỗi kết quả giữ bao nhiêu khoảng trắng cuối dòng đó?",
+      "options": [
+        "0, bị xoá",
+        "3, giữ nguyên như trong source",
+        "Chỉ bị xoá khi gọi `stripIndent()`",
+        "Chỉ bị xoá ở dòng cuối trước `\"\"\"`"
+      ],
+      "answer": 0,
+      "explanation": "Text block xoá khoảng trắng cuối mỗi dòng lúc biên dịch để source không phụ thuộc editor, không cần gọi method nào. Muốn giữ thì dùng escape `\\s`."
+    },
+    {
+      "id": "upgrade-matchexception",
+      "kind": "single",
+      "prompt": "Thư viện thêm lớp con `Wallet` vào interface `sealed Payment`; service dùng thư viện không biên dịch lại. `switch` đủ nhánh trên `Payment` (không `default`) gặp `Wallet` lúc chạy thì sao?",
+      "options": [
+        "Ném `MatchException`",
+        "Rơi vào nhánh cuối cùng",
+        "Trả `null` từ switch",
+        "Bỏ qua, không làm gì"
+      ],
+      "answer": 0,
+      "explanation": "Compiler chỉ kiểm đủ nhánh lúc biên dịch; khi gặp kiểu không có nhánh lúc chạy, pattern switch (Java 21) ném `MatchException`. Biên dịch lại thì thành lỗi biên dịch, đó là điều `sealed` muốn."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Nâng lên Java 17, cache phiên đăng nhập không khởi động",
+  "context": "Service đang chạy Java 11 được nâng lên Java 17. Code của team biên dịch không lỗi. Khi khởi động, thư viện serialize phiên bản cũ (dùng reflection để đọc ghi trực tiếp field của collection) ném lỗi và context Spring không lên. Trên Java 11 chỉ có một dòng cảnh báo `illegal reflective access` mà không ai để ý.",
+  "buggyCode": "// Bên trong thư viện serialize cũ, mô phỏng\nField elementData = ArrayList.class.getDeclaredField(\"elementData\");\nelementData.setAccessible(true);\nObject[] raw = (Object[]) elementData.get(sessionAttributes);",
+  "symptom": {
+    "description": "Chạy trên JDK 27 (Java 17 trở lên đều vậy): lỗi ngay ở `setAccessible`.",
+    "output": "java.lang.reflect.InaccessibleObjectException: Unable to make field transient java.lang.Object[] java.util.ArrayList.elementData accessible: module java.base does not \"opens java.util\" to unnamed module @397fbdb"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "Từ Java 17, nội bộ JDK bị đóng gói chặt, chặn reflection sâu",
+      "`elementData` bị đổi tên trong Java 17 nên không tìm thấy field",
+      "Java 17 bật SecurityManager mặc định nên chặn `setAccessible`",
+      "Phải biên dịch lại thư viện bằng `--release 17`"
+    ],
+    "answer": 0,
+    "explanation": "Từ Java 9 các package của `java.base` nằm trong module; Java 9–15 chỉ cảnh báo khi reflection vào phần không `opens`, Java 16 mặc định chặn, Java 17 (JEP 403) bỏ luôn cờ `--illegal-access` để mở lại. Field vẫn còn (message nêu đúng tên), SecurityManager không bật mặc định và đã bị vô hiệu ở 24, còn class biên dịch cho Java 11 chạy được trên JVM mới mà không cần biên dịch lại."
+  },
+  "fix": {
+    "code": "// Tạm thời, kèm ticket để gỡ:\njava --add-opens java.base/java.util=ALL-UNNAMED -jar app.jar\n\n// Cách đúng: nâng thư viện lên bản hỗ trợ Java 17+\n// và kiểm trước khi nâng JDK:\n// jdeps --jdk-internals target/lib/*.jar",
+    "explanation": "`--add-opens` mở lại reflection cho package cụ thể; dùng để qua cầu chứ không phải lời giải. Nâng thư viện lên bản không còn đọc nội bộ JDK. Trước mỗi lần nâng JDK, chạy test trên JDK mới và quét bằng `jdeps --jdk-internals` để thấy hết chỗ phụ thuộc nội bộ."
+  }
+}

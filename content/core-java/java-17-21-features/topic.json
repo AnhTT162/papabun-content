@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-17-21-features",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Java 17 → 21: record, sealed, pattern matching",
+  "summary": "Switch expression, pattern matching cho `instanceof` và `switch`, record pattern và `when`, kiểm tra đủ nhánh với `sealed`, `case null`, text block, sequenced collection, và những gì làm hỏng ứng dụng khi nâng từ Java 8/11 lên 17/21.",
+  "level": "mid",
+  "order": 17,
+  "minutes": 12,
+  "prerequisites": ["java-8-11-features", "immutability-records"],
+  "terms": ["switch-expression", "pattern-matching", "record-pattern", "sealed-class", "text-block", "sequenced-collection", "strong-encapsulation", "jpms", "record-class"],
+  "references": [
+    { "title": "JEP 441: Pattern Matching for switch", "url": "https://openjdk.org/jeps/441" },
+    { "title": "JEP 440: Record Patterns", "url": "https://openjdk.org/jeps/440" },
+    { "title": "JEP 403: Strongly Encapsulate JDK Internals", "url": "https://openjdk.org/jeps/403" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pattern matching `switch` với `sealed` khác gì Visitor pattern?\" Cả hai đều xử lý theo từng biến thể, nhưng với `sealed` và `switch` không có `default`, compiler kiểm đủ nhánh: thêm biến thể mới thì mọi `switch` chưa xử lý thành lỗi biên dịch, không cần interface `accept`/`visit`. Đổi lại, logic nằm ngoài class (kiểu dữ liệu đại số), hợp khi tập biến thể ổn định và thao tác hay thêm; khi biến thể hay thêm còn thao tác ổn định thì method đa hình trên từng class vẫn hợp hơn." },
+    { "type": "callout", "style": "warning", "markdown": "Nâng lên Java 17+ mà thư viện cũ dùng reflection vào class nội bộ của JDK sẽ ném `InaccessibleObjectException`. `--add-opens java.base/java.util=ALL-UNNAMED` chạy được nhưng chỉ là vá tạm; nâng thư viện (Lombok, Mockito, ByteBuddy, Kryo, Gson cũ) lên bản hỗ trợ Java mới." }
+  ]
+}

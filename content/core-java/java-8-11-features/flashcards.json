@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "lambda-compiles", "front": "Lambda được biên dịch thành gì?", "back": "Thân lambda thành một method private của class bao; chỗ dùng là `invokedynamic`, lần chạy đầu `LambdaMetafactory` dựng class implement interface." },
+    { "id": "effectively-final", "front": "Effectively final là gì?", "back": "Biến local không bị gán lại sau khi khởi tạo, dù không ghi `final`. Lambda và inner class chỉ capture được loại biến này." },
+    { "id": "this-in-lambda", "front": "`this` trong lambda và trong anonymous class khác nhau thế nào?", "back": "Trong lambda, `this` là object bao ngoài; trong anonymous class, `this` là chính object anonymous." },
+    { "id": "mref-eval", "front": "`conn::send` và `() -> conn.send()` khác nhau lúc nào?", "back": "Method reference tính `conn` ngay lúc tạo và giữ object đó (NPE ngay nếu `null`); lambda đọc `conn` mỗi lần chạy." },
+    { "id": "checked-in-lambda", "front": "Vì sao gọi method ném `IOException` trong `stream.map(...)` không biên dịch?", "back": "`Function.apply` không khai báo `throws`; phải bắt và bọc thành unchecked hoặc dùng interface riêng." },
+    { "id": "var-diamond", "front": "`var list = new ArrayList<>();` có kiểu gì?", "back": "`ArrayList<Object>`, vì diamond không có gì để suy luận; ghi rõ `new ArrayList<String>()`." },
+    { "id": "strip-trim", "front": "`strip()` khác `trim()` thế nào?", "back": "`trim` chỉ bỏ ký tự mã ≤ U+0020; `strip` (Java 11) bỏ mọi khoảng trắng Unicode theo `Character.isWhitespace`." },
+    { "id": "lts", "front": "Các bản Java LTS là những bản nào?", "back": "8, 11, 17, 21, 25." }
+  ]
+}

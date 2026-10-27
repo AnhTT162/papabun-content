@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-8-11-features",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Java 8 → 11: lambda, method reference, var",
+  "summary": "Lambda biên dịch thành gì và khác anonymous class ở đâu, effectively final, functional interface và checked exception, method reference giữ receiver ngay lúc tạo, `var` suy luận ra kiểu gì, và những API nhỏ của Java 9–11 hay dùng.",
+  "level": "mid",
+  "order": 16,
+  "minutes": 12,
+  "prerequisites": ["oop-java", "generics"],
+  "terms": ["lambda-expression", "functional-interface", "method-reference", "effectively-final", "invokedynamic", "local-variable-type-inference", "default-method"],
+  "references": [
+    { "title": "JLS §15.27 Lambda Expressions (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.27" },
+    { "title": "JLS §15.13 Method Reference Expressions (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.13" },
+    { "title": "JEP 286: Local-Variable Type Inference", "url": "https://openjdk.org/jeps/286" },
+    { "title": "JEP 320: Remove the Java EE and CORBA Modules", "url": "https://openjdk.org/jeps/320" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao lambda chỉ dùng được biến local effectively final?\" Lambda có thể chạy sau khi method tạo ra nó đã trả về, trên thread khác. Biến local nằm trên stack của method đó, nên lambda giữ **bản sao giá trị**; nếu cho phép sửa biến sau đó thì bản sao và bản gốc lệch nhau và sinh race condition. Field thì khác: lambda giữ `this` và đọc field lúc chạy, nên đọc được giá trị mới, và cũng vì thế không tự an toàn đa luồng." },
+    { "type": "callout", "style": "tip", "markdown": "Bài này không lặp lại các chủ đề đã có bài riêng: `Optional` ở bài Null, Optional & xử lý vắng giá trị; Stream ở bài Stream API chuyên sâu; default method và xung đột kế thừa ở bài OOP trong Java; `java.time` ở bài java.time; HTTP Client với HTTP/2 ở bài HTTP/1.1, HTTP/2 & HTTP/3." }
+  ]
+}

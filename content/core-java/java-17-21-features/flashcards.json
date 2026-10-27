@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "switch-arrow", "front": "`case A, B ->` khác `case A: case B:` thế nào?", "back": "Nhãn mũi tên không rơi xuống nhánh dưới (fall-through), mỗi nhánh chạy một biểu thức hay một khối." },
+    { "id": "yield", "front": "Nhánh của switch expression cần nhiều lệnh thì trả giá trị bằng gì?", "back": "`yield giaTri;` trong khối `{ ... }`." },
+    { "id": "exhaustive", "front": "Vì sao `switch` trên interface `sealed` không cần `default`?", "back": "Compiler biết đủ các lớp con được phép và kiểm mọi nhánh; thiếu nhánh là lỗi biên dịch." },
+    { "id": "case-null", "front": "`switch` trên giá trị `null` mà không có `case null` thì sao?", "back": "Ném `NullPointerException`. Java 21 cho viết `case null ->` hoặc `case null, default ->`." },
+    { "id": "record-pattern", "front": "Record pattern là gì?", "back": "Mẫu tách component của record ngay trong `instanceof` hay `case`, ví dụ `case Card(var last4) ->` (Java 21)." },
+    { "id": "when-guard", "front": "Nhánh `case Cash c when c.amount() > 1000` có được tính vào kiểm đủ nhánh không?", "back": "Không. Vẫn cần một nhánh `case Cash c` không điều kiện (hoặc `default`)." },
+    { "id": "inaccessible", "front": "`InaccessibleObjectException` sau khi nâng lên Java 17 nghĩa là gì?", "back": "Có code dùng reflection vào nội bộ JDK, bị chặn vì đóng gói chặt (JEP 403); nâng thư viện hoặc tạm `--add-opens`." },
+    { "id": "sequenced", "front": "Java 21 thêm gì chung cho `List`, `LinkedHashSet`, `Deque`?", "back": "Interface `SequencedCollection` với `getFirst`, `getLast`, `addFirst`, `addLast`, `reversed()`; map có thứ tự có `SequencedMap` riêng." }
+  ]
+}
