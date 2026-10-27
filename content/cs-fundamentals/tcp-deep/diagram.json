@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một kết nối TCP từ lúc mở tới lúc đóng",
+  "nodes": [
+    { "id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "synq", "label": "SYN queue", "kind": "queue", "x": 0.85, "y": 0.05 },
+    { "id": "acceptq", "label": "Accept queue", "kind": "queue", "x": 0.85, "y": 0.5 },
+    { "id": "app", "label": "Tomcat accept()", "kind": "service", "x": 0.85, "y": 0.95 },
+    { "id": "timewait", "label": "TIME_WAIT 60s", "kind": "generic", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-synq", "from": "client", "to": "synq", "label": "SYN" },
+    { "id": "synq-acceptq", "from": "synq", "to": "acceptq", "label": "ACK cuối" },
+    { "id": "acceptq-app", "from": "acceptq", "to": "app", "label": "accept()" },
+    { "id": "client-app", "from": "client", "to": "app", "label": "dữ liệu + ACK" },
+    { "id": "client-timewait", "from": "client", "to": "timewait", "label": "client đóng trước" }
+  ],
+  "steps": [
+    { "caption": "Client gửi SYN; kernel phía server ghi kết nối dở dang vào SYN queue và trả SYN-ACK.", "show": ["client", "synq", "client-synq"], "highlight": ["client-synq"] },
+    { "caption": "ACK cuối tới: kết nối đã mở, chuyển sang accept queue. Queue đầy thì kernel bỏ ACK, client phải chờ gửi lại.", "show": ["acceptq", "synq-acceptq"], "highlight": ["synq-acceptq"] },
+    { "caption": "Tomcat gọi accept() để lấy kết nối ra khỏi queue. Thiếu thread hay app treo thì Recv-Q của socket listen tăng dần.", "show": ["app", "acceptq-app"], "highlight": ["acceptq-app"] },
+    { "caption": "Dữ liệu đi hai chiều; mỗi đoạn được ACK, mất thì gửi lại sau RTO, tốc độ theo cửa sổ nhận và congestion window.", "show": ["client-app"], "highlight": ["client-app"] },
+    { "caption": "Bên đóng trước nằm TIME_WAIT 60 giây và giữ ephemeral port đó. Mở mới mỗi request là cạn port ở chính client.", "show": ["timewait", "client-timewait"], "highlight": ["client-timewait"] },
+    { "caption": "Dùng lại kết nối qua keep-alive và pool: không handshake lại, không TIME_WAIT, không cạn port.", "show": [], "highlight": ["client-app"] }
+  ]
+}

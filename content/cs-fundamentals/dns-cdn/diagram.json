@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Tải ảnh sản phẩm qua DNS và CDN",
+  "nodes": [
+    { "id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "resolver", "label": "Recursive resolver", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "auth", "label": "Authoritative DNS", "kind": "external", "x": 0.85, "y": 0.5 },
+    { "id": "edge", "label": "Edge Hà Nội", "kind": "cache", "x": 0.1, "y": 0.5 },
+    { "id": "shield", "label": "Origin shield", "kind": "cache", "x": 0.85, "y": 0.95 },
+    { "id": "origin", "label": "Origin", "kind": "service", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "browser-resolver", "from": "browser", "to": "resolver", "label": "IP của img.shop?" },
+    { "id": "resolver-auth", "from": "resolver", "to": "auth", "label": "root → .com → NS" },
+    { "id": "browser-edge", "from": "browser", "to": "edge", "label": "GET /p/123.webp" },
+    { "id": "edge-shield", "from": "edge", "to": "shield", "label": "cache miss" },
+    { "id": "shield-origin", "from": "shield", "to": "origin", "label": "miss, hỏi origin" }
+  ],
+  "steps": [
+    { "caption": "Trình duyệt cần IP của img.shop.example.com; không có trong cache nên hỏi recursive resolver.", "show": ["browser", "resolver", "browser-resolver"], "highlight": ["browser-resolver"] },
+    { "caption": "Resolver đi từ root tới .com rồi tới authoritative server; nhận CNAME sang tên của CDN, rồi IP của edge gần, kèm TTL.", "show": ["auth", "resolver-auth"], "highlight": ["resolver-auth"] },
+    { "caption": "Resolver cache câu trả lời theo TTL; người khác cùng resolver trong khoảng đó không phải hỏi lại.", "show": [], "highlight": ["resolver"] },
+    { "caption": "Trình duyệt gửi request tới edge Hà Nội. Edge tra cache theo cache key: host, path và các tham số được chọn.", "show": ["edge", "browser-edge"], "highlight": ["browser-edge"] },
+    { "caption": "Edge chưa có ảnh: hỏi origin shield, tầng cache chung cho nhiều edge, thay vì hỏi thẳng origin.", "show": ["shield", "edge-shield"], "highlight": ["edge-shield"] },
+    { "caption": "Shield cũng miss thì gọi origin một lần; response được lưu ở cả shield và edge theo Cache-Control.", "show": ["origin", "shield-origin"], "highlight": ["shield-origin"] },
+    { "caption": "Các request sau ở Hà Nội trả ngay từ edge. Đổi ảnh thì đổi tên file hoặc purge, vì bản cũ còn ở mọi tầng tới hết TTL.", "show": [], "highlight": ["edge", "browser-edge"] }
+  ]
+}

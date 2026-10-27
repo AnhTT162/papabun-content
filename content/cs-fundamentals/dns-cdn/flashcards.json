@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "resolution-path", "front": "Recursive resolver đi qua những máy chủ nào để phân giải `shop.example.com`?", "back": "Root, rồi máy chủ TLD `.com`, rồi authoritative server của `shop.example.com`; kết quả được cache theo TTL." },
+    { "id": "no-propagation", "front": "\"DNS đang lan truyền\" thật ra là gì?", "back": "Gần như luôn là cache chưa hết TTL của bản ghi cũ (trừ khi đổi nameserver). Hạ TTL trước khi đổi và chờ ít nhất bằng TTL cũ." },
+    { "id": "jvm-dns-cache", "front": "`InetAddress` của JVM cache kết quả DNS bao lâu?", "back": "Thành công 30 giây, lỗi 10 giây (`networkaddress.cache.ttl`, `.negative.ttl`), không theo TTL của bản ghi." },
+    { "id": "webclient-dns", "front": "`WebClient` (Reactor Netty) phân giải DNS bằng gì?", "back": "Mặc định bằng resolver bất đồng bộ của Netty, đọc `resolv.conf` và theo TTL của bản ghi, không dùng cache của JVM." },
+    { "id": "negative-ttl", "front": "Vì sao vừa tạo bản ghi DNS mà vẫn nhận `NXDOMAIN`?", "back": "Lần hỏi trước khi tạo đã bị cache (negative caching) trong min(TTL của bản ghi SOA, trường `MINIMUM` của SOA)." },
+    { "id": "apex-cname", "front": "Vì sao không đặt `CNAME` cho `shop.example.com` (apex)?", "back": "Tên có `CNAME` không được có bản ghi khác, mà apex luôn có `SOA` và `NS`. Dùng alias hoặc CNAME flattening." },
+    { "id": "cache-key-utm", "front": "Vì sao `utm_source` trong cache key làm hit ratio của CDN giảm?", "back": "Mỗi chiến dịch tạo một key khác cho cùng nội dung, nên edge phải hỏi origin lại. Bỏ tham số không đổi response khỏi key." },
+    { "id": "origin-shield", "front": "Origin shield giải quyết vấn đề gì?", "back": "Nhiều edge cùng miss một nội dung chỉ tạo một request tới origin, vì chúng hỏi qua một tầng cache chung." },
+    { "id": "cache-poisoning", "front": "Web cache poisoning xảy ra thế nào?", "back": "Origin dùng một header không có trong cache key (như `X-Forwarded-Host`) để dựng response; response độc bị cache và trả cho mọi người." }
+  ]
+}

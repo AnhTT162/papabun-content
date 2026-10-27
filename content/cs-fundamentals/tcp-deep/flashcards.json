@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "two-queues", "front": "Kernel phía server giữ kết nối đang mở trong hai hàng đợi nào?", "back": "SYN queue cho kết nối dở dang (đã nhận SYN), accept queue cho kết nối đã xong handshake chờ app gọi `accept()`." },
+    { "id": "accept-queue-size", "front": "Độ dài accept queue được tính thế nào?", "back": "min(backlog app truyền vào, `net.core.somaxconn`). Java `ServerSocket` mặc định 50, Tomcat `accept-count` 100, `somaxconn` 4096 từ kernel 5.4." },
+    { "id": "syn-retry", "front": "SYN bị bỏ lặng lẽ thì Linux chờ bao lâu mới báo lỗi?", "back": "Gửi lại sau 1, 2, 4, 8, 16, 32 giây (`tcp_syn_retries=6`), khoảng 127 giây. Luôn đặt connect timeout." },
+    { "id": "time-wait-side", "front": "`TIME_WAIT` nằm ở bên nào và kéo dài bao lâu?", "back": "Ở bên chủ động đóng trước, 60 giây trên Linux. `tcp_fin_timeout` không rút ngắn được nó." },
+    { "id": "port-ceiling", "front": "Client đóng trước mỗi request thì mở được bao nhiêu kết nối mới mỗi giây tới một đích?", "back": "Khoảng 28.232 port / 60 giây ≈ 470. Vượt thì `BindException: Cannot assign requested address`." },
+    { "id": "nagle-40ms", "front": "Vì sao request nhỏ chậm đúng khoảng 40 ms?", "back": "Nagle giữ đoạn nhỏ chờ ACK, bên nhận trì hoãn ACK (delayed ACK, Linux khoảng 40 ms). Bật `TCP_NODELAY` hoặc ghi một lần." },
+    { "id": "window-throughput", "front": "Thông lượng tối đa của một kết nối TCP bị giới hạn bởi gì?", "back": "Cửa sổ nhận chia RTT: 64 KB với RTT 200 ms chỉ khoảng 2,6 Mbit/s, dù đường truyền nhanh hơn nhiều." },
+    { "id": "keepalive-default", "front": "Vì sao TCP keepalive mặc định không cứu được kết nối qua NAT hay load balancer?", "back": "Linux chỉ gửi probe sau 7200 giây im lặng, trong khi ALB cắt sau 60 giây, NLB và NAT gateway sau 350 giây." },
+    { "id": "reset-after-idle", "front": "`Connection reset` rải rác ở request đầu tiên sau một lúc nhàn rỗi thường do đâu?", "back": "Thiết bị ở giữa đã xoá kết nối vì quá idle timeout. Cho pool bỏ kết nối nhàn rỗi trước mức đó." }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "tcp-deep",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "TCP chuyên sâu",
+  "summary": "Handshake với SYN queue và accept queue, gửi lại gói và RTO, flow control và congestion control, `TIME_WAIT` và cạn ephemeral port, Nagle với delayed ACK, keepalive và kết nối nửa sống, khi nào bên kia gửi RST; cách đọc `ss` và lỗi của Java ở từng trường hợp.",
+  "level": "mid",
+  "order": 9,
+  "minutes": 15,
+  "prerequisites": ["network-basics", "http-request-lifecycle"],
+  "terms": ["tcp-handshake", "accept-queue", "tcp-retransmission", "congestion-window", "time-wait", "ephemeral-port", "nagle-algorithm", "delayed-ack", "tcp-keepalive", "tcp-rst", "rtt", "conntrack", "keep-alive", "connection-pool"],
+  "references": [
+    { "title": "RFC 9293: Transmission Control Protocol (TCP)", "url": "https://www.rfc-editor.org/rfc/rfc9293.html" },
+    { "title": "RFC 6298: Computing TCP's Retransmission Timer", "url": "https://www.rfc-editor.org/rfc/rfc6298.html" },
+    { "title": "Linux kernel: ip-sysctl (tcp_* settings)", "url": "https://docs.kernel.org/networking/ip-sysctl.html" },
+    { "title": "Java SE 21: jdk.net.ExtendedSocketOptions", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/jdk.net/jdk/net/ExtendedSocketOptions.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Server có rất nhiều `TIME_WAIT`, có nên bật `tcp_tw_reuse` hay hạ `tcp_fin_timeout` không?\" Trước hết hỏi ai đóng kết nối trước và vì sao đóng: `TIME_WAIT` nằm ở bên chủ động đóng, và hàng chục nghìn socket như vậy gần như luôn là dấu hiệu mở kết nối mới cho mỗi request. Sửa gốc là dùng lại kết nối (connection pool, keep-alive). `tcp_fin_timeout` không rút ngắn `TIME_WAIT` (cố định 60 giây trên Linux), nó chỉnh `FIN_WAIT_2`. `tcp_tw_reuse` chỉ giúp phía client khi kết nối mới có timestamp, còn `tcp_tw_recycle` đã bị gỡ khỏi kernel 4.12 vì làm hỏng kết nối sau NAT." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chữa `TIME_WAIT` bằng `setSoLinger(true, 0)`. Đóng như vậy gửi RST thay cho FIN: bên kia nhận `Connection reset`, dữ liệu còn trong buffer chưa gửi bị bỏ, và bạn đã tắt đúng cơ chế bảo vệ kết nối mới khỏi gói trễ của kết nối cũ." }
+  ]
+}

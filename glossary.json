@@ -39,7 +39,7 @@
       "meaning": "Hệ thống phân giải tên miền thành địa chỉ IP. Kết quả được cache ở nhiều tầng theo TTL của bản ghi.",
       "example": "Tra `shop.example.com` nhận về bản ghi A `203.0.113.10` với TTL 300 giây.",
       "related": ["rtt", "load-balancer"],
-      "topics": ["http-request-lifecycle", "slow-api", "network-basics"]
+      "topics": ["http-request-lifecycle", "slow-api", "network-basics", "dns-cdn"]
     },
     {
       "id": "rtt",
@@ -47,7 +47,7 @@
       "meaning": "Thời gian để một gói tin đi từ client tới server và nhận được phản hồi quay lại. Mỗi bước handshake tốn ít nhất một RTT.",
       "example": "Từ Hà Nội tới server ở Singapore RTT khoảng 40ms, nên TCP + TLS 1.3 tốn khoảng 80ms trước khi gửi request.",
       "related": ["tcp-handshake", "tls-handshake"],
-      "topics": ["http-request-lifecycle", "client-performance"]
+      "topics": ["http-request-lifecycle", "client-performance", "tcp-deep"]
     },
     {
       "id": "tcp-handshake",
@@ -55,7 +55,7 @@
       "meaning": "Ba gói SYN, SYN-ACK, ACK để client và server thống nhất số thứ tự và mở kết nối TCP, tốn 1 RTT.",
       "example": "`curl -w '%{time_connect}'` đo thời điểm handshake TCP hoàn tất.",
       "related": ["rtt", "tls-handshake"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "tcp-deep"]
     },
     {
       "id": "tls-handshake",
@@ -71,7 +71,7 @@
       "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
       "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
       "related": ["tcp-handshake", "connection-pool"],
-      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning", "network-basics", "proxy-nginx"]
+      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning", "network-basics", "proxy-nginx", "tcp-deep"]
     },
     {
       "id": "load-balancer",
@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db", "server-tuning", "slow-api", "thread-pool-exhaustion", "db-performance"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db", "server-tuning", "slow-api", "thread-pool-exhaustion", "db-performance", "tcp-deep"]
     },
     {
       "id": "multiplexing",
@@ -2365,7 +2365,7 @@
       "meaning": "Tỉ lệ lần đọc tìm thấy dữ liệu trong cache. Phần còn lại (miss ratio) là tải đi xuống nguồn.",
       "example": "Hit ratio 99% nghĩa là cứ 100 lần đọc chỉ 1 lần xuống database.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-failures"]
+      "topics": ["caching-basics", "cache-failures", "dns-cdn"]
     },
     {
       "id": "ttl",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview", "dns-cdn"]
     },
     {
       "id": "cache-eviction",
@@ -2405,7 +2405,7 @@
       "meaning": "Khoá dùng để tìm một mục trong cache. Phải chứa mọi thứ làm kết quả khác đi (tenant, ngôn ngữ, người dùng nếu cá nhân hoá), nếu không sẽ trả nhầm dữ liệu.",
       "example": "`v3:product:{tenant}:{id}:{locale}`",
       "related": ["cache", "http-caching"],
-      "topics": ["caching-basics", "cache-patterns"]
+      "topics": ["caching-basics", "cache-patterns", "dns-cdn"]
     },
     {
       "id": "http-caching",
@@ -2413,7 +2413,7 @@
       "meaning": "Cơ chế cache của HTTP (RFC 9111, cộng các mở rộng như `stale-while-revalidate` ở RFC 5861) điều khiển bằng header như `Cache-Control`, `ETag`, `Vary`, áp cho trình duyệt, proxy và CDN.",
       "example": "`Cache-Control: private, max-age=60` cho dữ liệu riêng của người dùng.",
       "related": ["cdn", "etag"],
-      "topics": ["caching-basics", "client-performance"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn"]
     },
     {
       "id": "cdn",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn"]
     },
     {
       "id": "local-cache",
@@ -2445,7 +2445,7 @@
       "meaning": "Cache cả kết quả \"không tồn tại\" (thường với TTL ngắn), để những lần tra id không có thật không đi xuống database mỗi lần.",
       "example": "Lưu `product:999999 = NONE` trong 60 giây.",
       "related": ["cache", "ttl"],
-      "topics": ["caching-basics", "cache-failures"]
+      "topics": ["caching-basics", "cache-failures", "dns-cdn"]
     },
     {
       "id": "message-queue",
@@ -5525,7 +5525,7 @@
       "meaning": "DNS trả địa chỉ khác nhau tuỳ vị trí (hoặc độ trễ) của người hỏi, để đưa người dùng tới region gần nhất. Health check rút region hỏng khỏi câu trả lời.",
       "example": "Route 53 latency-based routing trả IP của Frankfurt cho người dùng ở Đức và của Singapore cho người dùng ở Việt Nam.",
       "related": ["dns", "active-active"],
-      "topics": ["multi-region-active-active"]
+      "topics": ["multi-region-active-active", "dns-cdn"]
     },
     {
       "id": "read-index",
@@ -5565,7 +5565,7 @@
       "meaning": "Cùng một địa chỉ IP được quảng bá từ nhiều điểm; mạng tự đưa gói tin tới điểm gần nhất, nên chuyển hướng khi một điểm hỏng không phụ thuộc cache DNS.",
       "example": "Load balancer toàn cục có IP anycast: người dùng ở Đức vào điểm biên Frankfurt, ở Việt Nam vào điểm biên Singapore.",
       "related": ["geodns", "dns"],
-      "topics": ["multi-region-active-active"]
+      "topics": ["multi-region-active-active", "dns-cdn"]
     },
     {
       "id": "cell-based-architecture",
@@ -5861,7 +5861,7 @@
       "meaning": "Đổi URL của tài nguyên mỗi khi nội dung đổi (thường gắn hash nội dung vào tên file), để vừa cache rất lâu vừa nhận bản mới ngay sau deploy.",
       "example": "`app.3f9c2b.js` với `Cache-Control: public, max-age=31536000, immutable`; HTML trỏ tới tên mới.",
       "related": ["http-caching", "cdn"],
-      "topics": ["client-performance"]
+      "topics": ["client-performance", "dns-cdn"]
     },
     {
       "id": "thread-starvation-deadlock",
@@ -5877,7 +5877,7 @@
       "meaning": "TCP gửi lại gói khi không nhận được ACK trong thời gian chờ (RTO). Trên Linux RTO tối thiểu khoảng 200ms; gói SYN đầu tiên bị mất được gửi lại sau 1 giây, rồi thêm 2 giây.",
       "example": "Latency gom thành cụm ở 1 giây và 3 giây khi gói SYN bị rớt.",
       "related": ["tcp-handshake", "rtt"],
-      "topics": ["slow-api"]
+      "topics": ["slow-api", "tcp-deep"]
     },
     {
       "id": "conntrack",
@@ -5885,7 +5885,7 @@
       "meaning": "Bảng theo dõi kết nối của netfilter trong kernel Linux, dùng cho NAT và firewall (kube-proxy dựa vào nó). Mỗi kết nối chiếm một mục, kể cả khi đã đóng: mục TIME_WAIT của conntrack giữ 120 giây, lâu hơn socket TIME_WAIT 60 giây. Bảng đầy thì kernel bỏ gói mới.",
       "example": "`dmesg` báo `nf_conntrack: table full, dropping packet` khi `nf_conntrack_count` chạm `nf_conntrack_max`.",
       "related": ["time-wait", "tcp-retransmission"],
-      "topics": ["slow-api", "network-basics"]
+      "topics": ["slow-api", "network-basics", "tcp-deep"]
     },
     {
       "id": "time-wait",
@@ -5893,7 +5893,7 @@
       "meaning": "Trạng thái của kết nối TCP sau khi bên chủ động đóng gửi ACK cuối, giữ một thời gian (60 giây trên Linux) để gói trễ không lẫn vào kết nối mới cùng cổng. Mở và đóng kết nối liên tục làm số socket TIME_WAIT tăng vọt.",
       "example": "Ứng dụng mở một kết nối mới cho mỗi request, 400 req/s: khoảng 24.000 socket ở TIME_WAIT.",
       "related": ["keep-alive", "conntrack"],
-      "topics": ["slow-api", "proxy-nginx"]
+      "topics": ["slow-api", "proxy-nginx", "tcp-deep"]
     },
     {
       "id": "out-of-memory-error",
@@ -6229,7 +6229,7 @@
       "meaning": "Port tạm kernel cấp cho phía client khi mở kết nối đi ra. Linux mặc định dùng dải `32768–60999` (`net.ipv4.ip_local_port_range`).",
       "example": "App gọi `10.0.2.30:5432` từ `10.0.1.12:41822`; 41822 là ephemeral port.",
       "related": ["network-port", "time-wait"],
-      "topics": ["network-basics", "proxy-nginx"]
+      "topics": ["network-basics", "proxy-nginx", "tcp-deep"]
     },
     {
       "id": "route-table",
@@ -6590,6 +6590,110 @@
       "example": "`1767225600` giây là `2026-01-01T00:00:00Z`, hiểu nhầm thành mili giây ra ngày 21/1/1970.",
       "related": ["utc"],
       "topics": ["time-encoding"]
+    },
+    {
+      "id": "accept-queue",
+      "term": "Accept queue",
+      "meaning": "Hàng đợi trong kernel giữ các kết nối TCP đã xong handshake, chờ app gọi `accept()`. Dài bằng min(backlog, `somaxconn`); đầy thì kết nối mới bị bỏ.",
+      "example": "`ss -lnt` của socket listen cổng 8080 có `Recv-Q` 100, `Send-Q` 100: queue đã đầy, Tomcat không kịp nhận kết nối.",
+      "related": ["tcp-handshake", "accept-count"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "congestion-window",
+      "term": "Congestion window",
+      "meaning": "Số byte bên gửi được phép gửi mà chưa nhận ACK, do TCP tự điều chỉnh theo tình trạng mạng: bắt đầu nhỏ (slow start), tăng dần, giảm khi mất gói.",
+      "example": "Kết nối mới bắt đầu với 10 segment (khoảng 14 KB), nên response 200 KB trên kết nối mới cần thêm vài RTT so với kết nối đã nóng.",
+      "related": ["tcp-retransmission", "rtt"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "nagle-algorithm",
+      "term": "Nagle algorithm",
+      "meaning": "TCP giữ các đoạn dữ liệu nhỏ lại cho tới khi đoạn trước được ACK, để gộp thành gói lớn hơn. Gặp delayed ACK thì request nhỏ chậm thêm vài chục ms.",
+      "example": "`socket.setTcpNoDelay(true)` tắt Nagle; Netty và Tomcat bật sẵn `TCP_NODELAY`.",
+      "related": ["delayed-ack"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "delayed-ack",
+      "term": "Delayed ACK",
+      "meaning": "Bên nhận trì hoãn gửi ACK một chút (Linux tối thiểu khoảng 40 ms) để gộp ACK với dữ liệu trả lời. Kết hợp với Nagle tạo ra độ trễ 40 ms kinh điển.",
+      "example": "Client ghi header rồi ghi body thành hai lần nhỏ: body chờ ACK của header, ACK bị trì hoãn 40 ms.",
+      "related": ["nagle-algorithm"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "tcp-keepalive",
+      "term": "TCP keepalive",
+      "meaning": "Kernel gửi gói thăm dò trên kết nối im lặng để phát hiện bên kia đã chết và giữ trạng thái trong NAT hay firewall. Linux mặc định chỉ bắt đầu sau 7200 giây.",
+      "example": "Java 11+: `socket.setKeepAlive(true)` rồi `socket.setOption(ExtendedSocketOptions.TCP_KEEPIDLE, 60)` để thăm dò sau 60 giây im lặng, dưới idle timeout 350 giây của NAT gateway.",
+      "related": ["keep-alive", "conntrack"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "tcp-rst",
+      "term": "RST",
+      "meaning": "Gói TCP báo hủy kết nối ngay, khác với FIN là đóng êm. Gửi khi tới port không ai nghe, khi đóng bằng `SO_LINGER` 0, hoặc khi nhận dữ liệu cho kết nối mà máy đã quên.",
+      "example": "Ghi vào kết nối đã bị load balancer xoá vì idle timeout: Java nhận `SocketException: Connection reset`.",
+      "related": ["tcp-keepalive", "time-wait"],
+      "topics": ["tcp-deep"]
+    },
+    {
+      "id": "recursive-resolver",
+      "term": "Recursive resolver",
+      "meaning": "Máy chủ DNS nhận câu hỏi của client và tự đi hỏi root, TLD, authoritative để tìm câu trả lời, rồi cache theo TTL. Thường là resolver của VPC, ISP hoặc dịch vụ công cộng.",
+      "example": "Trong VPC AWS là địa chỉ thứ hai của dải VPC (ví dụ `10.0.0.2`); ngoài Internet là `8.8.8.8` hay `1.1.1.1`.",
+      "related": ["dns", "authoritative-dns"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "authoritative-dns",
+      "term": "Authoritative DNS",
+      "meaning": "Máy chủ giữ bản ghi gốc của một zone và trả lời chính thức cho các tên trong zone đó. Bản ghi `NS` ở cấp cha chỉ ra máy chủ nào là authoritative.",
+      "example": "`dig shop.example.com NS` trả các máy chủ của nhà cung cấp DNS; `dig @ns1.provider.example shop.example.com` hỏi thẳng chúng, không qua cache.",
+      "related": ["recursive-resolver", "dns"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "cname",
+      "term": "CNAME",
+      "meaning": "Bản ghi DNS nói tên này là bí danh của một tên khác; resolver tiếp tục phân giải tên đích. Tên có `CNAME` không được có bản ghi nào khác, nên không đặt ở apex.",
+      "example": "`img.shop.example.com CNAME d111abcdef8.cloudfront.net` trỏ ảnh sang CDN.",
+      "related": ["dns"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "edge-location",
+      "term": "Edge location",
+      "meaning": "Điểm đặt máy chủ của CDN gần người dùng (PoP), trả nội dung từ cache và chỉ hỏi origin khi miss.",
+      "example": "Người dùng ở Hà Nội tải ảnh từ edge ở Hà Nội thay vì từ origin ở Singapore, giảm RTT từ khoảng 40 ms xuống vài ms.",
+      "related": ["cdn", "origin-shield"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "origin-shield",
+      "term": "Origin shield",
+      "meaning": "Tầng cache trung gian của CDN đứng giữa các edge và origin. Nhiều edge cùng miss một nội dung chỉ tạo một request tới origin.",
+      "example": "Bật origin shield ở vùng gần origin: 400 edge miss cùng một ảnh mới chỉ còn một request tới origin.",
+      "related": ["edge-location", "cache-stampede"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "cache-purge",
+      "term": "Cache purge",
+      "meaning": "Yêu cầu CDN xoá nội dung khỏi cache trước khi hết TTL. Cần thời gian để tới mọi edge và thường giới hạn số lượng, nên không thay được việc đổi tên file theo phiên bản.",
+      "example": "CloudFront invalidation `/index.html` sau khi deploy; 1.000 đường dẫn đầu mỗi tháng miễn phí.",
+      "related": ["cache-busting", "cdn"],
+      "topics": ["dns-cdn"]
+    },
+    {
+      "id": "cache-poisoning",
+      "term": "Web cache poisoning",
+      "meaning": "Kẻ tấn công làm cache dùng chung lưu một response độc, bằng cách gửi input không nằm trong cache key (thường là header) mà origin dùng để dựng response.",
+      "example": "Origin dựng link từ `X-Forwarded-Host`; request kèm `X-Forwarded-Host: evil.example` được CDN cache cho trang chủ và trả cho mọi người.",
+      "related": ["cache-key", "cdn"],
+      "topics": ["dns-cdn"]
     }
   ]
 }

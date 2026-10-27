@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "dns-cdn",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "DNS & CDN",
+  "summary": "Một tên miền được phân giải qua những ai, bản ghi và TTL được cache ở đâu (kể cả trong JVM và Kubernetes), vì sao đổi DNS không có hiệu lực ngay; CDN chọn edge thế nào, cache key, TTL, purge và origin shield, cùng các lỗ hổng cache poisoning và cache nhầm dữ liệu riêng.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 14,
+  "prerequisites": ["network-basics", "http-request-lifecycle"],
+  "terms": ["dns", "recursive-resolver", "authoritative-dns", "cname", "ttl", "negative-caching", "anycast", "geodns", "cdn", "edge-location", "cache-key", "cache-hit-ratio", "origin-shield", "cache-purge", "cache-poisoning", "cache-busting", "http-caching"],
+  "references": [
+    { "title": "RFC 1034: Domain Names, Concepts and Facilities", "url": "https://www.rfc-editor.org/rfc/rfc1034.html" },
+    { "title": "RFC 2308: Negative Caching of DNS Queries", "url": "https://www.rfc-editor.org/rfc/rfc2308.html" },
+    { "title": "Amazon CloudFront: Cache key and origin requests", "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/understanding-the-cache-key.html" },
+    { "title": "JEP 418: Internet-Address Resolution SPI", "url": "https://openjdk.org/jeps/418" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn chuyển hệ thống sang IP mới tối nay, làm sao để người dùng không bị trỏ vào IP cũ?\" Vài ngày trước, hạ TTL của bản ghi xuống 60 giây và chờ ít nhất bằng TTL cũ để mọi cache hết hạn. Giữ IP cũ chạy song song (hoặc chuyển tiếp sang IP mới) thêm một thời gian, vì JVM, connection pool và resolver không tuân thủ TTL vẫn gửi tới đó. Theo dõi lượng truy cập còn lại ở IP cũ trước khi tắt. Sau khi ổn định thì nâng TTL lên lại để giảm tải truy vấn." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để CDN cache response phụ thuộc người dùng. Một trang `/account` bị cache vì CDN cấu hình \"cache mọi thứ\", hay một đường dẫn kiểu `/account/profile.css` mà CDN tưởng là file tĩnh (web cache deception), sẽ trả thông tin của người này cho người khác. Response riêng phải có `Cache-Control: private` hoặc `no-store`, và quy tắc cache của CDN nên theo `Cache-Control` của origin, không theo đuôi file." }
+  ]
+}

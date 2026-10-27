@@ -1,0 +1,98 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Đợt khuyến mãi: 1/5 lời gọi kiểm tra gian lận lỗi ngay khi connect",
+  "symptom": "Từ 20:00 tối nay (giờ mở khuyến mãi), khoảng 22% đơn hàng lỗi ở bước kiểm tra gian lận. order-service báo lỗi gần như tức thì (dưới 1 ms), còn fraud-service vẫn khoẻ và không thấy request nào bị lỗi ở phía nó.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "order-service: 4 pod, JDK 21, mỗi pod có IP riêng\nMỗi đơn hàng gọi fraud-service (ClusterIP 10.96.40.12:8080) một lần.\n\ntime   req/s mỗi pod   lỗi    p99\n19:50  400             0%     48ms\n20:05  600             21%    52ms\n20:20  600             22%    51ms\n\nLog của order-service:\n20:05:13.402 ERROR FraudClient - fraud check failed\njava.net.BindException: Cannot assign requested address\n    at java.base/sun.nio.ch.Net.connect0(Native Method)\n    at java.base/sun.nio.ch.Net.connect(Net.java:...)\n    at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:...)\n    at org.apache.hc.client5.http.impl.io.DefaultHttpClientConnectionOperator.connect(...)",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi xảy ra ngay ở `connect` phía client. Bạn làm gì trước?",
+      "choices": [
+        { "label": "Xem trạng thái socket trên một pod bằng `ss`", "quality": "good", "feedback": "Đúng. `Cannot assign requested address` khi connect là kernel không cấp được địa chỉ hay port nguồn; trạng thái socket cho biết port đang bị giữ ở đâu.", "next": "ss" },
+        { "label": "Tăng giới hạn file descriptor của container", "quality": "poor", "feedback": "Hết file descriptor thì lỗi là `Too many open files`, không phải `Cannot assign requested address`. Nên đọc đúng thông điệp lỗi trước khi chỉnh giới hạn.", "next": "fd" },
+        { "label": "Scale fraud-service từ 3 lên 6 pod", "quality": "poor", "feedback": "fraud-service không thấy request lỗi nào và lỗi xảy ra trước khi kết nối được mở. Thêm pod phía server không đổi được gì ở phía client.", "next": "scale" }
+      ]
+    },
+    {
+      "id": "fd",
+      "evidence": "$ cat /proc/1/limits | grep 'open files'\nMax open files            1048576              1048576              files\n$ ls /proc/1/fd | wc -l\n341",
+      "evidenceFormat": "monospace",
+      "question": "Mới dùng 341 trên hơn 1 triệu file descriptor. Bước tiếp theo?",
+      "choices": [
+        { "label": "Xem trạng thái socket bằng `ss`", "quality": "good", "feedback": "Đúng. Không phải thiếu descriptor; cần biết port nguồn đang bị giữ ở trạng thái nào.", "next": "ss" }
+      ]
+    },
+    {
+      "id": "scale",
+      "evidence": "20:31  fraud-service 6 pod, CPU mỗi pod 18%\n20:35  order-service lỗi 22%\n\nfraud-service access log: không có request nào trả lỗi; số request nhận được mỗi giây khoảng 1.880 trên tổng 2.400 đơn mỗi giây.",
+      "evidenceFormat": "monospace",
+      "question": "Khoảng 520 request mỗi giây không bao giờ tới được fraud-service. Bước tiếp theo?",
+      "choices": [
+        { "label": "Xem trạng thái socket trên pod order-service", "quality": "good", "feedback": "Đúng. Request thiếu không rời được pod gọi; vấn đề nằm ở phía client.", "next": "ss" }
+      ]
+    },
+    {
+      "id": "ss",
+      "evidence": "$ ss -s\nTotal: 28562\nTCP:   28231 (estab 37, closed 28190, orphaned 0, timewait 28190)\n\n$ ss -Htan state time-wait dst 10.96.40.12 | wc -l\n28170\n\n$ cat /proc/sys/net/netfilter/nf_conntrack_count   # node này chỉ chạy 1 pod order-service\n61204\n\n$ sysctl net.ipv4.ip_local_port_range net.ipv4.tcp_tw_reuse\nnet.ipv4.ip_local_port_range = 32768\t60999\nnet.ipv4.tcp_tw_reuse = 2",
+      "evidenceFormat": "monospace",
+      "question": "Gần như toàn bộ 28.232 ephemeral port đang nằm `TIME_WAIT` tới đúng một đích. Bước tiếp theo?",
+      "choices": [
+        { "label": "Tìm chỗ code mở rồi đóng kết nối tới fraud-service", "quality": "good", "feedback": "Đúng. `TIME_WAIT` nằm ở bên đóng trước; 28.000 socket ở đây nghĩa là order-service đóng kết nối sau mỗi lần gọi thay vì dùng lại.", "next": "code" },
+        { "label": "Mở rộng `ip_local_port_range` thành 1024–65535", "quality": "ok", "feedback": "Giảm triệu chứng ngay, đáng làm như biện pháp tạm khi đang cháy. Nhưng chưa trả lời vì sao mỗi request lại cần một port mới.", "next": "sysctl" },
+        { "label": "Hạ `tcp_fin_timeout` xuống 10 giây", "quality": "poor", "feedback": "`tcp_fin_timeout` chỉnh thời gian ở `FIN_WAIT_2`, không rút ngắn `TIME_WAIT` (cố định 60 giây trên Linux).", "next": "finto" }
+      ]
+    },
+    {
+      "id": "finto",
+      "evidence": "20:40  sysctl -w net.ipv4.tcp_fin_timeout=10\n20:45  timewait 28188, lỗi 22%",
+      "evidenceFormat": "monospace",
+      "question": "Không đổi gì. Bước tiếp theo?",
+      "choices": [
+        { "label": "Tìm chỗ code tạo và đóng kết nối", "quality": "good", "feedback": "Đúng. Số `TIME_WAIT` chỉ giảm khi bớt số kết nối bị đóng mỗi giây.", "next": "code" }
+      ]
+    },
+    {
+      "id": "sysctl",
+      "evidence": "20:42  ip_local_port_range = 1024 65535 (64.512 port)\n20:47  lỗi 0%, timewait 35940, p99 52ms\n\nGhi chú: dải mới trùng các port đang listen trong pod (8080, 9090);\ncần khai báo net.ipv4.ip_local_reserved_ports để kernel không cấp chúng.",
+      "evidenceFormat": "monospace",
+      "question": "Hết lỗi, nhưng trần mới chỉ khoảng 1.075 kết nối mới mỗi giây mỗi pod. Còn việc gì?",
+      "choices": [
+        { "label": "Tìm chỗ code mở kết nối mới cho mỗi request", "quality": "good", "feedback": "Đúng. Đợt tải sau gấp đôi là lại chạm trần; cần sửa nguyên nhân.", "next": "code" }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "public FraudResult check(Order order) throws IOException {\n    try (CloseableHttpClient client = HttpClients.createDefault()) {   // client mới mỗi lần gọi\n        HttpPost post = new HttpPost(\"http://fraud-service:8080/v1/checks\");\n        post.setEntity(new StringEntity(json.write(order), ContentType.APPLICATION_JSON));\n        return client.execute(post, response -> json.read(response.getEntity(), FraudResult.class));\n    }   // close() đóng luôn kết nối vừa dùng: order-service là bên đóng trước\n}\n\nTính lại: 28.232 port / 60 giây ≈ 470 kết nối mới mỗi giây mỗi pod.\n400 req/s (trước 20:00) lọt dưới trần; 600 req/s vượt khoảng 130 req/s, tức khoảng 22%.",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào cho đúng gốc?",
+      "choices": [
+        { "label": "Dùng một client chung có connection pool và keep-alive", "quality": "good", "feedback": "Đúng. Kết nối được dùng lại cho hàng nghìn request, không còn handshake hay `TIME_WAIT` cho mỗi lần gọi.", "next": "root" },
+        { "label": "Đóng bằng `setSoLinger(true, 0)` để bỏ qua `TIME_WAIT`", "quality": "poor", "feedback": "Đóng bằng RST thay FIN: fraud-service có thể thấy `Connection reset`, và bạn bỏ mất cơ chế chống gói trễ. Vẫn tốn một handshake cho mỗi request.", "next": "linger" },
+        { "label": "Retry ba lần khi gặp `BindException`", "quality": "poor", "feedback": "Port chỉ được trả sau 60 giây; retry ngay chỉ tăng số lần thử, và retry thành công lại chiếm thêm port.", "next": "retry" }
+      ]
+    },
+    {
+      "id": "linger",
+      "evidence": "fraud-service log sau khi bật SO_LINGER 0:\nWARN  o.a.coyote.http11.Http11Processor - Connection reset by peer (khoảng 600 lần/giây, mỗi kết nối một lần)\n\norder-service: lỗi 0%, p99 52ms, mỗi request vẫn một lần handshake.",
+      "evidenceFormat": "monospace",
+      "question": "Hết lỗi port nhưng phía server ghi reset liên tục. Hướng nào tốt hơn?",
+      "choices": [
+        { "label": "Bỏ SO_LINGER, dùng một client có pool", "quality": "good", "feedback": "Đúng. Dùng lại kết nối xử lý cả handshake thừa lẫn `TIME_WAIT`.", "next": "root" }
+      ]
+    },
+    {
+      "id": "retry",
+      "evidence": "20:50  bật retry 3 lần\n20:55  lỗi 22%, số lần connect mỗi giây mỗi pod 1.010, p99 61ms",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi không giảm, số lần connect tăng khoảng 1,7 lần. Hướng nào đúng?",
+      "choices": [
+        { "label": "Dùng một client có pool, bỏ retry cho lỗi này", "quality": "good", "feedback": "Đúng. Port đang thiếu là do bị giữ 60 giây; chỉ giảm số kết nối mới mới giải quyết được.", "next": "root" }
+      ]
+    },
+    {
+      "id": "root",
+      "evidence": "**Nguyên nhân gốc**: mỗi lần gọi tạo một `CloseableHttpClient` mới rồi đóng nó, nên kết nối TCP bị đóng từ phía order-service sau mỗi request. Bên đóng trước giữ port ở `TIME_WAIT` 60 giây; ở 600 request mỗi giây, nhu cầu (36.000 port) vượt 28.232 port của dải ephemeral, và kernel trả `EADDRNOTAVAIL` ngay khi connect. Trước khuyến mãi, 400 request mỗi giây cần 24.000 port nên lỗi ẩn.\n\n**Sửa**: một `CloseableHttpClient` dùng chung (singleton bean) với `PoolingHttpClientConnectionManager`, giới hạn kết nối mỗi route theo nhu cầu (ví dụ 50), đặt connect timeout, response timeout, và bỏ kết nối nhàn rỗi trước idle timeout của server. Sau khi deploy: `estab` khoảng 40 mỗi pod, `TIME_WAIT` dưới 100, p99 giảm nhẹ từ 52 ms xuống 49 ms vì không còn mở kết nối mới.\n\n**Phòng ngừa**: alert theo số socket `TIME_WAIT` và theo tốc độ mở kết nối mới (`node_netstat_Tcp_ActiveOpens` của node exporter); code review chặn việc tạo HTTP client, `RestTemplate` hay `WebClient` mới trong mỗi lời gọi; load test ở mức gấp 1,5–2 lần đỉnh dự kiến để chạm các trần dạng này trước ngày khuyến mãi."
+    }
+  ]
+}

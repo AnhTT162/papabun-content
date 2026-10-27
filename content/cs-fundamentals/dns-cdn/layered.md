@@ -1,0 +1,37 @@
+## Quick
+
+[[dns|DNS]] đổi tên miền thành IP qua một chuỗi máy chủ, và mọi tầng trên đường đi (trình duyệt, JVM, hệ điều hành, [[recursive-resolver|resolver]]) đều cache câu trả lời theo [[ttl|TTL]]. [[cdn|CDN]] giữ bản sao nội dung ở [[edge-location|edge]] gần người dùng, chỉ hỏi origin khi chưa có trong cache. **Cả hai đều là cache phân tán: đổi DNS hay đổi nội dung không có hiệu lực ngay, mà sau khi bản cũ hết hạn ở mọi tầng, nên phải thiết kế TTL, [[cache-key|cache key]] và cách làm mới từ đầu.**
+
+## Interview
+
+**Phân giải**: app hỏi stub resolver (phần phân giải tên trong thư viện của hệ điều hành), stub hỏi recursive resolver (của VPC, ISP, hay 8.8.8.8). Recursive resolver đi từ root tới TLD `.com` rồi tới [[authoritative-dns|authoritative server]] của `shop.example.com`, nhận bản ghi kèm TTL và cache lại. Bản ghi hay gặp: `A`/`AAAA` (IP), [[cname|`CNAME`]] (tên này là bí danh của tên khác, như trỏ `img.shop.example.com` sang tên miền của CDN), `NS`, `MX`, `TXT` (xác minh domain, SPF).
+
+**TTL là đánh đổi**: TTL dài thì ít truy vấn và chịu được DNS chậm, nhưng chuyển IP khi sự cố mất đúng chừng đó thời gian. "DNS đang lan truyền" gần như luôn là các cache chưa hết hạn; ngoại lệ là đổi nameserver ở nhà đăng ký (bản ghi `NS` ở TLD thường có TTL 1–2 ngày) và secondary nameserver đồng bộ zone chậm. Kết quả "không tồn tại" cũng bị cache ([[negative-caching|negative caching]]).
+
+**CDN**: tên miền trỏ (qua DNS hoặc [[anycast]]) tới edge gần người dùng. Edge tra cache theo cache key (thường là host, path, và một phần query string): có thì trả ngay, không có thì hỏi origin rồi lưu theo `Cache-Control`. Hiệu quả đo bằng [[cache-hit-ratio|cache hit ratio]].
+
+**Làm mới nội dung**: file tĩnh nên có hash trong tên ([[cache-busting|cache busting]]) để cache được hàng năm; nội dung không đổi tên được thì dùng TTL ngắn hoặc [[cache-purge|purge]], nhưng purge mất thời gian lan tới mọi edge và thường giới hạn số lượng.
+
+**Bẫy hay gặp**:
+- JVM và connection pool giữ IP cũ lâu hơn TTL.
+- Đặt `CNAME` ở apex (`shop.example.com`) là trái chuẩn; dùng ALIAS hoặc CNAME flattening của nhà cung cấp DNS.
+- Cache key chứa tham số thừa (`utm_source`) làm hit ratio rơi; cache key thiếu thứ phân biệt (ngôn ngữ, tenant) làm lộ dữ liệu.
+- CDN cache nhầm response riêng của người dùng.
+
+**Cách làm đúng**: chọn TTL theo nhu cầu failover, chuẩn hoá cache key, để origin quyết định cache bằng `Cache-Control`, và chỉ cho CDN gọi được origin.
+
+## Deep
+
+- **Cache DNS trong Java**: `InetAddress` dùng resolver của hệ điều hành (`getaddrinfo`, tức `/etc/hosts` rồi `resolv.conf`) và tự cache kết quả thành công 30 giây, lỗi 10 giây (`networkaddress.cache.ttl`, `networkaddress.cache.negative.ttl`), không theo TTL của bản ghi. Connection pool giữ kết nối tới IP cũ dù DNS đã đổi, nên cần `maxLifetime` hay `timeToLive` cho kết nối (bài Tuning server & HTTP client). Reactor Netty (`WebClient`) mặc định dùng resolver riêng của Netty, đọc `resolv.conf` và theo TTL, không theo cache của JVM. Từ JDK 18 (JEP 418) có thể thay resolver của `InetAddress` bằng SPI.
+- **Failover bằng DNS chậm hơn bạn nghĩ**: RDS Multi-AZ failover bằng cách đổi bản ghi `CNAME` của endpoint; app chỉ thấy primary mới khi JVM hết cache và pool bỏ kết nối cũ. AWS khuyên đặt TTL của JVM không quá 60 giây. Route 53 có bản ghi failover và weighted gắn health check, tự trả IP dự phòng khi IP chính hỏng, nhưng client vẫn chỉ thấy sau khi cache hết hạn. Cần chuyển trong vài giây thì dùng anycast hay load balancer toàn cục thay vì DNS; [[geodns|GeoDNS]] trả IP theo vị trí của resolver để đưa người dùng tới region gần (bài Multi-region & active-active).
+- **Negative caching** (RFC 2308): `NXDOMAIN` được cache trong min(TTL của bản ghi SOA, trường `MINIMUM` của SOA); SOA (Start of Authority) là bản ghi mô tả zone. Lỡ truy vấn một tên trước khi tạo bản ghi, rồi tạo xong vẫn nhận "không tồn tại" thêm vài phút tới cả giờ. Tạo bản ghi trước, thử sau; hoặc hạ cả TTL lẫn `MINIMUM` của SOA với zone hay thêm tên mới.
+- **DNS trong Kubernetes**: pod hỏi CoreDNS qua ClusterIP của `kube-dns`; với `ndots:5`, tên ngoài cụm như `api.partner.com` bị thử ghép với từng search domain trước, nhiều lần truy vấn thừa (chi tiết và cách sửa ở bài Điều tra API chậm). Container thường không có cache DNS ở hệ điều hành (không có `nscd` hay `systemd-resolved`), nên mỗi lần JVM hết cache là một truy vấn tới CoreDNS. Resolver của VPC trên AWS giới hạn 1024 gói mỗi giây cho mỗi network interface, vượt thì truy vấn bị bỏ và app thấy timeout 5 giây.
+- **UDP, TCP và kích thước**: DNS chạy trên UDP 53. Câu trả lời lớn (nhiều bản ghi, DNSSEC) vượt giới hạn UDP (512 byte gốc, khoảng 1232 byte với EDNS theo khuyến nghị hiện nay) thì bị đánh dấu truncated và client hỏi lại qua TCP. Firewall chỉ mở UDP 53 làm các câu trả lời lớn hỏng một cách khó hiểu.
+- **Apex và CNAME**: theo RFC 1034, tên đã có `CNAME` không được có bản ghi nào khác, mà apex luôn có `SOA` và `NS`. Route 53 dùng bản ghi alias, Cloudflare dùng CNAME flattening: resolver phía nhà cung cấp tự tra và trả `A` cho client.
+- **Debug**: `dig shop.example.com +trace` đi từ root để thấy authoritative trả gì; `dig @8.8.8.8 shop.example.com` so với resolver nội bộ; cột số sau tên trong kết quả là TTL còn lại trong cache của resolver đó. `getent hosts shop.example.com` cho thấy đúng thứ app nhận (gồm cả `/etc/hosts`).
+- **CDN chọn edge**: CloudFront dùng DNS trả IP của edge gần resolver; Cloudflare dùng anycast, cùng IP được quảng bá ở mọi PoP. Kiểu DNS phụ thuộc vị trí resolver (người dùng dùng 8.8.8.8 ở xa có thể bị đưa tới edge xa, EDNS Client Subnet giảm việc này); anycast không phụ thuộc cache DNS.
+- **Cache key và TTL**: CDN lấy TTL từ [[http-caching|`Cache-Control`]] (`s-maxage` ưu tiên cho cache dùng chung) và giới hạn bởi min/max của cấu hình; CloudFront với policy `CachingOptimized` dùng 24 giờ khi origin không gửi header. Chỉ đưa vào cache key những gì thật sự làm response khác nhau: bỏ `utm_*`, sắp xếp tham số, chuẩn hoá chữ hoa thường của host (path phân biệt hoa thường). Header như `Vary` và cookie trong cache key xem bài Cache là gì & cache ở đâu.
+- **Purge và đổi tên**: CloudFront miễn phí 1.000 đường dẫn invalidation mỗi tháng, sau đó tính tiền theo đường dẫn, và invalidation cần thời gian để tới mọi edge. File tĩnh đặt tên theo hash nội dung (`app.3f9a1c.js`) không cần purge; HTML trỏ tới chúng dùng TTL ngắn hoặc `no-cache` kèm `ETag` (bài Hiệu năng phía client).
+- **Bảo vệ origin**: [[origin-shield|origin shield]] là một tầng cache trung gian để hàng trăm edge cùng miss không đổ cả vào origin; CDN cũng gộp các miss đồng thời cho cùng key thành một request (request collapsing). Khi origin lỗi, chỉ thị `stale-if-error` (RFC 5861) cho phép trả bản cũ; `stale-while-revalidate` cho trả bản cũ trong lúc làm mới ngầm. Chỉ cho CDN gọi origin (origin access control cho S3, prefix list của CloudFront hoặc header bí mật cho load balancer), nếu không kẻ tấn công vòng qua CDN và WAF.
+- **[[cache-poisoning|Cache poisoning]]**: origin dùng một header không nằm trong cache key (như `X-Forwarded-Host`) để dựng link hay redirect, kẻ tấn công gửi header độc một lần và CDN cache response đó cho mọi người. Origin không nên tin header không có trong cache key; CDN nên xoá các header như vậy trước khi chuyển vào.
+- **Khi nào không cần CDN**: API riêng cho từng người dùng, lượng truy cập nhỏ tập trung một vùng gần data center, hay dữ liệu đổi liên tục không cache được. CDN vẫn có ích ở TLS gần người dùng và chống DDoS, nhưng thêm một tầng cấu hình phải giữ đúng.

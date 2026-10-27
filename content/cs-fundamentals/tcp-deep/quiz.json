@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "socket-defaults-output",
+      "kind": "output",
+      "prompt": "Một client tự mở socket để gửi bản tin nhỏ tới hệ thống cũ. Chạy trên JDK 21 trở lên, chương trình in ra gì?",
+      "code": "try (Socket socket = new Socket()) {\n    System.out.println(socket.getTcpNoDelay() + \" \"\n            + socket.getKeepAlive() + \" \"\n            + socket.getSoLinger());\n}",
+      "options": [
+        "false false -1",
+        "true true -1",
+        "true false 0",
+        "false true 0"
+      ],
+      "answer": 0,
+      "explanation": "`java.net.Socket` mặc định để Nagle bật (`TCP_NODELAY` false), không bật `SO_KEEPALIVE`, và `SO_LINGER` tắt (trả -1, nghĩa là `close()` đóng bình thường bằng FIN). Netty và Tomcat tự bật `TCP_NODELAY`, nhưng code tự mở socket phải tự đặt, nếu không bản tin nhỏ dễ chậm thêm khoảng 40 ms vì Nagle gặp delayed ACK. (Đã chạy trên JDK 27.)"
+    },
+    {
+      "id": "accept-queue-len",
+      "kind": "single",
+      "prompt": "Một server tự viết dùng `new ServerSocket(9000)` trên Linux kernel 6.x (`somaxconn` mặc định). Accept queue của nó dài bao nhiêu?",
+      "options": [
+        "50",
+        "4096",
+        "128",
+        "Không giới hạn"
+      ],
+      "answer": 0,
+      "explanation": "Độ dài accept queue là min(backlog app truyền vào, `somaxconn`). Constructor không truyền backlog của `ServerSocket` dùng 50, nhỏ hơn 4096 của `somaxconn` (mặc định từ kernel 5.4; 128 là mặc định cũ). Muốn dài hơn thì truyền backlog vào `new ServerSocket(port, backlog)` và kiểm `somaxconn`. (Đây là độ dài danh nghĩa; kernel Linux thực tế nhận tới backlog + 1 kết nối.)"
+    },
+    {
+      "id": "reset-idle",
+      "kind": "single",
+      "prompt": "Service gọi một API nội bộ qua AWS ALB (idle timeout mặc định 60 giây). Ban đêm ít tải, khoảng 1% request gặp `SocketException: Connection reset` ngay khi gửi; ban ngày gần như không có. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Pool dùng lại kết nối nhàn rỗi quá 60 giây đã bị ALB đóng",
+        "API nội bộ bị quá tải nên chủ động từ chối kết nối mới",
+        "Accept queue của API đầy vào ban đêm nên bị bỏ kết nối",
+        "DNS của ALB đổi IP nên kết nối đi tới máy không còn tồn tại"
+      ],
+      "answer": 0,
+      "explanation": "Ban đêm kết nối trong pool nằm yên lâu hơn 60 giây, ALB đã đóng chúng; lần ghi đầu tiên vào kết nối đó nhận reset. Ban ngày kết nối được dùng liên tục nên không chạm idle timeout. Quá tải hay accept queue đầy sẽ nặng hơn vào ban ngày và cho triệu chứng ở bước connect. IP của ALB đổi thì kết nối đang mở vẫn tới máy cũ cho tới khi máy đó đóng. Cách sửa: bỏ kết nối nhàn rỗi trong pool sau dưới 60 giây, và retry một lần cho request idempotent."
+    },
+    {
+      "id": "fin-timeout-myth",
+      "kind": "single",
+      "prompt": "Client có 28.000 socket `TIME_WAIT` tới cùng một đích và bắt đầu gặp `Cannot assign requested address`. Đồng nghiệp đề xuất hạ `net.ipv4.tcp_fin_timeout` từ 60 xuống 10. Kết quả?",
+      "options": [
+        "Không đổi: tham số đó chỉnh `FIN_WAIT_2`",
+        "`TIME_WAIT` giảm còn 10 giây và hết lỗi",
+        "`TIME_WAIT` giảm còn 20 giây (2 × 10)",
+        "Kernel từ chối vì giá trị dưới 30 giây"
+      ],
+      "answer": 0,
+      "explanation": "Trên Linux, `TIME_WAIT` cố định 60 giây trong kernel (`TCP_TIMEWAIT_LEN`); `tcp_fin_timeout` chỉ quy định thời gian chờ ở `FIN_WAIT_2` khi bên kia chưa đóng chiều của nó. Cách chữa thật là dùng lại kết nối; mở rộng `ip_local_port_range` hoặc `tcp_tw_reuse` chỉ nâng trần."
+    },
+    {
+      "id": "who-time-wait",
+      "kind": "single",
+      "prompt": "Tomcat có keep-alive timeout 60 giây. Một client giữ kết nối nhàn rỗi tới khi Tomcat đóng nó. Socket `TIME_WAIT` của kết nối này nằm ở đâu, và có làm server cạn port không?",
+      "options": [
+        "Ở server; không cạn port vì server dùng chung port 8080",
+        "Ở client; client có thể cạn ephemeral port nếu lặp lại",
+        "Ở cả hai; mỗi bên giữ một socket trong 60 giây",
+        "Ở server; server sẽ cạn port khi có trên 28.232 socket"
+      ],
+      "answer": 0,
+      "explanation": "Bên đóng trước vào `TIME_WAIT`, ở đây là Tomcat. Mọi kết nối phía server cùng dùng port 8080, phân biệt bằng IP và port của client, nên `TIME_WAIT` ở server chỉ tốn một ít bộ nhớ kernel, không tiêu ephemeral port. Bên còn lại đi qua `CLOSE_WAIT` rồi `LAST_ACK` và đóng hẳn, không có `TIME_WAIT`."
+    }
+  ]
+}

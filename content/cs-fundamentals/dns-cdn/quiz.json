@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cache-key-output",
+      "kind": "output",
+      "prompt": "Hàm dựng cache key bỏ tham số `utm_*`, sắp xếp tham số còn lại và đưa host về chữ thường. Bốn URL dưới đây tạo ra bao nhiêu key khác nhau?",
+      "code": "static String cacheKey(String url) {\n    URI uri = URI.create(url);\n    String query = uri.getQuery() == null ? \"\" : Arrays.stream(uri.getQuery().split(\"&\"))\n            .filter(param -> !param.startsWith(\"utm_\"))\n            .sorted()\n            .collect(Collectors.joining(\"&\"));\n    return uri.getHost().toLowerCase() + uri.getPath() + (query.isEmpty() ? \"\" : \"?\" + query);\n}\n\npublic static void main(String[] args) {\n    Set<String> keys = new LinkedHashSet<>();\n    keys.add(cacheKey(\"https://shop.example.com/products?page=2&sort=price\"));\n    keys.add(cacheKey(\"https://SHOP.example.com/products?sort=price&page=2&utm_source=zalo\"));\n    keys.add(cacheKey(\"https://shop.example.com/products?sort=price&page=2&utm_campaign=sale\"));\n    keys.add(cacheKey(\"https://shop.example.com/Products?page=2&sort=price\"));\n    System.out.println(keys.size());\n}",
+      "options": ["2", "1", "3", "4"],
+      "answer": 0,
+      "explanation": "Ba URL đầu cùng ra `shop.example.com/products?page=2&sort=price`: host được đưa về chữ thường, `utm_*` bị bỏ, thứ tự tham số được sắp lại. URL cuối khác ở path `/Products`: path phân biệt hoa thường (origin có thể trả nội dung khác), nên không được gộp. Không chuẩn hoá thì bốn URL là bốn lần hỏi origin cho cùng một trang. (Đã chạy trên JDK 27.)"
+    },
+    {
+      "id": "jvm-stale-ip",
+      "kind": "single",
+      "prompt": "Đội hạ tầng chuyển API nội bộ sang IP mới, bản ghi có TTL 60 giây. Hai giờ sau, một service Spring Boot vẫn gửi request tới IP cũ, các service khác đã chuyển. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Pool vẫn giữ kết nối đã mở tới IP cũ, chưa hết `timeToLive`",
+        "JVM cache kết quả DNS vĩnh viễn theo mặc định của mọi bản JDK",
+        "Recursive resolver bỏ qua TTL 60 giây và cache suốt hai giờ",
+        "Authoritative DNS chưa lan truyền bản ghi mới tới service đó"
+      ],
+      "answer": 0,
+      "explanation": "Kết nối đã mở không hỏi lại DNS: pool dùng lại chúng tới khi bị đóng, nên request vẫn đi tới IP cũ dù JVM đã hết cache (30 giây mặc định khi không có security manager). Đặt `timeToLive` hay `maxLifetime` cho kết nối để buộc mở lại định kỳ. Cache vĩnh viễn chỉ là mặc định cũ khi bật security manager. Nếu resolver giữ hai giờ thì các service khác dùng chung resolver cũng bị. Ở đây không có gì để \"lan truyền\": các service khác đã thấy IP mới."
+    },
+    {
+      "id": "nxdomain-cached",
+      "kind": "single",
+      "prompt": "Bạn chạy `dig new-api.shop.example.com` để kiểm tra (chưa có bản ghi, nhận `NXDOMAIN`), rồi tạo bản ghi `A` ngay sau đó. 10 phút sau app vẫn báo `UnknownHostException`. Vì sao?",
+      "options": [
+        "Resolver cache `NXDOMAIN` theo TTL trong bản ghi SOA",
+        "Bản ghi `A` mới cần 24 giờ để lan ra toàn Internet",
+        "JVM cache lỗi phân giải vĩnh viễn tới khi restart",
+        "Bản ghi `A` cần thêm `CNAME` thì mới phân giải được"
+      ],
+      "answer": 0,
+      "explanation": "Câu trả lời \"không tồn tại\" cũng được cache (RFC 2308), trong min(TTL của bản ghi SOA, trường `MINIMUM` của SOA), có thể vài phút tới vài giờ. JVM chỉ cache lỗi 10 giây mặc định. Không có thời gian \"lan truyền\" cố định 24 giờ. Tạo bản ghi trước rồi mới kiểm tra, hoặc hỏi thẳng authoritative server bằng `dig @ns1... new-api.shop.example.com`."
+    },
+    {
+      "id": "deploy-css-stale",
+      "kind": "single",
+      "prompt": "Sau mỗi lần deploy, một phần người dùng thấy giao diện vỡ vài giờ: HTML mới nhưng `/static/app.css` cũ. File CSS được CDN cache với `max-age=86400`. Cách sửa bền nhất?",
+      "options": [
+        "Đặt hash nội dung vào tên file, HTML cache ngắn",
+        "Purge toàn bộ CDN bằng tay sau mỗi lần deploy",
+        "Hạ `max-age` của mọi file CSS xuống 60 giây",
+        "Tắt CDN cho thư mục `/static` để luôn lấy bản mới"
+      ],
+      "answer": 0,
+      "explanation": "Tên theo hash (`app.3f9a1c.css`) nghĩa là nội dung mới có URL mới: cache được hàng năm mà không bao giờ cũ, còn HTML (TTL ngắn hoặc `no-cache` kèm `ETag`) trỏ tới đúng phiên bản. Purge cần thời gian lan tới mọi edge, có giới hạn số lượng, và không xoá cache trong trình duyệt. TTL 60 giây hay tắt CDN làm origin chịu thêm tải mà vẫn có khoảng lệch."
+    },
+    {
+      "id": "poisoning-header",
+      "kind": "single",
+      "prompt": "Trang chủ dựng link tuyệt đối từ header `X-Forwarded-Host`. Cache key của CDN chỉ gồm host và path. Một request gửi `X-Forwarded-Host: evil.example` làm điều gì nguy hiểm nhất?",
+      "options": [
+        "Trang trỏ tới evil.example bị cache cho mọi người",
+        "CDN tự chặn request vì header không có trong cache key",
+        "Origin trả 400 nên trang chủ bị lỗi đúng một lần cho kẻ đó",
+        "Kẻ tấn công đọc được cookie của người khác qua header đó"
+      ],
+      "answer": 0,
+      "explanation": "Header không có trong cache key nên CDN coi response cho kẻ tấn công là bản dùng chung của `/`, rồi trả nó (với link, script trỏ sang domain độc) cho mọi người tới hết TTL: web cache poisoning. CDN không tự chặn header lạ. Sửa: origin không tin header không thuộc cache key (dùng host cấu hình sẵn), và CDN xoá các header đó trước khi chuyển vào origin."
+    }
+  ]
+}

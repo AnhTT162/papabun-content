@@ -4,7 +4,7 @@ Server có [[thread-pool|thread pool]], HTTP client có [[connection-pool|connec
 
 ## Interview
 
-**Phía server (Tomcat)**: Tomcat nhận tới `server.tomcat.max-connections` kết nối (mặc định 8192); kết nối [[keep-alive|keep-alive]] nhàn rỗi không chiếm thread nhờ NIO. Request được xử lý bởi tối đa `threads.max` thread (200). Thread bận hết thì request đã đọc xếp hàng chờ thread; đủ 8192 kết nối thì kết nối mới chờ trong hàng đợi của hệ điều hành dài [[accept-count|`accept-count`]] (100), đầy nữa thì client bị từ chối hoặc hết giờ khi kết nối.
+**Phía server (Tomcat)**: Tomcat nhận tới `server.tomcat.max-connections` kết nối (mặc định 8192); kết nối [[keep-alive|keep-alive]] nhàn rỗi không chiếm thread nhờ NIO. Request được xử lý bởi tối đa `threads.max` thread (200). Thread bận hết thì request đã đọc xếp hàng chờ thread; đủ 8192 kết nối thì kết nối mới chờ trong hàng đợi của hệ điều hành dài [[accept-count|`accept-count`]] (100), đầy nữa thì Linux mặc định bỏ gói lặng lẽ (`tcp_abort_on_overflow=0`), client thấy connect chậm 1 hay 3 giây rồi có thể hết giờ; chỉ bị từ chối ngay khi bật `tcp_abort_on_overflow=1` (bài TCP chuyên sâu).
 
 **Bao nhiêu thread là đủ**: Little's law cho số request đồng thời = RPS × latency. 1.000 request/giây × 0,1 giây là 100 request đang chạy. Nếu latency tăng lên 2 giây vì DB chậm, cần 2.000 thread; thêm thread lúc đó chỉ dời hàng đợi xuống connection pool của DB.
 
