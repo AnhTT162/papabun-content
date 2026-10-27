@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "rank-statements",
+      "kind": "single",
+      "prompt": "Trong 30 phút sự cố, pg_stat_statements có: câu A 3.000 calls, mean 900ms; câu B 1.800.000 calls, mean 2ms; câu C 40 calls, mean 12 giây. Câu nào tốn thời gian database nhiều nhất?",
+      "options": [
+        "Câu B, tổng khoảng 3.600 giây",
+        "Câu C, vì mỗi lần chạy lâu nhất",
+        "Câu A, tổng khoảng 2.700 giây",
+        "Như nhau, vì mean đã chuẩn hoá"
+      ],
+      "answer": 0,
+      "explanation": "Tổng thời gian = calls × mean: A là 2.700 giây, B là 3.600 giây, C chỉ 480 giây. Câu 2ms trông vô hại khi xếp theo mean, nhưng gọi gần 1.000 lần mỗi giây nên tốn nhiều nhất. Vì vậy xếp theo `total_exec_time`, rồi xem calls tăng (thêm tải, N+1) hay mean tăng (câu chậm đi)."
+    },
+    {
+      "id": "blocking-pids",
+      "kind": "single",
+      "prompt": "Ba session cùng chạy `UPDATE orders ... WHERE id = 42`. `pg_blocking_pids` cho: pid 201 bị chặn bởi {200}, pid 202 bởi {201}, pid 203 bởi {201, 202}. Pid 200 ở trạng thái `idle in transaction`. Cắt session nào để gỡ cả chuỗi?",
+      "options": [
+        "Pid 200, session gốc đang giữ khoá dòng",
+        "Pid 201, vì nó chặn cả 202 lẫn 203",
+        "Pid 203, vì nó bị nhiều session chặn nhất",
+        "Cả 201, 202, 203 để giải phóng hàng đợi"
+      ],
+      "answer": 0,
+      "explanation": "Pid 201 là người chờ đầu tiên (chờ `transactionid` của 200); 202 và 203 chờ khoá `tuple` mà 201 đang giữ trong hàng đợi, nên `pg_blocking_pids` của chúng trỏ vào 201 chứ không trỏ thẳng tới gốc. Cắt 201 thì 202 lên đầu hàng và vẫn chờ 200. Session gốc là 200: mở transaction, sửa dòng, rồi không làm gì nữa. `pg_terminate_backend(200)` gỡ cả chuỗi."
+    },
+    {
+      "id": "analyze-not-fix",
+      "kind": "single",
+      "prompt": "Plan: `Index Scan Backward using orders_created_idx`, `Filter: (merchant_id = 8000)`, ước lượng `rows=65231`, thực tế merchant có 60.000 đơn, `Rows Removed by Filter: 2304998`. Chạy `ANALYZE` có sửa được không?",
+      "options": [
+        "Không, ước lượng đã đúng; cần index (merchant_id, created_at)",
+        "Có, thống kê mới sẽ làm planner ước lượng lại đúng số dòng",
+        "Có, ANALYZE xây lại orders_created_idx nên quét nhanh hơn",
+        "Không, phải chạy VACUUM FULL vì 2,3 triệu dòng là dòng chết"
+      ],
+      "answer": 0,
+      "explanation": "65.231 so với 60.000 là ước lượng tốt. Planner sai ở giả định các dòng khớp rải đều theo `created_at`, nên nghĩ đi lùi vài nghìn dòng là đủ 50. Đơn của merchant 8000 đều cũ, nên phải lướt qua 2,3 triệu dòng mới hơn (dòng sống, không phải dòng chết). `ANALYZE` không đổi được giả định đó và không xây lại index; index ghép `(merchant_id, created_at)` cho phép đi thẳng vào phần của merchant."
+    },
+    {
+      "id": "pool-when-cpu",
+      "kind": "single",
+      "prompt": "Database 8 vCPU đang ở 95% CPU, có 45 session active không chờ gì. HikariCP của ứng dụng báo pending 30. Tăng `maximumPoolSize` gấp ba thì sao?",
+      "options": [
+        "Mọi câu chậm hơn vì thêm session tranh cùng 8 vCPU",
+        "Pending về 0 và latency giảm vì không còn phải chờ",
+        "Database tự xếp hàng câu mới nên không ảnh hưởng gì",
+        "Throughput tăng gấp ba vì có gấp ba connection chạy"
+      ],
+      "answer": 0,
+      "explanation": "Session active không có wait event là đang dùng CPU, và 45 session đã nhiều gấp năm lần số core. Thêm connection không thêm CPU: mỗi câu phải chờ CPU lâu hơn, giữ connection lâu hơn, nên pool vẫn cạn và latency tăng. Theo Little's law, cùng throughput mà thời gian giữ tăng thì số connection cần cũng tăng theo. Cần tìm câu đang ăn CPU và giảm việc."
+    }
+  ]
+}

@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db", "server-tuning", "slow-api", "thread-pool-exhaustion"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db", "server-tuning", "slow-api", "thread-pool-exhaustion", "db-performance"]
     },
     {
       "id": "multiplexing",
@@ -158,7 +158,7 @@
       "meaning": "Lần thu gom rác dọn toàn bộ heap (cả young và old), thường dừng mọi thread ứng dụng và tốn nhiều thời gian nhất.",
       "example": "GC log `Pause Full (G1 Compaction Pause) 2980M->2950M(3072M) 2345.678ms` cho thấy Full GC gần như không thu hồi được gì.",
       "related": ["stop-the-world"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "memory-growth-oom"]
     },
     {
       "id": "stop-the-world",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance"]
     },
     {
       "id": "virtual-thread",
@@ -733,7 +733,7 @@
       "meaning": "Index trên nhiều cột, sắp theo cột đầu rồi tới cột sau; chỉ tìm thẳng được khi điều kiện bắt đầu từ cột trái nhất.",
       "example": "Index `(customer_id, created_at)` giúp `WHERE customer_id = 42`, không giúp `WHERE created_at > ...`.",
       "related": ["b-tree", "covering-index"],
-      "topics": ["index-execution-plan"]
+      "topics": ["index-execution-plan", "db-performance"]
     },
     {
       "id": "covering-index",
@@ -749,7 +749,7 @@
       "meaning": "Kế hoạch database chọn để chạy một query: đọc bảng nào, dùng index nào, join và sort theo cách nào. Xem bằng `EXPLAIN`.",
       "example": "`EXPLAIN ANALYZE SELECT ...` in ra các node như `Index Scan`, `Hash Join`, `Sort` kèm thời gian.",
       "related": ["planner-statistics", "seq-scan"],
-      "topics": ["index-execution-plan", "sql-joins-deep"]
+      "topics": ["index-execution-plan", "sql-joins-deep", "db-performance"]
     },
     {
       "id": "planner-statistics",
@@ -757,7 +757,7 @@
       "meaning": "Thống kê database thu thập về dữ liệu (số dòng, giá trị phổ biến, phân bố) để ước lượng chi phí và chọn plan. Cập nhật bằng `ANALYZE`.",
       "example": "Sau khi import 2 triệu đơn của khách mới mà chưa `ANALYZE`, thống kê phân bố chưa có giá trị mới nên planner ước lượng `customer_id = 9001` chỉ khớp vài dòng.",
       "related": ["execution-plan", "selectivity"],
-      "topics": ["index-execution-plan", "sql-joins-deep"]
+      "topics": ["index-execution-plan", "sql-joins-deep", "db-performance"]
     },
     {
       "id": "selectivity",
@@ -981,7 +981,7 @@
       "meaning": "Lỗi hiệu năng: một query lấy N bản ghi, rồi mỗi bản ghi kéo thêm một query lấy dữ liệu liên quan, tổng cộng 1 + N lượt gọi database.",
       "example": "Lấy 50 đơn hàng rồi gọi `order.getCustomer().getName()` trong vòng lặp: 51 query.",
       "related": ["lazy-loading", "batch-fetching"],
-      "topics": ["n-plus-one", "jdbc-basics", "slow-api"]
+      "topics": ["n-plus-one", "jdbc-basics", "slow-api", "db-performance"]
     },
     {
       "id": "lazy-loading",
@@ -1005,7 +1005,7 @@
       "meaning": "Bộ nhớ của một session/EntityManager giữ các entity đã tải (cache cấp 1): trong cùng transaction, mỗi id chỉ được tải một lần và luôn là cùng một object.",
       "example": "Gọi `em.find(Customer.class, 7)` hai lần chỉ chạy một query.",
       "related": ["orm", "lazy-loading"],
-      "topics": ["n-plus-one"]
+      "topics": ["n-plus-one", "memory-growth-oom"]
     },
     {
       "id": "fetch-join",
@@ -1293,7 +1293,7 @@
       "meaning": "Câu SQL có tham số `?`, giá trị được bind riêng thay vì ghép chuỗi; chống SQL injection và cho phép tái sử dụng plan.",
       "example": "`ps = conn.prepareStatement(\"SELECT * FROM users WHERE email = ?\"); ps.setString(1, email);`",
       "related": ["sql-injection", "jdbc"],
-      "topics": ["jdbc-basics", "query-patterns"]
+      "topics": ["jdbc-basics", "query-patterns", "db-performance"]
     },
     {
       "id": "sql-injection",
@@ -1397,7 +1397,7 @@
       "meaning": "Thời gian tối đa một câu lệnh chờ lấy khoá trước khi báo lỗi. `NOWAIT` báo lỗi ngay thay vì chờ.",
       "example": "PostgreSQL `SET LOCAL lock_timeout = '2s'` (giá trị `0` nghĩa là chờ vô hạn); MySQL `innodb_lock_wait_timeout` mặc định 50 giây.",
       "related": ["pessimistic-locking", "skip-locked", "deadlock"],
-      "topics": ["optimistic-pessimistic-locking", "locking-deadlock-db", "schema-migration"]
+      "topics": ["optimistic-pessimistic-locking", "locking-deadlock-db", "schema-migration", "db-performance"]
     },
     {
       "id": "aggregate-root",
@@ -1557,7 +1557,7 @@
       "meaning": "Plan của prepared statement được lập một lần mà không biết giá trị tham số, dùng lại cho mọi lần chạy. PostgreSQL có thể chuyển sang nó sau 5 lần chạy nếu ước lượng chi phí của nó không cao hơn đáng kể so với các plan riêng cho từng giá trị.",
       "example": "5 lần đầu đều lọc theo một trạng thái hiếm, sau đó generic plan được dùng cho cả trạng thái phổ biến và chọn sai cách quét.",
       "related": ["prepared-statement", "execution-plan"],
-      "topics": ["query-patterns"]
+      "topics": ["query-patterns", "db-performance"]
     },
     {
       "id": "page",
@@ -1957,7 +1957,7 @@
       "meaning": "Tiến trình nền của PostgreSQL tự chạy VACUUM và ANALYZE cho từng bảng khi số dòng chết hoặc dòng thay đổi vượt ngưỡng.",
       "example": "Mặc định chạy khi dòng chết vượt `50 + 20% × số dòng` (bản 18 chặn trần 100 triệu); bảng lớn thường hạ `autovacuum_vacuum_scale_factor` xuống 0.01.",
       "related": ["vacuum", "xid-wraparound"],
-      "topics": ["mvcc-vacuum"]
+      "topics": ["mvcc-vacuum", "db-performance"]
     },
     {
       "id": "xmin-horizon",
@@ -1973,7 +1973,7 @@
       "meaning": "Bảng chiếm nhiều dung lượng hơn mức cần vì chứa dòng chết hoặc chỗ trống chưa dùng lại sau nhiều lần UPDATE/DELETE.",
       "example": "Bảng 52 triệu dòng thường chỉ 18GB nhưng đang chiếm 150GB.",
       "related": ["index-bloat", "vacuum", "pg-repack"],
-      "topics": ["mvcc-vacuum", "schema-migration"]
+      "topics": ["mvcc-vacuum", "schema-migration", "db-performance"]
     },
     {
       "id": "fillfactor",
@@ -2053,7 +2053,7 @@
       "meaning": "Extension của PostgreSQL ghi lại bảng hoặc index để thu hồi dung lượng phình, trong khi bảng vẫn đọc ghi được; chỉ cần lock mạnh trong chốc lát lúc bắt đầu và lúc đổi bảng.",
       "example": "`pg_repack --table=public.orders shop`; tài liệu khuyên chừa chỗ trống khoảng gấp đôi bảng cộng index.",
       "related": ["table-bloat", "vacuum"],
-      "topics": ["mvcc-vacuum"]
+      "topics": ["mvcc-vacuum", "db-performance"]
     },
     {
       "id": "streaming-replication",
@@ -2093,7 +2093,7 @@
       "meaning": "Độ trễ giữa lúc thay đổi commit trên primary và lúc replica áp xong nó. Đọc từ replica trong khoảng này thấy dữ liệu cũ.",
       "example": "`pg_stat_replication.replay_lag = 00:00:04.2`; MySQL `Seconds_Behind_Source: 9612`.",
       "related": ["read-your-writes", "streaming-replication"],
-      "topics": ["replication-ha", "schema-migration", "consistency-cap"]
+      "topics": ["replication-ha", "schema-migration", "consistency-cap", "db-performance"]
     },
     {
       "id": "relay-log",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance"]
     },
     {
       "id": "redis-sentinel",
@@ -3285,7 +3285,7 @@
       "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
       "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
       "related": ["transaction"],
-      "topics": ["transactional-basics", "threadlocal"]
+      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom"]
     },
     {
       "id": "aop-proxy",
@@ -3341,7 +3341,7 @@
       "meaning": "Số time series mà một metric sinh ra, bằng số tổ hợp giá trị tag. Tag có giá trị không giới hạn (id, URL thô) làm phình bộ nhớ ứng dụng và hệ thống giám sát.",
       "example": "Timer có tag `userId` với 16.000 người dùng và 70 bucket histogram sinh hơn một triệu series.",
       "related": ["micrometer"],
-      "topics": ["spring-observability"]
+      "topics": ["spring-observability", "memory-growth-oom"]
     },
     {
       "id": "propagation",
@@ -4205,7 +4205,7 @@
       "meaning": "Thành phần của JVM nạp bytecode thành class. Cùng một tên class được nạp bởi hai classloader khác nhau là hai class khác nhau, mỗi bên có field `static` riêng.",
       "example": "App server nạp hai ứng dụng bằng hai classloader, nên mỗi ứng dụng có một `ExchangeRates.INSTANCE` riêng.",
       "related": ["singleton-pattern"],
-      "topics": ["creational-patterns"]
+      "topics": ["creational-patterns", "memory-growth-oom"]
     },
     {
       "id": "prototype-pattern",
@@ -5677,7 +5677,7 @@
       "meaning": "Ảnh chụp toàn bộ object trong heap của JVM tại một thời điểm, dùng để tìm memory leak. Ghi file làm dừng ứng dụng và file chứa dữ liệu nhạy cảm.",
       "example": "`jcmd <pid> GC.heap_dump /tmp/heap.hprof`, mở bằng Eclipse MAT.",
       "related": ["thread-dump"],
-      "topics": ["troubleshooting-mindset"]
+      "topics": ["troubleshooting-mindset", "memory-growth-oom"]
     },
     {
       "id": "runbook",
@@ -5894,6 +5894,118 @@
       "example": "Ứng dụng mở một kết nối mới cho mỗi request, 400 req/s: khoảng 24.000 socket ở TIME_WAIT.",
       "related": ["keep-alive", "conntrack"],
       "topics": ["slow-api"]
+    },
+    {
+      "id": "out-of-memory-error",
+      "term": "OutOfMemoryError",
+      "meaning": "Lỗi JVM ném khi một vùng nhớ của nó hết chỗ (heap, metaspace, direct buffer, thread). Thông điệp đi kèm cho biết vùng nào hết.",
+      "example": "`java.lang.OutOfMemoryError: Java heap space` khi object còn sống vượt `-Xmx`.",
+      "related": ["oomkilled", "heap-dump", "memory-leak"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "oomkilled",
+      "term": "OOMKilled",
+      "meaning": "Trạng thái Kubernetes báo khi kernel giết container vì tổng bộ nhớ vượt memory limit. Process bị SIGKILL ngay (exit code 137), không kịp ghi log hay heap dump.",
+      "example": "`kubectl describe pod` hiện `Reason: OOMKilled`, `Exit Code: 137` dù log không có `OutOfMemoryError`.",
+      "related": ["out-of-memory-error", "rss"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "rss",
+      "term": "RSS",
+      "meaning": "Resident Set Size: lượng bộ nhớ vật lý process đang thực sự chiếm. Với JVM gồm heap đã dùng tới, metaspace, stack của thread, buffer native và malloc của thư viện.",
+      "example": "Heap 1 GiB nhưng `ps -o rss` báo 1,9 GiB: 900 MiB còn lại là bộ nhớ native.",
+      "related": ["oomkilled", "native-memory-tracking"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "memory-leak",
+      "term": "Memory leak",
+      "meaning": "Object không còn cần nhưng vẫn bị tham chiếu nên GC không thu hồi được, làm lượng bộ nhớ còn sống tăng dần theo thời gian.",
+      "example": "Một `static Map` dùng làm cache mà không bao giờ xoá entry: heap sau GC tăng mỗi giờ.",
+      "related": ["heap-dump", "dominator-tree", "retained-size"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "native-memory-tracking",
+      "term": "NMT",
+      "meaning": "Native Memory Tracking: tính năng của HotSpot chia bộ nhớ JVM cấp ngoài heap theo hạng mục (Class, Thread, Code, GC, Other...). Bật lúc khởi động bằng `-XX:NativeMemoryTracking=summary`.",
+      "example": "`jcmd <pid> VM.native_memory baseline`, vài giờ sau `summary.diff` cho thấy `Other` tăng 300 MB.",
+      "related": ["rss", "direct-buffer", "metaspace"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "metaspace",
+      "term": "Metaspace",
+      "meaning": "Vùng nhớ native chứa metadata của class đã load (thay PermGen từ Java 8). Mặc định không giới hạn kích thước.",
+      "example": "Rò classloader sau mỗi lần redeploy làm metaspace tăng tới `OutOfMemoryError: Metaspace` hoặc OOMKilled.",
+      "related": ["classloader", "native-memory-tracking"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "direct-buffer",
+      "term": "Direct buffer",
+      "meaning": "`ByteBuffer` nằm ngoài heap, cấp bằng `ByteBuffer.allocateDirect`, dùng cho I/O không cần chép qua heap. Tổng bị giới hạn bởi `-XX:MaxDirectMemorySize` (mặc định bằng `-Xmx`).",
+      "example": "Netty và NIO dùng direct buffer; metric `jvm.buffer.memory.used{id=direct}` đo phần cấp qua `allocateDirect`.",
+      "related": ["native-memory-tracking", "zero-copy"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "dominator-tree",
+      "term": "Dominator tree",
+      "meaning": "Cây trong công cụ phân tích heap dump (như Eclipse MAT) xếp object theo lượng bộ nhớ mà chúng giữ độc quyền, để thấy ngay ai giữ phần lớn heap.",
+      "example": "Gốc dominator tree là một `ConcurrentHashMap` retained 900 MB: cache không giới hạn.",
+      "related": ["retained-size", "heap-dump"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "retained-size",
+      "term": "Retained size",
+      "meaning": "Lượng bộ nhớ được giải phóng nếu một object mất đi, gồm chính nó và mọi object chỉ có thể tới được qua nó. Khác shallow size là kích thước của riêng object.",
+      "example": "Map shallow 64 byte nhưng retained 900 MB vì giữ toàn bộ entry.",
+      "related": ["dominator-tree", "memory-leak"],
+      "topics": ["memory-growth-oom"]
+    },
+    {
+      "id": "pg-stat-activity",
+      "term": "pg_stat_activity",
+      "meaning": "View hệ thống của PostgreSQL, mỗi dòng là một session: đang chạy câu gì, trạng thái (`active`, `idle in transaction`...), đang chờ gì (wait event) và transaction mở từ lúc nào.",
+      "example": "Gom theo `state, wait_event_type` thấy 35 session `active` không chờ gì: database đang hết CPU.",
+      "related": ["wait-event", "idle-in-transaction", "pg-stat-statements"],
+      "topics": ["db-performance"]
+    },
+    {
+      "id": "pg-stat-statements",
+      "term": "pg_stat_statements",
+      "meaning": "Extension của PostgreSQL gom mọi câu SQL cùng dạng (hằng số thành `$1`) và cộng dồn số lần gọi, tổng/trung bình/max thời gian, số dòng và số block đọc.",
+      "example": "Xếp theo `total_exec_time` thấy một câu 2ms gọi 1.000 lần/giây tốn nhiều hơn mọi câu chậm khác.",
+      "related": ["pg-stat-activity", "auto-explain"],
+      "topics": ["db-performance"]
+    },
+    {
+      "id": "wait-event",
+      "term": "Wait event",
+      "meaning": "Thứ mà một session database đang chờ, như khoá (`Lock`), đọc đĩa (`IO: DataFileRead`) hay chờ client gửi lệnh (`Client: ClientRead`). Không có wait event nghĩa là đang chạy trên CPU.",
+      "example": "`wait_event_type = Lock, wait_event = transactionid`: chờ một transaction khác commit hoặc rollback.",
+      "related": ["pg-stat-activity", "lock-queue"],
+      "topics": ["db-performance"]
+    },
+    {
+      "id": "idle-in-transaction",
+      "term": "Idle in transaction",
+      "meaning": "Trạng thái session đã mở transaction nhưng không chạy câu nào, vẫn giữ khoá, connection và chặn VACUUM dọn dòng cũ. Thường do ứng dụng làm việc khác (gọi API, chờ người dùng) giữa transaction.",
+      "example": "Một job mở transaction, `UPDATE` một dòng rồi gọi API ngoài 30 giây: mọi `UPDATE` khác trên dòng đó phải chờ.",
+      "related": ["pg-stat-activity", "xmin-horizon", "lock-timeout"],
+      "topics": ["db-performance"]
+    },
+    {
+      "id": "auto-explain",
+      "term": "auto_explain",
+      "meaning": "Module của PostgreSQL tự ghi execution plan của các câu chạy lâu hơn ngưỡng `auto_explain.log_min_duration` vào log, kèm tham số (từ bản 16).",
+      "example": "`log_min_duration = 500ms` ghi plan của lần chạy chậm với `$1 = 8000`, thứ chạy thử bằng tay không tái hiện được.",
+      "related": ["execution-plan", "pg-stat-statements"],
+      "topics": ["db-performance"]
     }
   ]
 }

@@ -1,0 +1,220 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "billing-api bị OOMKilled mỗi 9 tiếng",
+  "symptom": "Từ ba ngày nay, các pod của billing-api lần lượt bị restart khoảng 9 tiếng một lần. Log không có OutOfMemoryError, thư mục heap dump trống dù đã bật -XX:+HeapDumpOnOutOfMemoryError. Mỗi lần restart, vài request xuất hoá đơn đang chạy bị lỗi 502.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "billing-api: 4 pod, Spring Boot 3.5, JDK 25, G1\nresources: requests.memory=2Gi, limits.memory=2Gi\nJAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps\n\n$ kubectl describe pod billing-api-7d9f-x2k4q\n    Last State:     Terminated\n      Reason:       OOMKilled\n      Exit Code:    137\n      Started:      08:02\n      Finished:     17:10\n    Restart Count:  7\n\ncontainer_memory_working_set_bytes (pod x2k4q):\n08:05  1.35 GiB\n12:00  1.68 GiB\n16:00  1.93 GiB\n17:10  2.00 GiB -> OOMKilled\n\nThay đổi gần đây: 3 ngày trước release tính năng \"Xuất PDF hoá đơn gộp\".",
+      "evidenceFormat": "monospace",
+      "question": "Container bị kernel giết vì chạm limit, JVM không ném lỗi nào. Bước đầu tiên?",
+      "choices": [
+        {
+          "label": "So heap sau GC, heap committed và RSS để biết phần nào đang tăng",
+          "quality": "good",
+          "feedback": "Đúng. OOMKilled là tổng bộ nhớ của process vượt limit, không nhất thiết là heap. Phải biết heap hay native tăng trước khi chọn công cụ.",
+          "next": "breakdown"
+        },
+        {
+          "label": "Chụp heap dump của một pod đang gần 2 GiB để tìm leak",
+          "quality": "ok",
+          "feedback": "Heap dump chỉ cho thấy bên trong heap. Nếu phần tăng nằm ngoài heap, bạn tốn vài phút dừng ứng dụng mà không thấy gì.",
+          "next": "heap-dump"
+        },
+        {
+          "label": "Tăng MaxRAMPercentage lên 85 để heap có thêm chỗ chứa",
+          "quality": "poor",
+          "feedback": "Limit của container không đổi. Cho heap lớn hơn là bớt chỗ cho phần native, và chưa biết phần nào đang tăng.",
+          "next": "bigger-heap"
+        }
+      ]
+    },
+    {
+      "id": "bigger-heap",
+      "evidence": "Deploy MaxRAMPercentage=85 lúc 09:00 (Xmx 1740 MiB)\n\ncontainer_memory_working_set_bytes:\n09:05  1.41 GiB\n12:00  1.79 GiB\n14:20  2.00 GiB -> OOMKilled\n\njvm.memory.committed{area=heap} lúc 14:00: 1.20 GiB (trước đó khoảng 1.0 GiB)\nVẫn không có OutOfMemoryError, vẫn không có heap dump.",
+      "evidenceFormat": "monospace",
+      "question": "Pod chết sau 5 tiếng thay vì 9 tiếng. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Trả cấu hình cũ, so heap sau GC, heap committed và RSS",
+          "quality": "good",
+          "feedback": "Đúng. Heap lớn hơn chỉ ăn thêm vào phần native; cần biết phần nào đang tăng.",
+          "next": "breakdown"
+        }
+      ]
+    },
+    {
+      "id": "heap-dump",
+      "evidence": "$ jcmd 1 GC.heap_dump /dumps/billing.hprof\nHeap dump file created [402 MB in 3.8 secs]\n\nEclipse MAT, Dominator Tree (theo retained size):\n  com.github.benmanes.caffeine.cache.BoundedLocalCache   118 MB   (maximumSize=50000)\n  org.hibernate.metamodel...MappingMetamodelImpl          31 MB\n  org.apache.tomcat.util.net.NioEndpoint                  12 MB\n  ...\nLeak Suspects: không có object nào giữ quá 30% heap.\n\nDump thứ hai sau 3 giờ: 405 MB, dominator tree gần như y hệt.",
+      "evidenceFormat": "monospace",
+      "question": "Heap chỉ khoảng 400 MB và không lớn lên giữa hai lần dump. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "So heap committed với RSS để tìm phần bộ nhớ nằm ngoài heap",
+          "quality": "good",
+          "feedback": "Đúng. Heap không lớn lên, nên phần tăng nằm ở chỗ khác trong process.",
+          "next": "breakdown"
+        }
+      ]
+    },
+    {
+      "id": "breakdown",
+      "evidence": "Pod x2k4q lúc 16:00 (đã chạy 8 giờ):\n\nRSS của process java (ps -o rss)        1.92 GiB\njvm.memory.committed{area=heap}          1.00 GiB\njvm.memory.used{area=heap} sau GC        370-410 MiB (phẳng từ 08:00)\njvm.memory.committed{area=nonheap}       240 MiB   (metaspace, code cache)\njvm.buffer.memory.used{id=direct}        12 MiB    (phẳng)\njvm.threads.live                         212       (phẳng)\n\nPhần còn lại ngoài heap và non-heap: khoảng 700 MiB. Một phần là GC, stack của thread, symbol; không metric nào cho biết phần nào đang tăng.",
+      "evidenceFormat": "monospace",
+      "question": "Heap phẳng, direct buffer phẳng, số thread phẳng, nhưng còn khoảng 700 MiB không rõ. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Bật NMT trên một pod, lấy baseline rồi so summary.diff sau vài giờ",
+          "quality": "good",
+          "feedback": "Đúng. NMT chia bộ nhớ native của JVM theo hạng mục; diff cho thấy hạng mục nào đang tăng.",
+          "next": "nmt"
+        },
+        {
+          "label": "Nâng limit lên 3Gi để pod không bị giết trong lúc điều tra",
+          "quality": "ok",
+          "feedback": "Hợp lý như một biện pháp cầm máu, nhưng chỉ kéo dài thời gian tới lần OOMKilled kế tiếp. Vẫn cần biết cái gì đang tăng.",
+          "next": "raise-limit"
+        },
+        {
+          "label": "Đặt -XX:MaxDirectMemorySize=256m để chặn bộ nhớ ngoài heap",
+          "quality": "poor",
+          "feedback": "Metric direct buffer chỉ 12 MiB và phẳng. Giới hạn này chỉ áp cho `ByteBuffer.allocateDirect`, chưa có bằng chứng đó là phần đang tăng.",
+          "next": "direct-limit"
+        }
+      ]
+    },
+    {
+      "id": "raise-limit",
+      "evidence": "limits.memory=3Gi trên cả 4 pod, deploy lúc 17:30.\n\ncontainer_memory_working_set_bytes (pod mới):\n17:35  1.36 GiB\n09:30  2.52 GiB (hôm sau)\nTốc độ tăng không đổi: khoảng 75 MiB mỗi giờ.\n\nHeap sau GC vẫn phẳng quanh 400 MiB.",
+      "evidenceFormat": "monospace",
+      "question": "Pod sống lâu hơn nhưng vẫn tăng đều. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Bật NMT trên một pod, lấy baseline rồi so summary.diff sau vài giờ",
+          "quality": "good",
+          "feedback": "Đúng. Đã có thời gian thở; giờ cần biết hạng mục native nào tăng.",
+          "next": "nmt"
+        }
+      ]
+    },
+    {
+      "id": "direct-limit",
+      "evidence": "Deploy -XX:MaxDirectMemorySize=256m lúc 10:00.\n\n10:05  RSS 1.36 GiB\n15:00  RSS 1.72 GiB\n19:00  OOMKilled\n\nKhông có \"Cannot reserve ... bytes of direct buffer memory\" trong log.\njvm.buffer.memory.used{id=direct} vẫn 12 MiB.",
+      "evidenceFormat": "monospace",
+      "question": "Giới hạn direct memory không có tác dụng gì. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Bật NMT trên một pod, lấy baseline rồi so summary.diff sau vài giờ",
+          "quality": "good",
+          "feedback": "Đúng. Phần đang tăng không đi qua `allocateDirect`; cần NMT để biết nó thuộc hạng mục nào.",
+          "next": "nmt"
+        }
+      ]
+    },
+    {
+      "id": "nmt",
+      "evidence": "JAVA_TOOL_OPTIONS thêm -XX:NativeMemoryTracking=summary trên pod canary.\n$ jcmd 1 VM.native_memory baseline        (10:00)\n$ jcmd 1 VM.native_memory summary.diff    (14:00)\n\nTotal: reserved=3684950KB +318512KB, committed=1912340KB +318540KB\n\n-                 Java Heap (reserved=1572864KB, committed=1048576KB)\n-                     Class (reserved=1052114KB +210KB, committed=186250KB +210KB)\n-                    Thread (reserved=219136KB, committed=44302KB +96KB)\n                            (threads #212)\n-                      Code (reserved=253952KB, committed=71236KB +418KB)\n-                        GC (reserved=96214KB, committed=82130KB)\n-                     Other (reserved=402880KB +317440KB, committed=402880KB +317440KB)\n                            (malloc=402880KB +317440KB #138 +61)\n-                    Symbol (reserved=31420KB, committed=31420KB)",
+      "evidenceFormat": "monospace",
+      "question": "Chỉ hạng mục `Other` tăng: thêm 310 MiB trong 4 giờ, 138 khối malloc. Giải thích nào khớp?",
+      "choices": [
+        {
+          "label": "Buffer native cấp ngoài BufferPool, mỗi khối vài MB, giữ lại mãi",
+          "quality": "good",
+          "feedback": "Đúng. `Other` gồm direct buffer và buffer tạm của NIO. Metric direct chỉ 12 MiB, nên đây là buffer không đi qua `allocateDirect`: 138 khối, trung bình gần 3 MB mỗi khối.",
+          "next": "code"
+        },
+        {
+          "label": "Rò `ByteBuffer.allocateDirect` ở đâu đó trong code xuất PDF",
+          "quality": "poor",
+          "feedback": "`allocateDirect` được đếm trong `jvm.buffer.memory.used{id=direct}`, mà metric đó phẳng ở 12 MiB. Phần tăng không đi qua đường này.",
+          "next": "code"
+        },
+        {
+          "label": "Rò thread: mỗi lần xuất PDF tạo thêm thread mà không đóng",
+          "quality": "poor",
+          "feedback": "Hạng mục `Thread` gần như không đổi và vẫn là 212 thread. Rò thread làm tăng cả số thread lẫn hạng mục `Thread`.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "// InvoiceExportService.java (release 3 ngày trước)\nPath exportMerged(List<Invoice> invoices) throws IOException {\n    byte[] pdf = pdfRenderer.renderMerged(invoices);        // 1-9 MB tuỳ số hoá đơn\n    Path tmp = Files.createTempFile(\"invoices-\", \".pdf\");\n    try (var channel = FileChannel.open(tmp, StandardOpenOption.WRITE)) {\n        channel.write(ByteBuffer.wrap(pdf));                // heap buffer, ghi một lần\n    }\n    return tmp;                                             // sau đó upload lên object storage\n}\n\nTomcat: threads.max=200, tomcat.threads.current 186-200 suốt giờ làm việc.\nMỗi ngày khoảng 9.000 lượt xuất, PDF lớn dần theo số hoá đơn của khách.",
+      "evidenceFormat": "monospace",
+      "question": "Ghi một heap buffer vài MB vào FileChannel từ thread Tomcat. Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Đặt jdk.nio.maxCachedBufferSize nhỏ và ghi file theo từng khối",
+          "quality": "good",
+          "feedback": "Đúng. JDK chép heap buffer sang buffer native tạm cùng kích thước và giữ nó trong cache của từng thread. Giới hạn cache và ghi theo khối nhỏ (`Files.write`, hoặc stream thẳng lên storage) làm buffer tạm không còn tích luỹ.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Đặt -XX:MaxDirectMemorySize=256m để giới hạn buffer native đó",
+          "quality": "poor",
+          "feedback": "Trên JDK 25, buffer tạm này cấp bằng `Unsafe.allocateMemory`, không đi qua `Bits.reserveMemory`, nên không bị giới hạn đó chặn.",
+          "next": "direct-limit-late"
+        },
+        {
+          "label": "Gọi System.gc() sau mỗi lần xuất để giải phóng buffer native",
+          "quality": "poor",
+          "feedback": "Buffer tạm không chờ GC: nó nằm trong cache của thread và chỉ được giải phóng khi thread kết thúc. GC thêm chỉ tốn thêm pause.",
+          "next": "gc-call"
+        }
+      ]
+    },
+    {
+      "id": "direct-limit-late",
+      "evidence": "Deploy -XX:MaxDirectMemorySize=256m lúc 10:00, NMT vẫn bật.\n\n10:05  RSS 1.36 GiB, NMT Other 40 MiB\n14:05  RSS 1.66 GiB, NMT Other 345 MiB\nKhông có \"Cannot reserve ... bytes of direct buffer memory\" trong log.\njvm.buffer.memory.used{id=direct} vẫn 12 MiB.",
+      "evidenceFormat": "monospace",
+      "question": "Giới hạn direct memory không chặn được `Other`. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Bỏ giới hạn đó, đặt jdk.nio.maxCachedBufferSize và ghi theo khối",
+          "quality": "good",
+          "feedback": "Đúng. Trên JDK 24+, buffer tạm của NIO không đi qua `Bits.reserveMemory`, nên `MaxDirectMemorySize` không chạm tới nó; phải ngăn buffer lớn vào cache của thread.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Hạ tiếp MaxDirectMemorySize xuống 64m cho chắc chắn hơn",
+          "quality": "poor",
+          "feedback": "Giới hạn nhỏ hơn cũng không chạm tới buffer tạm, chỉ có thể làm vỡ thư viện thật sự dùng `allocateDirect` (Netty, driver).",
+          "next": "direct-limit-late"
+        }
+      ]
+    },
+    {
+      "id": "gc-call",
+      "evidence": "Deploy System.gc() sau mỗi lần xuất lúc 10:00.\n\njvm.gc.pause: thêm khoảng 9.000 full GC mỗi ngày, p99 của billing-api từ 180ms lên 410ms.\nNMT Other: vẫn +75 MiB mỗi giờ.",
+      "evidenceFormat": "monospace",
+      "question": "GC thêm không giải phóng được gì mà còn làm API chậm. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Bỏ System.gc(), giới hạn cache buffer tạm và ghi theo từng khối",
+          "quality": "good",
+          "feedback": "Đúng. Cần ngăn buffer lớn đi vào cache của thread, không phải ép GC.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "Deploy:\n  JAVA_TOOL_OPTIONS += -Djdk.nio.maxCachedBufferSize=262144\n  exportMerged: Files.write(tmp, pdf)   // JDK ghi theo khối 8 KB\n\nSau 48 giờ trên cả 4 pod:\nRSS                                1.33-1.41 GiB (phẳng)\nNMT Other                          38 MiB (phẳng)\nHeap sau GC                        380-410 MiB\nRestart Count                      0",
+      "evidenceFormat": "monospace",
+      "question": "Bộ nhớ đã phẳng. Còn việc gì để lần sau phát hiện sớm hơn?",
+      "choices": [
+        {
+          "label": "Alert theo RSS so với limit và giữ NMT summary trên canary",
+          "quality": "good",
+          "feedback": "Đúng. Lần này mất ba ngày vì không có metric nào theo dõi phần native. Alert khi RSS vượt khoảng 85% limit và tăng đều, cùng NMT bật sẵn, rút thời gian điều tra từ ngày xuống giờ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `FileChannel.write` với một heap `ByteBuffer` buộc JDK chép dữ liệu sang một buffer native tạm cùng kích thước rồi mới gọi hệ điều hành. Buffer tạm đó được giữ trong cache riêng của từng thread (`sun.nio.ch.Util`) và chỉ được giải phóng khi thread kết thúc. Thread Tomcat sống suốt ngày, nên mỗi thread giữ lại buffer cỡ PDF lớn nhất nó từng ghi; vài trăm thread nhân vài MB là vài trăm MB tới hơn 1 GB. Từ JDK 24, buffer này cấp bằng `Unsafe.allocateMemory`, nên không hiện trong metric direct buffer và không bị `MaxDirectMemorySize` chặn. Heap đã chiếm 1 GiB committed trong limit 2 GiB, phần native còn lại cạn dần và kernel giết container: không có `OutOfMemoryError`, nên cũng không có heap dump.\n\n**Vì sao khó thấy**: mọi metric quen thuộc (heap, direct buffer, số thread) đều phẳng. Chỉ có RSS và NMT cho thấy phần tăng.\n\n**Phòng ngừa**:\n- Với OOMKilled, so heap sau GC với RSS trước khi lấy heap dump; heap phẳng thì dùng NMT (`baseline` rồi `summary.diff`).\n- Để phần native có chỗ: `MaxRAMPercentage` khoảng 70–75% cho container chỉ chạy JVM, đừng tăng heap khi phần tăng nằm ngoài heap.\n- Không ghi heap buffer lớn qua `FileChannel`/`SocketChannel` trên thread sống lâu; ghi theo khối hoặc stream, và đặt `-Djdk.nio.maxCachedBufferSize`.\n- Alert theo RSS (hoặc working set) so với limit, không chỉ theo heap; bật NMT summary sẵn trên một pod canary.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

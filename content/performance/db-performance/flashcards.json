@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-shapes", "front": "Ba dạng của \"database chậm\" là gì?", "back": "Một câu chậm đi (plan, dữ liệu), nhiều câu hơn (traffic, N+1, cache miss), và câu chờ chứ không chạy (lock, đĩa, connection)." },
+    { "id": "active-no-wait", "front": "Session `active` mà `wait_event_type` rỗng nghĩa là gì?", "back": "Session đang chạy trên CPU. Nhiều session như vậy cùng CPU cao là có câu đang tốn CPU." },
+    { "id": "rank-total", "front": "Nên xếp pg_stat_statements theo cột nào?", "back": "Theo `total_exec_time`: câu nhanh nhưng gọi rất nhiều lần thường tốn hơn câu chậm hiếm khi chạy." },
+    { "id": "snapshot", "front": "Vì sao phải so hai snapshot pg_stat_statements?", "back": "Số liệu cộng dồn từ lần reset; chỉ hiệu của hai snapshot mới cho thấy câu nào tốn trong khoảng có sự cố." },
+    { "id": "blocking-chain", "front": "Tìm session gốc gây chờ khoá trên PostgreSQL thế nào?", "back": "Dùng `pg_blocking_pids(pid)` và đi theo chuỗi tới session không bị ai chặn; thường là một session `idle in transaction`." },
+    { "id": "order-limit-trap", "front": "Vì sao `WHERE a = ? ORDER BY b LIMIT n` có thể rất chậm dù có index trên a và trên b?", "back": "Planner có thể đi theo index b và lọc a, giả định dòng khớp rải đều; nếu dòng khớp nằm cuối index thì phải lướt qua hàng triệu dòng. Index ghép (a, b) sửa được." },
+    { "id": "pool-symptom", "front": "HikariCP pending tăng có nghĩa database thiếu connection không?", "back": "Thường không: connection bị giữ lâu vì query chậm hoặc chờ khoá. Tăng pool khi DB đã hết CPU làm mọi câu chậm thêm." },
+    { "id": "auto-explain", "front": "auto_explain dùng để làm gì?", "back": "Ghi plan, kèm tham số (PostgreSQL 16+), của mọi câu chạy lâu hơn `log_min_duration`, để thấy đúng plan của lần chạy chậm." },
+    { "id": "idle-tx-timeout", "front": "Cài đặt nào chặn transaction bị bỏ quên giữ khoá?", "back": "`idle_in_transaction_session_timeout`, và từ PostgreSQL 17 `transaction_timeout`; cả hai mặc định tắt." }
+  ]
+}

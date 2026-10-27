@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "db-performance",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Database chậm trên production",
+  "summary": "Điều tra database chậm theo ba câu hỏi: session đang chạy hay đang chờ (pg_stat_activity, wait event, chuỗi chờ khoá), câu nào tốn tổng thời gian nhiều nhất (pg_stat_statements, so snapshot), và vì sao nó chậm với đúng tham số (auto_explain). Bẫy ORDER BY ... LIMIT, plan đổi mà không ai deploy, cạn pool là triệu chứng, replica lag và công cụ tương ứng trên MySQL.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 16,
+  "prerequisites": ["index-execution-plan", "connection-pool", "locking-deadlock-db", "slow-api"],
+  "terms": ["pg-stat-activity", "pg-stat-statements", "wait-event", "idle-in-transaction", "auto-explain", "n-plus-one", "connection-pool", "replica-lag", "generic-plan", "littles-law", "composite-index", "execution-plan", "pg-repack", "lock-timeout", "autovacuum", "planner-statistics", "prepared-statement", "table-bloat", "rate-limiting"],
+  "references": [
+    { "title": "PostgreSQL 17: pg_stat_statements", "url": "https://www.postgresql.org/docs/17/pgstatstatements.html" },
+    { "title": "PostgreSQL 17: The Cumulative Statistics System (pg_stat_activity, wait events)", "url": "https://www.postgresql.org/docs/17/monitoring-stats.html" },
+    { "title": "PostgreSQL 17: auto_explain", "url": "https://www.postgresql.org/docs/17/auto-explain.html" },
+    { "title": "MySQL 8.4: Performance Schema Statement Digests", "url": "https://dev.mysql.com/doc/refman/8.4/en/performance-schema-statement-digests.html" },
+    { "title": "PostgreSQL 17: CREATE INDEX (Building Indexes Concurrently)", "url": "https://www.postgresql.org/docs/17/sql-createindex.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Query chạy thử thì nhanh, sao trên production lại chậm?\" Plan phụ thuộc tham số và phân bố dữ liệu: cùng một câu có thể đi index này với merchant lớn và index khác với merchant nhỏ. Prepared statement còn có thể chuyển sang generic plan sau vài lần chạy. Ngoài ra trên production câu đó tranh CPU, cache và khoá với hàng chục session khác. Trả lời tốt: lấy đúng tham số và plan của lần chạy chậm từ auto_explain, rồi `EXPLAIN (ANALYZE, BUFFERS)` với tham số đó." },
+    { "type": "callout", "style": "warning", "markdown": "Khi database đã hết CPU, đừng tăng connection pool hay scale thêm pod ứng dụng. Mỗi connection thêm là một query nữa tranh cùng số core, nên mọi câu đều chậm hơn và pool vẫn cạn. Tìm câu đang ăn CPU trước; cầm máu bằng cách giảm việc (rate limit, tắt tính năng), không phải thêm việc." }
+  ]
+}

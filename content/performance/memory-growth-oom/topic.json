@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "memory-growth-oom",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Bộ nhớ tăng dần & OOM",
+  "summary": "Điều tra bộ nhớ tăng dần từ đầu tới cuối: phân biệt OutOfMemoryError với OOMKilled, so heap sau GC với RSS để biết heap hay native, heap dump và dominator tree cho leak trong heap, NMT baseline và summary.diff cho bộ nhớ native, ngân sách bộ nhớ của container và buffer tạm của NIO.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 16,
+  "prerequisites": ["troubleshooting-mindset", "observability"],
+  "terms": ["out-of-memory-error", "oomkilled", "heap-dump", "rss", "memory-leak", "native-memory-tracking", "metaspace", "direct-buffer", "dominator-tree", "retained-size", "thread-local", "metric-cardinality", "classloader", "full-gc", "persistence-context"],
+  "references": [
+    { "title": "Troubleshooting Guide: Understand the OutOfMemoryError Exception (JDK 21)", "url": "https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshooting-memory-leaks.html" },
+    { "title": "Native Memory Tracking (JDK 21 Troubleshooting Guide)", "url": "https://docs.oracle.com/en/java/javase/21/vm/native-memory-tracking.html" },
+    { "title": "Kubernetes: Resource Management for Pods and Containers", "url": "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" },
+    { "title": "Eclipse Memory Analyzer (MAT)", "url": "https://eclipse.dev/mat/" },
+    { "title": "JEP 346: Promptly Return Unused Committed Memory from G1", "url": "https://openjdk.org/jeps/346" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pod bị OOMKilled, vậy tăng `-Xmx` có giải quyết không?\" Thường là ngược lại. OOMKilled nghĩa là tổng bộ nhớ của process vượt limit của container, mà heap chỉ là một phần. Nếu heap sau GC phẳng, phần tăng nằm ở native (thread, metaspace, buffer); heap lớn hơn chỉ bớt chỗ cho phần đó và pod thường chết sớm hơn. Trả lời tốt: so heap sau GC với RSS, rồi dùng heap dump hoặc NMT tuỳ bên nào tăng." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chỉ alert theo heap. Mọi ca OOMKilled vì native đều có heap trông khoẻ mạnh tới phút cuối. Alert cả RSS (hoặc `container_memory_working_set_bytes`) so với limit, và nhớ `HeapDumpOnOutOfMemoryError` không chạy khi kernel giết container." }
+  ]
+}

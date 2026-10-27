@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "oome-vs-oomkilled", "front": "OutOfMemoryError khác OOMKilled thế nào?", "back": "OutOfMemoryError do JVM ném khi một vùng nhớ của nó hết; OOMKilled là kernel giết process vì container vượt memory limit, exit code 137, không log và không dump." },
+    { "id": "first-step", "front": "Bộ nhớ tăng dần: việc đầu tiên là gì?", "back": "So heap sau GC với RSS. Heap sau GC tăng là leak trong heap (heap dump); heap phẳng mà RSS tăng là native (NMT)." },
+    { "id": "after-gc", "front": "Vì sao nhìn heap sau GC thay vì heap used?", "back": "Heap used luôn lên xuống theo hình răng cưa; chỉ đáy sau mỗi lần GC mới cho thấy lượng object còn sống đang tăng hay không." },
+    { "id": "max-ram", "front": "MaxRAMPercentage mặc định là bao nhiêu và nên đặt thế nào trong container?", "back": "Mặc định 25% memory limit; container chỉ chạy JVM thường đặt 70–75% để còn chỗ cho metaspace, thread, buffer và GC." },
+    { "id": "retained-size", "front": "Retained size trong heap dump là gì?", "back": "Lượng bộ nhớ được giải phóng nếu object đó mất đi, gồm mọi object chỉ nó giữ; dominator tree xếp theo con số này." },
+    { "id": "nmt-diff", "front": "Dùng NMT để tìm rò native thế nào?", "back": "Bật `-XX:NativeMemoryTracking=summary` lúc khởi động, `jcmd <pid> VM.native_memory baseline`, vài giờ sau `summary.diff` để xem hạng mục nào tăng." },
+    { "id": "dump-not-fired", "front": "Khi nào HeapDumpOnOutOfMemoryError không tạo dump?", "back": "Khi container bị OOMKilled, và khi OOME do code Java ném như lỗi direct buffer, vì cờ này chỉ chạy khi chính JVM ném lỗi." },
+    { "id": "nio-temp-buffer", "front": "Ghi heap ByteBuffer lớn vào FileChannel tốn bộ nhớ native thế nào?", "back": "JDK chép sang buffer native tạm cùng kích thước và giữ trong cache của từng thread tới khi thread kết thúc; từ JDK 24 buffer này còn không hiện trong metric direct." },
+    { "id": "g1-committed", "front": "RSS cao mà heap sau GC thấp có phải leak không?", "back": "Chưa chắc: G1 hiếm khi trả heap đã commit cho hệ điều hành. So `jvm.memory.committed` với used trước khi kết luận." }
+  ]
+}

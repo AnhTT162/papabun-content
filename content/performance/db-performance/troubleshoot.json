@@ -1,0 +1,242 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "PostgreSQL CPU 90% dù không ai deploy",
+  "symptom": "14:05 thứ Ba, mọi API của order-api chậm hẳn: p99 từ 120ms lên 4,8 giây, một phần request trả 503 vì hết thời gian chờ connection. Hôm nay không có deploy nào, traffic của người dùng bình thường. CPU của primary PostgreSQL ở mức 88–92%.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "order-api: 3 pod, HikariCP maximumPoolSize=20, connectionTimeout=5s\nPostgreSQL 17, primary 8 vCPU, 1 replica\n\ntime   req/s  p99     hikari active  hikari pending  db CPU  db read IOPS  replica lag\n13:55  610    120ms   4/20           0               21%     310           0.3s\n14:05  640    4.8s    20/20          31              91%     340           0.4s\n14:15  650    5.1s    20/20          36              92%     350           0.4s\n\nSố liệu hikari là của mỗi pod: trên cả ba pod, 20/20 connection đều đang được mượn.",
+      "evidenceFormat": "monospace",
+      "question": "Pool cạn, CPU của database gần chạm trần, IOPS gần như không đổi. Bước đầu tiên?",
+      "choices": [
+        {
+          "label": "Xem session đang làm gì: pg_stat_activity theo state, wait_event",
+          "quality": "good",
+          "feedback": "Đúng. Pool cạn chỉ là triệu chứng: connection bị giữ lâu vì query chạy lâu. Cần biết các session đang chạy trên CPU, chờ lock hay chờ đĩa.",
+          "next": "activity"
+        },
+        {
+          "label": "Tăng maximumPoolSize từ 20 lên 60 trên cả ba pod cho hết chờ",
+          "quality": "poor",
+          "feedback": "Database đã gần hết CPU. Thêm connection là đẩy thêm query vào cùng 8 vCPU, mọi query đều chậm hơn.",
+          "next": "bigger-pool"
+        },
+        {
+          "label": "Scale order-api từ 3 lên 6 pod để chia bớt tải mỗi pod",
+          "quality": "poor",
+          "feedback": "Ứng dụng không phải chỗ nghẽn. Thêm pod là thêm 20 connection mỗi pod vào một database đang hết CPU.",
+          "next": "more-pods"
+        }
+      ]
+    },
+    {
+      "id": "bigger-pool",
+      "evidence": "14:20  deploy maximumPoolSize=60\n\ntime   hikari active  hikari pending  db CPU  active sessions  p99\n14:25  60/60          12              100%    142              7.9s\n\nmean_exec_time của mọi query trong pg_stat_statements đều tăng, kể cả SELECT theo primary key.",
+      "evidenceFormat": "monospace",
+      "question": "Nhiều connection hơn, database chậm hơn. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Trả pool về 20 và xem pg_stat_activity theo state, wait_event",
+          "quality": "good",
+          "feedback": "Đúng. Database đã bão hoà; cần biết cái gì đang ăn CPU.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "more-pods",
+      "evidence": "14:20  scale order-api lên 6 pod (120 connection tới primary)\n\ntime   hikari pending (tổng)  db CPU  active sessions  p99\n14:25  58                     100%    104              6.7s\n\nPod mới cũng cạn pool sau vài chục giây.",
+      "evidenceFormat": "monospace",
+      "question": "Thêm pod không giúp gì. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Trả về 3 pod và xem pg_stat_activity theo state, wait_event",
+          "quality": "good",
+          "feedback": "Đúng. Chỗ nghẽn nằm trong database; cần thấy các session đang làm gì.",
+          "next": "activity"
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "evidence": "SELECT state, wait_event_type, wait_event, count(*)\nFROM pg_stat_activity WHERE backend_type = 'client backend' GROUP BY 1, 2, 3 ORDER BY 4 DESC;\n\nstate                | wait_event_type | wait_event   | count\nactive               |                 |              | 35\nidle in transaction  | Client          | ClientRead   | 9\nactive               | IO              | DataFileRead | 3\nidle                 | Client          | ClientRead   | 13\n\nCác session active: 21 đang chạy cùng một câu\n  SELECT id, status, total, created_at FROM orders WHERE merchant_id = $1 ORDER BY created_at DESC LIMIT 50\nidle in transaction: mọi transaction đều mới mở dưới 1 giây.\nKhông có session nào chờ Lock.",
+      "evidenceFormat": "monospace",
+      "question": "Phần lớn session active không chờ gì, tức đang chạy trên CPU, và 21 session chạy cùng một câu. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem pg_stat_statements: câu nào tốn tổng thời gian nhất, so hôm qua",
+          "quality": "good",
+          "feedback": "Đúng. Ảnh chụp pg_stat_activity chỉ là một thời điểm; pg_stat_statements cho biết câu nào ăn tài nguyên trong cả khoảng thời gian và nó thay đổi thế nào.",
+          "next": "statements"
+        },
+        {
+          "label": "Chạy EXPLAIN ANALYZE câu đó với một merchant_id bất kỳ để xem plan",
+          "quality": "ok",
+          "feedback": "Đúng hướng là xem plan, nhưng plan có thể khác nhau theo tham số. Chọn tham số ngẫu nhiên dễ ra một plan nhanh và kết luận sai.",
+          "next": "explain-random"
+        },
+        {
+          "label": "Chạy VACUUM FULL bảng orders vì bảng có thể đã bị bloat nặng",
+          "quality": "poor",
+          "feedback": "Không có bằng chứng nào về bloat: IOPS bình thường, các session đang chạy trên CPU. VACUUM FULL còn giữ khoá ACCESS EXCLUSIVE suốt lúc ghi lại bảng.",
+          "next": "vacuum-full"
+        }
+      ]
+    },
+    {
+      "id": "vacuum-full",
+      "evidence": "pgstattuple trước đó: dead_tuple_percent của orders = 2.1%\n\n14:22:00  VACUUM FULL orders; xin khoá ACCESS EXCLUSIVE, chờ các query đang chạy xong\n14:22:01  có khoá, bắt đầu ghi lại bảng; mọi SELECT/INSERT trên orders xếp hàng sau nó\n\nstate   | wait_event_type | wait_event | count\nactive  | Lock            | relation   | 57\n\n14:22:14  VACUUM FULL xong. Trong 13 giây đó hikari pending vượt 60, khoảng 6.000 request trả 503: gần như mọi request chạm tới orders.\n14:23     CPU lại về 91%, plan và query vẫn như cũ.",
+      "evidenceFormat": "monospace",
+      "question": "Bảng không bloat, và VACUUM FULL làm treo mọi truy cập vào orders 13 giây. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem pg_stat_statements: câu nào tốn tổng thời gian nhiều nhất",
+          "quality": "good",
+          "feedback": "Đúng. Cần bằng chứng về câu đang ăn CPU trước khi làm gì với bảng.",
+          "next": "statements"
+        }
+      ]
+    },
+    {
+      "id": "explain-random",
+      "evidence": "EXPLAIN (ANALYZE, BUFFERS) ... WHERE merchant_id = 5 ORDER BY created_at DESC LIMIT 50;\n\nLimit  (cost=0.43..58.82 rows=50 width=27) (actual time=0.020..0.117 rows=50 loops=1)\n  Buffers: shared hit=25\n  ->  Index Scan Backward using orders_created_idx on orders  (cost=0.43..143570.13 rows=122935 width=27) (actual time=0.020..0.115 rows=50 loops=1)\n        Filter: (merchant_id = 5)\n        Rows Removed by Filter: 1459\nExecution Time: 0.128 ms",
+      "evidenceFormat": "monospace",
+      "question": "Với merchant 5, câu này chỉ mất 0,1ms. Vậy sao nó chiếm 21 session?",
+      "choices": [
+        {
+          "label": "Xem pg_stat_statements và tìm tham số của những lần chạy chậm",
+          "quality": "good",
+          "feedback": "Đúng. Một câu có thể nhanh với đa số tham số và rất chậm với một vài tham số; cần biết lần chạy chậm dùng tham số gì.",
+          "next": "statements"
+        }
+      ]
+    },
+    {
+      "id": "statements",
+      "evidence": "Diff hai snapshot pg_stat_statements, 14:00 -> 14:30:\n\ncalls   total_s  mean_ms  max_ms  blks/call  query\n97,600  33,410   342.3    3,120   13,357     SELECT id, status, total, created_at FROM orders WHERE merchant_id = $1 ORDER BY created_at DESC LIMIT $2\n612,000 61       0.10     38      4          SELECT ... FROM orders WHERE id = $1\n58,300  44       0.75     41      9          UPDATE orders SET status = $2 WHERE id = $1\n\nCùng khung giờ hôm qua, câu đầu: 51,800 calls, mean 0.7 ms, 24 blks/call.\n\nauto_explain (log_min_duration = 500ms), mẫu lặp lại liên tục từ 14:02:\nduration: 741.6 ms  plan:\n  Query Parameters: $1 = '8000'\n  Limit  (cost=0.43..112.72 rows=50 width=27) (actual time=741.2..741.5 rows=50 loops=1)\n    Buffers: shared hit=29803\n    ->  Index Scan Backward using orders_created_idx on orders  (cost=0.43..146496.34 rows=65231 width=27) (actual rows=50 loops=1)\n          Filter: (merchant_id = 8000)\n          Rows Removed by Filter: 2304998\n\nAccess log của order-api: từ 14:02, khoảng 26 request/giây với merchant 8000 từ bộ tích hợp ERP của merchant này (20 worker chạy song song).",
+      "evidenceFormat": "monospace",
+      "question": "Số lần gọi tăng gấp đôi, và mỗi lần với merchant 8000 lướt qua 2,3 triệu dòng để lấy 50. Vì sao planner chọn plan này?",
+      "choices": [
+        {
+          "label": "Planner giả định đơn của merchant rải đều theo thời gian",
+          "quality": "good",
+          "feedback": "Đúng. Ước lượng 65.231 dòng là chính xác; cái sai là giả định phân bố. Planner nghĩ cứ đi lùi theo created_at thì vài nghìn dòng là gặp đủ 50 đơn của merchant 8000, nhưng thực tế phải lướt qua 2,3 triệu dòng mới hơn mới gặp đơn đầu tiên của họ.",
+          "next": "data"
+        },
+        {
+          "label": "Thống kê đã cũ nên ước lượng sai số dòng của merchant 8000",
+          "quality": "poor",
+          "feedback": "Ước lượng `rows=65231` khớp với khoảng 60.000 đơn thật của merchant 8000. Số dòng không sai; sai là chỗ các dòng đó nằm ở đâu theo created_at.",
+          "next": "analyze"
+        },
+        {
+          "label": "Index orders_merchant_idx bị bloat nên planner bỏ qua nó",
+          "quality": "poor",
+          "feedback": "Chưa có bằng chứng nào về bloat, và plan chậm không dùng orders_merchant_idx nên tình trạng của index đó khó là nguyên nhân. Cần kiểm tra trước khi tin.",
+          "next": "bloat"
+        }
+      ]
+    },
+    {
+      "id": "bloat",
+      "evidence": "SELECT leaf_pages, empty_pages, deleted_pages, avg_leaf_density, leaf_fragmentation\nFROM pgstatindex('orders_merchant_idx');\n\nleaf_pages | empty_pages | deleted_pages | avg_leaf_density | leaf_fragmentation\n3498       | 0           | 0             | 88.35            | 0.17\n\nEXPLAIN (ANALYZE, BUFFERS) ... WHERE merchant_id = 1500 ORDER BY created_at DESC LIMIT 50;\nLimit  (actual time=1.114..1.117 rows=50 loops=1)\n  ->  Sort  (Sort Method: top-N heapsort)\n        ->  Bitmap Heap Scan on orders  (rows=541) (actual rows=546)\n              ->  Bitmap Index Scan on orders_merchant_idx\n                    Index Cond: (merchant_id = 1500)\nExecution Time: 1.136 ms",
+      "evidenceFormat": "monospace",
+      "question": "Index dày 88%, không có page rỗng, và merchant nhỏ vẫn dùng nó bình thường. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem dữ liệu của merchant 8000 nằm ở đâu theo created_at",
+          "quality": "good",
+          "feedback": "Đúng. Index khoẻ; planner bỏ nó cho merchant 8000 vì ước lượng plan đi lùi theo created_at rẻ hơn. Cần hiểu vì sao ước lượng đó sai.",
+          "next": "data"
+        }
+      ]
+    },
+    {
+      "id": "analyze",
+      "evidence": "14:35  ANALYZE orders;   (mất 0,4 giây)\n\nauto_explain sau đó vẫn ghi cùng plan:\n  Index Scan Backward using orders_created_idx ... (rows=65102)\n  Rows Removed by Filter: 2305212\n\nCPU vẫn 91%.",
+      "evidenceFormat": "monospace",
+      "question": "Thống kê mới, plan vẫn y hệt. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem dữ liệu của merchant 8000 nằm ở đâu theo created_at",
+          "quality": "good",
+          "feedback": "Đúng. Ước lượng số dòng vốn đúng; cần hiểu vì sao đi lùi theo created_at lại tệ với merchant này.",
+          "next": "data"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "evidence": "SELECT count(*), min(created_at), max(created_at) FROM orders WHERE merchant_id = 8000;\n count  |   min      |   max\n 60000  | 2024-03-30 | 2025-09-22\n\norders: 4,1 triệu dòng, 2,3 triệu dòng mới hơn 2025-09-22.\nIndex hiện có: orders_pkey (id), orders_merchant_idx (merchant_id), orders_created_idx (created_at).\n\nMerchant 8000 ngừng bán từ 13 tháng trước; hôm nay họ bật lại bộ tích hợp ERP, gọi danh sách đơn liên tục để đồng bộ.",
+      "evidenceFormat": "monospace",
+      "question": "Một merchant có dữ liệu toàn ở cuối index đang ăn gần hết CPU. Làm gì?",
+      "choices": [
+        {
+          "label": "Rate limit merchant 8000, tạo index (merchant_id, created_at) CONCURRENTLY",
+          "quality": "good",
+          "feedback": "Đúng. Cầm máu trước bằng rate limit ở API; index ghép cho phép đi thẳng vào phần của merchant 8000 theo đúng thứ tự created_at, chỉ đọc 50 entry. CONCURRENTLY không chặn ghi trong lúc tạo.",
+          "next": "fixed"
+        },
+        {
+          "label": "Tạo ngay index (merchant_id, created_at) bằng CREATE INDEX thường",
+          "quality": "ok",
+          "feedback": "Đúng index, sai cách tạo. CREATE INDEX thường giữ khoá SHARE suốt lúc tạo: mọi INSERT, UPDATE vào orders bị chặn tới khi xong.",
+          "next": "blocking-index"
+        },
+        {
+          "label": "Đặt statement_timeout = 200ms cho role order_api để cắt query dài",
+          "quality": "poor",
+          "feedback": "Timeout cắt được những lần chạy dài nhưng mỗi lần vẫn đốt 200ms CPU trước khi bị cắt, và ERP sẽ retry ngay. Merchant 8000 nhận toàn lỗi mà nguyên nhân vẫn còn.",
+          "next": "timeout-only"
+        }
+      ]
+    },
+    {
+      "id": "blocking-index",
+      "evidence": "14:40  CREATE INDEX orders_merchant_created_idx ON orders (merchant_id, created_at);\n\nstate   | wait_event_type | wait_event | count\nactive  | Lock            | relation   | 44   (INSERT, UPDATE trên orders)\n\n14:40:07  index tạo xong sau 7 giây, các lệnh ghi chạy tiếp. Trong 7 giây đó khoảng 400 request đặt hàng trả 503.\n           Trên bảng vài trăm triệu dòng, khoảng chặn này là nhiều phút.",
+      "evidenceFormat": "monospace",
+      "question": "Index đã có nhưng ghi bị chặn 7 giây. Lần sau làm thế nào?",
+      "choices": [
+        {
+          "label": "Lần sau dùng CONCURRENTLY và lock_timeout; giờ kiểm tra plan mới",
+          "quality": "good",
+          "feedback": "Đúng. CONCURRENTLY không chặn ghi, đổi lại chạy lâu hơn, không chạy được trong transaction và để lại index INVALID nếu thất bại giữa chừng. Index đã có, giờ xác nhận plan.",
+          "next": "fixed"
+        }
+      ]
+    },
+    {
+      "id": "timeout-only",
+      "evidence": "14:40  ALTER ROLE order_api SET statement_timeout = '200ms';\n\n14:45  db CPU 84%\n       ERROR: canceling statement due to statement timeout   ~26 lần/giây, đều với merchant 8000\n       ERP của merchant 8000 retry ngay sau mỗi lỗi.",
+      "evidenceFormat": "monospace",
+      "question": "CPU chỉ giảm một chút và merchant 8000 nhận toàn lỗi. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Rate limit tích hợp của merchant 8000, tạo index ghép bằng CONCURRENTLY",
+          "quality": "good",
+          "feedback": "Đúng. Timeout là lưới an toàn, không phải cách sửa; cần một plan không phải lướt qua hàng triệu dòng.",
+          "next": "fixed"
+        }
+      ]
+    },
+    {
+      "id": "fixed",
+      "evidence": "Đã có index orders_merchant_created_idx (merchant_id, created_at); rate limit 5 request/giây cho tích hợp của merchant 8000 đang bật.\n\nEXPLAIN (ANALYZE, BUFFERS) ... WHERE merchant_id = 8000 ORDER BY created_at DESC LIMIT 50;\nLimit  (actual time=0.006..0.010 rows=50 loops=1)\n  Buffers: shared hit=3 read=1\n  ->  Index Scan Backward using orders_merchant_created_idx on orders\n        Index Cond: (merchant_id = 8000)\nExecution Time: 0.019 ms\n\n10 phút sau: db CPU 19%, p99 115ms, hikari pending 0; gỡ rate limit tạm thời, CPU vẫn 20%.\n\nSau 7 ngày, pg_stat_user_indexes trên primary và replica: orders_merchant_idx idx_scan tăng 0.",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn định. Còn việc gì?",
+      "choices": [
+        {
+          "label": "Xoá index thừa, lưu snapshot pg_stat_statements và alert theo DB load",
+          "quality": "good",
+          "feedback": "Đúng. orders_merchant_idx là tiền tố của index mới nên không còn được dùng, chỉ làm ghi chậm hơn. Snapshot định kỳ của pg_stat_statements cho phép so \"hôm nay với hôm qua\" ngay khi có sự cố.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: câu `WHERE merchant_id = $1 ORDER BY created_at DESC LIMIT 50` chỉ có hai index một cột. Với merchant lớn, planner chọn đi lùi trên `orders_created_idx` và lọc theo merchant, vì nó giả định đơn của merchant rải đều theo thời gian nên sẽ gặp đủ 50 dòng rất sớm. Giả định đó đúng với merchant đang bán, nhưng merchant 8000 có 60.000 đơn đều cũ hơn 13 tháng: mỗi lần gọi phải lướt qua 2,3 triệu dòng mới hơn (khoảng 30.000 page) để lấy 50 dòng. Khi bộ tích hợp ERP của họ gọi liên tục với 20 worker, câu này ăn gần hết 8 vCPU, mọi query khác chậm theo, connection bị giữ lâu hơn và pool của order-api cạn.\n\n**Vì sao khó thấy**: không có deploy, ước lượng số dòng của planner đúng, và chạy thử với một merchant bất kỳ thì nhanh. Chỉ pg_stat_statements (tổng thời gian tăng vọt so với hôm qua) và auto_explain (tham số của lần chạy chậm) chỉ ra đúng chỗ.\n\n**Phòng ngừa**:\n- Query dạng lọc theo A, sắp theo B, có `LIMIT` cần index ghép `(A, B)`; đừng trông vào hai index một cột.\n- Lưu snapshot pg_stat_statements định kỳ (hoặc dùng công cụ giám sát có sẵn) để so theo thời gian; xếp theo tổng thời gian chứ không theo mean.\n- Bật auto_explain với `log_min_duration` vài trăm ms để có plan và tham số của lần chạy chậm.\n- Rate limit theo tenant ở API để một khách hàng không chiếm hết database.\n- Đừng sửa cạn pool bằng cách tăng pool khi database đã bão hoà.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

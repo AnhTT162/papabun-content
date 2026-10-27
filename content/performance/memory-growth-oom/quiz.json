@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "direct-oome-exit",
+      "kind": "output",
+      "prompt": "Chạy với `-XX:MaxDirectMemorySize=64m -XX:+ExitOnOutOfMemoryError`. Đoạn code in ra gì?",
+      "code": "List<ByteBuffer> kept = new ArrayList<>();\ntry {\n    for (int i = 0; i < 100; i++) {\n        kept.add(ByteBuffer.allocateDirect(8 << 20));   // 8 MB\n    }\n} catch (OutOfMemoryError e) {\n    System.out.println(\"caught: \" + kept.size());\n}\nSystem.out.println(\"still alive\");",
+      "options": [
+        "caught: 8 rồi still alive",
+        "JVM thoát ngay ở lần cấp phát thứ 9, không in gì",
+        "still alive, vì direct memory không có giới hạn",
+        "caught: 8, rồi JVM thoát trước khi in still alive"
+      ],
+      "answer": 0,
+      "explanation": "8 buffer 8 MB chạm đúng giới hạn 64 MB, lần thứ 9 ném `OutOfMemoryError: Cannot reserve 8388608 bytes of direct buffer memory`. Lỗi này do `java.nio.Bits.reserveMemory` (code Java) ném, không phải JVM, nên `ExitOnOutOfMemoryError` và `HeapDumpOnOutOfMemoryError` không chạy: code bắt được lỗi và chạy tiếp. Hai cờ đó chỉ có tác dụng với lỗi do JVM ném như `Java heap space` hay `Metaspace`."
+    },
+    {
+      "id": "oomkilled-xmx",
+      "kind": "single",
+      "prompt": "Pod limit 2Gi bị OOMKilled mỗi vài giờ. Heap sau GC phẳng ở 400 MiB, heap committed khoảng 1 GiB và tăng theo tải, RSS tăng đều. Đồng nghiệp đề xuất tăng `MaxRAMPercentage` từ 75 lên 85. Kết quả nhiều khả năng là gì?",
+      "options": [
+        "Pod bị OOMKilled sớm hơn vì phần native còn ít chỗ hơn",
+        "Hết OOMKilled vì heap có thêm chỗ chứa object mới",
+        "JVM chuyển sang ném OutOfMemoryError thay vì bị kill",
+        "JVM tự thu nhỏ heap để nhường chỗ cho native"
+      ],
+      "answer": 0,
+      "explanation": "Heap sau GC phẳng nghĩa là heap không phải phần đang tăng. Limit của container không đổi, nên cho heap được phép lớn hơn (G1 sẽ commit thêm khi có tải) chỉ bớt chỗ cho phần native đang tăng. JVM không biết về limit khi phần native vượt, nên vẫn là kernel giết process, không phải `OutOfMemoryError`. JVM không biết phần native gần chạm limit nên không tự thu nhỏ heap."
+    },
+    {
+      "id": "nmt-category",
+      "kind": "single",
+      "prompt": "NMT `summary.diff` sau 6 giờ: `Thread` tăng từ 210 lên 3.400 thread, committed +410 MB; các hạng mục khác gần như không đổi. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Code tạo executor hoặc thread mới mà không bao giờ đóng",
+        "Leak object trong heap làm stack của thread phình to",
+        "Cache buffer tạm của NIO giữ lại buffer cho mỗi thread",
+        "Classloader cũ không được thu hồi sau khi redeploy"
+      ],
+      "answer": 0,
+      "explanation": "Số thread tăng từ 210 lên 3.400 là rò thread, thường do tạo `Executors.newFixedThreadPool` trong mỗi request mà không `shutdown`. Mỗi thread có stack riêng nên hạng mục `Thread` tăng theo. Leak trong heap làm tăng `Java Heap`, buffer tạm của NIO nằm trong `Other`, rò classloader nằm trong `Class`. Thread dump sẽ cho thấy tên pool của các thread thừa."
+    },
+    {
+      "id": "dominator",
+      "kind": "single",
+      "prompt": "Trong Eclipse MAT, một `ConcurrentHashMap` có shallow size 64 byte nhưng retained size 900 MB. Điều đó nghĩa là gì?",
+      "options": [
+        "Giải phóng map này thì khoảng 900 MB được thu hồi",
+        "Chính object map chiếm 900 MB trong bộ nhớ",
+        "MAT đếm trùng, retained size không đáng tin",
+        "900 MB là tổng của mọi object cùng class trong heap"
+      ],
+      "answer": 0,
+      "explanation": "Shallow size chỉ là chính object map. Retained size là mọi thứ chỉ map này giữ (entry, key, value và object chúng trỏ tới), tức lượng bộ nhớ được thu hồi nếu map mất. Bước tiếp theo là xem Path to GC Roots để biết ai đang giữ map, thường là một field `static` làm cache không giới hạn."
+    }
+  ]
+}

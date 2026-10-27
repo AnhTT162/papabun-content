@@ -302,8 +302,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 7 | `java-high-cpu` | Ứng dụng Java CPU 100% | senior | `top -H`, thread dump, regex backtracking | L T | ✅ |
 | 8 | `slow-api` | Điều tra API chậm | senior | Lần theo từng tầng: DB, downstream, GC, thread pool, mạng | L T | ✅ |
 | 9 | `thread-pool-exhaustion` | Request treo vì cạn thread | senior | Thread dump toàn WAITING, timeout thiếu, bulkhead | L T | ✅ |
-| 10 | `memory-growth-oom` | Bộ nhớ tăng dần & OOM | senior | Điều tra end-to-end: heap hay native, OOMKilled hay OutOfMemoryError; dẫn sang `memory-leak`, `jvm-containers` | L T | ⬜ |
-| 11 | `db-performance` | Database chậm trên production | senior | `pg_stat_statements`, lock wait, cạn connection pool, replica lag | L T | ⬜ |
+| 10 | `memory-growth-oom` | Bộ nhớ tăng dần & OOM | senior | Điều tra end-to-end: heap hay native, OOMKilled hay OutOfMemoryError; dẫn sang `memory-leak`, `jvm-containers` | L T | ✅ |
+| 11 | `db-performance` | Database chậm trên production | senior | `pg_stat_statements`, lock wait, cạn connection pool, replica lag | L T | ✅ |
 | 12 | `profiling` | Profiling | senior | async-profiler, flame graph CPU/allocation/lock, đọc JFR recording | L D T | ⬜ |
 | 13 | `tail-latency` | Tail latency, timeout & retry | senior | Retry khuếch đại tải, timeout budget, hedging | L S Sc | ⬜ |
 | 14 | `capacity-planning` | Capacity planning & autoscaling | senior | Ước lượng tải, headroom, autoscale theo metric nào | L Sc | ⬜ |
