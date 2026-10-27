@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "stream-api",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Stream API chuyên sâu",
+  "summary": "Stream chạy lười theo từng phần tử, thao tác stateful như `sorted` chặn cả pipeline, short-circuit, collector (`toMap` trùng key, `groupingBy`), `toList` khác `Collectors.toList`, side effect trong parallel stream làm mất dữ liệu, và khi nào vòng `for` tốt hơn.",
+  "level": "mid",
+  "order": 18,
+  "minutes": 12,
+  "prerequisites": ["java-8-11-features", "collections-overview"],
+  "terms": ["lazy-evaluation", "intermediate-operation", "terminal-operation", "stateful-operation", "short-circuit", "collector", "parallel-stream", "common-pool", "spliterator"],
+  "references": [
+    { "title": "Javadoc package java.util.stream (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/package-summary.html" },
+    { "title": "Javadoc Collectors (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/Collectors.html" },
+    { "title": "JEP 485: Stream Gatherers", "url": "https://openjdk.org/jeps/485" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào dùng parallel stream?\" Khi việc là CPU thuần trên dữ liệu trong bộ nhớ, đủ lớn (thường hàng trăm nghìn phần tử trở lên hoặc mỗi phần tử tốn nhiều CPU), nguồn chia đều được (`ArrayList`, mảng, `IntStream.range`), và không có side effect hay thứ tự phụ thuộc. Không dùng cho gọi HTTP hay DB: nó chạy trên [[common-pool|common pool]] dùng chung cả JVM. Chi tiết work-stealing và common pool ở bài ForkJoinPool." }
+  ]
+}

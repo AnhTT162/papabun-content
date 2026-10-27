@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "map-float-type",
+      "kind": "output",
+      "prompt": "Với Jackson 2 hoặc 3 cấu hình mặc định, đoạn code sau in ra gì?",
+      "code": "Map<?, ?> m = mapper.readValue(\"{\\\"total\\\":12.50}\", Map.class);\nSystem.out.println(m.get(\"total\").getClass().getSimpleName() + \" \" + m.get(\"total\"));",
+      "options": ["Double 12.5", "BigDecimal 12.50", "String 12.50", "Float 12.5"],
+      "answer": 0,
+      "explanation": "Không có kiểu đích, Jackson đọc số thập phân thành `Double`, mất số 0 cuối và có thể mất chính xác. Bật `USE_BIG_DECIMAL_FOR_FLOATS` thì ra `BigDecimal` `12.50`."
+    },
+    {
+      "id": "missing-vs-null",
+      "kind": "single",
+      "prompt": "Jackson 3, record `Req(long amount)`. JSON `{}` và JSON `{\"amount\": null}` cho kết quả gì?",
+      "options": ["`{}` ra amount 0; có `null` thì ném lỗi", "Cả hai đều ra amount 0", "Cả hai đều ném lỗi", "`{}` ném lỗi; có `null` thì ra 0"],
+      "answer": 0,
+      "explanation": "Trường vắng được truyền giá trị mặc định 0. `FAIL_ON_NULL_FOR_PRIMITIVES` bật mặc định ở Jackson 3 nên `null` tường minh cho primitive ném lỗi. Ở Jackson 2 cờ này tắt nên cả hai ra 0."
+    },
+    {
+      "id": "spring-vs-new-mapper",
+      "kind": "single",
+      "prompt": "Ứng dụng Spring Boot 3 parse JSON có trường lạ: controller nhận bình thường, nhưng một service tự `new ObjectMapper()` thì ném lỗi. Vì sao?",
+      "options": ["Mapper của Spring đã tắt `FAIL_ON_UNKNOWN_PROPERTIES`", "Controller dùng Jackson 3, service dùng Jackson 2", "`new ObjectMapper()` không thread-safe", "Controller bỏ qua JSON lỗi nhờ `@Valid`"],
+      "answer": 0,
+      "explanation": "Spring Boot cấu hình bean mapper (tắt lỗi trường lạ, ghi ngày ISO, đăng ký module). Mapper tự tạo mang mặc định của Jackson 2 nên ném `UnrecognizedPropertyException`. Inject mapper của Spring thay vì tự tạo."
+    },
+    {
+      "id": "safe-polymorphism",
+      "kind": "single",
+      "prompt": "API nhận nhiều loại thanh toán (`Card`, `Wallet`) trong cùng một trường. Cách deserialize an toàn là gì?",
+      "options": ["`@JsonTypeInfo(use = Id.NAME)` với lớp con khai báo sẵn", "`activateDefaultTyping` cho mọi `Object`", "`@JsonTypeInfo(use = Id.CLASS)` để client gửi tên class", "Đọc thành `Map` rồi `Class.forName` theo trường `type`"],
+      "answer": 0,
+      "explanation": "Tên logic với danh sách lớp con cố định chỉ cho khởi tạo đúng các class đó. Cho client chọn tên class (default typing, `Id.CLASS`, `Class.forName`) mở đường cho gadget và chạy code từ xa."
+    }
+  ]
+}

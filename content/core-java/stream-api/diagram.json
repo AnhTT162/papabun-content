@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Phần tử đi qua pipeline thế nào",
+  "nodes": [
+    { "id": "source", "label": "Nguồn\n[c, a, b]", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "filter", "label": "filter", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "map", "label": "map", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "sorted", "label": "sorted\n(stateful)", "kind": "queue", "x": 0.1, "y": 0.5 },
+    { "id": "terminal", "label": "findFirst", "kind": "client", "x": 0.1, "y": 0.95 },
+    { "id": "result", "label": "Kết quả", "kind": "generic", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "source-filter", "from": "source", "to": "filter", "label": "từng phần tử" },
+    { "id": "filter-map", "from": "filter", "to": "map", "label": "qua lọc" },
+    { "id": "map-sorted", "from": "map", "to": "sorted", "label": "gom vào buffer" },
+    { "id": "sorted-terminal", "from": "sorted", "to": "terminal", "label": "sau khi đủ" },
+    { "id": "terminal-result", "from": "terminal", "to": "result", "label": "dừng sớm" }
+  ],
+  "steps": [
+    { "caption": "Gọi filter, map, sorted chỉ dựng pipeline; chưa phần tử nào chạy. Không có thao tác kết thúc thì không gì xảy ra.", "show": ["source", "filter", "map", "sorted"], "highlight": [] },
+    { "caption": "findFirst kích hoạt pipeline: từng phần tử đi qua filter rồi map ngay, không có bước lọc cả nguồn trước.", "show": ["terminal", "source-filter", "filter-map"], "highlight": ["source-filter", "filter-map"] },
+    { "caption": "sorted là thao tác stateful: nó phải nhận mọi phần tử vào buffer rồi mới sắp xếp được, nên mọi phần tử đều qua filter và map.", "show": ["map-sorted"], "highlight": ["map-sorted", "sorted"] },
+    { "caption": "Sau khi sắp xếp, sorted đẩy phần tử nhỏ nhất xuống findFirst. Không có sorted thì findFirst đã dừng ở phần tử đầu tiên qua lọc.", "show": ["sorted-terminal"], "highlight": ["sorted-terminal"] },
+    { "caption": "findFirst short-circuit: nhận một phần tử là trả kết quả, phần còn lại trong buffer bị bỏ. Stream đã dùng không chạy lại được.", "show": ["result", "terminal-result"], "highlight": ["terminal-result"] }
+  ]
+}

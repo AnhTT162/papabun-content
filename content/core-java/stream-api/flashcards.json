@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "lazy", "front": "Stream không có thao tác kết thúc thì sao?", "back": "Không chạy gì cả: thao tác trung gian chỉ dựng pipeline." },
+    { "id": "per-element", "front": "`filter(...).map(...).findFirst()` chạy theo thứ tự nào?", "back": "Từng phần tử đi qua cả pipeline; phần tử đầu tiên qua lọc được map rồi trả về, phần còn lại không bị xét." },
+    { "id": "stateful", "front": "Vì sao `sorted` làm mất tính lười?", "back": "Nó là thao tác stateful: phải nhận hết phần tử vào buffer mới sắp xếp được. Trên stream vô hạn nó chạy tới `OutOfMemoryError`." },
+    { "id": "tomap-dup", "front": "`Collectors.toMap` gặp key trùng thì sao?", "back": "Ném `IllegalStateException: Duplicate key`; truyền hàm gộp, ví dụ `Long::sum`." },
+    { "id": "tolist-diff", "front": "`Stream.toList()` khác `Collectors.toList()` thế nào?", "back": "`toList()` (Java 16) trả list bất biến; `Collectors.toList()` trả list sửa được (thực tế là `ArrayList`)." },
+    { "id": "reuse", "front": "Gọi thao tác kết thúc lần hai trên cùng stream thì sao?", "back": "Ném `IllegalStateException: stream has already been operated upon or closed`." },
+    { "id": "parallel-side-effect", "front": "Vì sao `parallel().forEach(list::add)` sai?", "back": "Nhiều thread cùng ghi vào `ArrayList` không thread-safe: mất phần tử hoặc ném lỗi. Dùng collector." },
+    { "id": "reduce-identity", "front": "`parallel().reduce(10, Integer::sum)` sai ở đâu?", "back": "Identity phải trung lập (0 cho cộng); song song cộng identity cho mỗi phần chia nên ra kết quả lớn hơn." }
+  ]
+}

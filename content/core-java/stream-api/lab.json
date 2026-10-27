@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Báo cáo thiếu đơn ngẫu nhiên sau khi thêm parallel",
+  "context": "Job đối soát cuối ngày gom mã đơn hợp lệ vào một list rồi gửi sang hệ thống kế toán. Để chạy nhanh hơn, một dev thêm `.parallel()`. Từ đó số đơn mỗi lần chạy lại khác nhau và thấp hơn thực tế, có đêm job chết với ngoại lệ lạ.",
+  "buggyCode": "List<Integer> validIds = new ArrayList<>();\n\nIntStream.range(0, 100_000)\n    .parallel()\n    .filter(id -> isValid(id))   // mọi id đều hợp lệ trong mô phỏng\n    .forEach(validIds::add);\n\nSystem.out.println(\"size=\" + validIds.size());",
+  "symptom": {
+    "description": "Chạy 5 lần trên JDK 27, máy 10 core: kết quả mỗi lần một khác, có lần ném lỗi từ bên trong `ArrayList`.",
+    "output": "size=17219\nsize=8316\nsize=10282\njava.lang.ArrayIndexOutOfBoundsException: Index 16499 out of bounds for length 14053\n\tat java.base/java.util.ArrayList.add(ArrayList.java:485)"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "Nhiều worker cùng `add` vào `ArrayList` không thread-safe",
+      "`filter` có side effect nên làm rơi phần tử khi song song",
+      "`IntStream.range` chia không đều nên một phần bị mất",
+      "`parallel()` đổi thứ tự nên một số phần tử bị trùng đè"
+    ],
+    "answer": 0,
+    "explanation": "`forEach` chạy lambda trên nhiều thread của common pool cùng lúc. `ArrayList.add` đọc `size`, ghi phần tử, tăng `size` mà không khoá: hai thread ghi đè cùng ô làm mất phần tử, hoặc một thread ghi vào mảng cũ trong lúc thread khác đang tăng kích thước nên vượt chỉ số. Stream không bỏ phần tử nào và `range` chia rất đều."
+  },
+  "fix": {
+    "code": "List<Integer> validIds = IntStream.range(0, 100_000)\n    .parallel()\n    .filter(id -> isValid(id))\n    .boxed()\n    .toList(); // stream tự gom từng phần rồi ghép lại, giữ thứ tự gặp",
+    "explanation": "Để stream tự gom kết quả: mỗi worker có kết quả riêng, cuối cùng được ghép, nên luôn đủ 100.000 (đã chạy). Không bao giờ ghi ra biến dùng chung từ `forEach` của parallel stream. Với job I/O-bound (gọi DB, HTTP để kiểm `isValid`), parallel stream cũng sai công cụ; dùng executor riêng có giới hạn."
+  }
+}

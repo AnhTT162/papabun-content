@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pipeline-order",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Stream.of(\"a\", \"b\", \"c\")\n    .filter(s -> { System.out.println(\"filter \" + s); return true; })\n    .map(s -> { System.out.println(\"map \" + s); return s.toUpperCase(); })\n    .findFirst()\n    .ifPresent(System.out::println);",
+      "options": ["filter a / map a / A", "filter a / filter b / filter c / map a / A", "filter a / filter b / filter c / map a / map b / map c / A", "A"],
+      "answer": 0,
+      "explanation": "Phần tử đi qua cả pipeline lần lượt, và `findFirst` dừng ngay khi có kết quả, nên `b` và `c` không bao giờ được xét."
+    },
+    {
+      "id": "peek-count",
+      "kind": "output",
+      "prompt": "Trên Java 9 trở lên, đoạn code sau in ra gì?",
+      "code": "long n = Stream.of(1, 2, 3)\n    .peek(x -> System.out.println(\"peek \" + x))\n    .count();\nSystem.out.println(\"count=\" + n);",
+      "options": ["count=3", "peek 1 / peek 2 / peek 3 / count=3", "peek 1 / count=3", "count=0"],
+      "answer": 0,
+      "explanation": "Từ Java 9, `count()` biết trước kích thước nguồn và không có thao tác nào làm đổi số phần tử, nên bỏ qua pipeline; `peek` không chạy. Đó là lý do không đặt logic trong `peek`."
+    },
+    {
+      "id": "parallel-reduce",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì (máy nhiều core)?",
+      "code": "System.out.println(Stream.of(1, 2, 3, 4).reduce(10, Integer::sum));\nSystem.out.println(Stream.of(1, 2, 3, 4).parallel().reduce(10, Integer::sum));",
+      "options": ["20 / 50", "20 / 20", "10 / 10", "20 / 30"],
+      "answer": 0,
+      "explanation": "Tuần tự: 10 + 1 + 2 + 3 + 4 = 20. Song song: mỗi phần (ở đây bốn phần) bắt đầu từ identity 10 rồi ghép lại, ra 50. Identity phải là phần tử trung lập."
+    },
+    {
+      "id": "groupingby-order",
+      "kind": "single",
+      "prompt": "Cần tổng tiền theo khách hàng, in ra theo thứ tự tên. Collector nào đúng?",
+      "options": ["`groupingBy(Order::customer, TreeMap::new, summingLong(...))`", "`groupingBy(Order::customer, summingLong(...))` rồi `sorted()`", "`toMap(Order::customer, Order::amount)`", "`toMap(Order::customer, Order::amount, Long::sum)`"],
+      "answer": 0,
+      "explanation": "`groupingBy` mặc định trả `HashMap` không có thứ tự; truyền `TreeMap::new` để có thứ tự theo key. `sorted()` không áp dụng được cho map kết quả, và `toMap` có hàm gộp vẫn trả `HashMap` không thứ tự."
+    }
+  ]
+}

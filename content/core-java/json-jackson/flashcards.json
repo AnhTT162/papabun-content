@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "unknown-default", "front": "Gặp trường lạ trong JSON, Jackson 2 và Jackson 3 làm gì?", "back": "Jackson 2 ném `UnrecognizedPropertyException`; Jackson 3 bỏ qua. Spring Boot cấu hình Jackson 2 để bỏ qua." },
+    { "id": "missing-primitive", "front": "Trường `long amount` không có trong JSON thì nhận giá trị gì?", "back": "0, không lỗi. Dùng `Long` + `@NotNull` hoặc `FAIL_ON_MISSING_CREATOR_PROPERTIES` để bắt." },
+    { "id": "instant-j2", "front": "Jackson 2 serialize `Instant` không cấu hình gì thì sao?", "back": "Ném lỗi, cần module `jackson-datatype-jsr310`; có module thì mặc định ra số giây, tắt `WRITE_DATES_AS_TIMESTAMPS` mới ra ISO." },
+    { "id": "float-map", "front": "Đọc `{\"total\": 12.50}` vào `Map` thì `total` có kiểu gì?", "back": "`Double` (12.5). Bật `USE_BIG_DECIMAL_FOR_FLOATS` hoặc dùng field `BigDecimal`." },
+    { "id": "bigdecimal-plain", "front": "Vì sao JSON có thể chứa `1E+2` cho tiền?", "back": "Jackson ghi `BigDecimal` bằng `toString()`; bật `WRITE_BIGDECIMAL_AS_PLAIN`." },
+    { "id": "shared-mapper", "front": "Vì sao không tạo `ObjectMapper` mới mỗi request?", "back": "Mapper cache serializer theo class; tạo mới mất cache và chậm hàng trăm lần. Mapper đã cấu hình là thread-safe." },
+    { "id": "default-typing", "front": "Vì sao không bật default typing cho JSON từ bên ngoài?", "back": "JSON được chọn class để khởi tạo; class gadget trên classpath có thể dẫn tới chạy code từ xa." },
+    { "id": "jackson3-exception", "front": "Exception của Jackson 3 khác Jackson 2 thế nào?", "back": "`JacksonException` là unchecked (kế thừa `RuntimeException`); Jackson 2 dùng `JsonProcessingException` checked." }
+  ]
+}

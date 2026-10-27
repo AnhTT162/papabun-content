@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "json-jackson",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "JSON & Jackson",
+  "summary": "Jackson 2 và 3 khác nhau ở mặc định nào (trường lạ, ngày giờ, exception), trường thiếu thành 0 im lặng, `BigDecimal` và số lớn, record, polymorphic type an toàn, và vì sao phải dùng chung một `ObjectMapper` đã cấu hình.",
+  "level": "mid",
+  "order": 19,
+  "minutes": 12,
+  "prerequisites": ["immutability-records", "bigdecimal-money"],
+  "terms": ["object-mapper", "polymorphic-deserialization", "breaking-change", "record-class", "default-typing"],
+  "references": [
+    { "title": "Jackson 3.0 release notes", "url": "https://github.com/FasterXML/jackson/wiki/Jackson-Release-3.0" },
+    { "title": "Jackson databind: DeserializationFeature", "url": "https://github.com/FasterXML/jackson-databind/wiki/Deserialization-Features" },
+    { "title": "Jackson docs: Polymorphic Deserialization", "url": "https://github.com/FasterXML/jackson-docs/wiki/JacksonPolymorphicDeserialization" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bật `FAIL_ON_UNKNOWN_PROPERTIES` hay tắt?\" **Client đọc response** nên bỏ qua trường lạ, để server thêm trường mà không làm hỏng client (tolerant reader). **Server nhận request** thì tuỳ hợp đồng: bỏ qua trường lạ cũng nuốt luôn lỗi gõ sai tên, nên phải bắt **trường bắt buộc bị thiếu** bằng validation (`@NotNull`, kiểu wrapper, `FAIL_ON_MISSING_CREATOR_PROPERTIES`). Thêm giá trị enum mới vẫn là thay đổi phá vỡ với client cũ (bài Thiết kế REST API)." },
+    { "type": "callout", "style": "warning", "markdown": "Không bật [[default-typing|default typing]] toàn cục (`activateDefaultTyping`, hay `enableDefaultTyping` cũ) cho dữ liệu từ bên ngoài: JSON được chọn class để khởi tạo, và một class \"gadget\" trên classpath có thể dẫn tới chạy code từ xa. Hàng chục CVE của Jackson 2.x thuộc dạng này. Dùng `@JsonTypeInfo(use = Id.NAME)` với danh sách lớp con khai báo sẵn; chi tiết ở bài Serialization & lỗ hổng deserialization." }
+  ]
+}

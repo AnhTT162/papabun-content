@@ -693,7 +693,7 @@
       "meaning": "`ForkJoinPool.commonPool()`: pool dùng chung cho cả JVM, khoảng số core − 1 thread, chạy parallel stream và `CompletableFuture.*Async` khi không truyền executor.",
       "example": "Máy 8 core: common pool có 7 thread dùng chung cho mọi parallel stream.",
       "related": ["thread-pool"],
-      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion"]
+      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion", "stream-api"]
     },
     {
       "id": "completion-exception",
@@ -3869,7 +3869,7 @@
       "meaning": "Stream chạy song song (`parallelStream()` hoặc `.parallel()`): nguồn được chia bằng spliterator, các phần chạy trên common pool của `ForkJoinPool` rồi được ghép lại.",
       "example": "`IntStream.range(0, n).parallel().map(this::cost).sum()` chia dãy thành các đoạn cho từng worker, kể cả thread gọi.",
       "related": ["common-pool", "spliterator", "work-stealing"],
-      "topics": ["forkjoin"]
+      "topics": ["forkjoin", "stream-api"]
     },
     {
       "id": "spliterator",
@@ -3877,7 +3877,7 @@
       "meaning": "Iterator có thể tự tách đôi (`trySplit`), là cách stream chia nguồn dữ liệu thành các phần cho parallel stream. Nguồn chia đều và rẻ thì song song hiệu quả.",
       "example": "Spliterator của `ArrayList` tách đôi theo chỉ số trong O(1); của `LinkedList` phải duyệt và chép từng lô ra mảng.",
       "related": ["parallel-stream"],
-      "topics": ["forkjoin"]
+      "topics": ["forkjoin", "stream-api"]
     },
     {
       "id": "mono",
@@ -6893,7 +6893,7 @@
       "meaning": "Thay đổi API làm client đang chạy hỏng mà không đổi code của họ: xoá hay đổi tên trường, đổi kiểu, thêm tham số bắt buộc, siết validate, đổi status code, thêm giá trị enum trong response.",
       "example": "Thêm trạng thái `PARTIALLY_REFUNDED`: client Java có enum ba giá trị ném `InvalidFormatException` khi đọc cả trang lịch sử đơn.",
       "related": ["api-versioning", "tolerant-reader"],
-      "topics": ["rest-api-design"]
+      "topics": ["rest-api-design", "json-jackson"]
     },
     {
       "id": "api-versioning",
@@ -7605,7 +7605,7 @@
       "meaning": "Class dữ liệu (Java 16): khai báo các component, compiler sinh field `private final`, constructor, accessor, `equals`, `hashCode`, `toString`. Luôn `final` và chỉ bất biến nông.",
       "example": "`record Money(BigDecimal amount, Currency currency) {}`.",
       "related": ["compact-constructor", "immutable", "value-object"],
-      "topics": ["immutability-records", "java-17-21-features"]
+      "topics": ["immutability-records", "java-17-21-features", "json-jackson"]
     },
     {
       "id": "compact-constructor",
@@ -7702,6 +7702,78 @@
       "example": "Thư viện cũ gọi `setAccessible(true)` trên `ArrayList.elementData` hỏng khi nâng lên Java 17.",
       "related": ["jpms"],
       "topics": ["java-17-21-features"]
+    },
+    {
+      "id": "lazy-evaluation",
+      "term": "Lazy evaluation",
+      "meaning": "Tính toán lười: phép xử lý chỉ chạy khi kết quả thật sự được cần. Stream chỉ chạy khi có thao tác kết thúc, và xử lý từng phần tử qua cả pipeline.",
+      "example": "`stream.filter(...).map(...)` không làm gì cho tới khi gọi `toList()`.",
+      "related": ["intermediate-operation", "terminal-operation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "intermediate-operation",
+      "term": "Intermediate operation",
+      "meaning": "Thao tác trung gian của stream (`filter`, `map`, `sorted`): trả về stream mới và chỉ dựng pipeline, chưa chạy.",
+      "example": "`orders.stream().filter(Order::isPaid)` chưa duyệt đơn nào.",
+      "related": ["terminal-operation", "lazy-evaluation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "terminal-operation",
+      "term": "Terminal operation",
+      "meaning": "Thao tác kết thúc của stream (`toList`, `count`, `forEach`, `findFirst`): kích hoạt pipeline và đóng stream; stream không dùng lại được.",
+      "example": "Gọi `count()` lần hai ném `IllegalStateException`.",
+      "related": ["intermediate-operation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "stateful-operation",
+      "term": "Stateful operation",
+      "meaning": "Thao tác trung gian phải nhớ trạng thái qua nhiều phần tử. `sorted` phải nhận hết phần tử nên chặn tính lười; `distinct` tuần tự vẫn lười nhưng giữ mọi phần tử đã gặp trong bộ nhớ.",
+      "example": "`Stream.iterate(1, x -> x + 1).sorted().findFirst()` chạy tới `OutOfMemoryError`.",
+      "related": ["intermediate-operation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "short-circuit",
+      "term": "Short-circuit",
+      "meaning": "Thao tác stream có thể dừng trước khi duyệt hết nguồn (`findFirst`, `anyMatch`, `limit`, `takeWhile`), nên dùng được với stream vô hạn.",
+      "example": "`Stream.iterate(1, x -> x * 2).limit(5)` ra `[1, 2, 4, 8, 16]`.",
+      "related": ["lazy-evaluation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "collector",
+      "term": "Collector",
+      "meaning": "Công thức gom phần tử stream thành kết quả (`toList`, `toMap`, `groupingBy`, `joining`), gồm tạo vùng chứa, thêm phần tử, ghép kết quả của các phần song song.",
+      "example": "`groupingBy(Order::customer, summingLong(Order::amount))`.",
+      "related": ["terminal-operation"],
+      "topics": ["stream-api"]
+    },
+    {
+      "id": "object-mapper",
+      "term": "ObjectMapper",
+      "meaning": "Class trung tâm của Jackson chuyển object Java sang JSON và ngược lại; thread-safe sau khi cấu hình và cache serializer theo class, nên dùng chung. Jackson 3 dùng `JsonMapper` bất biến tạo qua builder.",
+      "example": "Inject bean `ObjectMapper` của Spring thay vì `new ObjectMapper()` trong mỗi request.",
+      "related": ["polymorphic-deserialization"],
+      "topics": ["json-jackson"]
+    },
+    {
+      "id": "polymorphic-deserialization",
+      "term": "Polymorphic deserialization",
+      "meaning": "Đọc JSON vào kiểu cha mà chọn đúng lớp con, dựa trên một trường như `type`. An toàn khi dùng tên logic với danh sách lớp con cố định; nguy hiểm khi JSON được chọn tên class.",
+      "example": "`@JsonTypeInfo(use = Id.NAME, property = \"type\")` với `@JsonSubTypes({Card.class, Wallet.class})`.",
+      "related": ["object-mapper"],
+      "topics": ["json-jackson"]
+    },
+    {
+      "id": "default-typing",
+      "term": "Default typing",
+      "meaning": "Chế độ Jackson ghi tên class Java vào JSON và dùng nó để chọn class khi đọc, cho mọi field kiểu chung (`Object`). Với dữ liệu từ ngoài, nó cho kẻ tấn công chọn class để khởi tạo.",
+      "example": "`mapper.activateDefaultTyping(validator, DefaultTyping.NON_FINAL)`.",
+      "related": ["polymorphic-deserialization"],
+      "topics": ["json-jackson"]
     }
   ]
 }

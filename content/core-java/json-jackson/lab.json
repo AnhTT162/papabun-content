@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Chuyển khoản 0 đồng mà không có lỗi nào",
+  "context": "API chuyển khoản nội bộ nhận `TransferRequest` dạng record. Đối tác mới tích hợp gửi trường `amount_vnd` thay vì `amount` theo tài liệu cũ của họ. Mapper bỏ qua trường lạ (mặc định của Jackson 3, và của bean mapper Spring Boot với Jackson 2). Hệ thống ghi nhận hàng loạt lệnh chuyển 0 đồng, trạng thái thành công.",
+  "buggyCode": "public record TransferRequest(String toAccount, long amount) {}\n\nString body = \"{\\\"toAccount\\\":\\\"0123456789\\\",\\\"amount_vnd\\\":5000000}\";\nJsonMapper mapper = JsonMapper.builder().build();\nSystem.out.println(mapper.readValue(body, TransferRequest.class));",
+  "symptom": {
+    "description": "Chạy với Jackson 3.2.4 trên JDK 27: không có exception, request được chấp nhận với số tiền 0.",
+    "output": "TransferRequest[toAccount=0123456789, amount=0]"
+  },
+  "diagnosis": {
+    "question": "Vì sao `amount` thành 0 mà không có lỗi?",
+    "options": [
+      "Trường lạ bị bỏ qua, trường thiếu nhận mặc định 0",
+      "`FAIL_ON_NULL_FOR_PRIMITIVES` tắt nên `null` thành 0",
+      "Thiếu `@JsonProperty` nên Jackson không gán được field",
+      "Record không có setter nên Jackson bỏ qua mọi field"
+    ],
+    "answer": 0,
+    "explanation": "Jackson 3 mặc định không ném lỗi với trường lạ, nên `amount_vnd` bị bỏ qua. `amount` không có trong JSON (khác với có mà bằng `null`), nên Jackson truyền giá trị mặc định của `long` là 0 vào canonical constructor. `FAIL_ON_NULL_FOR_PRIMITIVES` thực ra bật mặc định ở Jackson 3 nhưng chỉ áp dụng khi JSON ghi rõ `null`. Record được gán qua canonical constructor theo tên component, không cần setter hay `@JsonProperty` (field `toAccount` vẫn được gán đúng)."
+  },
+  "fix": {
+    "code": "public record TransferRequest(\n        @NotBlank String toAccount,\n        @NotNull @Positive Long amount) {}\n\n// hoặc chặn ở mapper cho mọi record/constructor:\nJsonMapper mapper = JsonMapper.builder()\n    .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)\n    .build();\n// MismatchedInputException: Missing creator property 'amount' (index 1)",
+    "explanation": "Dùng kiểu wrapper để \"thiếu\" thành `null`, rồi validate bằng `@Valid` + `@NotNull @Positive`, nên request sai trả 400. `FAIL_ON_MISSING_CREATOR_PROPERTIES` ném lỗi khi thiếu tham số constructor (đã chạy). Bật lại `FAIL_ON_UNKNOWN_PROPERTIES` cũng bắt được lỗi này nhưng làm hỏng khả năng client gửi thêm trường mới; với API nội bộ giữa các team, có thể chấp nhận. `FAIL_ON_MISSING_CREATOR_PROPERTIES` cũng cấm mọi trường tuỳ chọn được vắng, nên chỉ hợp với DTO mà mọi trường đều bắt buộc."
+  }
+}
