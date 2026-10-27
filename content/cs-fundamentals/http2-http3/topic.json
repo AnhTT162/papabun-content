@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "http2-http3",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "HTTP/1.1, HTTP/2 & HTTP/3",
+  "summary": "HTTP/1.1 với keep-alive và giới hạn một request mỗi kết nối; HTTP/2 với frame, stream, multiplexing, HPACK và head-of-line blocking dời xuống TCP; HTTP/3 trên QUIC, 0-RTT và đổi mạng không mất kết nối; ảnh hưởng tới connection pool, cân bằng tải, Java HttpClient và Spring Boot.",
+  "level": "mid",
+  "order": 11,
+  "minutes": 13,
+  "prerequisites": ["tcp-deep", "tls-https"],
+  "terms": ["keep-alive", "multiplexing", "http2-stream", "hpack", "head-of-line-blocking", "quic", "connection-migration", "alt-svc", "alpn", "zero-rtt", "grpc", "connection-pool"],
+  "references": [
+    { "title": "RFC 9113: HTTP/2", "url": "https://www.rfc-editor.org/rfc/rfc9113.html" },
+    { "title": "RFC 9114: HTTP/3", "url": "https://www.rfc-editor.org/rfc/rfc9114.html" },
+    { "title": "RFC 9000: QUIC", "url": "https://www.rfc-editor.org/rfc/rfc9000.html" },
+    { "title": "JEP 517: HTTP/3 for the HTTP Client API", "url": "https://openjdk.org/jeps/517" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"HTTP/2 đã multiplexing rồi, sao vẫn có head-of-line blocking?\" HTTP/2 giải quyết việc request sau phải chờ response trước ở tầng HTTP, nhưng mọi stream vẫn đi chung một kết nối TCP. TCP giao byte theo đúng thứ tự, nên mất một gói là mọi stream phải chờ gói đó được gửi lại, kể cả stream không liên quan. Trên mạng di động mất gói 1–2%, HTTP/2 có thể chậm hơn sáu kết nối HTTP/1.1 song song. HTTP/3 đưa stream xuống QUIC trên UDP, mỗi stream có thứ tự riêng, nên mất gói chỉ chặn stream chứa gói đó." },
+    { "type": "callout", "style": "warning", "markdown": "Bật HTTP/2 hay gRPC sau load balancer L4 (Kubernetes Service thường, NLB) thì mọi request của một client đi trên một kết nối, rơi vào đúng một pod; scale thêm pod không chia được tải. Dùng load balancer L7 hiểu HTTP/2 (Envoy, ALB, service mesh), client-side load balancing, hoặc giới hạn tuổi kết nối để client mở lại định kỳ (bài Load balancing, bài Giao tiếp giữa service)." }
+  ]
+}

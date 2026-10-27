@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "httpclient-version-output",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27, `www.google.com` hỗ trợ cả HTTP/2 và HTTP/3. Chương trình in ra gì?",
+      "code": "HttpClient client = HttpClient.newHttpClient();\nSystem.out.println(client.version());\nHttpResponse<Void> response = client.send(\n        HttpRequest.newBuilder(URI.create(\"https://www.google.com/\")).build(),\n        HttpResponse.BodyHandlers.discarding());\nSystem.out.println(response.version());",
+      "options": [
+        "HTTP_2 / HTTP_2",
+        "HTTP_1_1 / HTTP_2",
+        "HTTP_3 / HTTP_3",
+        "HTTP_2 / HTTP_3"
+      ],
+      "answer": 0,
+      "explanation": "`newHttpClient()` mặc định ưu tiên HTTP/2 và chọn giao thức bằng ALPN trong TLS handshake; server hỗ trợ `h2` nên response là `HTTP_2`. HTTP/3 (JDK 26+) chỉ được thử khi đặt `version(HTTP_3)` trên client hoặc request. (Đã chạy trên JDK 27.)"
+    },
+    {
+      "id": "h2-lossy-network",
+      "kind": "single",
+      "prompt": "App di động chuyển API từ HTTP/1.1 (6 kết nối) sang HTTP/2 (1 kết nối). Trên Wi-Fi tốt, p50 giảm. Trên mạng 4G yếu mất gói khoảng 2%, p95 lại tăng. Giải thích hợp lý nhất?",
+      "options": [
+        "Mất một gói TCP làm mọi stream trên kết nối phải chờ",
+        "HPACK tốn CPU giải nén trên điện thoại cấu hình thấp",
+        "HTTP/2 bắt buộc TLS 1.3 nên handshake lâu hơn trên 4G",
+        "Server giới hạn 100 stream nên request phải xếp hàng"
+      ],
+      "answer": 0,
+      "explanation": "Với sáu kết nối, mất gói chỉ làm chậm một kết nối; với HTTP/2, cả chục request đang bay trên một kết nối TCP cùng chờ gói bị mất được gửi lại. Đây là head-of-line blocking ở tầng TCP mà HTTP/3 giải quyết. HPACK rất rẻ; HTTP/2 không bắt buộc TLS 1.3; app di động hiếm khi có tới 100 request đồng thời."
+    },
+    {
+      "id": "grpc-one-pod",
+      "kind": "single",
+      "prompt": "Service A gọi service B bằng gRPC qua Kubernetes Service (ClusterIP). Scale B từ 2 lên 8 pod nhưng 2 pod cũ vẫn chịu gần hết tải, 6 pod mới gần như rảnh. Nguyên nhân?",
+      "options": [
+        "Kết nối HTTP/2 dài đã mở tới pod cũ, Service chia theo kết nối",
+        "Readiness probe của 6 pod mới chưa thành công nên chưa nhận tải",
+        "kube-proxy dùng round robin theo request nhưng có độ trễ cập nhật",
+        "Client gRPC cache IP của 2 pod cũ từ lần phân giải DNS đầu"
+      ],
+      "answer": 0,
+      "explanation": "ClusterIP là cân bằng L4: chọn pod khi mở kết nối. gRPC trên HTTP/2 mở vài kết nối rồi gửi mọi request qua đó mãi, nên pod mới không nhận được gì cho tới khi kết nối cũ đóng. Sửa bằng cân bằng L7 (Envoy, service mesh), client-side load balancing của gRPC với headless Service, hoặc giới hạn tuổi kết nối (`GOAWAY` định kỳ). Pod chưa ready thì không có trong danh sách endpoint, nên không phải trường hợp \"gần như rảnh\" sau khi đã ready. Client gRPC phân giải tên Service ra một ClusterIP duy nhất, không phải IP của từng pod, nên cache DNS không phải nguyên nhân."
+    },
+    {
+      "id": "server-push-replacement",
+      "kind": "single",
+      "prompt": "Đội frontend muốn dùng HTTP/2 server push để đẩy file CSS chính sớm hơn. Bạn khuyên gì?",
+      "options": [
+        "Dùng `103 Early Hints` hoặc `preload`; push đã bị Chrome gỡ",
+        "Bật server push trên Nginx vì mọi trình duyệt hiện đều hỗ trợ",
+        "Chuyển sang HTTP/3 vì server push chỉ chạy được qua QUIC",
+        "Gộp CSS vào HTML là cách duy nhất để tải sớm tài nguyên"
+      ],
+      "answer": 0,
+      "explanation": "Server push hay đẩy thứ trình duyệt đã có trong cache nên phí băng thông; Chrome gỡ nó năm 2022. `103 Early Hints` cho server gửi trước header `Link: rel=preload` khi còn đang tạo response, để trình duyệt tự tải song song và vẫn dùng cache của nó. Gộp CSS vào HTML là một cách cho CSS quan trọng, nhưng không phải duy nhất và mất khả năng cache riêng."
+    },
+    {
+      "id": "h3-corporate",
+      "kind": "single",
+      "prompt": "Sau khi CDN bật HTTP/3, đa số người dùng nhanh hơn, nhưng nhân viên trong mạng công ty vẫn chỉ dùng HTTP/2. Vì sao?",
+      "options": [
+        "Firewall công ty chặn UDP 443, trình duyệt lùi về TCP",
+        "HTTP/3 chỉ dùng được với trình duyệt trên điện thoại",
+        "Mạng công ty dùng IPv4, còn HTTP/3 cần có IPv6",
+        "`Alt-Svc` chỉ được gửi cho trình duyệt ngoài mạng nội bộ"
+      ],
+      "answer": 0,
+      "explanation": "QUIC chạy trên UDP; nhiều firewall doanh nghiệp chỉ mở TCP 443 hoặc ép mọi thứ qua proxy HTTP, nên trình duyệt thử QUIC không được và dùng HTTP/2 qua TCP. Đó là hành vi thiết kế, không phải lỗi: HTTP/3 luôn cần đường lùi. HTTP/3 chạy trên cả desktop lẫn IPv4. CDN gửi `Alt-Svc` như nhau cho mọi client; nó không biết người dùng ở mạng nào."
+    }
+  ]
+}

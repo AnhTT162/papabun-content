@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "default-protocols-output",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27 không cấu hình gì thêm, chương trình in ra gì?",
+      "code": "SSLParameters params = SSLContext.getDefault().getDefaultSSLParameters();\nSystem.out.println(String.join(\",\", params.getProtocols()));",
+      "options": [
+        "TLSv1.3,TLSv1.2",
+        "TLSv1.3,TLSv1.2,TLSv1.1,TLSv1",
+        "TLSv1.2",
+        "TLSv1.3"
+      ],
+      "answer": 0,
+      "explanation": "JDK 11 thêm TLS 1.3; từ JDK 16 (backport 11.0.11, 8u291) TLS 1.0 và 1.1 bị đưa vào `jdk.tls.disabledAlgorithms` nên không còn trong danh sách mặc định. Server chỉ nói TLS 1.1 sẽ nhận lỗi `The server selected protocol version TLS11 is not accepted by client preferences [TLS13, TLS12]`. (Đã chạy trên JDK 27.)"
+    },
+    {
+      "id": "error-to-cause",
+      "kind": "single",
+      "prompt": "Service Java gọi `https://orders` trong cluster và nhận `SSLHandshakeException: No subject alternative DNS name matching orders found`. Chứng chỉ của server cấp cho `orders.prod.svc.cluster.local`. Nguyên nhân?",
+      "options": [
+        "Tên client gọi không nằm trong SAN của chứng chỉ server",
+        "Chứng chỉ server hết hạn nên Java bỏ qua phần SAN",
+        "Truststore của client thiếu root CA của cluster",
+        "Server không gửi intermediate CA nên SAN không đọc được"
+      ],
+      "answer": 0,
+      "explanation": "Client kiểm tên miền nó dùng để gọi (`orders`) có nằm trong SAN của chứng chỉ không; chứng chỉ chỉ có tên đầy đủ nên không khớp. Gọi bằng tên đầy đủ, hoặc cấp chứng chỉ có thêm các tên ngắn. Hết hạn báo `CertificateExpiredException`; thiếu root hay intermediate báo `PKIX path building failed`."
+    },
+    {
+      "id": "browser-ok-java-pkix",
+      "kind": "single",
+      "prompt": "Trang `https://api.partner.example` mở bình thường trên Chrome, nhưng Java và `curl` đều báo lỗi xác thực chứng chỉ. `openssl s_client -showcerts` chỉ in một chứng chỉ ở depth 0. Sửa ở đâu?",
+      "options": [
+        "Server của đối tác phải gửi fullchain kèm intermediate",
+        "Nâng JDK để truststore có thêm root CA mới nhất",
+        "Nhập chứng chỉ leaf của đối tác vào `cacerts` của JDK",
+        "Tắt kiểm tra hostname vì Chrome đã xác nhận chứng chỉ"
+      ],
+      "answer": 0,
+      "explanation": "Server chỉ gửi leaf; Chrome tự tải intermediate thiếu (AIA) nên che lỗi, còn Java và `curl` thì không. Root đã có sẵn, nên nâng JDK không giúp. Nhập leaf chỉ chạy tới lần đối tác cấp lại chứng chỉ, và sửa `cacerts` mất khi nâng JDK. Tắt kiểm tra hostname không liên quan tới chuỗi và làm yếu bảo mật."
+    },
+    {
+      "id": "zero-rtt-risk",
+      "kind": "single",
+      "prompt": "Đồng nghiệp muốn bật TLS 1.3 0-RTT trên CDN cho mọi request để giảm latency khi kết nối lại. Rủi ro chính là gì?",
+      "options": [
+        "Dữ liệu 0-RTT có thể bị phát lại, nguy hiểm với POST",
+        "0-RTT tắt mã hoá trong lần gửi đầu tiên của client",
+        "0-RTT bỏ qua kiểm tra chứng chỉ của server lần đó",
+        "0-RTT chỉ chạy được khi chứng chỉ server là RSA"
+      ],
+      "answer": 0,
+      "explanation": "Dữ liệu 0-RTT được mã hoá bằng khoá từ phiên trước, nhưng kẻ đứng giữa có thể ghi lại và gửi lại nó, và server không phân biệt được lần gửi lại với lần gốc. Với `GET` idempotent thì chấp nhận được; với `POST` tạo đơn hay chuyển tiền thì có thể làm hai lần. Vì vậy CDN thường chỉ cho 0-RTT với method an toàn, và JSSE của JDK không hỗ trợ 0-RTT."
+    },
+    {
+      "id": "add-internal-ca",
+      "kind": "single",
+      "prompt": "Service cần gọi một API nội bộ dùng chứng chỉ do CA riêng của công ty cấp, đồng thời vẫn gọi các API công khai. Yêu cầu bảo mật: chỉ client gọi API nội bộ được tin CA nội bộ. Cách cấu hình nào đúng?",
+      "options": [
+        "SSL bundle riêng chứa CA nội bộ, gắn cho client gọi API nội bộ",
+        "`-Djavax.net.ssl.trustStore` trỏ tới file chỉ chứa CA nội bộ",
+        "Thêm CA nội bộ vào `cacerts` trong image JDK của Dockerfile",
+        "Dùng `TrustManager` chấp nhận mọi chứng chỉ cho API nội bộ"
+      ],
+      "answer": 0,
+      "explanation": "Bundle riêng chỉ ảnh hưởng client được gắn nó, các client khác vẫn dùng `cacerts` cho API công khai. Đặt `javax.net.ssl.trustStore` thay thế toàn bộ truststore mặc định, nên mọi API công khai sẽ lỗi PKIX. Thêm CA vào `cacerts` trong Dockerfile chạy được và lặp lại được mỗi lần build, nhưng làm mọi kết nối của JVM tin CA nội bộ, trái yêu cầu. Tin mọi chứng chỉ thì không còn xác thực server."
+    }
+  ]
+}

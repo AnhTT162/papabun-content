@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Tải 30 tài nguyên qua ba phiên bản HTTP",
+  "nodes": [
+    { "id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "h1", "label": "6 kết nối HTTP/1.1", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "h2", "label": "1 kết nối HTTP/2", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "h3", "label": "QUIC trên UDP", "kind": "generic", "x": 0.85, "y": 0.95 },
+    { "id": "server", "label": "Server", "kind": "service", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "browser-h1", "from": "browser", "to": "h1", "label": "mỗi lúc 1 request" },
+    { "id": "browser-h2", "from": "browser", "to": "h2", "label": "30 stream đan xen" },
+    { "id": "browser-h3", "from": "browser", "to": "h3", "label": "stream độc lập" },
+    { "id": "h2-server", "from": "h2", "to": "server", "label": "mất 1 gói: chờ hết" },
+    { "id": "h3-server", "from": "h3", "to": "server", "label": "mất 1 gói: 1 stream" }
+  ],
+  "steps": [
+    { "caption": "HTTP/1.1: mỗi kết nối chỉ chạy một request mỗi lúc, nên trình duyệt mở 6 kết nối, mỗi cái một lần handshake TCP và TLS.", "show": ["browser", "h1", "browser-h1"], "highlight": ["browser-h1"] },
+    { "caption": "HTTP/2: một kết nối, 30 request là 30 stream; frame của chúng đan xen, header được nén bằng HPACK.", "show": ["h2", "browser-h2"], "highlight": ["browser-h2"] },
+    { "caption": "Nhưng mọi stream chung một dòng byte TCP: mất một gói thì cả 30 stream chờ gói đó được gửi lại.", "show": ["server", "h2-server"], "highlight": ["h2-server"] },
+    { "caption": "HTTP/3: QUIC trên UDP, TLS 1.3 gộp vào handshake, mỗi stream có thứ tự riêng.", "show": ["h3", "browser-h3"], "highlight": ["browser-h3"] },
+    { "caption": "Mất một gói chỉ chặn stream chứa nó; đổi Wi-Fi sang 4G vẫn giữ kết nối nhờ connection ID.", "show": ["h3-server"], "highlight": ["h3-server"] },
+    { "caption": "Mạng chặn UDP 443 thì trình duyệt lùi về HTTP/2 qua TCP; server quảng bá HTTP/3 bằng Alt-Svc.", "show": [], "highlight": ["h2", "h3"] }
+  ]
+}

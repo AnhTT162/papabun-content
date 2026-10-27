@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "h1-one-at-a-time", "front": "Vì sao trình duyệt mở khoảng 6 kết nối tới mỗi host với HTTP/1.1?", "back": "Mỗi kết nối HTTP/1.1 chỉ chạy một request mỗi lúc (pipelining hầu như không dùng), nên muốn song song phải mở nhiều kết nối." },
+    { "id": "h2-stream", "front": "Stream trong HTTP/2 là gì?", "back": "Một cặp request–response có id riêng; frame của nhiều stream đan xen trên cùng một kết nối TCP." },
+    { "id": "hpack", "front": "HPACK giúp gì?", "back": "Nén header bằng bảng các header đã gửi, nên cookie và token lặp lại mỗi request chỉ tốn vài byte." },
+    { "id": "h2-hol", "front": "HTTP/2 còn head-of-line blocking ở đâu?", "back": "Ở TCP: mất một gói thì mọi stream trên kết nối chờ gửi lại, vì TCP giao byte đúng thứ tự." },
+    { "id": "quic-benefits", "front": "QUIC (HTTP/3) cải thiện gì so với TCP + TLS?", "back": "Handshake gộp còn 1 RTT (0-RTT khi kết nối lại), stream độc lập khi mất gói, và giữ kết nối khi đổi mạng nhờ connection ID." },
+    { "id": "alt-svc", "front": "Trình duyệt biết server hỗ trợ HTTP/3 bằng cách nào?", "back": "Qua header `Alt-Svc: h3=\":443\"` trong response HTTP/2 hoặc bản ghi DNS `HTTPS`; lần sau mới thử QUIC." },
+    { "id": "h2-l4-lb", "front": "Vì sao gRPC sau Kubernetes Service thường dồn tải vào một pod?", "back": "HTTP/2 gửi mọi request trên một kết nối dài, còn Service cân bằng theo kết nối (L4). Cần cân bằng L7 hoặc phía client." },
+    { "id": "goaway", "front": "Frame `GOAWAY` dùng để làm gì?", "back": "Server báo stream cuối cùng nó sẽ xử lý và yêu cầu client mở kết nối mới, để tắt máy hay chia lại tải mà không làm hỏng request đang bay." },
+    { "id": "java-http-version", "front": "`java.net.http.HttpClient` mặc định dùng phiên bản HTTP nào?", "back": "Ưu tiên HTTP/2 và lùi về HTTP/1.1 nếu server không hỗ trợ; HTTP/3 có từ JDK 26 (JEP 517) khi đặt `version(HTTP_3)`." }
+  ]
+}

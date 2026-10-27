@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "tls-https",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "TLS & HTTPS",
+  "summary": "TLS bảo vệ gì và handshake 1.2, 1.3 khác nhau ra sao; chuỗi chứng chỉ, SNI, ALPN, mTLS; truststore và keystore trong Java; đọc bốn lỗi handshake kinh điển, sự cố chứng chỉ hết hạn hay thiếu intermediate, và lộ trình rút ngắn thời hạn chứng chỉ.",
+  "level": "mid",
+  "order": 10,
+  "minutes": 15,
+  "prerequisites": ["http-request-lifecycle", "tcp-deep"],
+  "terms": ["tls-handshake", "certificate-chain", "sni", "alpn", "forward-secrecy", "zero-rtt", "truststore", "mtls", "hsts", "tls-termination", "rtt"],
+  "references": [
+    { "title": "RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3", "url": "https://www.rfc-editor.org/rfc/rfc8446.html" },
+    { "title": "Java SE 21: JSSE Reference Guide", "url": "https://docs.oracle.com/en/java/javase/21/security/java-secure-socket-extension-jsse-reference-guide.html" },
+    { "title": "Spring Boot Reference: SSL bundles", "url": "https://docs.spring.io/spring-boot/reference/features/ssl.html" },
+    { "title": "CA/Browser Forum: Baseline Requirements", "url": "https://cabforum.org/working-groups/server/baseline-requirements/requirements/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao để không bao giờ có sự cố chứng chỉ hết hạn?\" Tự động hoá việc cấp lại (ACME như Let's Encrypt, cert-manager trong Kubernetes, AWS Certificate Manager) thay vì nhắc lịch; giám sát ngày hết hạn từ phía ngoài (probe kết nối thật và đọc chứng chỉ server trả về, không chỉ đọc file) với cảnh báo ở 30 và 14 ngày; kiểm kê cả chứng chỉ ít ai nhớ: client certificate của mTLS, chứng chỉ trong truststore của đối tác, chứng chỉ ký JWT. Thời hạn tối đa của chứng chỉ công khai đang giảm theo lộ trình của CA/Browser Forum (200 ngày từ 3/2026, 100 ngày từ 3/2027, 47 ngày từ 3/2029), nên quy trình làm tay sẽ không theo kịp." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng sửa `PKIX path building failed` bằng một `TrustManager` chấp nhận mọi chứng chỉ hay `HostnameVerifier` luôn trả `true`. Đoạn code \"tạm thời\" đó tắt toàn bộ xác thực server: bất kỳ ai đứng giữa (Wi-Fi công cộng, proxy bị chiếm) đều đọc và sửa được dữ liệu, kể cả token. Tìm đúng chứng chỉ còn thiếu và thêm nó vào truststore riêng của ứng dụng." }
+  ]
+}

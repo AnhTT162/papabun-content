@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "tls-three-goals", "front": "TLS bảo vệ kết nối ở ba mặt nào?", "back": "Bí mật (mã hoá), toàn vẹn (không sửa được mà không bị phát hiện) và xác thực server qua chứng chỉ." },
+    { "id": "tls13-rtt", "front": "Handshake TLS 1.3 và TLS 1.2 tốn bao nhiêu RTT?", "back": "TLS 1.3 một RTT, TLS 1.2 hai RTT (chưa tính TCP handshake). Kết nối lại có thể dùng 0-RTT với rủi ro replay." },
+    { "id": "forward-secrecy", "front": "Forward secrecy nghĩa là gì?", "back": "Khoá phiên sinh bằng ECDHE tạm thời, nên lộ private key của server sau này không giải mã được các phiên đã ghi lại." },
+    { "id": "pkix-meaning", "front": "`PKIX path building failed` trong Java nghĩa là gì?", "back": "Java không dựng được chuỗi từ chứng chỉ server tới một root trong truststore: thường do server thiếu intermediate hoặc CA nội bộ chưa được tin." },
+    { "id": "browser-ok-java-fail", "front": "Vì sao Chrome mở được trang mà Java báo PKIX?", "back": "Server thiếu intermediate; Chrome tự tải qua AIA, Java mặc định không. Sửa server cho gửi fullchain." },
+    { "id": "san-not-cn", "front": "Tên miền phải nằm ở trường nào của chứng chỉ?", "back": "SAN (Subject Alternative Name). Trình duyệt bỏ qua CN; wildcard chỉ phủ một cấp." },
+    { "id": "truststore-vs-keystore", "front": "Truststore và keystore khác nhau thế nào?", "back": "Truststore chứa CA mình tin để xác thực bên kia; keystore chứa private key và chứng chỉ của chính mình." },
+    { "id": "trust-ca-not-leaf", "front": "Vì sao không nhập chứng chỉ leaf của đối tác vào truststore?", "back": "Leaf đổi mỗi lần cấp lại (vài tháng), nên sẽ hỏng lại. Tin CA phát hành thay vì leaf." },
+    { "id": "cert-lifetime", "front": "Thời hạn tối đa của chứng chỉ TLS công khai đang thay đổi thế nào?", "back": "Theo CA/Browser Forum: 200 ngày từ 3/2026, 100 ngày từ 3/2027, 47 ngày từ 3/2029. Phải tự động hoá việc cấp lại." }
+  ]
+}

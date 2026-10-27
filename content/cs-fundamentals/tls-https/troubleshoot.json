@@ -1,0 +1,131 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Sau khi đối tác đổi chứng chỉ, mọi lời gọi từ Java đều lỗi PKIX",
+  "symptom": "Sáng thứ Hai, 100% lời gọi từ payment-service tới API đối tác `api.partner.example` thất bại. Đối tác nói họ vừa cấp lại chứng chỉ cuối tuần, và mở `https://api.partner.example/health` trên Chrome vẫn thấy ổ khoá xanh.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "payment-service: Spring Boot 3.5, JDK 21, gọi đối tác bằng RestClient\n\n09:02:11.884 ERROR PartnerClient - charge failed\norg.springframework.web.client.ResourceAccessException: I/O error on POST request for \"https://api.partner.example/v2/charges\":\n  PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException:\n  unable to find valid certification path to requested target\nCaused by: javax.net.ssl.SSLHandshakeException: PKIX path building failed: ...\n\nTỉ lệ lỗi: 0% tới 23:40 Chủ Nhật, 100% từ 23:41.",
+      "evidenceFormat": "monospace",
+      "question": "Trình duyệt chạy được, Java thì không. Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Xem chuỗi server gửi bằng `openssl s_client`",
+          "quality": "good",
+          "feedback": "Đúng. PKIX nghĩa là Java không dựng được chuỗi tới root nó tin; cần thấy server đang gửi những chứng chỉ nào.",
+          "next": "chain"
+        },
+        {
+          "label": "Tạm dùng `TrustManager` tin mọi chứng chỉ cho client này",
+          "quality": "poor",
+          "feedback": "Tắt xác thực server cho một luồng thanh toán: ai đứng giữa cũng đọc được thẻ và token. Không bao giờ là bước chẩn đoán.",
+          "next": "trustall"
+        },
+        {
+          "label": "Nâng JDK lên bản mới nhất để có root CA mới",
+          "quality": "ok",
+          "feedback": "Thiếu root là một khả năng, nhưng chưa có bằng chứng. Đọc chuỗi trước thì biết có cần nâng JDK không.",
+          "next": "jdk"
+        }
+      ]
+    },
+    {
+      "id": "trustall",
+      "evidence": "Security review chặn pull request:\n\"TrustAllManager tắt xác thực server cho mọi kết nối của RestClient này.\nPCI DSS yêu cầu mã hoá mạnh khi truyền dữ liệu thẻ; không merge.\"",
+      "evidenceFormat": "monospace",
+      "question": "Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem chuỗi chứng chỉ bằng `openssl s_client`",
+          "quality": "good",
+          "feedback": "Đúng. Cần biết mắt xích nào thiếu.",
+          "next": "chain"
+        },
+        {
+          "label": "Gộp nhánh tắt kiểm tra nhưng chỉ bật trên staging",
+          "quality": "poor",
+          "feedback": "Staging chạy được không cho biết gì về production, và cấu hình kiểu này hay lọt lên production. Cần biết chứng chỉ nào thiếu.",
+          "next": "chain"
+        }
+      ]
+    },
+    {
+      "id": "jdk",
+      "evidence": "Nâng staging lên JDK 21 bản vá mới nhất (cacerts mới nhất).\n09:40 staging vẫn lỗi PKIX 100%.",
+      "evidenceFormat": "monospace",
+      "question": "Truststore mới nhất cũng không đủ. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem chuỗi chứng chỉ bằng `openssl s_client`",
+          "quality": "good",
+          "feedback": "Đúng. Root không phải vấn đề; xem server gửi gì.",
+          "next": "chain"
+        },
+        {
+          "label": "Trỏ `-Djavax.net.ssl.trustStore` tới chứng chỉ của đối tác",
+          "quality": "poor",
+          "feedback": "Thuộc tính này thay hẳn `cacerts`: mọi API công khai khác của service sẽ lỗi PKIX, và vẫn chưa biết mắt xích nào thiếu.",
+          "next": "chain"
+        }
+      ]
+    },
+    {
+      "id": "chain",
+      "evidence": "$ openssl s_client -connect api.partner.example:443 -servername api.partner.example -showcerts </dev/null\ndepth=0 CN = api.partner.example\nverify error:num=20:unable to get local issuer certificate\ndepth=0 CN = api.partner.example\nverify error:num=21:unable to verify the first certificate\n---\nCertificate chain\n 0 s:CN = api.partner.example\n   i:C = US, O = Example Trust, CN = Example Issuing CA G2\n---\nVerify return code: 21 (unable to verify the first certificate)\n\nSo với tuần trước (bản lưu trong runbook): server gửi 2 chứng chỉ, leaf và \"Example Issuing CA G2\".",
+      "evidenceFormat": "monospace",
+      "question": "Server chỉ gửi leaf. Vì sao Chrome vẫn chạy, và nên sửa ở đâu?",
+      "choices": [
+        {
+          "label": "Chrome tự bù intermediate; đối tác phải gửi fullchain",
+          "quality": "good",
+          "feedback": "Đúng. Trình duyệt tự bù intermediate qua AIA, Java và `curl` thì không. Lỗi nằm ở cấu hình server của đối tác.",
+          "next": "fix"
+        },
+        {
+          "label": "Nhập chứng chỉ leaf của đối tác vào truststore",
+          "quality": "poor",
+          "feedback": "Chạy được tới lần cấp lại sau (vài tháng nữa) rồi hỏng lại, và bỏ qua việc kiểm chuỗi. Tin CA, không tin leaf.",
+          "next": "leaf"
+        },
+        {
+          "label": "Bật `com.sun.security.enableAIAcaIssuers=true` cho cả JVM",
+          "quality": "ok",
+          "feedback": "Java sẽ tự tải intermediate như trình duyệt, nhưng mỗi handshake phụ thuộc thêm một lời gọi HTTP ra ngoài (có thể bị firewall chặn) và che đi lỗi cấu hình thật.",
+          "next": "aia"
+        }
+      ]
+    },
+    {
+      "id": "leaf",
+      "evidence": "Khoảng 6 tháng sau, đối tác cấp lại chứng chỉ theo lịch:\n02:15 payment-service lỗi PKIX 100% (leaf mới không có trong truststore)",
+      "evidenceFormat": "monospace",
+      "question": "Sự cố lặp lại đúng như cũ. Cách sửa bền?",
+      "choices": [
+        {
+          "label": "Đối tác gửi fullchain; truststore chỉ chứa CA",
+          "quality": "good",
+          "feedback": "Đúng. Không ghim leaf trừ khi có quy trình xoay vòng cùng đối tác.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "aia",
+      "evidence": "Bật -Dcom.sun.security.enableAIAcaIssuers=true trên staging (JDK 21.0.10):\n10:05 staging vẫn lỗi PKIX 100%\n\n$ grep allowedAIALocations $JAVA_HOME/conf/security/java.security\ncom.sun.security.allowedAIALocations=\n\nRelease note của bản vá 1/2026 (JDK-8368032): danh sách URL được phép tải qua AIA mặc định rỗng,\ntức là chặn hết. Muốn dùng phải liệt kê URL của CA; production còn có egress firewall\nchỉ cho phép api.partner.example:443.",
+      "evidenceFormat": "monospace",
+      "question": "AIA bị chặn mặc định và cần thêm đường ra Internet. Hướng nào?",
+      "choices": [
+        {
+          "label": "Đề nghị đối tác sửa chain; tạm thêm Issuing CA G2 vào truststore riêng",
+          "quality": "good",
+          "feedback": "Đúng. Sửa gốc ở server, còn biện pháp tạm phía mình là tin intermediate CA (không phải leaf) qua truststore riêng.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "**Nguyên nhân gốc của sự cố sáng thứ Hai**: khi cấp lại chứng chỉ, đối tác cấu hình server bằng file chỉ chứa leaf thay vì fullchain. TLS yêu cầu server gửi các intermediate; client chỉ có sẵn root. Chrome tự tải intermediate thiếu qua URL AIA trong chứng chỉ nên không ai bên đối tác thấy lỗi, còn JSSE mặc định không tải (và từ bản vá 1/2026 còn chặn mọi URL AIA trừ khi khai báo `com.sun.security.allowedAIALocations`) nên mọi client Java đều thất bại.\n\n**Xử lý**: đối tác thay bằng fullchain lúc 10:40, lỗi về 0%. Trong lúc chờ, payment-service thêm \"Example Issuing CA G2\" vào một SSL bundle riêng (`spring.ssl.bundle.pem.partner.truststore.certificate`, gồm cả CA công khai cần thiết) thay vì sửa `cacerts` hay tắt xác thực; gỡ ra sau khi đối tác sửa.\n\n**Phòng ngừa**: synthetic check gọi API đối tác bằng chính JVM của mình mỗi phút (không dùng trình duyệt), cảnh báo ngày hết hạn của chứng chỉ đối tác, và đưa việc kiểm `openssl s_client -showcerts` vào checklist khi đối tác báo đổi chứng chỉ."
+    }
+  ]
+}

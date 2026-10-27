@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Handshake TLS 1.3 và kiểm tra chuỗi chứng chỉ",
+  "nodes": [
+    { "id": "client", "label": "Client Java", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "server", "label": "api.partner", "kind": "external", "x": 0.85, "y": 0.05 },
+    { "id": "session", "label": "Khoá phiên", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "leaf", "label": "Chứng chỉ leaf", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "root", "label": "Root CA (truststore)", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "inter", "label": "Intermediate CA", "kind": "generic", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-server", "from": "client", "to": "server", "label": "ClientHello + SNI" },
+    { "id": "client-session", "from": "client", "to": "session", "label": "ECDHE" },
+    { "id": "server-leaf", "from": "server", "to": "leaf", "label": "gửi chứng chỉ" },
+    { "id": "leaf-inter", "from": "leaf", "to": "inter", "label": "ký bởi" },
+    { "id": "inter-root", "from": "inter", "to": "root", "label": "ký bởi" }
+  ],
+  "steps": [
+    { "caption": "Client gửi ClientHello: phiên bản, cipher, key share và SNI là tên miền cần chứng chỉ.", "show": ["client", "server", "client-server"], "highlight": ["client-server"] },
+    { "caption": "Server trả key share; hai bên tự tính cùng một khoá phiên bằng ECDHE, nên mọi thứ sau đó đã được mã hoá. Hết 1 RTT.", "show": ["session", "client-session"], "highlight": ["client-session"] },
+    { "caption": "Server gửi chứng chỉ leaf của api.partner kèm chữ ký chứng minh nó giữ private key tương ứng.", "show": ["leaf", "server-leaf"], "highlight": ["server-leaf"] },
+    { "caption": "Leaf do intermediate CA ký. Server phải gửi kèm intermediate; quên gửi thì Java báo PKIX path building failed.", "show": ["inter", "leaf-inter"], "highlight": ["leaf-inter"] },
+    { "caption": "Intermediate do root CA ký, và root nằm sẵn trong truststore của client: chuỗi khép kín, server được tin.", "show": ["root", "inter-root"], "highlight": ["inter-root"] },
+    { "caption": "Client còn kiểm thời hạn từng chứng chỉ và tên api.partner có trong SAN của leaf; sai một điều là handshake hỏng.", "show": [], "highlight": ["leaf"] }
+  ]
+}
