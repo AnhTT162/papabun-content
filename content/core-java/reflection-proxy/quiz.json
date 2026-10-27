@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "retention-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "@Target(ElementType.METHOD) @interface Audited {}\n@Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD) @interface AuditedRt {}\n\nclass RealPayment {\n    @Audited @AuditedRt public String pay(long a) { return \"paid\"; }\n}\n\nMethod m = RealPayment.class.getMethod(\"pay\", long.class);\nSystem.out.println(m.isAnnotationPresent(Audited.class) + \" \" + m.isAnnotationPresent(AuditedRt.class));",
+      "options": ["false true", "true true", "false false", "true false"],
+      "answer": 0,
+      "explanation": "Không ghi `@Retention` thì mặc định là `CLASS`: annotation có trong file class nhưng JVM không cung cấp cho reflection. Chỉ `AuditedRt` có `RUNTIME` nên được thấy."
+    },
+    {
+      "id": "proxy-instanceof",
+      "kind": "output",
+      "prompt": "`proxy` tạo bằng `Proxy.newProxyInstance` cho interface `PaymentService`, handler chuyển tiếp sang `new RealPayment()`. Đoạn code in ra gì?",
+      "code": "System.out.println(proxy instanceof PaymentService);\nSystem.out.println(proxy instanceof RealPayment);",
+      "options": ["true / false", "true / true", "false / true", "false / false"],
+      "answer": 0,
+      "explanation": "Proxy là class `$ProxyN` implement `PaymentService`, không kế thừa `RealPayment`. Đó là lý do inject bean theo class cài đặt thất bại khi Spring dùng JDK proxy."
+    },
+    {
+      "id": "final-not-proxied",
+      "kind": "single",
+      "prompt": "Proxy CGLIB thêm log cho mọi method của `OrderService`. Method nào **không** có log khi gọi qua proxy?",
+      "options": ["`public final void cancel()`", "`public void place()`", "`protected void audit()` gọi qua proxy", "Method được khai báo trong interface"],
+      "answer": 0,
+      "explanation": "CGLIB tạo lớp con và override method; method `final` không override được nên chạy thẳng code gốc, không qua interceptor. Method `protected` vẫn override được."
+    },
+    {
+      "id": "mapstruct-runtime",
+      "kind": "single",
+      "prompt": "Vì sao mapper sinh bởi MapStruct nhanh như code viết tay?",
+      "options": ["Code được sinh lúc biên dịch, không dùng reflection", "MapStruct cache `Method` nên reflection rất rẻ", "MapStruct dùng `MethodHandle` thay cho reflection", "JIT tự thay reflection bằng lời gọi trực tiếp"],
+      "answer": 0,
+      "explanation": "MapStruct là annotation processor: sinh class `...MapperImpl` với các lời gọi getter/setter bình thường ngay lúc biên dịch, nên lúc chạy không còn reflection."
+    }
+  ]
+}

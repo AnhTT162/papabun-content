@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Deploy xong, mọi giỏ hàng đang mở biến mất",
+  "context": "Giỏ hàng lưu trong Redis bằng serializer mặc định (Java serialization). Bản mới thêm field `voucher` vào `CartSession`. Ngay sau deploy, log đầy lỗi đọc session và mọi khách đang mua bị mất giỏ; bản cũ chạy song song trong rolling deploy cũng không đọc được giỏ do bản mới ghi.",
+  "buggyCode": "// Bản cũ (không khai báo serialVersionUID)\npublic class CartSession implements Serializable {\n    String userId;\n    List<String> items = new ArrayList<>();\n}\n\n// Bản mới: thêm một field\npublic class CartSession implements Serializable {\n    String userId;\n    List<String> items = new ArrayList<>();\n    String voucher;\n}\n\n// Đọc byte do bản cũ ghi bằng class của bản mới\nObject cart = new ObjectInputStream(in).readObject();",
+  "symptom": {
+    "description": "Chạy trên JDK 27: bản cũ đọc lại được dữ liệu của chính nó; bản mới đọc dữ liệu cũ thì ném lỗi.",
+    "output": "Cart(u1,[ao])\nInvalidClassException: CartSession; local class incompatible: stream classdesc serialVersionUID = 5240751688771244621, local class serialVersionUID = -265360969532042105"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "Không khai báo UID nên JVM tự tính, thêm field làm UID đổi",
+      "Java serialization không cho thêm field vào class đã ghi",
+      "Redis cắt dữ liệu nhị phân nên object đọc ra bị hỏng",
+      "Field `voucher` là `null` nên không serialize được"
+    ],
+    "answer": 0,
+    "explanation": "Thiếu `serialVersionUID` thì JVM băm cấu trúc class ra một UID; thêm `voucher` đổi cấu trúc nên đổi UID, và JVM từ chối dữ liệu có UID khác. Nếu UID được khai báo cố định thì thêm field là thay đổi tương thích: field mới nhận `null`. Redis lưu nguyên byte, và `null` serialize bình thường."
+  },
+  "fix": {
+    "code": "// Trước mắt: cố định UID bằng đúng giá trị cũ để đọc được dữ liệu đang có\npublic class CartSession implements Serializable {\n    @Serial\n    private static final long serialVersionUID = 5240751688771244621L;\n    String userId;\n    List<String> items = new ArrayList<>();\n    String voucher;\n}\n\n// Lâu dài: lưu giỏ hàng bằng JSON với DTO có version\nredisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(CartSessionDto.class));",
+    "explanation": "Khai báo UID bằng giá trị cũ (lấy từ message lỗi hoặc `serialver`) để bản mới đọc được dữ liệu cũ. Lâu dài, dữ liệu sống lâu hơn một lần deploy (session, cache, message) không nên dùng Java serialization: JSON/Protobuf có quy tắc tiến hoá schema rõ ràng, đọc được từ ngôn ngữ khác và không mở lỗ hổng deserialization."
+  }
+}

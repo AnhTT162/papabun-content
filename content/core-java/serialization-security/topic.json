@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "serialization-security",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Serialization & lỗ hổng deserialization",
+  "summary": "Java serialization ghi gì và đọc lại thế nào, `serialVersionUID` làm session trong cache hỏng sau deploy, vì sao deserialize dữ liệu không tin cậy dẫn tới chạy code từ xa (gadget chain), `ObjectInputFilter`, và cùng lớp lỗi ở Jackson default typing, SnakeYAML, XStream.",
+  "level": "senior",
+  "order": 23,
+  "minutes": 14,
+  "prerequisites": ["reflection-proxy", "json-jackson"],
+  "terms": ["java-serialization", "serial-version-uid", "gadget-chain", "object-input-filter", "default-typing", "remote-code-execution"],
+  "references": [
+    { "title": "JEP 290: Filter Incoming Serialization Data", "url": "https://openjdk.org/jeps/290" },
+    { "title": "JEP 415: Context-Specific Deserialization Filters", "url": "https://openjdk.org/jeps/415" },
+    { "title": "OWASP Deserialization Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Ứng dụng không có class nào nguy hiểm thì deserialize dữ liệu ngoài có an toàn không?\" Không. Kẻ tấn công không cần class của bạn: chúng ghép các class có sẵn trên classpath (Commons Collections, Spring, Groovy, chính JDK) thành [[gadget-chain|gadget chain]], mà `readObject`, `hashCode` hay `compareTo` của chúng tự gọi nhau khi được dựng lại, cuối chuỗi là `Runtime.exec`. Công cụ ysoserial có sẵn hàng chục chuỗi như vậy. Classpath càng nhiều thư viện, càng nhiều gadget." },
+    { "type": "callout", "style": "warning", "markdown": "Không bao giờ gọi `ObjectInputStream.readObject()` trên byte từ nguồn không tin cậy (request HTTP, cookie, message queue mở, file tải lên). Lệnh ép kiểu sau `readObject` không bảo vệ gì: code độc đã chạy **trong lúc** dựng object, trước khi tới dòng ép kiểu." }
+  ]
+}

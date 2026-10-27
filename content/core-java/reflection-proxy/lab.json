@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm proxy đo thời gian, xử lý lỗi hạn mức hỏng",
+  "context": "Team bọc `PaymentService` bằng một JDK dynamic proxy tự viết để đo thời gian mỗi lời gọi. Controller vẫn bắt `IllegalStateException` (vượt hạn mức) để trả 422. Sau khi bật proxy, các request vượt hạn mức trả 500 và log đầy `UndeclaredThrowableException`.",
+  "buggyCode": "PaymentService proxy = (PaymentService) Proxy.newProxyInstance(\n    PaymentService.class.getClassLoader(),\n    new Class<?>[] { PaymentService.class },\n    (p, method, args) -> {\n        long start = System.nanoTime();\n        try {\n            return method.invoke(real, args);\n        } finally {\n            metrics.record(method.getName(), System.nanoTime() - start);\n        }\n    });\n\ntry {\n    proxy.pay(1); // real.pay ném IllegalStateException(\"limit\")\n} catch (IllegalStateException e) {\n    return unprocessable(e);\n}",
+  "symptom": {
+    "description": "Chạy trên JDK 27: khối `catch (IllegalStateException)` không bắt được gì, exception lọt ra ngoài.",
+    "output": "java.lang.reflect.UndeclaredThrowableException\nCaused by: java.lang.reflect.InvocationTargetException\nCaused by: java.lang.IllegalStateException: limit"
+  },
+  "diagnosis": {
+    "question": "Vì sao exception đổi kiểu khi đi qua proxy?",
+    "options": [
+      "`Method.invoke` bọc exception, handler ném lại nguyên lớp bọc",
+      "JDK proxy chỉ cho phép ném exception đã khai báo `throws`",
+      "Lambda trong `newProxyInstance` nuốt exception unchecked",
+      "Khối `finally` thay exception gốc bằng exception của `metrics`"
+    ],
+    "answer": 0,
+    "explanation": "`Method.invoke` bọc mọi exception của method được gọi trong `InvocationTargetException` (checked). Handler để nó bay ra; vì `pay` không khai báo `throws InvocationTargetException`, proxy bọc tiếp vào `UndeclaredThrowableException`. Exception unchecked gốc vẫn ném được qua proxy bình thường nếu handler ném chính nó. `finally` chỉ ghi metric, không ném gì."
+  },
+  "fix": {
+    "code": "(p, method, args) -> {\n    long start = System.nanoTime();\n    try {\n        return method.invoke(real, args);\n    } catch (InvocationTargetException e) {\n        throw e.getCause(); // ném lại exception thật của method\n    } finally {\n        metrics.record(method.getName(), System.nanoTime() - start);\n    }\n}",
+    "explanation": "Gỡ `InvocationTargetException` và ném lại cause, nên bên gọi thấy đúng exception như khi gọi trực tiếp. Spring AOP và các framework proxy đều làm bước này. Viết test cho proxy với method ném exception, không chỉ với method chạy thành công."
+  }
+}

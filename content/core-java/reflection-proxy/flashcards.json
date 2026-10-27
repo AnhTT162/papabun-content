@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "default-retention", "front": "Retention mặc định của annotation là gì, reflection có thấy không?", "back": "`CLASS`: có trong file `.class` nhưng reflection không thấy. Cần `@Retention(RUNTIME)`." },
+    { "id": "ite", "front": "Exception do method được gọi qua `Method.invoke` ném ra sẽ thành gì?", "back": "`InvocationTargetException`; exception thật ở `getCause()`." },
+    { "id": "ute", "front": "Khi nào bên gọi proxy nhận `UndeclaredThrowableException`?", "back": "Khi handler ném checked exception mà method interface không khai báo, thường do không gỡ `InvocationTargetException`." },
+    { "id": "jdk-vs-subclass", "front": "JDK dynamic proxy khác proxy CGLIB/ByteBuddy thế nào?", "back": "JDK proxy chỉ implement interface; CGLIB/ByteBuddy sinh lớp con nên proxy được class nhưng không chặn được method `final`." },
+    { "id": "proxy-cast", "front": "Ép JDK proxy sang class cài đặt thì sao?", "back": "`ClassCastException`: proxy chỉ implement interface, không phải lớp con của class thật." },
+    { "id": "processor", "front": "Annotation processor chạy lúc nào?", "back": "Lúc biên dịch, trong javac; sinh code mới (MapStruct, Dagger) nên không tốn reflection lúc chạy." },
+    { "id": "reflection-cost", "front": "Phần nào của reflection đắt nhất?", "back": "Tra cứu (`getMethod`, `getDeclaredFields`); framework cache `Method`/`Field` theo class. Bản thân `invoke` từ JDK 18 dùng method handle." },
+    { "id": "parameters-flag", "front": "Vì sao cần biên dịch với `-parameters`?", "back": "Để reflection thấy tên tham số thật thay vì `arg0`; Spring 6.1 cần nó cho `@PathVariable`/`@RequestParam` không ghi tên." }
+  ]
+}

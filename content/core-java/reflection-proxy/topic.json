@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "reflection-proxy",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Reflection, annotation & dynamic proxy",
+  "summary": "Reflection đọc và gọi class lúc chạy với giá bao nhiêu, retention của annotation quyết định ai thấy nó, annotation processor sinh code lúc biên dịch, JDK dynamic proxy và proxy sinh lớp con (CGLIB, ByteBuddy) khác nhau ở đâu, và bẫy `UndeclaredThrowableException` khi viết `InvocationHandler`.",
+  "level": "senior",
+  "order": 22,
+  "minutes": 14,
+  "prerequisites": ["oop-java", "generics"],
+  "terms": ["reflection", "annotation-retention", "annotation-processor", "jdk-dynamic-proxy", "cglib", "method-handle", "strong-encapsulation"],
+  "references": [
+    { "title": "Javadoc java.lang.reflect.Proxy (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/reflect/Proxy.html" },
+    { "title": "JEP 416: Reimplement Core Reflection with Method Handles", "url": "https://openjdk.org/jeps/416" },
+    { "title": "Javadoc RetentionPolicy (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/annotation/RetentionPolicy.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lombok và MapStruct có dùng reflection không?\" Không, chúng chạy **lúc biên dịch**. MapStruct là [[annotation-processor|annotation processor]] chuẩn, sinh file `.java` mới (`OrderMapperImpl`). Lombok cũng chạy như annotation processor nhưng sửa trực tiếp cây cú pháp của javac qua API nội bộ, nên mỗi lần nâng JDK phải nâng Lombok. Vì không có reflection lúc chạy, code sinh ra nhanh như code viết tay và chạy được trên GraalVM native image." },
+    { "type": "callout", "style": "tip", "markdown": "Proxy trong Spring (khi nào JDK proxy, khi nào CGLIB, self-invocation, `final` method) ở bài Spring AOP & proxy. Bài này giải thích cơ chế Java bên dưới." }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "readobject-before-cast",
+      "kind": "output",
+      "prompt": "Class `Evil` có `private void readObject(ObjectInputStream s) { System.out.println(\"evil\"); ... }`. Byte chứa `HashMap` có một value là `Evil`. Đoạn code in ra gì?",
+      "code": "try (var in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {\n    Object x = in.readObject();\n    System.out.println(\"cast attempt\");\n    String s = (String) x;\n} catch (ClassCastException e) {\n    System.out.println(\"CCE\");\n}",
+      "options": [
+        "evil / cast attempt / CCE",
+        "cast attempt / CCE",
+        "evil / CCE",
+        "cast attempt / evil / CCE"
+      ],
+      "answer": 0,
+      "explanation": "`readObject` dựng cả đồ thị, gọi hook `readObject` của `Evil` ngay trong lúc đó, nên `evil` in trước. Ép kiểu chỉ thất bại sau khi code đã chạy (đã chạy trên JDK 27): ép kiểu không bảo vệ được gì."
+    },
+    {
+      "id": "uid-compatible",
+      "kind": "single",
+      "prompt": "Class khai báo `serialVersionUID = 1L` cố định. Bản mới thêm field `String voucher`. Đọc dữ liệu do bản cũ ghi thì sao?",
+      "options": [
+        "Đọc được, `voucher` là `null`",
+        "Ném `InvalidClassException`",
+        "Ném `StreamCorruptedException`",
+        "Đọc được, `voucher` là chuỗi rỗng"
+      ],
+      "answer": 0,
+      "explanation": "UID không đổi nên JVM chấp nhận; field không có trong luồng byte nhận giá trị mặc định. Thêm field là thay đổi tương thích, đổi kiểu field thì không."
+    },
+    {
+      "id": "safe-defense",
+      "kind": "single",
+      "prompt": "Service nhận object Java serialize qua một endpoint nội bộ cũ. Cách phòng thủ tốt nhất?",
+      "options": [
+        "Đổi sang JSON ánh xạ vào DTO cố định",
+        "Ép kiểu ngay sau `readObject` để chặn class lạ",
+        "Chỉ mở endpoint trong mạng nội bộ là đủ",
+        "Bắt mọi exception quanh `readObject`"
+      ],
+      "answer": 0,
+      "explanation": "Bỏ hẳn Java serialization loại trừ cả lớp lỗi. Ép kiểu và bắt exception đều xảy ra sau khi gadget đã chạy; mạng nội bộ chỉ giảm bề mặt, không loại trừ (tấn công từ máy đã bị chiếm, SSRF). Nếu chưa bỏ được thì thêm `ObjectInputFilter` allowlist."
+    },
+    {
+      "id": "same-class-of-bug",
+      "kind": "single",
+      "prompt": "Cấu hình nào **không** cùng lớp lỗi với Java deserialization?",
+      "options": [
+        "Jackson đọc JSON vào record cố định",
+        "Jackson bật default typing cho `Object` không có validator",
+        "SnakeYAML 1.x dùng `new Yaml().load()`",
+        "XStream cũ đọc XML không có allowlist"
+      ],
+      "answer": 0,
+      "explanation": "Đọc JSON vào kiểu cố định không cho dữ liệu chọn class. Ba cấu hình còn lại đều để dữ liệu đầu vào quyết định class Java nào được tạo."
+    }
+  ]
+}

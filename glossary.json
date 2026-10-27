@@ -3301,7 +3301,7 @@
       "meaning": "Proxy do `java.lang.reflect.Proxy` tạo lúc chạy, chỉ implement các interface; khác CGLIB tạo lớp con của class.",
       "example": "Bean JDK proxy của `PaymentService` không inject được vào field kiểu `PaymentServiceImpl`.",
       "related": ["aop-proxy"],
-      "topics": ["spring-aop-proxy", "structural-patterns"]
+      "topics": ["spring-aop-proxy", "structural-patterns", "reflection-proxy"]
     },
     {
       "id": "transactional-event-listener",
@@ -3317,7 +3317,7 @@
       "meaning": "Thư viện sinh bytecode tạo lớp con của một class lúc chạy; Spring dùng nó để proxy bean theo class. Không override được class hay method `final`.",
       "example": "Bean `OrderService` có `@Transactional` thành `OrderService$$SpringCGLIB$$0`.",
       "related": ["aop-proxy", "jdk-dynamic-proxy"],
-      "topics": ["spring-aop-proxy", "structural-patterns"]
+      "topics": ["spring-aop-proxy", "structural-patterns", "reflection-proxy"]
     },
     {
       "id": "micrometer",
@@ -7701,7 +7701,7 @@
       "meaning": "Từ Java 17 (JEP 403), code ngoài JDK không reflection được vào package nội bộ chưa `opens`; vi phạm ném `InaccessibleObjectException`, chỉ mở lại bằng `--add-opens`.",
       "example": "Thư viện cũ gọi `setAccessible(true)` trên `ArrayList.elementData` hỏng khi nâng lên Java 17.",
       "related": ["jpms"],
-      "topics": ["java-17-21-features"]
+      "topics": ["java-17-21-features", "reflection-proxy"]
     },
     {
       "id": "lazy-evaluation",
@@ -7773,7 +7773,7 @@
       "meaning": "Chế độ Jackson ghi tên class Java vào JSON và dùng nó để chọn class khi đọc, cho mọi field kiểu chung (`Object`). Với dữ liệu từ ngoài, nó cho kẻ tấn công chọn class để khởi tạo.",
       "example": "`mapper.activateDefaultTyping(validator, DefaultTyping.NON_FINAL)`.",
       "related": ["polymorphic-deserialization"],
-      "topics": ["json-jackson"]
+      "topics": ["json-jackson", "serialization-security"]
     },
     {
       "id": "tree-rotation",
@@ -7830,6 +7830,78 @@
       "example": "Kafka map file index của mỗi segment bằng `FileChannel.map`.",
       "related": ["zero-copy", "page-cache"],
       "topics": ["java-io-nio"]
+    },
+    {
+      "id": "reflection",
+      "term": "Reflection",
+      "meaning": "API đọc cấu trúc class (method, field, annotation, kiểu generic) và gọi method, đọc ghi field lúc chạy mà không biết trước lúc biên dịch. Nền của Spring, Hibernate, Jackson, JUnit.",
+      "example": "`OrderService.class.getMethod(\"place\", Order.class).invoke(service, order)`.",
+      "related": ["method-handle", "annotation-retention"],
+      "topics": ["reflection-proxy"]
+    },
+    {
+      "id": "annotation-retention",
+      "term": "Retention",
+      "meaning": "Mức sống của annotation: `SOURCE` (chỉ compiler), `CLASS` (mặc định, có trong file class nhưng reflection không thấy), `RUNTIME` (đọc được bằng reflection).",
+      "example": "Annotation `@Audited` tự viết thiếu `@Retention(RUNTIME)` làm aspect không bao giờ thấy nó.",
+      "related": ["reflection"],
+      "topics": ["reflection-proxy"]
+    },
+    {
+      "id": "method-handle",
+      "term": "MethodHandle",
+      "meaning": "Tham chiếu có kiểu tới method, constructor hay field (`java.lang.invoke`), được JIT tối ưu tốt; từ JDK 18 reflection core được cài lại bằng method handle.",
+      "example": "`MethodHandles.lookup().findVirtual(Order.class, \"total\", MethodType.methodType(long.class))`.",
+      "related": ["reflection", "invokedynamic"],
+      "topics": ["reflection-proxy"]
+    },
+    {
+      "id": "java-serialization",
+      "term": "Java serialization",
+      "meaning": "Cơ chế `Serializable`/`ObjectOutputStream` ghi đồ thị object kèm tên class; khi đọc, luồng byte quyết định class được tạo và các hook `readObject` tự chạy.",
+      "example": "Session HTTP lưu Redis bằng `JdkSerializationRedisSerializer`.",
+      "related": ["serial-version-uid", "gadget-chain"],
+      "topics": ["serialization-security"]
+    },
+    {
+      "id": "serial-version-uid",
+      "term": "serialVersionUID",
+      "meaning": "Số phiên bản của class `Serializable`; khác giữa dữ liệu và class hiện tại thì ném `InvalidClassException`. Không khai báo thì JVM tự tính từ cấu trúc class.",
+      "example": "`@Serial private static final long serialVersionUID = 1L;`",
+      "related": ["java-serialization"],
+      "topics": ["serialization-security"]
+    },
+    {
+      "id": "gadget-chain",
+      "term": "Gadget chain",
+      "meaning": "Chuỗi class có sẵn trên classpath mà các hook khi deserialize (`readObject`, `hashCode`, `compare`) gọi nhau, cuối cùng chạy lệnh tuỳ ý. Kẻ tấn công chỉ cần gửi byte đúng hình dạng.",
+      "example": "Chuỗi `InvokerTransformer` của Apache Commons Collections 3.x (2015) dẫn tới `Runtime.exec`.",
+      "related": ["java-serialization", "object-input-filter"],
+      "topics": ["serialization-security"]
+    },
+    {
+      "id": "object-input-filter",
+      "term": "ObjectInputFilter",
+      "meaning": "Bộ lọc khi deserialize (JEP 290, Java 9, backport 8u121): kiểm class, độ sâu, số phần tử, số byte và từ chối cái không được phép. Java 17 thêm filter theo ngữ cảnh (JEP 415).",
+      "example": "`ObjectInputFilter.Config.createFilter(\"com.shop.dto.*;java.lang.String;!*\")`.",
+      "related": ["gadget-chain"],
+      "topics": ["serialization-security"]
+    },
+    {
+      "id": "annotation-processor",
+      "term": "Annotation processor",
+      "meaning": "Plugin chạy trong javac, đọc annotation và sinh file nguồn mới lúc biên dịch; không tốn reflection lúc chạy.",
+      "example": "MapStruct sinh `OrderMapperImpl` từ interface có `@Mapper`.",
+      "related": ["annotation-retention"],
+      "topics": ["reflection-proxy"]
+    },
+    {
+      "id": "remote-code-execution",
+      "term": "RCE",
+      "meaning": "Remote code execution: kẻ tấn công làm server chạy lệnh hay code tuỳ ý từ xa, mức nghiêm trọng cao nhất.",
+      "example": "Log4Shell và gadget chain deserialization đều dẫn tới RCE.",
+      "related": ["gadget-chain"],
+      "topics": ["serialization-security"]
     }
   ]
 }

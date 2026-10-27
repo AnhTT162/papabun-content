@@ -147,8 +147,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 19 | `json-jackson` | ✚ JSON & Jackson | mid | Unknown property, ngày giờ và `BigDecimal`, polymorphic type, record, cấu hình `ObjectMapper` dùng chung | L B | ✅ |
 | 20 | `sorted-collections-internals` | TreeMap, LinkedHashMap, PriorityQueue bên trong | mid | Cây đỏ đen, LRU, binary heap | L S | ✅ |
 | 21 | `java-io-nio` | I/O & NIO | mid | Stream và channel, buffer, file, đọc file lớn, `Files` API, đóng resource | L B | ✅ |
-| 22 | `reflection-proxy` | Reflection, annotation & dynamic proxy | senior | JDK proxy và CGLIB/ByteBuddy, annotation processing; nền của Spring AOP | L D B | ⬜ |
-| 23 | `serialization-security` | ✚ Serialization & lỗ hổng deserialization | senior | Java serialization, gadget chain, Jackson default typing, cách phòng tránh | L B | ⬜ |
+| 22 | `reflection-proxy` | Reflection, annotation & dynamic proxy | senior | JDK proxy và CGLIB/ByteBuddy, annotation processing; nền của Spring AOP | L D B | ✅ |
+| 23 | `serialization-security` | ✚ Serialization & lỗ hổng deserialization | senior | Java serialization, gadget chain, Jackson default typing, cách phòng tránh | L B | ✅ |
 | 24 | `classpath-modules` | Classpath, JPMS & xung đột dependency | senior | Dependency hell, shading, JPMS, `NoSuchMethodError` lúc chạy | L T | ⬜ |
 
 ### 3. Concurrency (`concurrency`)

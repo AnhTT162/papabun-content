@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "no-constructor", "front": "Deserialize một object `Serializable` có gọi constructor của nó không?", "back": "Không. Chỉ constructor không tham số của lớp cha đầu tiên không `Serializable` được gọi; field được gán thẳng từ luồng byte." },
+    { "id": "uid", "front": "Không khai báo `serialVersionUID` thì sao?", "back": "JVM tự tính từ cấu trúc class; thêm field đổi UID nên dữ liệu cũ ném `InvalidClassException`." },
+    { "id": "transient", "front": "Field `transient` khi deserialize nhận giá trị gì?", "back": "Giá trị mặc định (`null`, 0, `false`), vì không được ghi; initializer của field cũng không chạy." },
+    { "id": "gadget", "front": "Gadget chain là gì?", "back": "Chuỗi class có sẵn trên classpath mà hook (`readObject`, `hashCode`...) gọi nhau khi được dựng lại, cuối cùng chạy lệnh tuỳ ý." },
+    { "id": "cast-no-protect", "front": "Ép kiểu ngay sau `readObject` có chặn được tấn công không?", "back": "Không. Code độc chạy trong lúc dựng object, trước khi tới dòng ép kiểu." },
+    { "id": "filter", "front": "`ObjectInputFilter` làm gì?", "back": "Kiểm từng class, độ sâu, kích thước khi deserialize và từ chối cái không được phép (JEP 290, Java 9, backport 8u121)." },
+    { "id": "snakeyaml", "front": "Vì sao `new Yaml().load(input)` của SnakeYAML trước 2.0 nguy hiểm?", "back": "Tag YAML cho tạo class Java bất kỳ (CVE-2022-1471); SnakeYAML 2.0 mặc định từ chối global tag (qua `TagInspector`)." },
+    { "id": "redis-default", "front": "Serializer mặc định của `RedisTemplate` trong Spring Data Redis là gì, rủi ro gì?", "back": "`JdkSerializationRedisSerializer` (Java serialization): đổi class là hỏng dữ liệu cũ, và dữ liệu Redis bị sửa thành đường tấn công." }
+  ]
+}

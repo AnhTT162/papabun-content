@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Lời gọi đi qua JDK dynamic proxy",
+  "nodes": [
+    { "id": "caller", "label": "Bên gọi", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "proxy", "label": "$Proxy2\n(proxy)", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "handler", "label": "Invocation\nHandler", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "method", "label": "Method\n(reflection)", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "target", "label": "RealPayment", "kind": "service", "x": 0.1, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "caller-proxy", "from": "caller", "to": "proxy", "label": "pay(100)" },
+    { "id": "proxy-handler", "from": "proxy", "to": "handler", "label": "invoke(...)" },
+    { "id": "handler-method", "from": "handler", "to": "method", "label": "method.invoke" },
+    { "id": "method-target", "from": "method", "to": "target", "label": "pay(100)" },
+    { "id": "target-self", "from": "target", "to": "target", "label": "this.refund()" }
+  ],
+  "steps": [
+    { "caption": "Bên gọi chỉ biết interface PaymentService. Object nó cầm là $Proxy2, một class JDK sinh lúc chạy, không phải RealPayment.", "show": ["caller", "proxy", "caller-proxy"], "highlight": ["caller-proxy"] },
+    { "caption": "Mọi method của interface, cả toString, equals, hashCode, đều đi vào InvocationHandler.invoke kèm object Method và mảng tham số.", "show": ["handler", "proxy-handler"], "highlight": ["proxy-handler"] },
+    { "caption": "Handler làm việc của mình (log, đo thời gian, transaction) rồi gọi object thật qua reflection.", "show": ["method", "handler-method"], "highlight": ["handler-method"] },
+    { "caption": "Method.invoke gọi RealPayment.pay. Nếu pay ném lỗi, lỗi quay về bị bọc trong InvocationTargetException; handler phải gỡ bằng getCause(), nếu không bên gọi nhận UndeclaredThrowableException.", "show": ["target", "method-target"], "highlight": ["method-target"] },
+    { "caption": "Bên trong RealPayment, this.refund() gọi thẳng object thật, không qua proxy: hành vi của handler không áp dụng cho lời gọi nội bộ.", "show": ["target-self"], "highlight": ["target-self"] }
+  ]
+}
