@@ -39,7 +39,7 @@
       "meaning": "Hệ thống phân giải tên miền thành địa chỉ IP. Kết quả được cache ở nhiều tầng theo TTL của bản ghi.",
       "example": "Tra `shop.example.com` nhận về bản ghi A `203.0.113.10` với TTL 300 giây.",
       "related": ["rtt", "load-balancer"],
-      "topics": ["http-request-lifecycle", "slow-api"]
+      "topics": ["http-request-lifecycle", "slow-api", "network-basics"]
     },
     {
       "id": "rtt",
@@ -71,7 +71,7 @@
       "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
       "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
       "related": ["tcp-handshake", "connection-pool"],
-      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning"]
+      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning", "network-basics"]
     },
     {
       "id": "load-balancer",
@@ -605,7 +605,7 @@
       "meaning": "Dữ liệu nằm liền nhau trong bộ nhớ được CPU nạp vào cache cùng lúc, nên duyệt tuần tự nhanh hơn nhiều so với nhảy lung tung.",
       "example": "Duyệt `ArrayList` nhanh hơn `LinkedList` cùng kích thước vì phần tử nằm liền nhau.",
       "related": ["big-o"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "computer-architecture"]
     },
     {
       "id": "unmodifiable-view",
@@ -3805,15 +3805,15 @@
       "meaning": "Đơn vị nhỏ nhất mà cache CPU nạp và giữ nhất quán giữa các core, thường 64 byte trên x86 và 128 byte trên Apple Silicon. Ghi một byte là cả line ở core khác mất hiệu lực.",
       "example": "Hai field `long` nằm liền nhau trong một object thường chung một cache line.",
       "related": ["false-sharing", "memory-barrier"],
-      "topics": ["atomic-cas"]
+      "topics": ["atomic-cas", "computer-architecture"]
     },
     {
       "id": "false-sharing",
       "term": "False sharing",
       "meaning": "Hai biến độc lập nằm chung một cache line; mỗi lần một core ghi biến của nó, line ở core kia mất hiệu lực, nên các thread làm chậm nhau dù không dùng chung biến nào.",
-      "example": "Hai counter `hitsA`, `hitsB` cạnh nhau trong một object, mỗi thread cộng một cái: chạy 2 thread chậm hơn 1 thread. Đệm field bằng `@Contended` thì hết.",
+      "example": "Hai counter `hitsA`, `hitsB` cạnh nhau trong một object, mỗi thread cộng một cái: chạy 2 thread chậm hơn 1 thread. Đệm field bằng `@Contended` (code ngoài JDK cần `-XX:-RestrictContended`) hoặc tự đệm thì hết.",
       "related": ["cache-line", "long-adder"],
-      "topics": ["atomic-cas"]
+      "topics": ["atomic-cas", "computer-architecture"]
     },
     {
       "id": "lock-free",
@@ -5581,7 +5581,7 @@
       "meaning": "Thời gian từ lúc gửi request tới lúc nhận đủ response, gồm cả thời gian chờ trong hàng đợi lẫn thời gian xử lý thật.",
       "example": "API trả về sau 120ms: latency 120ms, trong đó 80ms chờ database.",
       "related": ["throughput", "percentile"],
-      "topics": ["perf-methodology", "slow-api"]
+      "topics": ["perf-methodology", "slow-api", "computer-architecture"]
     },
     {
       "id": "throughput",
@@ -5589,7 +5589,7 @@
       "meaning": "Lượng việc hệ thống xử lý xong trong một đơn vị thời gian, như request/giây hay message/giây.",
       "example": "Service xử lý 1.500 request/giây ở p99 200ms.",
       "related": ["latency", "littles-law"],
-      "topics": ["perf-methodology"]
+      "topics": ["perf-methodology", "computer-architecture"]
     },
     {
       "id": "percentile",
@@ -5885,7 +5885,7 @@
       "meaning": "Bảng theo dõi kết nối của netfilter trong kernel Linux, dùng cho NAT và firewall (kube-proxy dựa vào nó). Mỗi kết nối chiếm một mục, kể cả khi đã đóng: mục TIME_WAIT của conntrack giữ 120 giây, lâu hơn socket TIME_WAIT 60 giây. Bảng đầy thì kernel bỏ gói mới.",
       "example": "`dmesg` báo `nf_conntrack: table full, dropping packet` khi `nf_conntrack_count` chạm `nf_conntrack_max`.",
       "related": ["time-wait", "tcp-retransmission"],
-      "topics": ["slow-api"]
+      "topics": ["slow-api", "network-basics"]
     },
     {
       "id": "time-wait",
@@ -6174,6 +6174,158 @@
       "example": "`recordValueWithExpectedInterval(latency, 10)` thêm các mẫu bị bỏ sót khi biết request lẽ ra gửi mỗi 10ms.",
       "related": ["coordinated-omission", "percentile"],
       "topics": ["load-testing"]
+    },
+    {
+      "id": "osi-model",
+      "term": "Mô hình OSI",
+      "meaning": "Mô hình bảy tầng mô tả mạng, từ vật lý tới ứng dụng. Thực tế chạy theo TCP/IP bốn tầng, nhưng người ta vẫn gọi tên theo số tầng OSI: L2 là Ethernet, L3 là IP, L4 là TCP/UDP, L7 là HTTP.",
+      "example": "Load balancer L4 chuyển tiếp theo IP và port; load balancer L7 route được theo path `/api` vì đọc được HTTP.",
+      "related": ["ip-address", "load-balancer"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "ip-address",
+      "term": "Địa chỉ IP",
+      "meaning": "Địa chỉ của một interface mạng ở tầng 3, dùng để đưa gói tin tới đúng máy. IPv4 dài 32 bit, IPv6 dài 128 bit.",
+      "example": "`10.0.1.12` là IPv4 private; `2001:db8::1` là IPv6.",
+      "related": ["subnet", "cidr"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "subnet",
+      "term": "Subnet",
+      "meaning": "Một dải IP liên tục mà các máy trong đó gửi gói trực tiếp cho nhau; gói tới IP ngoài dải phải đi qua gateway.",
+      "example": "Subnet `10.0.1.0/24` chứa `10.0.1.0` tới `10.0.1.255`; app ở đó gọi `10.0.2.30` phải qua gateway.",
+      "related": ["cidr", "route-table"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "cidr",
+      "term": "CIDR (Classless Inter-Domain Routing)",
+      "meaning": "Cách viết một dải IP bằng địa chỉ đầu và độ dài prefix: `/n` nghĩa là n bit đầu cố định, nên dải có 2^(32−n) địa chỉ IPv4.",
+      "example": "`10.0.16.0/20` có 4.096 địa chỉ, từ `10.0.16.0` tới `10.0.31.255`.",
+      "related": ["subnet", "ip-address"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "private-ip",
+      "term": "IP private",
+      "meaning": "Các dải IPv4 dành cho mạng nội bộ theo RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), không được route trên Internet nên phải qua NAT để ra ngoài.",
+      "example": "Pod `10.0.1.12` gọi API ngoài thì đi qua NAT gateway và đối tác thấy IP public của NAT.",
+      "related": ["nat", "cidr"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "network-port",
+      "term": "Port (mạng)",
+      "meaning": "Số 16 bit (0–65535) chỉ process đích trên một máy. Cùng với IP và giao thức, port xác định một đầu của kết nối.",
+      "example": "PostgreSQL nghe port 5432, HTTPS dùng 443.",
+      "related": ["ephemeral-port", "ip-address"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "ephemeral-port",
+      "term": "Ephemeral port",
+      "meaning": "Port tạm kernel cấp cho phía client khi mở kết nối đi ra. Linux mặc định dùng dải `32768–60999` (`net.ipv4.ip_local_port_range`).",
+      "example": "App gọi `10.0.2.30:5432` từ `10.0.1.12:41822`; 41822 là ephemeral port.",
+      "related": ["network-port", "time-wait"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "route-table",
+      "term": "Route table",
+      "meaning": "Bảng router dùng để chọn đường cho gói tin theo IP đích. Khi nhiều route cùng khớp, route có prefix dài nhất thắng; `0.0.0.0/0` là route mặc định.",
+      "example": "Route `10.0.0.0/16 local` cho gói trong VPC, `0.0.0.0/0 → NAT gateway` cho gói ra Internet.",
+      "related": ["subnet", "nat"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "nat",
+      "term": "NAT (Network Address Translation)",
+      "meaning": "Thiết bị đổi địa chỉ trong gói khi đi qua ranh giới mạng, thường thay IP nguồn private bằng IP public của nó (SNAT) và ghi lại để chuyển response về đúng máy.",
+      "example": "Cả 20 pod ra Internet qua một NAT gateway nên đối tác chỉ cần whitelist một IP.",
+      "related": ["private-ip", "conntrack"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "security-group",
+      "term": "Security group",
+      "meaning": "Firewall ảo gắn vào interface mạng trên AWS, chỉ có luật cho phép. Nó stateful: cho chiều vào thì response tự được đi ra. Gói không khớp luật bị bỏ lặng lẽ nên phía gọi thấy timeout.",
+      "example": "Security group của database cho phép TCP 5432 từ dải `10.0.1.0/24`.",
+      "related": ["route-table", "subnet"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "mtu",
+      "term": "MTU (Maximum Transmission Unit)",
+      "meaning": "Kích thước lớn nhất của một gói ở tầng liên kết, thường 1.500 byte trên Ethernet, 9.001 bên trong một VPC của AWS (ra Internet hay qua VPN vẫn là 1.500). Qua tunnel hay VPN, MTU thực tế nhỏ hơn.",
+      "example": "Qua VPN, `curl` trang nhỏ được nhưng tải file lớn bị treo vì gói lớn bị bỏ và ICMP báo lỗi bị chặn.",
+      "related": ["ip-address"],
+      "topics": ["network-basics"]
+    },
+    {
+      "id": "latency-numbers",
+      "term": "Latency numbers",
+      "meaning": "Bảng độ trễ theo bậc độ lớn của các thao tác cơ bản: cache CPU, RAM, SSD, mạng. Dùng để ước lượng chỗ nào chậm trước khi đo.",
+      "example": "L1 ~1 ns, RAM ~100 ns, NVMe SSD ~100 µs, vòng mạng trong datacenter ~0,5 ms.",
+      "related": ["cpu-cache", "rtt"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "cpu-cache",
+      "term": "Cache CPU (L1/L2/L3)",
+      "meaning": "Bộ nhớ nhỏ và nhanh nằm trong CPU, giữ dữ liệu vừa dùng để khỏi vào RAM. L1 và L2 riêng từng core, L3 dùng chung cho nhiều core.",
+      "example": "Đọc L1 khoảng 1 ns, trượt cả ba tầng thì vào RAM khoảng 100 ns.",
+      "related": ["cache-line", "latency-numbers"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "hardware-prefetch",
+      "term": "Hardware prefetch",
+      "meaning": "CPU nhận ra mẫu đọc tuần tự hoặc bước đều và nạp trước các cache line sắp dùng. Truy cập theo con trỏ hay ngẫu nhiên thì prefetch không giúp được.",
+      "example": "Duyệt `int[]` gần như không chờ RAM; duyệt `LinkedList` thì phải đọc xong node này mới biết node sau ở đâu.",
+      "related": ["cache-line", "cache-locality"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "branch-prediction",
+      "term": "Branch prediction",
+      "meaning": "CPU đoán trước nhánh của lệnh rẽ nhánh để chạy tiếp mà không đợi điều kiện. Đoán sai phải bỏ phần đã chạy, tốn hàng chục chu kỳ.",
+      "example": "Vòng `if (v >= 128)` trên mảng đã sắp xếp chạy nhanh hơn nhiều lần so với mảng ngẫu nhiên.",
+      "related": ["cpu-cache"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "object-header",
+      "term": "Object header",
+      "meaning": "Phần đầu của mỗi object trên heap của HotSpot, chứa mark word (hash, trạng thái khoá, tuổi GC) và thông tin lớp. Compact object header (JEP 519) giảm từ 12 xuống 8 byte trên 64 bit.",
+      "example": "Một `Integer` chiếm 16 byte: header cộng 4 byte giá trị, làm tròn lên bội của 8.",
+      "related": ["cache-locality"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "tlb",
+      "term": "TLB (Translation Lookaside Buffer)",
+      "meaning": "Cache trong CPU giữ các bản dịch từ địa chỉ ảo sang địa chỉ vật lý theo page. Truy cập ngẫu nhiên trên vùng nhớ lớn làm TLB miss nhiều; huge page giảm số page cần dịch.",
+      "example": "Heap 32 GB với page 4 KB có tám triệu page; dùng page 2 MB chỉ còn 16.384.",
+      "related": ["cpu-cache"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "numa",
+      "term": "NUMA (Non-Uniform Memory Access)",
+      "meaning": "Kiến trúc máy nhiều socket, mỗi socket có RAM gắn riêng; đọc RAM của socket khác chậm hơn đáng kể.",
+      "example": "`-XX:+UseNUMA` cho G1 (từ JDK 14) và Parallel GC cấp vùng nhớ gần với thread đang chạy.",
+      "related": ["cpu-cache"],
+      "topics": ["computer-architecture"]
+    },
+    {
+      "id": "iops",
+      "term": "IOPS",
+      "meaning": "Số thao tác đọc/ghi một ổ đĩa làm được mỗi giây. Phụ thuộc cả latency mỗi lần lẫn số request chạy song song (queue depth).",
+      "example": "Mỗi lần đọc 100 µs, đọc lần lượt thì tối đa 10.000 IOPS; EBS gp3 cho mặc định 3.000 IOPS.",
+      "related": ["latency", "throughput"],
+      "topics": ["computer-architecture"]
     }
   ]
 }

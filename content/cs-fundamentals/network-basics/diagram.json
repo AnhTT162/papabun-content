@@ -1,0 +1,130 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "App gọi database và API đối tác",
+  "nodes": [
+    {
+      "id": "app",
+      "label": "App 10.0.1.12",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "route",
+      "label": "Route table",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "db",
+      "label": "DB 10.0.2.30",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "nat",
+      "label": "NAT gateway",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "partner",
+      "label": "API đối tác",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.05
+    }
+  ],
+  "edges": [
+    {
+      "id": "app-route",
+      "from": "app",
+      "to": "route",
+      "label": "đích 10.0.2.30"
+    },
+    {
+      "id": "route-db",
+      "from": "route",
+      "to": "db",
+      "label": "10.0.0.0/16 local"
+    },
+    {
+      "id": "route-nat",
+      "from": "route",
+      "to": "nat",
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "nat-partner",
+      "from": "nat",
+      "to": "partner",
+      "label": "nguồn: IP public"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "App ở subnet private 10.0.1.0/24 cần gọi database ở subnet 10.0.2.0/24, cổng 5432.",
+      "show": [
+        "app",
+        "db"
+      ]
+    },
+    {
+      "caption": "Đích khác subnet nên gói đi tới gateway; route table chọn route có prefix dài nhất khớp với 10.0.2.30.",
+      "show": [
+        "route",
+        "app-route"
+      ],
+      "highlight": [
+        "app-route"
+      ]
+    },
+    {
+      "caption": "Route 10.0.0.0/16 local đưa gói tới DB. Security group của DB chưa mở 5432 nên gói bị bỏ: app thấy Connect timed out.",
+      "show": [
+        "route-db"
+      ],
+      "highlight": [
+        "route-db"
+      ]
+    },
+    {
+      "caption": "Mở 5432 cho dải 10.0.1.0/24 trong security group của DB; nếu thấy Connection refused thì gói đã tới nơi, hãy kiểm process.",
+      "show": [],
+      "highlight": [
+        "db"
+      ]
+    },
+    {
+      "caption": "Gọi API đối tác: IP đích nằm ngoài VPC, chỉ khớp route mặc định 0.0.0.0/0 trỏ tới NAT gateway.",
+      "show": [
+        "nat",
+        "route-nat"
+      ],
+      "highlight": [
+        "route-nat"
+      ]
+    },
+    {
+      "caption": "NAT thay IP nguồn 10.0.1.12 bằng IP public của nó và ghi lại để chuyển response về đúng app.",
+      "show": [
+        "partner",
+        "nat-partner"
+      ],
+      "highlight": [
+        "nat-partner"
+      ]
+    },
+    {
+      "caption": "Đối tác whitelist IP public của NAT, không phải IP của app. Mọi app trong subnet đi ra bằng cùng IP đó.",
+      "show": [],
+      "highlight": [
+        "nat",
+        "partner"
+      ]
+    }
+  ]
+}

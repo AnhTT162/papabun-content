@@ -7,7 +7,7 @@
   "title": "HTTP request đi qua những gì",
   "summary": "Từ lúc gõ URL tới khi nhận response: DNS, TCP, TLS, load balancer, app server, database, keep-alive, và HTTP/2, HTTP/3 thay đổi gì.",
   "level": "foundation",
-  "order": 1,
+  "order": 2,
   "minutes": 15,
   "prerequisites": [],
   "terms": ["dns", "rtt", "tcp-handshake", "tls-handshake", "keep-alive", "load-balancer", "reverse-proxy", "tls-termination", "connection-pool", "multiplexing", "quic", "head-of-line-blocking"],

@@ -1,0 +1,146 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần đọc dữ liệu đi xuống bao xa",
+  "nodes": [
+    {
+      "id": "core",
+      "label": "Core + L1 ~1 ns",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "l2",
+      "label": "L2 ~4 ns",
+      "kind": "cache",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "l3",
+      "label": "L3 chung 10–40 ns",
+      "kind": "cache",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "ram",
+      "label": "RAM ~100 ns",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    },
+    {
+      "id": "ssd",
+      "label": "NVMe SSD ~100 µs",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "net",
+      "label": "Server khác 0,5 ms",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.05
+    }
+  ],
+  "edges": [
+    {
+      "id": "core-l2",
+      "from": "core",
+      "to": "l2",
+      "label": "L1 miss"
+    },
+    {
+      "id": "l2-l3",
+      "from": "l2",
+      "to": "l3",
+      "label": "L2 miss"
+    },
+    {
+      "id": "l3-ram",
+      "from": "l3",
+      "to": "ram",
+      "label": "nạp cả cache line"
+    },
+    {
+      "id": "ram-ssd",
+      "from": "ram",
+      "to": "ssd",
+      "label": "page cache miss"
+    },
+    {
+      "id": "core-net",
+      "from": "core",
+      "to": "net",
+      "label": "gọi qua mạng"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Code đọc `prices[i]`. Nếu giá trị đã nằm trong L1 của core, lệnh đọc chỉ mất vài chu kỳ, cỡ 1 ns.",
+      "show": [
+        "core"
+      ]
+    },
+    {
+      "caption": "Không có trong L1 thì hỏi L2, vẫn riêng của core, chậm hơn vài lần.",
+      "show": [
+        "l2",
+        "core-l2"
+      ],
+      "highlight": [
+        "core-l2"
+      ]
+    },
+    {
+      "caption": "L3 dùng chung cho nhiều core: lớn hơn, chậm hơn, và là nơi các core thấy dữ liệu của nhau.",
+      "show": [
+        "l3",
+        "l2-l3"
+      ],
+      "highlight": [
+        "l2-l3"
+      ]
+    },
+    {
+      "caption": "Trượt cả ba tầng thì vào RAM, khoảng 100 ns. CPU nạp cả cache line 64–128 byte, nên `prices[i+1]` sau đó gần như miễn phí.",
+      "show": [
+        "ram",
+        "l3-ram"
+      ],
+      "highlight": [
+        "l3-ram"
+      ]
+    },
+    {
+      "caption": "Dữ liệu chưa có trong RAM (file chưa vào page cache) thì đọc SSD: chậm hơn RAM khoảng 1.000 lần.",
+      "show": [
+        "ssd",
+        "ram-ssd"
+      ],
+      "highlight": [
+        "ram-ssd"
+      ]
+    },
+    {
+      "caption": "Dữ liệu nằm ở database hay service khác thì mỗi lần đọc là một vòng mạng, chậm hơn cả SSD local, chưa kể thời gian bên kia xử lý.",
+      "show": [
+        "net",
+        "core-net"
+      ],
+      "highlight": [
+        "core-net"
+      ]
+    },
+    {
+      "caption": "Một vòng lặp gọi database 200 lần trả 200 vòng mạng; gom thành một query trả một vòng.",
+      "show": [],
+      "highlight": [
+        "core",
+        "net"
+      ]
+    }
+  ]
+}

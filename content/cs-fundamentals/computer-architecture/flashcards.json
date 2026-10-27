@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "l1-vs-ram", "front": "Đọc từ L1 và đọc từ RAM chênh nhau cỡ bao nhiêu?", "back": "Khoảng 100 lần: L1 cỡ 1 ns, RAM cỡ 100 ns." },
+    { "id": "ram-ssd-net", "front": "Xếp theo độ trễ: đọc ngẫu nhiên NVMe SSD, đọc RAM, một vòng mạng trong datacenter.", "back": "RAM ~100 ns < NVMe SSD 20–100 µs < vòng mạng trong datacenter 0,1–0,5 ms." },
+    { "id": "cache-line-size", "front": "Cache line lớn bao nhiêu và vì sao quan trọng?", "back": "64 byte trên x86, 128 byte trên Apple Silicon. CPU nạp cả line một lần, nên đọc phần tử kế bên gần như miễn phí." },
+    { "id": "column-traversal", "front": "Vì sao cộng `int[][]` theo cột chậm hơn nhiều so với theo hàng?", "back": "Mỗi hàng là một mảng riêng; đi theo cột thì mỗi phần tử nằm trên một cache line khác, gần như lần nào cũng trượt cache." },
+    { "id": "linkedlist-slow", "front": "`ArrayList` và `LinkedList` đều duyệt O(n), sao `LinkedList` chậm hơn?", "back": "Mỗi bước phải đọc xong node này mới biết địa chỉ node sau nên CPU không đọc trước được; node lại to hơn và rải rác dần sau GC." },
+    { "id": "boxed-array", "front": "`int[]` và `Integer[]` khác nhau thế nào về bố cục bộ nhớ?", "back": "`int[]` chứa giá trị liền nhau; `Integer[]` chứa tham chiếu tới các object 16 byte nằm chỗ khác trên heap." },
+    { "id": "speed-of-light", "front": "Vì sao gọi đồng bộ sang region khác luôn đắt dù code nhanh?", "back": "Tín hiệu trong cáp quang chỉ đi khoảng 200 km mỗi ms; Hà Nội tới Singapore một vòng thực tế khoảng 40 ms, không tối ưu code nào xoá được." },
+    { "id": "latency-vs-iops", "front": "Ổ đĩa trả mỗi lần đọc 100 µs, đọc lần lượt từng cái thì tối đa bao nhiêu IOPS?", "back": "1 / 100 µs = 10.000 IOPS. Muốn cao hơn phải gửi nhiều request song song (queue depth lớn hơn)." }
+  ]
+}

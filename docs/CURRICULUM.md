@@ -104,9 +104,9 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `network-basics` | ✚ Mạng máy tính cơ bản | foundation | Mô hình TCP/IP và OSI, IP, subnet và CIDR, port, NAT, routing; vì sao service "không gọi được nhau" | A L D | ⬜ |
+| 1 | `network-basics` | ✚ Mạng máy tính cơ bản | foundation | Mô hình TCP/IP và OSI, IP, subnet và CIDR, port, NAT, routing; vì sao service "không gọi được nhau" | A L D | ✅ |
 | 2 | `http-request-lifecycle` | HTTP request đi qua những gì | foundation | DNS → TCP → TLS → LB → app; connection pool, keep-alive | A L D | ✅ |
-| 3 | `computer-architecture` | ✚ CPU, bộ nhớ & các con số latency | foundation | Cache L1/L2/L3, cache line, RAM và SSD và mạng, latency numbers; nền cho false sharing và hiệu năng | A L D | ⬜ |
+| 3 | `computer-architecture` | ✚ CPU, bộ nhớ & các con số latency | foundation | Cache L1/L2/L3, cache line, RAM và SSD và mạng, latency numbers; nền cho false sharing và hiệu năng | A L D | ✅ |
 | 4 | `proxy-nginx` | ✚ Forward proxy, reverse proxy & Nginx | junior | Reverse proxy, TLS termination, load balancing cơ bản, timeout và buffer, header `X-Forwarded-*` | A L D | ⬜ |
 | 5 | `os-process-memory` | Process, thread & bộ nhớ của hệ điều hành | junior | Context switch, virtual memory, page cache, file descriptor, `ulimit`, OOM killer | A L D | ⬜ |
 | 6 | `data-structures` | Cấu trúc dữ liệu cơ bản & Big-O | junior | Mảng, linked list, hash table, cây, heap, graph; Big-O; chọn cấu trúc theo thao tác | L D | ⬜ |

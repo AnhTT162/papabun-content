@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cidr-mask-output",
+      "kind": "output",
+      "prompt": "Đoạn code kiểm một IP có nằm trong `10.0.16.0/20` không. Chương trình in ra gì?",
+      "code": "static int ip(int a, int b, int c, int d) { return a << 24 | b << 16 | c << 8 | d; }\n\nstatic boolean inRange(int addr, int network, int prefix) {\n    int mask = -1 << (32 - prefix);\n    return (addr & mask) == (network & mask);\n}\n\npublic static void main(String[] args) {\n    int subnet = ip(10, 0, 16, 0);\n    System.out.println(inRange(ip(10, 0, 31, 200), subnet, 20));\n    System.out.println(inRange(ip(10, 0, 32, 9), subnet, 20));\n    System.out.println(inRange(ip(10, 0, 15, 255), subnet, 20));\n}",
+      "options": ["true / false / false", "true / true / false", "false / false / true", "true / false / true"],
+      "answer": 0,
+      "explanation": "Mask `/20` là `255.255.240.0`: octet thứ ba chỉ giữ 4 bit cao, tức làm tròn xuống bội của 16. 31 ra 16 nên `10.0.31.200` thuộc dải; 32 ra 32 và 15 ra 0 nên hai IP còn lại nằm ngoài. Dải `10.0.16.0/20` kéo dài từ `10.0.16.0` tới `10.0.31.255`."
+    },
+    {
+      "id": "timeout-meaning",
+      "kind": "single",
+      "prompt": "Service A gọi database ở subnet khác, cổng 5432, và nhận `SocketTimeoutException: Connect timed out` sau đúng 2 giây (connect timeout). Từ chính máy database, `psql` vào localhost vẫn chạy. Nên kiểm tra gì trước?",
+      "options": [
+        "Database đang nghe sai port nên trả RST",
+        "Security group hoặc firewall đang bỏ gói tới 5432",
+        "Connection pool của service A đã cạn kết nối",
+        "Database hết `max_connections` nên từ chối kết nối"
+      ],
+      "answer": 1,
+      "explanation": "Timeout ở bước connect nghĩa là SYN không nhận được gì quay về: gói bị bỏ lặng lẽ trên đường, điển hình là security group, route hoặc IP sai. Process không nghe port thì kernel trả RST và Java báo `Connection refused` ngay. Hết `max_connections` thì TCP đã kết nối được, lỗi đến từ PostgreSQL sau handshake. Pool cạn thì lỗi là chờ pool, không phải connect."
+    },
+    {
+      "id": "nat-whitelist-ip",
+      "kind": "single",
+      "prompt": "Đối tác chỉ cho phép IP trong whitelist gọi API của họ. Service chạy trên 20 pod trong subnet private, ra Internet qua một NAT gateway. Cần gửi đối tác IP nào?",
+      "options": [
+        "IP private của cả 20 pod",
+        "IP public của NAT gateway",
+        "CIDR của subnet private chứa các pod",
+        "IP của load balancer nhận traffic vào"
+      ],
+      "answer": 1,
+      "explanation": "NAT thay IP nguồn của mọi gói đi ra bằng IP public của nó, nên đối tác chỉ thấy IP đó. IP private và CIDR private không đi được trên Internet. Load balancer phía vào xử lý traffic đi vào, không phải traffic service tự gọi ra."
+    },
+    {
+      "id": "localhost-bind",
+      "kind": "single",
+      "prompt": "Một service chạy trong container nghe `127.0.0.1:8080`. Từ container khác trong cùng network, `curl http://orders:8080` báo `Connection refused`, dù DNS ra đúng IP của container. Nguyên nhân?",
+      "options": [
+        "Service chỉ nghe loopback, không nghe interface mạng",
+        "DNS của Docker trả về IP cũ của container trước đó",
+        "Port 8080 thuộc dải ephemeral port nên bị chặn",
+        "Thiếu route giữa hai container trong cùng network"
+      ],
+      "answer": 0,
+      "explanation": "`127.0.0.1` là loopback của chính container đó. Gói tới interface mạng của container nhưng không socket nào nghe ở đó nên kernel trả RST: refused. Thiếu route hay firewall bỏ gói sẽ cho timeout, không phải refused. Sửa bằng cách nghe `0.0.0.0`."
+    }
+  ]
+}

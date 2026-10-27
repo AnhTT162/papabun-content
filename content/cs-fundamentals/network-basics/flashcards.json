@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cidr-size", "front": "`10.0.16.0/20` gồm bao nhiêu địa chỉ và kéo dài tới đâu?", "back": "12 bit cho host nên có 2^12 = 4.096 địa chỉ, từ `10.0.16.0` tới `10.0.31.255`." },
+    { "id": "private-ranges", "front": "Ba dải IPv4 private theo RFC 1918 là gì?", "back": "`10.0.0.0/8`, `172.16.0.0/12` và `192.168.0.0/16`." },
+    { "id": "longest-prefix", "front": "Router chọn route nào khi nhiều route cùng khớp một IP đích?", "back": "Route có prefix dài nhất (cụ thể nhất). `0.0.0.0/0` khớp mọi IP nên chỉ được dùng khi không route nào khác khớp." },
+    { "id": "five-tuple", "front": "Thứ gì xác định duy nhất một kết nối TCP?", "back": "Bộ năm: giao thức, IP nguồn, port nguồn, IP đích, port đích. Vì thế một server port 443 nhận được rất nhiều kết nối cùng lúc." },
+    { "id": "refused-vs-timeout", "front": "`Connection refused` và `Connect timed out` nói gì khác nhau?", "back": "Refused: gói đã tới máy đích và bị trả RST (không ai nghe port, hoặc firewall REJECT). Timeout: gói bị bỏ lặng lẽ, thường do security group, route hoặc IP sai." },
+    { "id": "nat-whitelist", "front": "App trong subnet private gọi API ngoài qua NAT. Đối tác thấy IP nào?", "back": "IP public của NAT, dùng chung cho mọi máy đi qua NAT đó. Đó là IP cần đưa cho đối tác whitelist." },
+    { "id": "bind-localhost", "front": "App trong container nghe `127.0.0.1:8080`. Từ container khác gọi vào thì sao?", "back": "Bị refused: `127.0.0.1` chỉ nhận kết nối từ chính container đó. Phải nghe `0.0.0.0` (mọi interface)." },
+    { "id": "aws-reserved", "front": "Một subnet `/24` trên AWS VPC dùng được bao nhiêu IP?", "back": "251: AWS giữ 5 địa chỉ mỗi subnet (4 địa chỉ đầu và địa chỉ cuối)." },
+    { "id": "sg-stateful", "front": "Security group và Network ACL của AWS khác nhau thế nào về chiều về?", "back": "Security group là stateful nên response tự được đi ra; NACL là stateless, phải mở cả chiều về cho dải ephemeral port." }
+  ]
+}

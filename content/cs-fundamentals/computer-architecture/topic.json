@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "computer-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "CPU, bộ nhớ & các con số latency",
+  "summary": "Cache L1/L2/L3, cache line và prefetch, RAM, SSD và mạng chênh nhau bao nhiêu; vì sao mảng nhanh hơn danh sách liên kết, boxing và branch prediction ảnh hưởng thế nào, và dùng các con số latency để thấy chỗ chậm thật trong hệ thống.",
+  "level": "foundation",
+  "order": 3,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["latency-numbers", "cpu-cache", "cache-line", "cache-locality", "hardware-prefetch", "false-sharing", "branch-prediction", "object-header", "tlb", "numa", "iops", "latency", "throughput"],
+  "references": [
+    { "title": "JEP 519: Compact Object Headers", "url": "https://openjdk.org/jeps/519" },
+    { "title": "Ulrich Drepper: What Every Programmer Should Know About Memory", "url": "https://people.freebsd.org/~lstewart/articles/cpumemory.pdf" },
+    { "title": "JEP 345: NUMA-Aware Memory Allocation for G1", "url": "https://openjdk.org/jeps/345" },
+    { "title": "Colin Scott: Latency numbers every programmer should know", "url": "https://colin-scott.github.io/personal_website/research/interactive_latency.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Thuật toán O(n log n) có luôn nhanh hơn O(n²) không?\" Không, với n nhỏ hoặc khi bản O(n log n) đi theo con trỏ còn bản kia đọc mảng tuần tự. Big-O bỏ hằng số, mà một lần trượt cache tốn bằng hàng trăm phép tính. Vì thế nhiều hash table hiện đại dùng open addressing trên mảng phẳng thay vì danh sách liên kết trong bucket, và database dùng B-tree với node lớn bằng một page thay vì cây nhị phân." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tin microbenchmark tự viết bằng `System.nanoTime()` trong một vòng lặp: JIT có thể bỏ code không dùng kết quả, chưa kịp tối ưu ở lần đầu, hoặc đổi nhánh thành lệnh không rẽ nhánh. Dùng JMH, chạy trên phần cứng giống production, và xác nhận bằng profiler trước khi sửa code vì lý do cache." }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "network-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Mạng máy tính cơ bản",
+  "summary": "Các tầng TCP/IP và OSI, địa chỉ IP, subnet và CIDR, port, routing, NAT và firewall; đọc lỗi kết nối của Java để biết tầng nào hỏng khi service không gọi được nhau.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["osi-model", "ip-address", "subnet", "cidr", "private-ip", "network-port", "ephemeral-port", "route-table", "nat", "security-group", "mtu", "dns", "conntrack", "keep-alive"],
+  "references": [
+    { "title": "RFC 4632: Classless Inter-domain Routing (CIDR)", "url": "https://www.rfc-editor.org/rfc/rfc4632.html" },
+    { "title": "RFC 1918: Address Allocation for Private Internets", "url": "https://www.rfc-editor.org/rfc/rfc1918.html" },
+    { "title": "AWS: Subnet CIDR blocks", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-sizing.html" },
+    { "title": "AWS: NAT gateway basics", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-basics.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Service A không gọi được service B, bạn điều tra thế nào?\" Đi từ dưới lên, mỗi bước một lệnh: `getent hosts b` hoặc `dig` (tên ra đúng IP chưa), `ip route get <IP>` (gói đi interface nào), `nc -vz <IP> <port>` (refused hay timeout), rồi trên máy B `ss -ltnp` (process có nghe đúng địa chỉ và port không). Refused thì nhìn phía B; timeout thì nhìn security group, NACL và route ở giữa." },
+    { "type": "callout", "style": "warning", "markdown": "Chọn CIDR cho VPC hay cluster là quyết định khó đổi. Dải quá nhỏ thì hết IP khi scale pod; dải trùng với VPC khác, mạng văn phòng hay bridge Docker `172.17.0.0/16` trên máy Linux thì sau này không peering hay nối VPN được. Lập bảng phân bổ CIDR cho cả tổ chức trước khi tạo mạng đầu tiên." }
+  ]
+}

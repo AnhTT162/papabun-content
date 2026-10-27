@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "flat-array-output",
+      "kind": "output",
+      "prompt": "Ma trận 3 × 4 được lưu trong một mảng `int[]` để các hàng nằm liền nhau. Chương trình in ra gì?",
+      "code": "int rows = 3, cols = 4;\nint[] grid = new int[rows * cols];\nfor (int i = 0; i < rows; i++)\n    for (int j = 0; j < cols; j++)\n        grid[i * cols + j] = i * 10 + j;\nSystem.out.println(grid[6] + \" \" + grid[11]);",
+      "options": [
+        "12 23",
+        "6 11",
+        "2 23",
+        "20 32"
+      ],
+      "answer": 0,
+      "explanation": "Chỉ số là `i * cols + j`: 6 = 1 × 4 + 2 nên là hàng 1, cột 2, giá trị 12; 11 = 2 × 4 + 3 nên giá trị 23. 6 11 là nhầm rằng giá trị bằng chỉ số. 2 23 là đọc mảng như thể lưu theo cột (cột `k / 3`, hàng `k % 3`). 20 32 là tính hàng bằng `k / 3`, nhầm số cột với số hàng. Bố cục theo hàng này là lý do duyệt theo `j` ở vòng trong đọc bộ nhớ tuần tự và tận dụng được cache line."
+    },
+    {
+      "id": "loop-network-calls",
+      "kind": "single",
+      "prompt": "Một API mất 105 ms. Profiler cho thấy CPU chỉ bận khoảng 3 ms. Trong code có vòng lặp gọi Redis `GET` 200 lần, mỗi vòng mạng khoảng 0,5 ms. Sửa gì hiệu quả nhất?",
+      "options": [
+        "Gom 200 lệnh lại, gửi trong một vòng mạng",
+        "Đổi `LinkedList` của vòng lặp sang `ArrayList`",
+        "Tăng CPU cho pod từ 1 lên 2 core",
+        "Bật huge page để giảm TLB miss"
+      ],
+      "answer": 0,
+      "explanation": "200 × 0,5 ms = 100 ms nằm ở chờ mạng, CPU chỉ chiếm 3 ms. Gom bằng `MGET` hoặc pipeline thì còn khoảng một vòng mạng (trên Redis Cluster, `MGET` chỉ chạy khi mọi key cùng slot, nếu không sẽ lỗi `CROSSSLOT`; pipeline theo từng node thì không cần). Đổi cấu trúc dữ liệu, thêm CPU hay huge page chỉ tác động tới phần 3 ms."
+    },
+    {
+      "id": "linkedlist-locality",
+      "kind": "single",
+      "prompt": "Duyệt 5 triệu phần tử, `LinkedList<Integer>` chậm hơn `ArrayList<Integer>` vài lần dù cả hai đều O(n). Lý do chính?",
+      "options": [
+        "Iterator của `LinkedList` phải kiểm tra `modCount` ở mỗi bước",
+        "Bước sau phải chờ đọc con trỏ của bước trước, node lại to hơn",
+        "`LinkedList` phải unbox `Integer` còn `ArrayList` thì không cần",
+        "`LinkedList.get(i)` đi từ đầu danh sách ở mỗi lần lặp for-each"
+      ],
+      "answer": 1,
+      "explanation": "Mảng tham chiếu của `ArrayList` nằm liền nhau: một cache line chứa nhiều tham chiếu, CPU đọc trước và đọc song song được. Với `LinkedList`, phải đọc xong node này mới biết địa chỉ node sau, và mỗi node 24 byte cộng `Integer` nên tốn băng thông hơn; node rải rác sau GC càng làm chậm thêm. Cả hai iterator đều kiểm tra `modCount` và đều phải unbox. For-each dùng iterator, không gọi `get(i)`."
+    },
+    {
+      "id": "iops-queue-depth",
+      "kind": "single",
+      "prompt": "Một ổ đĩa trả mỗi lần đọc ngẫu nhiên trong 200 µs. Ứng dụng đọc lần lượt, chờ xong lần này mới gửi lần sau. Đạt tối đa bao nhiêu IOPS?",
+      "options": [
+        "500 IOPS",
+        "5.000 IOPS",
+        "50.000 IOPS",
+        "200.000 IOPS"
+      ],
+      "answer": 1,
+      "explanation": "Chỉ một request mỗi lúc thì mỗi giây làm được 1 / 0,0002 = 5.000 lần đọc. Ổ NVMe có thể đạt hàng trăm nghìn IOPS, nhưng chỉ khi có nhiều request song song (queue depth lớn). Latency và throughput khác nhau: muốn throughput cao phải có song song."
+    }
+  ]
+}
