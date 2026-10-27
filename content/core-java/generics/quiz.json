@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "same-class",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "List<String> a = new ArrayList<>();\nList<Integer> b = new ArrayList<>();\nSystem.out.println(a.getClass() == b.getClass());\nObject[] arr = new String[1];\ntry { arr[0] = 1; System.out.println(\"ok\"); }\ncatch (ArrayStoreException e) { System.out.println(\"ASE\"); }",
+      "options": ["true / ASE", "false / ASE", "true / ok", "false / ok"],
+      "answer": 0,
+      "explanation": "Sau erasure, cả hai đều là `ArrayList`. Mảng thì giữ kiểu phần tử lúc chạy, nên gán `Integer` vào mảng thật sự là `String[]` ném `ArrayStoreException`."
+    },
+    {
+      "id": "pecs-add",
+      "kind": "single",
+      "prompt": "Với `List<? extends Number> nums`, lệnh nào biên dịch được?",
+      "options": ["`Number n = nums.get(0);`", "`nums.add(1);`", "`nums.add(Integer.valueOf(1));`", "`nums.add((Number) 1);`"],
+      "answer": 0,
+      "explanation": "`? extends Number` là nguồn để đọc: chắc chắn lấy ra được `Number`. Nhưng list thật có thể là `List<Double>`, nên compiler cấm thêm bất kỳ giá trị nào trừ `null`."
+    },
+    {
+      "id": "overload-erasure",
+      "kind": "single",
+      "prompt": "Class có hai method `void save(List<String> xs)` và `void save(List<Integer> xs)`. Kết quả?",
+      "options": ["Lỗi biên dịch", "Biên dịch được, chọn theo kiểu lúc chạy", "Biên dịch được, luôn gọi bản khai báo trước", "Biên dịch được, chỉ có cảnh báo unchecked"],
+      "answer": 0,
+      "explanation": "Sau erasure cả hai thành `save(List)`, trùng chữ ký (name clash). Đặt tên khác (`saveNames`, `saveIds`) hoặc dùng một method generic."
+    },
+    {
+      "id": "varargs-array",
+      "kind": "single",
+      "prompt": "`static <T> T[] pair(T a, T b) { return toArray(a, b); }` với `toArray(T... xs)` trả `xs`. Gọi `String[] s = pair(\"a\", \"b\");` thì sao?",
+      "options": ["Ném `ClassCastException` lúc chạy", "Trả về `String[]` gồm `a`, `b`", "Lỗi biên dịch vì mảng generic", "Trả về `null` do erasure"],
+      "answer": 0,
+      "explanation": "Trong `pair`, `T` đã bị xoá nên mảng varargs được tạo là `Object[]`. Gán nó cho `String[]` ở bên gọi ném `ClassCastException`. Compiler chỉ cảnh báo heap pollution."
+    }
+  ]
+}

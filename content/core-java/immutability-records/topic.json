@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "immutability-records",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Immutability & record",
+  "summary": "Năm điều kiện để một class bất biến, defensive copy và view không sửa được khác bản sao, record sinh gì và vì sao nó chỉ bất biến nông, compact constructor để validate, record với JPA và Jackson, lợi ích đa luồng của bất biến.",
+  "level": "mid",
+  "order": 15,
+  "minutes": 12,
+  "prerequisites": ["equals-hashcode", "oop-java"],
+  "terms": ["immutable", "defensive-copy", "record-class", "compact-constructor", "unmodifiable-view", "value-based-class", "value-object", "safe-publication", "this-escape", "data-race", "copy-on-write"],
+  "references": [
+    { "title": "JEP 395: Records", "url": "https://openjdk.org/jeps/395" },
+    { "title": "Javadoc java.lang.Record (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Record.html" },
+    { "title": "Javadoc List: Unmodifiable Lists (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html#unmodifiable" },
+    { "title": "JLS §17.5 final Field Semantics (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html#jls-17.5" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Entity JPA có làm bằng record được không?\" Không: JPA cần constructor không tham số, field không `final` để nạp lười và proxy, và danh tính theo id thay vì theo mọi field. Record hợp làm DTO, projection (Spring Data trả record trực tiếp), `@Embeddable` (Hibernate 6.2+), command, event và value object. Jackson đọc ghi record từ 2.12, nhưng nên dùng 2.15+ vì các bản trước có lỗi về tên property của record." },
+    { "type": "callout", "style": "warning", "markdown": "Record chỉ **bất biến nông**: field `final` nhưng object bên trong vẫn sửa được. `record Order(String id, List<String> items)` nhận list từ bên ngoài thì bên gọi vẫn sửa được `items`, làm `hashCode` đổi khi record đang nằm trong `HashSet`. Sao chép trong compact constructor: `items = List.copyOf(items);`." }
+  ]
+}

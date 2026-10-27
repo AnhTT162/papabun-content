@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "ClassCastException ở chỗ không ai sửa",
+  "context": "Job xuất báo cáo tên khách hàng chạy ổn nhiều tháng. Tuần này team tích hợp thêm module import CSV cũ viết từ thời Java 1.4 (dùng raw type). Job bắt đầu lỗi ở vòng lặp in tên, đoạn code không ai đụng tới. Module import vẫn chạy không lỗi.",
+  "buggyCode": "// Module cũ, biên dịch chỉ có cảnh báo unchecked\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nstatic void legacyImport(List rows) {\n    rows.add(12345); // mã khách đọc từ CSV, kiểu Integer\n}\n\n// Code mới\nList<String> names = new ArrayList<>(List.of(\"An\"));\nlegacyImport(names);\nSystem.out.println(names.size() + \" \" + names);\n\nfor (String name : names) {\n    System.out.println(name.toUpperCase());\n}",
+  "symptom": {
+    "description": "Chạy trên JDK 27: lệnh `add` không lỗi, list in ra đủ, lỗi nổ ở vòng `for` khi tới phần tử thứ hai.",
+    "output": "2 [An, 12345]\nAN\nException in thread \"main\" java.lang.ClassCastException: class java.lang.Integer cannot be cast to class java.lang.String (...)"
+  },
+  "diagnosis": {
+    "question": "Vì sao lỗi nổ ở vòng lặp mà không nổ ở `rows.add(12345)`?",
+    "options": [
+      "Erasure xoá kiểu, ép kiểu chỉ chèn ở chỗ đọc",
+      "`ArrayList` kiểm kiểu lúc `add` nhưng bỏ qua với raw type",
+      "Raw type tạo bản sao list nên `names` gốc bị hỏng",
+      "`for-each` dùng `Iterator` raw nên ép kiểu sai"
+    ],
+    "answer": 0,
+    "explanation": "Lúc chạy, `names` chỉ là `ArrayList` chứa `Object`; raw type `List` cho phép `add` bất kỳ thứ gì mà JVM không kiểm. Compiler chèn ép kiểu `(String)` ở chỗ lấy phần tử ra trong vòng `for`, nên lỗi hiện ở đó. Đây là heap pollution: biến kiểu `List<String>` trỏ tới list chứa `Integer`. `ArrayList` không kiểm kiểu phần tử ở bất kỳ đâu và raw type không tạo bản sao; ép kiểu đến từ compiler theo kiểu khai báo `String name`, không phải từ iterator."
+  },
+  "fix": {
+    "code": "// Chặn ngay ở biên với code cũ: thêm sai kiểu ném lỗi tại chỗ\nList<String> names = Collections.checkedList(new ArrayList<>(List.of(\"An\")), String.class);\nlegacyImport(names); // ClassCastException: Attempt to insert class java.lang.Integer ...\n\n// Tốt hơn: sửa module cũ trả kiểu rõ ràng\nstatic List<String> legacyImport(Path csv) { ... }",
+    "explanation": "`Collections.checkedList` kiểm kiểu ở mỗi lần thêm, nên lỗi nổ đúng dòng gây ra nó. Cách gốc là bỏ raw type ở module cũ và coi mỗi cảnh báo `unchecked` là lỗi; bật `-Xlint:unchecked -Werror` để CI chặn."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đơn hàng biến mất khỏi HashSet",
+  "context": "Service gom đơn chờ xử lý vào một `HashSet<Order>` để chống trùng. `Order` là record, team tin record là bất biến. Một bước sau đó thêm món vào danh sách `items` mà nó vẫn giữ. Từ đó có đơn bị xử lý hai lần và có đơn không bao giờ được đánh dấu xong.",
+  "buggyCode": "record Order(String id, List<String> items) {}\n\nList<String> items = new ArrayList<>(List.of(\"ao\"));\nOrder order = new Order(\"A1\", items);\nSet<Order> pending = new HashSet<>(Set.of(order));\n\nitems.add(\"quan\"); // bước gom hàng thêm món\n\nSystem.out.println(order);\nSystem.out.println(pending.contains(order));\nSystem.out.println(pending.contains(new Order(\"A1\", List.of(\"ao\", \"quan\"))));\nSystem.out.println(\"size=\" + pending.size());",
+  "symptom": {
+    "description": "Chạy trên JDK 27: set vẫn có 1 phần tử nhưng không tìm thấy chính object đã thêm vào.",
+    "output": "Order[id=A1, items=[ao, quan]]\nfalse\nfalse\nsize=1"
+  },
+  "diagnosis": {
+    "question": "Vì sao `contains(order)` trả `false` với chính object đó?",
+    "options": [
+      "Record giữ list mutable nên hashCode đổi theo list",
+      "Record sinh `equals` so tham chiếu nên object mới không khớp",
+      "`HashSet` chép list lúc thêm nên `items.add` không vào set",
+      "`HashSet` so phần tử bằng `==` nên cần đúng object"
+    ],
+    "answer": 0,
+    "explanation": "Field `items` là `final` nhưng trỏ tới đúng `ArrayList` mà bên gọi còn giữ. Thêm `quan` làm `hashCode` của record (tính từ mọi component) đổi, trong khi entry vẫn nằm ở bucket tính theo hash cũ. `contains` tìm ở bucket mới nên không thấy. Record sinh `equals` so theo giá trị component; `HashSet` không chép phần tử và so bằng `equals`, nhưng chỉ trong bucket tính theo hash hiện tại."
+  },
+  "fix": {
+    "code": "record Order(String id, List<String> items) {\n    Order {\n        Objects.requireNonNull(id);\n        items = List.copyOf(items); // bản sao bất biến, từ chối null\n    }\n\n    Order withItem(String item) {\n        var next = new ArrayList<>(items);\n        next.add(item);\n        return new Order(id, next);\n    }\n}",
+    "explanation": "Compact constructor chép list thành bản bất biến, nên bên ngoài không còn tham chiếu nào sửa được trạng thái của record, và `order.items().add(...)` ném `UnsupportedOperationException`. Muốn thêm món thì tạo `Order` mới; nếu đơn đang nằm trong set, xoá bản cũ rồi thêm bản mới."
+  }
+}

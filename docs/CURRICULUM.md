@@ -139,8 +139,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 11 | `java-logging` | ✚ Logging trong Java | junior | SLF4J và Logback/Log4j2, log level, chi phí logging, async appender, MDC, bài học Log4Shell | L B | ✅ |
 | 12 | `hashmap-internals` | HashMap Internals | mid | Hash spreading, resize, treeify | A L S B | ✅ |
 | 13 | `exceptions` | Exceptions | mid | Checked/unchecked, cause, try-with-resources, fast throw | L B | ✅ |
-| 14 | `generics` | Generics & type erasure | mid | Erasure, wildcard và PECS, bridge method, heap pollution | L B | ⬜ |
-| 15 | `immutability-records` | Immutability & record | mid | Defensive copy, record, value-based class, an toàn đa luồng | L B | ⬜ |
+| 14 | `generics` | Generics & type erasure | mid | Erasure, wildcard và PECS, bridge method, heap pollution | L B | ✅ |
+| 15 | `immutability-records` | Immutability & record | mid | Defensive copy, record, value-based class, an toàn đa luồng | L B | ✅ |
 | 16 | `java-8-11-features` | ✚ Java 8 → 11: lambda, stream, Optional, var | mid | Lambda và capture, method reference, functional interface, default method, `var`, HTTP Client | L B | ⬜ |
 | 17 | `java-17-21-features` | ✚ Java 17 → 21: record, sealed, pattern matching | mid | Record, sealed, pattern matching cho `instanceof` và `switch`, text block, sequenced collection; nâng cấp từ 8/11 lên 17/21 | L B | ⬜ |
 | 18 | `stream-api` | Stream API chuyên sâu | mid | Lazy evaluation, stateful op, collector, parallel stream và common pool | L D B | ⬜ |

@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas", "java-basics-types", "bigdecimal-money", "date-time-api"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas", "java-basics-types", "bigdecimal-money", "date-time-api", "immutability-records"]
     },
     {
       "id": "dns",
@@ -437,7 +437,7 @@
       "meaning": "Hai thread truy cập cùng một biến, ít nhất một bên ghi, mà không có happens-before giữa hai lần truy cập. Kết quả khi đó không được JMM đảm bảo.",
       "example": "Hai thread cùng `count++` trên một `int` thường không khoá.",
       "related": ["race-condition", "happens-before"],
-      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model", "java-basics-types"]
+      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model", "java-basics-types", "immutability-records"]
     },
     {
       "id": "lost-update",
@@ -613,7 +613,7 @@
       "meaning": "Lớp bọc chặn mọi thao tác sửa nhưng vẫn đọc trực tiếp collection gốc; collection gốc đổi thì view đổi theo.",
       "example": "`Collections.unmodifiableList(list)` thấy ngay phần tử mới được thêm vào `list`.",
       "related": ["immutable"],
-      "topics": ["collections-overview", "structural-patterns"]
+      "topics": ["collections-overview", "structural-patterns", "immutability-records"]
     },
     {
       "id": "copy-on-write",
@@ -621,7 +621,7 @@
       "meaning": "Kỹ thuật cho hai bên dùng chung dữ liệu tới khi một bên ghi, lúc đó mới sao chép phần bị ghi. Áp dụng cho collection trong Java, và cho bộ nhớ của process sau `fork`, như khi Redis tạo snapshot.",
       "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn. Với Redis: snapshot trong lúc ghi nhiều làm các page bị ghi được sao chép, RAM có thể tăng gần gấp đôi.",
       "related": ["immutable", "fail-fast"],
-      "topics": ["collections-overview", "redis-internals", "structural-patterns", "os-process-memory"]
+      "topics": ["collections-overview", "redis-internals", "structural-patterns", "os-process-memory", "immutability-records"]
     },
     {
       "id": "sequenced-collection",
@@ -3717,7 +3717,7 @@
       "meaning": "Chia sẻ một object sang thread khác qua một cạnh happens-before, để thread đó thấy object đã dựng đầy đủ. Ví dụ: field volatile, field final, static initializer, collection đồng thời.",
       "example": "`private volatile Config current;` rồi `current = Config.load();` công bố an toàn; gán vào field thường thì thread khác có thể thấy field của `Config` vẫn mặc định.",
       "related": ["happens-before", "immutable", "this-escape"],
-      "topics": ["java-memory-model"]
+      "topics": ["java-memory-model", "immutability-records"]
     },
     {
       "id": "this-escape",
@@ -3725,7 +3725,7 @@
       "meaning": "Tham chiếu `this` lọt ra cho code khác (đăng ký listener, start thread, gọi method có thể override) khi constructor chưa chạy xong. Thread khác có thể thấy object dở dang, và đảm bảo của field final mất hiệu lực.",
       "example": "Gọi `bus.register(this)` ở dòng đầu constructor: event tới trên thread khác thấy field `final` vẫn `null`.",
       "related": ["safe-publication", "immutable"],
-      "topics": ["java-memory-model", "oop-java"]
+      "topics": ["java-memory-model", "oop-java", "immutability-records"]
     },
     {
       "id": "var-handle",
@@ -4453,7 +4453,7 @@
       "meaning": "Object nhỏ, bất biến, được so sánh bằng giá trị thay vì danh tính, và tự kiểm tra tính hợp lệ khi tạo.",
       "example": "`record Money(BigDecimal amount, Currency currency)` hai đối tượng cùng số tiền và tiền tệ là bằng nhau.",
       "related": ["primitive-obsession"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "ddd-tactical", "bigdecimal-money"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "ddd-tactical", "bigdecimal-money", "immutability-records"]
     },
     {
       "id": "feature-flag",
@@ -7397,7 +7397,7 @@
       "meaning": "Class mà instance chỉ được dùng theo giá trị, không theo danh tính: không so bằng `==`, không `synchronized` trên nó. `Optional`, `Integer`, `LocalDate` là ví dụ.",
       "example": "`synchronized (Integer.valueOf(1))` bị javac cảnh báo `[synchronization]` từ Java 16.",
       "related": ["optional", "wrapper-class"],
-      "topics": ["optional-null", "java-basics-types"]
+      "topics": ["optional-null", "java-basics-types", "immutability-records"]
     },
     {
       "id": "floating-point",
@@ -7526,6 +7526,94 @@
       "example": "App server cũ tra `DataSource` bằng `new InitialContext().lookup(\"java:comp/env/jdbc/orders\")`.",
       "related": ["log4shell"],
       "topics": ["java-logging"]
+    },
+    {
+      "id": "type-erasure",
+      "term": "Type erasure",
+      "meaning": "Cách Java cài generics: compiler kiểm tra kiểu rồi xoá tham số kiểu khỏi bytecode, thay bằng cận trên và chèn ép kiểu ở chỗ đọc. Lúc chạy `List<String>` và `List<Integer>` là cùng một class.",
+      "example": "Không viết được `new T()`; với `Object x`, `x instanceof List<String>` không biên dịch được vì `String` không còn lúc chạy.",
+      "related": ["bridge-method", "reifiable-type"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "wildcard",
+      "term": "Wildcard",
+      "meaning": "Ký hiệu `?` trong kiểu generic cho \"một kiểu nào đó\": `? extends T` (cận trên, để đọc), `? super T` (cận dưới, để ghi), `?` (không biết).",
+      "example": "`double sum(List<? extends Number> xs)` nhận được cả `List<Integer>` lẫn `List<Double>`.",
+      "related": ["pecs"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "pecs",
+      "term": "PECS",
+      "meaning": "Producer Extends, Consumer Super: tham số chỉ để đọc ra dùng `? extends T`, tham số chỉ để ghi vào dùng `? super T`.",
+      "example": "`Collections.copy(List<? super T> dest, List<? extends T> src)`.",
+      "related": ["wildcard"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "bridge-method",
+      "term": "Bridge method",
+      "meaning": "Method tổng hợp do compiler sinh để giữ đa hình sau type erasure, chuyển lời gọi từ chữ ký đã xoá kiểu sang method thật.",
+      "example": "`Price implements Comparable<Price>` có thêm `compareTo(Object)` gọi sang `compareTo(Price)`.",
+      "related": ["type-erasure"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "raw-type",
+      "term": "Raw type",
+      "meaning": "Kiểu generic dùng không kèm tham số (`List` thay vì `List<String>`), tồn tại để tương thích code trước Java 5; tắt kiểm tra kiểu và chỉ sinh cảnh báo `unchecked`.",
+      "example": "`List rows = names; rows.add(12345);` biên dịch được dù `names` là `List<String>`.",
+      "related": ["heap-pollution"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "heap-pollution",
+      "term": "Heap pollution",
+      "meaning": "Tình trạng biến kiểu generic trỏ tới object chứa sai kiểu, do raw type, unchecked cast hay varargs generic. `ClassCastException` nổ muộn ở chỗ đọc.",
+      "example": "`List<String>` chứa một `Integer`; lỗi chỉ nổ khi vòng `for` lấy phần tử đó ra.",
+      "related": ["raw-type", "type-erasure"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "reifiable-type",
+      "term": "Reifiable type",
+      "meaning": "Kiểu còn đầy đủ thông tin lúc chạy: primitive, class không generic, raw type, `List<?>`. Chỉ kiểu reifiable làm được kiểu phần tử của mảng.",
+      "example": "`new List<?>[10]` hợp lệ, `new List<String>[10]` thì không.",
+      "related": ["type-erasure"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "type-token",
+      "term": "Type token",
+      "meaning": "Object mang thông tin kiểu generic đầy đủ lúc chạy, thường là lớp con ẩn danh để kiểu nằm trong chữ ký lớp cha và đọc được qua reflection.",
+      "example": "`mapper.readValue(json, new TypeReference<List<Order>>() {})`.",
+      "related": ["type-erasure"],
+      "topics": ["generics"]
+    },
+    {
+      "id": "defensive-copy",
+      "term": "Defensive copy",
+      "meaning": "Sao chép phòng thủ: chép object mutable khi nhận vào và khi trả ra, để bên ngoài không giữ tham chiếu sửa được trạng thái bên trong.",
+      "example": "Constructor nhận `List<String> items` rồi lưu `List.copyOf(items)`.",
+      "related": ["immutable", "unmodifiable-view"],
+      "topics": ["immutability-records"]
+    },
+    {
+      "id": "record-class",
+      "term": "Record",
+      "meaning": "Class dữ liệu (Java 16): khai báo các component, compiler sinh field `private final`, constructor, accessor, `equals`, `hashCode`, `toString`. Luôn `final` và chỉ bất biến nông.",
+      "example": "`record Money(BigDecimal amount, Currency currency) {}`.",
+      "related": ["compact-constructor", "immutable", "value-object"],
+      "topics": ["immutability-records"]
+    },
+    {
+      "id": "compact-constructor",
+      "term": "Compact constructor",
+      "meaning": "Constructor của record không khai báo tham số, dùng để validate và chuẩn hoá; compiler tự gán field từ tham số ở cuối.",
+      "example": "`Order { items = List.copyOf(items); }`.",
+      "related": ["record-class"],
+      "topics": ["immutability-records"]
     }
   ]
 }

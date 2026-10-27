@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "view-vs-copy-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "List<String> base = new ArrayList<>(List.of(\"x\"));\nList<String> view = Collections.unmodifiableList(base);\nList<String> copy = List.copyOf(base);\nbase.add(\"y\");\nSystem.out.println(view + \" \" + copy);",
+      "options": ["[x, y] [x]", "[x] [x]", "[x, y] [x, y]", "UnsupportedOperationException"],
+      "answer": 0,
+      "explanation": "`unmodifiableList` chỉ bọc list gốc, nên thấy `y` được thêm qua `base`. `List.copyOf` đã sao chép lúc tạo nên giữ nguyên `[x]`. Không có lệnh sửa nào đi qua view nên không ném lỗi."
+    },
+    {
+      "id": "record-array-equals",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "record Hash(byte[] bytes) {}\nSystem.out.println(new Hash(new byte[]{1}).equals(new Hash(new byte[]{1})));",
+      "options": ["false", "true", "Lỗi biên dịch", "NullPointerException"],
+      "answer": 0,
+      "explanation": "`equals` sinh sẵn so từng component bằng `equals` của nó; mảng không override `equals` nên so tham chiếu, ra `false`."
+    },
+    {
+      "id": "final-not-immutable",
+      "kind": "single",
+      "prompt": "Class `final` có field `private final Date createdAt` và getter trả thẳng field. Class này có bất biến không?",
+      "options": ["Không, vì getter lộ `Date` mutable", "Có, vì class và field đều `final`", "Có, vì `Date` là value-based class", "Không, vì thiếu `volatile` cho field"],
+      "answer": 0,
+      "explanation": "`final` chỉ cố định tham chiếu; `Date` mutable nên ai có tham chiếu đều sửa được. Sao chép khi nhận và trả, hoặc dùng `Instant` (bất biến). `volatile` không liên quan tới bất biến."
+    },
+    {
+      "id": "record-extends",
+      "kind": "single",
+      "prompt": "Câu nào đúng về record?",
+      "options": ["Implement được interface nhưng không kế thừa được class", "Kế thừa được một abstract class có field", "Có thể khai báo thêm field instance không phải component", "Lớp khác có thể kế thừa record nếu bỏ `final`"],
+      "answer": 0,
+      "explanation": "Record ngầm kế thừa `java.lang.Record` và luôn `final`. Chỉ được thêm field `static`, không thêm field instance ngoài component, nhưng implement được interface (kể cả interface `sealed`)."
+    }
+  ]
+}

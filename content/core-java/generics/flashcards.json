@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "erasure", "front": "Type erasure làm gì?", "back": "Compiler kiểm tra kiểu rồi xoá tham số kiểu khỏi bytecode, thay bằng cận trên và chèn ép kiểu ở chỗ đọc." },
+    { "id": "invariance", "front": "Vì sao `List<Integer>` không phải là `List<Number>`?", "back": "Nếu là thì có thể `add(2.5)` vào list số nguyên. Generics bất biến để chặn lỗi đó lúc biên dịch." },
+    { "id": "arrays-covariant", "front": "`Object[] a = new String[2]; a[0] = 1;` thì sao?", "back": "Biên dịch được nhưng ném `ArrayStoreException` lúc chạy, vì mảng hiệp biến và JVM kiểm kiểu phần tử." },
+    { "id": "pecs", "front": "PECS nghĩa là gì?", "back": "Producer Extends, Consumer Super: đọc từ nguồn dùng `? extends T`, ghi vào đích dùng `? super T`." },
+    { "id": "bridge", "front": "Bridge method là gì?", "back": "Method compiler sinh thêm để giữ đa hình sau erasure, ví dụ `compareTo(Object)` gọi sang `compareTo(Price)`." },
+    { "id": "heap-pollution", "front": "Heap pollution là gì?", "back": "Biến kiểu generic trỏ tới object chứa sai kiểu (qua raw type, unchecked cast); `ClassCastException` nổ muộn ở chỗ đọc." },
+    { "id": "new-t", "front": "Vì sao không viết được `new T()`?", "back": "Lúc chạy không còn biết `T` là gì; truyền `Class<T>` hoặc `Supplier<T>` vào." },
+    { "id": "type-token", "front": "Jackson biết `List<Order>` bằng cách nào dù erasure?", "back": "`new TypeReference<List<Order>>() {}` là lớp con ẩn danh; kiểu lớp cha của nó lưu `List<Order>` trong class file và đọc được bằng reflection." }
+  ]
+}

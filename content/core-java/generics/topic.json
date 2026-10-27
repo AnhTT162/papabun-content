@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "generics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Generics & type erasure",
+  "summary": "Type erasure làm gì với `List<String>` lúc chạy, vì sao `List<Integer>` không phải `List<Number>` còn mảng thì có, wildcard và PECS, bridge method, raw type và heap pollution làm `ClassCastException` nổ xa chỗ gây lỗi, type token.",
+  "level": "mid",
+  "order": 14,
+  "minutes": 12,
+  "prerequisites": ["oop-java", "collections-overview"],
+  "terms": ["type-erasure", "wildcard", "pecs", "bridge-method", "raw-type", "heap-pollution", "reifiable-type", "type-token"],
+  "references": [
+    { "title": "JLS §4.6 Type Erasure (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.6" },
+    { "title": "The Java Tutorials: Generics", "url": "https://docs.oracle.com/javase/tutorial/java/generics/index.html" },
+    { "title": "JLS §4.12.2 Variables of Reference Type (heap pollution)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.12.2" },
+    { "title": "Javadoc Collections.checkedList (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Collections.html#checkedList(java.util.List,java.lang.Class)" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Erasure xoá kiểu rồi thì Jackson hay Spring làm sao biết `List<Order>` để deserialize?\" Erasure xoá kiểu của **object lúc chạy**, nhưng kiểu khai báo trong **chữ ký** class, field, method và lớp cha vẫn được ghi trong class file (attribute `Signature`) và đọc được qua reflection. `new TypeReference<List<Order>>() {}` tạo một lớp con ẩn danh, nên `List<Order>` nằm trong kiểu lớp cha của nó: đó là [[type-token|type token]]. Spring dùng `ParameterizedTypeReference` và `ResolvableType` theo cùng cách." }
+  ]
+}

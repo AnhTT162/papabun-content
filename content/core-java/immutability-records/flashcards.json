@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "five-rules", "front": "Điều kiện để một class bất biến?", "back": "Không có method sửa trạng thái, class `final`, field `private final`, sao chép phòng thủ field mutable, không để `this` lọt ra trong constructor." },
+    { "id": "view-vs-copy", "front": "`Collections.unmodifiableList` khác `List.copyOf` thế nào?", "back": "`unmodifiableList` là view, vẫn thấy thay đổi của list gốc; `List.copyOf` là bản sao bất biến độc lập." },
+    { "id": "record-generates", "front": "Record sinh sẵn những gì?", "back": "Field `private final`, canonical constructor, accessor theo tên component, `equals`/`hashCode`/`toString` theo mọi component." },
+    { "id": "shallow", "front": "Record có bất biến sâu không?", "back": "Không. Field `final` nhưng object bên trong (list, mảng) vẫn sửa được nếu không sao chép." },
+    { "id": "compact-ctor", "front": "Compact constructor dùng để làm gì?", "back": "Validate và chuẩn hoá tham số (`items = List.copyOf(items)`); compiler tự gán field ở cuối." },
+    { "id": "record-array", "front": "Hai record chứa hai mảng `byte[]` cùng nội dung có `equals` không?", "back": "Không, vì `equals` sinh sẵn so mảng bằng tham chiếu. Phải override bằng `Arrays.equals`." },
+    { "id": "record-jpa", "front": "Vì sao record không làm entity JPA được?", "back": "JPA cần constructor không tham số, field không `final` cho proxy và nạp lười, và danh tính theo id." },
+    { "id": "immutable-threads", "front": "Vì sao object bất biến an toàn đa luồng?", "back": "Không ai sửa được trạng thái, và field `final` được đảm bảo thấy đúng giá trị sau constructor kể cả khi chia sẻ qua data race." }
+  ]
+}
