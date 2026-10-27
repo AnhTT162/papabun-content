@@ -1,0 +1,165 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Chạy trên laptop, lỗi trong container",
+  "symptom": "Service `event-gateway` vừa thêm SDK analytics của một đối tác. Chạy từ IDE và `mvn spring-boot:run` đều ổn. Image container mới (dựng bằng Jib) khởi động được nhưng mọi request ghi sự kiện trả 500 với `NoSuchMethodError` trong đoạn code log nội dung message Protobuf.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "2026-10-27T09:14:02.381Z ERROR [event-gateway] o.a.c.c.C.[dispatcherServlet] Servlet.service() threw exception\njava.lang.NoSuchMethodError: 'com.google.protobuf.TextFormat$Printer com.google.protobuf.TextFormat.debugFormatPrinter()'\n\tat com.shop.events.EventCodec.describe(EventCodec.java:41)\n\tat com.shop.events.EventController.ingest(EventController.java:28)\n\nJDK 21, Spring Boot 3.5, protobuf-java khai báo trực tiếp: 4.31.1",
+      "evidenceFormat": "monospace",
+      "question": "Bạn kiểm tra gì đầu tiên?",
+      "choices": [
+        {
+          "label": "Xem class `TextFormat` thật sự được nạp từ jar nào trong container",
+          "quality": "good",
+          "feedback": "`NoSuchMethodError` nghĩa là class nạp lúc chạy khác class lúc biên dịch. Câu hỏi đầu tiên là class đó từ đâu tới; `-verbose:class` hoặc `getCodeSource()` trả lời trực tiếp.",
+          "next": "verbose"
+        },
+        {
+          "label": "Chạy `mvn dependency:tree` tìm protobuf phiên bản khác",
+          "quality": "ok",
+          "feedback": "Hợp lý vì xung đột phiên bản trung gian là nguyên nhân hay gặp. Nhưng nếu class trùng nằm trong một artifact khác tên, cây dependency sẽ không cho thấy.",
+          "next": "tree"
+        },
+        {
+          "label": "Nâng JDK của image lên 25",
+          "quality": "poor",
+          "feedback": "`TextFormat` là class của thư viện, không phải của JDK; đổi JDK không đổi class nào được nạp. Thêm biến số chỉ làm điều tra khó hơn.",
+          "next": "jdk25"
+        }
+      ]
+    },
+    {
+      "id": "tree",
+      "evidence": "$ mvn dependency:tree -Dincludes=com.google.protobuf\n[INFO] com.shop:event-gateway:jar:1.8.0\n[INFO] \\- com.google.protobuf:protobuf-java:jar:4.31.1:compile\n\n(chỉ có một phiên bản protobuf-java trong cây)",
+      "evidenceFormat": "monospace",
+      "question": "Cây dependency chỉ có protobuf 4.31.1, đúng bản có `debugFormatPrinter()`. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Tìm class `TextFormat` được nạp từ đâu lúc chạy",
+          "quality": "good",
+          "feedback": "Cây sạch mà lúc chạy vẫn sai thì class phải đến từ một jar không mang tên protobuf. Cần bằng chứng từ JVM.",
+          "next": "verbose"
+        },
+        {
+          "label": "Xoá cache `~/.m2` trên máy build rồi dựng lại image",
+          "quality": "poor",
+          "feedback": "Cache không phải vấn đề khi cây đã đúng; dựng lại sẽ cho cùng image và mất thời gian.",
+          "next": "rebuilt"
+        }
+      ]
+    },
+    {
+      "id": "verbose",
+      "evidence": "$ JAVA_TOOL_OPTIONS=-verbose:class java -cp @/app/jib-classpath-file ... | grep protobuf.TextFormat\n[0.512s][info][class,load] com.google.protobuf.TextFormat source: file:/app/libs/partner-analytics-sdk-2.4.0.jar\n\n# trên laptop (IDE):\n[0.498s][info][class,load] com.google.protobuf.TextFormat source: file:.../protobuf-java-4.31.1.jar",
+      "evidenceFormat": "monospace",
+      "question": "`TextFormat` được nạp từ jar của SDK đối tác. Bạn xác nhận thế nào?",
+      "choices": [
+        {
+          "label": "Liệt kê nội dung jar SDK xem có nhúng package protobuf không",
+          "quality": "good",
+          "feedback": "Một jar chứa class của thư viện khác mà không đổi package là dấu hiệu shading không relocation. `jar tf` xác nhận trong vài giây.",
+          "next": "jar"
+        },
+        {
+          "label": "Đổi thứ tự dependency trong `pom.xml` để protobuf đứng trước",
+          "quality": "ok",
+          "feedback": "Không đáng tin: image Jib mặc định dùng wildcard `/app/libs/*`, và thứ tự mở rộng wildcard do filesystem quyết định chứ không theo `pom.xml`. Kể cả khi lỗi biến mất, SDK có thể hỏng vì phải chạy với protobuf 4.",
+          "next": "reordered"
+        }
+      ]
+    },
+    {
+      "id": "jar",
+      "evidence": "$ jar tf partner-analytics-sdk-2.4.0.jar | grep -c '^com/google/protobuf/'\n412\n$ jar tf partner-analytics-sdk-2.4.0.jar | grep 'TextFormat.class'\ncom/google/protobuf/TextFormat.class\n$ unzip -p partner-analytics-sdk-2.4.0.jar META-INF/maven/com.google.protobuf/protobuf-java/pom.properties\nversion=3.21.12",
+      "evidenceFormat": "monospace",
+      "question": "SDK nhúng nguyên protobuf 3.21.12 với package gốc. Hướng xử lý?",
+      "choices": [
+        {
+          "label": "Dùng bản SDK có relocation hoặc bản không nhúng, và chặn class trùng trên CI",
+          "quality": "good",
+          "feedback": "Giải quyết gốc: không còn hai bản `com.google.protobuf` trên classpath. Rule `banDuplicateClasses` làm lần sau thất bại ngay lúc build thay vì lúc chạy.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tự shade lại SDK với relocation trong một module riêng",
+          "quality": "ok",
+          "feedback": "Làm được khi đối tác không có bản sửa, nhưng bạn phải tự duy trì bản shade và tự theo dõi lỗ hổng của protobuf 3.21 bị nhúng.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Hạ protobuf của service về 3.21.12 cho khớp SDK",
+          "quality": "poor",
+          "feedback": "Code của service dùng API của 4.x (`debugFormatPrinter`); hạ phiên bản làm hỏng code của chính bạn, và bạn bị khoá vào phiên bản cũ của bên thứ ba.",
+          "next": "downgraded"
+        }
+      ]
+    },
+    {
+      "id": "jdk25",
+      "evidence": "Image mới với JDK 25:\njava.lang.NoSuchMethodError: 'com.google.protobuf.TextFormat$Printer com.google.protobuf.TextFormat.debugFormatPrinter()'\n\tat com.shop.events.EventCodec.describe(EventCodec.java:41)",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi y nguyên. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem class `TextFormat` được nạp từ jar nào",
+          "quality": "good",
+          "feedback": "Đúng hướng: lỗi nằm ở class của thư viện, cần biết nó đến từ đâu.",
+          "next": "verbose"
+        },
+        {
+          "label": "Xem cây dependency tìm protobuf khác phiên bản",
+          "quality": "ok",
+          "feedback": "Hợp lý, nhưng cây chỉ thấy artifact, không thấy class trùng trong artifact khác tên.",
+          "next": "tree"
+        }
+      ]
+    },
+    {
+      "id": "rebuilt",
+      "evidence": "Build lại sau khi xoá ~/.m2: tải lại 214 artifact, image mới có digest khác.\nRequest ghi sự kiện: 500\njava.lang.NoSuchMethodError: 'com.google.protobuf.TextFormat$Printer com.google.protobuf.TextFormat.debugFormatPrinter()'",
+      "evidenceFormat": "monospace",
+      "question": "Vẫn lỗi như cũ. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Tìm class `TextFormat` được nạp từ đâu lúc chạy",
+          "quality": "good",
+          "feedback": "Cache không phải vấn đề; cần bằng chứng từ JVM.",
+          "next": "verbose"
+        }
+      ]
+    },
+    {
+      "id": "reordered",
+      "evidence": "Đưa protobuf-java lên đầu <dependencies>, dựng lại image:\n$ cat /app/jib-classpath-file\n/app/resources:/app/classes:/app/libs/*\nRequest ghi sự kiện: vẫn 500, cùng NoSuchMethodError",
+      "evidenceFormat": "monospace",
+      "question": "Đổi thứ tự không có tác dụng vì classpath dùng wildcard. Bạn làm gì?",
+      "choices": [
+        {
+          "label": "Liệt kê nội dung jar SDK xem có nhúng protobuf không",
+          "quality": "good",
+          "feedback": "Quay lại tìm gốc: vì sao có hai bản `com.google.protobuf`.",
+          "next": "jar"
+        }
+      ]
+    },
+    {
+      "id": "downgraded",
+      "evidence": "$ mvn -q package   (protobuf-java 3.21.12)\n[ERROR] EventCodec.java:[41,38] cannot find symbol\n  symbol:   method debugFormatPrinter()\n  location: class com.google.protobuf.TextFormat",
+      "evidenceFormat": "monospace",
+      "question": "Code của service không còn biên dịch. Hướng nào bền?",
+      "choices": [
+        {
+          "label": "Dùng bản SDK có relocation và chặn class trùng trên CI",
+          "quality": "good",
+          "feedback": "Không còn hai bản `com.google.protobuf`; CI chặn lần sau ngay lúc build.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `partner-analytics-sdk-2.4.0.jar` nhúng toàn bộ protobuf-java 3.21.12 **không relocation** (vẫn package `com.google.protobuf`). Classpath chỉ giữ được một class cho mỗi tên và lấy bản đứng trước. Trong IDE, `protobuf-java-4.31.1.jar` đứng trước nên chạy đúng; trong image Jib, classpath là wildcard `/app/libs/*` và thứ tự mở rộng do filesystem quyết định, lần này jar SDK đứng trước nên `TextFormat` của bản 3.21 được nạp, thiếu `debugFormatPrinter()` (chỉ có từ 4.29; đã kiểm bằng `javap`: có ở 4.29.3–4.31.1, không có ở 3.21.12 tới 4.28.3), và code biên dịch với 4.x ném `NoSuchMethodError`.\n\n`mvn dependency:tree` không thấy vì Maven chỉ so tọa độ artifact; hai artifact khác tên chứa cùng package là vô hình với nó.\n\n**Phòng ngừa**:\n- CI chặn class trùng giữa các jar (Enforcer `banDuplicateClasses` của extra-enforcer-rules, hoặc duplicate-finder-maven-plugin).\n- Yêu cầu SDK bên thứ ba shade **có relocation** hoặc khai báo dependency bình thường.\n- Khi gặp `LinkageError`, tìm jar thật bằng `-verbose:class` trước khi đọc cây dependency.\n- Chạy test tích hợp trên đúng image sẽ deploy, không chỉ trong IDE."
+    }
+  ]
+}

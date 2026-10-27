@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "init-failure-output",
+      "kind": "output",
+      "prompt": "`Cfg` có `static final int PORT = Integer.parseInt(\"abc\");`. Gọi `Cfg.port()` hai lần, mỗi lần bắt `Throwable` và in tên lớp lỗi. Kết quả?",
+      "code": "for (int i = 0; i < 2; i++) {\n    try { Cfg.port(); }\n    catch (Throwable t) { System.out.println(t.getClass().getSimpleName()); }\n}",
+      "options": [
+        "ExceptionInInitializerError / NoClassDefFoundError",
+        "NumberFormatException / NumberFormatException",
+        "ExceptionInInitializerError / ExceptionInInitializerError",
+        "NoClassDefFoundError / NoClassDefFoundError"
+      ],
+      "answer": 0,
+      "explanation": "Lần đầu static initializer ném, JVM bọc thành `ExceptionInInitializerError` và đánh dấu class lỗi. Mọi lần sau là `NoClassDefFoundError: Could not initialize class Cfg` (đã chạy JDK 27), không còn nguyên nhân gốc."
+    },
+    {
+      "id": "order-matters",
+      "kind": "single",
+      "prompt": "Classpath có `money-util-1.0.jar` rồi `money-util-2.0.jar`. Code gọi method chỉ có ở 2.0. Kết quả?",
+      "options": [
+        "`NoSuchMethodError` vì class của 1.0 được nạp",
+        "Chạy đúng vì JVM chọn bản mới hơn",
+        "Lỗi khởi động vì class trùng",
+        "Chạy đúng vì Maven đã chọn bản 2.0 lúc build"
+      ],
+      "answer": 0,
+      "explanation": "JVM lấy class đầu tiên tìm thấy theo thứ tự classpath và không có khái niệm phiên bản. Đổi thứ tự thì chạy đúng (đã chạy), nên lỗi kiểu này hay chỉ xuất hiện ở một môi trường."
+    },
+    {
+      "id": "cnfe-vs-ncdfe",
+      "kind": "single",
+      "prompt": "Lỗi nào xảy ra khi code gọi `Class.forName(\"org.postgresql.Driver\")` mà thiếu jar driver?",
+      "options": [
+        "`ClassNotFoundException`",
+        "`NoClassDefFoundError`",
+        "`NoSuchMethodError`",
+        "`NoSuchMethodException`"
+      ],
+      "answer": 0,
+      "explanation": "Nạp class động theo tên mà không thấy là `ClassNotFoundException` (checked). `NoClassDefFoundError` dành cho class đã được tham chiếu lúc biên dịch nhưng lúc chạy không nạp được."
+    },
+    {
+      "id": "shade-without-relocation",
+      "kind": "single",
+      "prompt": "Một SDK nhúng Guava 31 vào jar của nó mà giữ nguyên package `com.google.common`. Ứng dụng dùng Guava 33. Rủi ro chính?",
+      "options": [
+        "Hai bản cùng package, thứ tự classpath quyết định",
+        "Maven chọn Guava 33 nên SDK cũng chạy với bản đó",
+        "Maven báo xung đột lúc build vì có hai bản Guava",
+        "JVM tự tách hai bản theo jar chứa nó"
+      ],
+      "answer": 0,
+      "explanation": "Không relocation thì class trùng tên; classpath chỉ giữ một bản, nên hoặc SDK hoặc ứng dụng chạy với Guava sai phiên bản. Maven không thấy vì hai artifact khác tên, và JVM không cô lập theo jar trên classpath."
+    }
+  ]
+}

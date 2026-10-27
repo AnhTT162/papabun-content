@@ -3053,7 +3053,7 @@
       "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
       "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
       "related": ["embedded-server", "spring-boot"],
-      "topics": ["spring-overview", "maven-gradle"]
+      "topics": ["spring-overview", "maven-gradle", "classpath-modules"]
     },
     {
       "id": "bom",
@@ -4205,7 +4205,7 @@
       "meaning": "Thành phần của JVM nạp bytecode thành class. Cùng một tên class được nạp bởi hai classloader khác nhau là hai class khác nhau, mỗi bên có field `static` riêng.",
       "example": "App server nạp hai ứng dụng bằng hai classloader, nên mỗi ứng dụng có một `ExchangeRates.INSTANCE` riêng.",
       "related": ["singleton-pattern"],
-      "topics": ["creational-patterns", "memory-growth-oom"]
+      "topics": ["creational-patterns", "memory-growth-oom", "classpath-modules"]
     },
     {
       "id": "prototype-pattern",
@@ -4597,7 +4597,7 @@
       "meaning": "Java Platform Module System (Java 9+): khai báo module bằng `module-info.java` với `requires` và `exports`, chặn truy cập package không được export ở cả lúc biên dịch lẫn lúc chạy.",
       "example": "`module shop.payment { exports shop.payment.api; }` thì `shop.payment.internal` không dùng được từ module khác.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith", "java-17-21-features"]
+      "topics": ["modular-monolith", "java-17-21-features", "classpath-modules"]
     },
     {
       "id": "big-ball-of-mud",
@@ -7453,7 +7453,7 @@
       "meaning": "Quy tắc chọn một phiên bản khi cây dependency yêu cầu nhiều bản của cùng thư viện: Maven chọn bản gần gốc nhất (hoà thì khai báo trước), Gradle chọn bản cao nhất.",
       "example": "`money-util` 1.0 và 2.0 cùng độ sâu: Maven lấy bản của dependency khai báo trước.",
       "related": ["transitive-dependency"],
-      "topics": ["maven-gradle"]
+      "topics": ["maven-gradle", "classpath-modules"]
     },
     {
       "id": "dependency-scope",
@@ -7701,7 +7701,7 @@
       "meaning": "Từ Java 17 (JEP 403), code ngoài JDK không reflection được vào package nội bộ chưa `opens`; vi phạm ném `InaccessibleObjectException`, chỉ mở lại bằng `--add-opens`.",
       "example": "Thư viện cũ gọi `setAccessible(true)` trên `ArrayList.elementData` hỏng khi nâng lên Java 17.",
       "related": ["jpms"],
-      "topics": ["java-17-21-features", "reflection-proxy"]
+      "topics": ["java-17-21-features", "reflection-proxy", "classpath-modules"]
     },
     {
       "id": "lazy-evaluation",
@@ -7902,6 +7902,30 @@
       "example": "Log4Shell và gadget chain deserialization đều dẫn tới RCE.",
       "related": ["gadget-chain"],
       "topics": ["serialization-security"]
+    },
+    {
+      "id": "classpath",
+      "term": "Classpath",
+      "meaning": "Danh sách jar và thư mục JVM tìm class theo thứ tự; class trùng tên thì bản đứng trước thắng, không có khái niệm phiên bản.",
+      "example": "`java -cp app.jar:libs/*` ; hai jar cùng chứa `com.x.Foo` thì jar đứng trước được nạp.",
+      "related": ["classloader", "shading"],
+      "topics": ["classpath-modules"]
+    },
+    {
+      "id": "shading",
+      "term": "Shading",
+      "meaning": "Gói class của thư viện phụ thuộc vào trong jar của mình; kèm relocation (đổi package) thì không đụng bản thư viện của ứng dụng dùng nó.",
+      "example": "Maven Shade đổi `com.google.protobuf` thành `com.vendor.shaded.protobuf`.",
+      "related": ["classpath", "split-package"],
+      "topics": ["classpath-modules"]
+    },
+    {
+      "id": "split-package",
+      "term": "Split package",
+      "meaning": "Một package nằm ở hai module (hoặc hai jar). Module path của JPMS từ chối; classpath thì cho phép và lấy class theo thứ tự.",
+      "example": "`liba` và `libb` cùng export `com.shop.util`: javac báo `reads package com.shop.util from both liba and libb`.",
+      "related": ["jpms", "shading"],
+      "topics": ["classpath-modules"]
     }
   ]
 }
