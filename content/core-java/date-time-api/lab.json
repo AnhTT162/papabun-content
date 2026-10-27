@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Ngày giao hàng nhảy sang năm sau",
+  "context": "Service nhận đơn parse ngày giao (`yyyy-MM-dd`) bằng một `SimpleDateFormat` khai báo `static final` để khỏi tạo lại mỗi request. Chạy local một request một lần thì đúng. Dưới tải thật, vài đơn có ngày giao vô lý và log thỉnh thoảng có ngoại lệ không liên quan.",
+  "buggyCode": "public class DeliveryParser {\n    private static final SimpleDateFormat FMT = new SimpleDateFormat(\"yyyy-MM-dd\");\n\n    static String roundTrip(String text) throws ParseException {\n        return FMT.format(FMT.parse(text));\n    }\n}\n\n// Mô phỏng tải: 8 thread, 2.000 lần, 4 ngày khác nhau\nExecutorService pool = Executors.newFixedThreadPool(8);\n// mỗi task: so roundTrip(s) với s, in ra nếu khác",
+  "symptom": {
+    "description": "Chạy trên JDK 27 với 2.000 lần parse rồi format: phần lớn kết quả lệch ngày gốc, kèm ngoại lệ không liên quan tới dữ liệu đầu vào.",
+    "output": "2025-12-31 -> 2027-03-31\n2025-12-31 -> 2026-07-04\nwrong=1757 errs=20\nArrayIndexOutOfBoundsException: Index -50528 out of bounds for length 13\nArrayIndexOutOfBoundsException: Index -1 out of bounds for length 13"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "`SimpleDateFormat` dùng `Calendar` nháp chung, thread ghi đè nhau",
+      "`SimpleDateFormat` lenient nên nhận ngày sai rồi tự cộng dồn",
+      "Pattern `yyyy` là năm theo era nên cần đổi sang `YYYY`",
+      "Các thread cùng sửa object `Date` trả về từ `parse`"
+    ],
+    "answer": 0,
+    "explanation": "`SimpleDateFormat` kế thừa field `calendar` từ `DateFormat` và dùng nó làm chỗ nháp khi parse và format: xoá, gán từng trường, rồi đọc ra. Hai thread làm cùng lúc trên một object sẽ trộn trường của nhau, cho ngày sai hoặc chỉ số tháng vô lý (độ dài 13 khớp mảng tên tháng của `DateFormatSymbols`). Javadoc ghi rõ class này không đồng bộ. Mỗi lần `parse` trả `Date` mới nên không thread nào sửa chung nó; lenient chỉ ảnh hưởng ngày không hợp lệ, còn đầu vào ở đây đều hợp lệ. Đổi sang `YYYY` còn làm sai thêm vì đó là năm theo tuần."
+  },
+  "fix": {
+    "code": "private static final DateTimeFormatter FMT = DateTimeFormatter.ISO_LOCAL_DATE;\n\nstatic LocalDate parse(String text) {\n    return LocalDate.parse(text, FMT);\n}",
+    "explanation": "`DateTimeFormatter` bất biến nên dùng chung an toàn, và `LocalDate` đúng kiểu cho ngày giao không có giờ. Nếu buộc phải giữ API cũ, tạo `SimpleDateFormat` mới mỗi lần hoặc dùng `ThreadLocal<SimpleDateFormat>`; `synchronized` cũng đúng nhưng biến formatter thành điểm tranh khoá."
+  }
+}

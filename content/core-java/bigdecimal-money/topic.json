@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "bigdecimal-money",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Số thực & tiền tệ",
+  "summary": "Vì sao `double` không giữ được 0,1, `BigDecimal` lưu gì bên trong, `new BigDecimal(0.1)` và `valueOf`, `equals` so cả scale, `divide` ném lỗi, chọn `RoundingMode`, chia tiền không mất đồng lẻ, lưu tiền trong DB và JSON.",
+  "level": "junior",
+  "order": 9,
+  "minutes": 10,
+  "prerequisites": ["java-basics-types"],
+  "terms": ["floating-point", "bigdecimal-scale", "rounding-mode", "bankers-rounding", "minor-unit", "value-object", "immutable"],
+  "references": [
+    { "title": "Javadoc BigDecimal (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/math/BigDecimal.html" },
+    { "title": "Javadoc RoundingMode (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/math/RoundingMode.html" },
+    { "title": "JLS §4.2.3 Floating-Point Types (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.2.3" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Tiền nên là `BigDecimal` hay `long`?\" Cả hai đều đúng nếu nhất quán. `long` theo [[minor-unit|đơn vị nhỏ nhất]] (đồng, cent) nhanh, nhỏ, không có bẫy scale, hợp với số dư và ledger; nhưng phải tự quy ước số chữ số thập phân cho từng loại tiền và không biểu diễn được đơn giá lẻ (0,0035 USD/request). `BigDecimal` hợp khi có tỉ lệ, thuế, lãi suất, tỉ giá cần nhiều chữ số. Thường dùng `BigDecimal` khi tính và làm tròn một lần về đơn vị nhỏ nhất khi ghi sổ." },
+    { "type": "callout", "style": "warning", "markdown": "Không so `BigDecimal` bằng `equals` để kiểm giá trị: `new BigDecimal(\"0.00\").equals(BigDecimal.ZERO)` là `false` vì khác [[bigdecimal-scale|scale]]. Dùng `compareTo(...) == 0` hoặc `signum() == 0`. Cũng vì vậy không dùng `BigDecimal` chưa chuẩn hoá scale làm key của `HashMap`." }
+  ]
+}

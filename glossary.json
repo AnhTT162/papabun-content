@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas", "java-basics-types"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas", "java-basics-types", "bigdecimal-money", "date-time-api"]
     },
     {
       "id": "dns",
@@ -3565,7 +3565,7 @@
       "meaning": "Class hay method vẫn đúng khi nhiều thread gọi cùng lúc, với bất kỳ cách xen kẽ nào, mà bên gọi không phải tự đồng bộ thêm.",
       "example": "`ConcurrentHashMap` và `DateTimeFormatter` thread-safe; `HashMap` và `SimpleDateFormat` thì không.",
       "related": ["race-condition", "immutable", "thread-confinement"],
-      "topics": ["concurrency-basics"]
+      "topics": ["concurrency-basics", "date-time-api"]
     },
     {
       "id": "thread-confinement",
@@ -4453,7 +4453,7 @@
       "meaning": "Object nhỏ, bất biến, được so sánh bằng giá trị thay vì danh tính, và tự kiểm tra tính hợp lệ khi tạo.",
       "example": "`record Money(BigDecimal amount, Currency currency)` hai đối tượng cùng số tiền và tiền tệ là bằng nhau.",
       "related": ["primitive-obsession"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "ddd-tactical"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "ddd-tactical", "bigdecimal-money"]
     },
     {
       "id": "feature-flag",
@@ -6493,7 +6493,7 @@
       "meaning": "Coordinated Universal Time: giờ chuẩn quốc tế, không có giờ mùa hè. Dùng làm mốc chung để lưu và so sánh thời điểm.",
       "example": "`Instant.now()` in ra `2026-10-27T03:15:00Z`, chữ `Z` nghĩa là UTC; giờ Việt Nam là UTC+7.",
       "related": ["time-zone"],
-      "topics": ["time-encoding"]
+      "topics": ["time-encoding", "date-time-api"]
     },
     {
       "id": "time-zone",
@@ -6501,7 +6501,7 @@
       "meaning": "Quy tắc đổi từ UTC sang giờ địa phương của một vùng, gồm cả DST và lịch sử thay đổi. Định danh theo IANA như `Asia/Ho_Chi_Minh`, khác với offset cố định `+07:00`.",
       "example": "`ZonedDateTime.now(ZoneId.of(\"America/New_York\"))` cho offset `-05:00` mùa đông và `-04:00` mùa hè.",
       "related": ["utc", "dst"],
-      "topics": ["time-encoding"]
+      "topics": ["time-encoding", "date-time-api"]
     },
     {
       "id": "dst",
@@ -6509,7 +6509,7 @@
       "meaning": "Daylight Saving Time: giờ mùa hè, vặn đồng hồ sớm thêm một giờ. Ngày chuyển giờ có một giờ không tồn tại và một giờ lặp lại; ngày đó dài 23 hoặc 25 giờ.",
       "example": "Ở New York, `2026-03-08T02:30` không tồn tại; `2026-11-01T01:30` xảy ra hai lần.",
       "related": ["time-zone"],
-      "topics": ["time-encoding"]
+      "topics": ["time-encoding", "date-time-api"]
     },
     {
       "id": "iso-8601",
@@ -6517,7 +6517,7 @@
       "meaning": "Chuẩn viết ngày giờ dạng văn bản, sắp xếp được theo chữ: năm-tháng-ngày, `T`, giờ, kèm offset hoặc `Z`. Định dạng nên dùng cho API và log.",
       "example": "`2026-03-08T14:00:00Z` hoặc `2026-03-08T21:00:00+07:00` cùng chỉ một thời điểm.",
       "related": ["utc"],
-      "topics": ["time-encoding"]
+      "topics": ["time-encoding", "date-time-api"]
     },
     {
       "id": "unicode",
@@ -7398,6 +7398,46 @@
       "example": "`synchronized (Integer.valueOf(1))` bị javac cảnh báo `[synchronization]` từ Java 16.",
       "related": ["optional", "wrapper-class"],
       "topics": ["optional-null", "java-basics-types"]
+    },
+    {
+      "id": "floating-point",
+      "term": "Floating point",
+      "meaning": "Số thực dấu phẩy động theo chuẩn IEEE 754 (`float`, `double`): lưu phần định trị (mantissa) và số mũ cơ số 2, nên phần lớn số thập phân như 0,1 chỉ được biểu diễn gần đúng.",
+      "example": "`0.1 + 0.2` ra `0.30000000000000004`.",
+      "related": ["bigdecimal-scale"],
+      "topics": ["bigdecimal-money"]
+    },
+    {
+      "id": "bigdecimal-scale",
+      "term": "Scale",
+      "meaning": "Số chữ số sau dấu thập phân của một `BigDecimal`: giá trị = unscaledValue × 10^(-scale). `equals` và `hashCode` phụ thuộc scale, `compareTo` thì không.",
+      "example": "`12.50` là 1250 với scale 2; `12.5` là 125 với scale 1.",
+      "related": ["rounding-mode", "floating-point"],
+      "topics": ["bigdecimal-money"]
+    },
+    {
+      "id": "rounding-mode",
+      "term": "RoundingMode",
+      "meaning": "Quy tắc làm tròn khi giảm scale hoặc chia (`HALF_UP`, `HALF_EVEN`, `DOWN`, `CEILING`...). `UNNECESSARY` ném lỗi nếu phải làm tròn, dùng để khẳng định số đã đúng scale.",
+      "example": "`amount.setScale(0, RoundingMode.HALF_UP)` cho tiền VND.",
+      "related": ["bankers-rounding", "bigdecimal-scale"],
+      "topics": ["bigdecimal-money"]
+    },
+    {
+      "id": "bankers-rounding",
+      "term": "Banker's rounding",
+      "meaning": "Làm tròn nửa về số chẵn (`RoundingMode.HALF_EVEN`): 2,5 thành 2, 3,5 thành 4. Sai số làm tròn triệt tiêu nhau khi cộng nhiều số thay vì dồn về một phía.",
+      "example": "Tổng lãi của hàng triệu tài khoản ít lệch hơn khi mỗi khoản làm tròn bằng `HALF_EVEN`.",
+      "related": ["rounding-mode"],
+      "topics": ["bigdecimal-money"]
+    },
+    {
+      "id": "minor-unit",
+      "term": "Minor unit",
+      "meaning": "Đơn vị tiền nhỏ nhất của một loại tiền (cent của USD, đồng của VND). Lưu tiền bằng số nguyên theo đơn vị này tránh được sai số thập phân.",
+      "example": "12,50 USD lưu thành `long` 1250 cent.",
+      "related": ["bigdecimal-scale"],
+      "topics": ["bigdecimal-money"]
     }
   ]
 }

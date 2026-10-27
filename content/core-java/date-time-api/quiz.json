@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "plus-months-chain",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "LocalDate start = LocalDate.of(2026, 1, 31);\nSystem.out.println(start.plusMonths(1).plusMonths(1));\nSystem.out.println(start.plusMonths(2));",
+      "options": [
+        "2026-03-28 / 2026-03-31",
+        "2026-03-31 / 2026-03-31",
+        "2026-03-28 / 2026-03-28",
+        "2026-03-03 / 2026-03-31"
+      ],
+      "answer": 0,
+      "explanation": "Cộng một tháng từ 31/1 ra 28/2 (kéo về cuối tháng), cộng tiếp từ 28/2 ra 28/3. Cộng thẳng hai tháng từ 31/1 ra 31/3. Lịch định kỳ phải tính từ ngày gốc."
+    },
+    {
+      "id": "immutable-plus",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "LocalDate due = LocalDate.of(2026, 3, 1);\ndue.plusDays(1);\nSystem.out.println(due);",
+      "options": [
+        "2026-03-01",
+        "2026-03-02",
+        "Lỗi biên dịch",
+        "2026-02-28"
+      ],
+      "answer": 0,
+      "explanation": "`plusDays` trả `LocalDate` mới và không sửa `due`. Kết quả bị bỏ đi nên `due` giữ nguyên. Error Prone có kiểm tra `ReturnValueIgnored` bắt lỗi này."
+    },
+    {
+      "id": "period-vs-days",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "LocalDate from = LocalDate.of(2026, 1, 15);\nLocalDate to = LocalDate.of(2026, 3, 20);\nSystem.out.println(Period.between(from, to));\nSystem.out.println(ChronoUnit.DAYS.between(from, to));",
+      "options": [
+        "P2M5D / 64",
+        "P64D / 64",
+        "P2M5D / 5",
+        "P64D / 2"
+      ],
+      "answer": 0,
+      "explanation": "`Period` tách thành tháng và ngày theo lịch: 2 tháng 5 ngày. `ChronoUnit.DAYS.between` đếm tổng số ngày là 64."
+    },
+    {
+      "id": "created-at-type",
+      "kind": "single",
+      "prompt": "Đoạn code nào biên dịch được nhưng ném `UnsupportedTemporalTypeException` lúc chạy?",
+      "options": [
+        "`Instant.now().plus(1, ChronoUnit.MONTHS)`",
+        "`LocalDate.now().plus(1, ChronoUnit.MONTHS)`",
+        "`Instant.now().plus(1, ChronoUnit.DAYS)`",
+        "`ZonedDateTime.now().plus(1, ChronoUnit.MONTHS)`"
+      ],
+      "answer": 0,
+      "explanation": "`Instant` không gắn lịch nên không biết một tháng dài bao nhiêu và từ chối đơn vị `MONTHS`. Đơn vị `DAYS` thì được vì `Instant` coi một ngày là đúng 86.400 giây. `LocalDate` và `ZonedDateTime` có lịch nên cộng tháng được."
+    }
+  ]
+}

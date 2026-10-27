@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-double-wrong", "front": "Vì sao `0.1 + 0.2` ra `0.30000000000000004`?", "back": "`double` lưu theo cơ số 2; 0,1 là phân số tuần hoàn trong nhị phân nên bị làm tròn, sai số hiện ra khi cộng." },
+    { "id": "new-vs-valueof", "front": "`new BigDecimal(0.1)` khác `BigDecimal.valueOf(0.1)` thế nào?", "back": "Constructor nhận đúng giá trị nhị phân đã sai (`0.1000000000000000055...`); `valueOf` đi qua `Double.toString` nên ra `0.1`." },
+    { "id": "equals-scale", "front": "`new BigDecimal(\"0.00\").equals(BigDecimal.ZERO)` trả gì?", "back": "`false`, vì `equals` so cả scale. So giá trị bằng `compareTo` hoặc `signum()`." },
+    { "id": "divide-error", "front": "Vì sao `new BigDecimal(\"100\").divide(new BigDecimal(\"3\"))` ném lỗi?", "back": "Kết quả là số thập phân vô hạn, không có scale đủ chính xác. Phải truyền scale và `RoundingMode`." },
+    { "id": "half-even", "front": "`HALF_EVEN` làm tròn 2,5 và 3,5 ra gì, vì sao dùng nó?", "back": "2 và 4: về số chẵn gần nhất, để sai số không dồn về một phía khi cộng nhiều số đã làm tròn." },
+    { "id": "split-remainder", "front": "Chia 100.000 đ cho 3 người thế nào cho tổng đúng?", "back": "Chia phần nguyên 33.333 cho mỗi người, dồn 1 đồng dư vào một người, thay vì làm tròn từng phần rồi mất 1 đồng." },
+    { "id": "currency-digits", "front": "Mọi loại tiền đều có 2 chữ số thập phân?", "back": "Không. VND, JPY có 0, USD 2, KWD 3; lấy bằng `Currency.getDefaultFractionDigits()`." },
+    { "id": "plain-string", "front": "Khi nào cần `toPlainString()` thay `toString()`?", "back": "Khi in ra file, báo cáo, chữ ký: `toString` có thể ra dạng khoa học như `1E+2`." }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "which-class-event", "front": "Lưu thời điểm tạo đơn hàng bằng class nào của `java.time`?", "back": "`Instant` (hoặc `OffsetDateTime` khi cần offset), không dùng `LocalDateTime` vì nó không biết múi giờ." },
+    { "id": "duration-vs-period", "front": "`Duration` khác `Period` thế nào?", "back": "`Duration` đo giây và nano (`PT24H`), đi với `Instant`; `Period` đo năm, tháng, ngày theo lịch (`P1D`), đi với `LocalDate`." },
+    { "id": "plus-ignored", "front": "Sau `date.plusDays(1);` thì `date` có đổi không?", "back": "Không. Class `java.time` bất biến, `plusDays` trả object mới; phải gán lại." },
+    { "id": "month-end", "front": "`LocalDate.of(2026, 1, 31).plusMonths(1)` ra gì?", "back": "`2026-02-28`: ngày bị kéo về ngày cuối của tháng đích." },
+    { "id": "period-between", "front": "`Period.between(15/1, 20/3)` trả gì, muốn số ngày thì sao?", "back": "`P2M5D`. Muốn tổng số ngày dùng `ChronoUnit.DAYS.between` (64)." },
+    { "id": "sdf-threadsafe", "front": "Vì sao không khai báo `static final SimpleDateFormat`?", "back": "Nó giữ `Calendar` nháp bên trong và không đồng bộ; nhiều thread dùng chung sẽ cho ngày sai hoặc ngoại lệ. Dùng `DateTimeFormatter`." },
+    { "id": "uuuu-strict", "front": "Vì sao `dd/MM/yyyy` với `ResolverStyle.STRICT` không parse được `15/03/2026`?", "back": "`yyyy` là năm theo era, thiếu era nên STRICT không dựng được ngày. Dùng `uuuu`." },
+    { "id": "smart-resolver", "front": "Formatter mặc định parse `31/02/2026` ra gì?", "back": "`2026-02-28`, không báo lỗi, vì resolver mặc định là `SMART`." }
+  ]
+}

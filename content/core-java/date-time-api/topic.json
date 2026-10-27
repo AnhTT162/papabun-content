@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "date-time-api",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "java.time",
+  "summary": "Chọn đúng class trong `java.time`, `Duration` khác `Period`, cộng tháng ở cuối tháng, `DateTimeFormatter` và bẫy `yyyy` khi `STRICT`, vì sao `SimpleDateFormat` dùng chung làm sai ngày, chuyển đổi với `Date`, JDBC và JSON.",
+  "level": "junior",
+  "order": 8,
+  "minutes": 10,
+  "prerequisites": ["time-encoding", "java-basics-types"],
+  "terms": ["utc", "time-zone", "dst", "iso-8601", "immutable", "thread-safe"],
+  "references": [
+    { "title": "Javadoc package java.time (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/package-summary.html" },
+    { "title": "Javadoc DateTimeFormatter (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/format/DateTimeFormatter.html" },
+    { "title": "JSR 310: Date and Time API", "url": "https://jcp.org/en/jsr/detail?id=310" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao `java.time` an toàn đa luồng còn `Date`/`SimpleDateFormat` thì không?\" Mọi class của `java.time` là [[immutable|bất biến]]: `plusDays` trả object mới, không sửa object cũ, nên chia sẻ thoải mái. `Date` có `setTime`, còn `SimpleDateFormat` giữ một `Calendar` bên trong làm chỗ nháp khi parse và format, nên hai thread dùng chung sẽ ghi đè lên nhau." },
+    { "type": "callout", "style": "warning", "markdown": "`DateTimeFormatter.ofPattern(\"dd/MM/yyyy\")` mặc định dùng `ResolverStyle.SMART`: `31/02/2026` không báo lỗi mà thành `2026-02-28` (đã chạy JDK 27). Validate ngày người dùng nhập thì dùng `dd/MM/uuuu` kèm `withResolverStyle(ResolverStyle.STRICT)`." }
+  ]
+}

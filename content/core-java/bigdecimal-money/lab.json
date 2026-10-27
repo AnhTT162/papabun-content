@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đơn 0 đồng vẫn bị tính phí ship",
+  "context": "Đơn có tổng tiền hàng bằng 0 (dùng voucher 100%) được miễn phí ship. Unit test tạo đơn với `BigDecimal.ZERO` và qua. Trên production, tổng tiền đọc từ cột `NUMERIC(19, 2)` dùng chung cho nhiều loại tiền và khách vẫn bị tính phí.",
+  "buggyCode": "BigDecimal shippingFee(BigDecimal subtotal) {\n    if (subtotal.equals(BigDecimal.ZERO)) {\n        return BigDecimal.ZERO;\n    }\n    return new BigDecimal(\"30000\");\n}\n\n// subtotal đọc từ DB: JDBC trả BigDecimal mang scale của cột\nBigDecimal fromDb = new BigDecimal(\"0.00\");\nSystem.out.println(shippingFee(BigDecimal.ZERO));\nSystem.out.println(shippingFee(fromDb));",
+  "symptom": {
+    "description": "Cùng giá trị 0, test ra phí 0 còn dữ liệu thật ra phí 30.000.",
+    "output": "0\n30000"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "`equals` của `BigDecimal` so cả scale, `0.00` khác `0`",
+      "`BigDecimal.ZERO` là object dùng chung nên bị sửa ở chỗ khác",
+      "JDBC đọc `NUMERIC` thành `double` nên ra số gần 0, không bằng 0",
+      "`new BigDecimal(\"0.00\")` mang sai số nhị phân giống `double`"
+    ],
+    "answer": 0,
+    "explanation": "`BigDecimal` lưu số nguyên không scale và scale. `0.00` là (0, scale 2), `BigDecimal.ZERO` là (0, scale 0). `equals` coi hai số khác scale là khác nhau, dù `compareTo` trả 0. `BigDecimal` bất biến nên không bị ai sửa, và tạo từ `String` thì không có sai số nhị phân."
+  },
+  "fix": {
+    "code": "BigDecimal shippingFee(BigDecimal subtotal) {\n    if (subtotal.signum() == 0) {          // hoặc compareTo(BigDecimal.ZERO) == 0\n        return BigDecimal.ZERO;\n    }\n    return new BigDecimal(\"30000\");\n}",
+    "explanation": "So giá trị bằng `signum()` hoặc `compareTo`. Tốt hơn nữa là gói tiền vào value object `Money` chuẩn hoá scale khi tạo (`setScale(0, RoundingMode.UNNECESSARY)` cho VND), và viết test với giá trị có scale khác nhau như dữ liệu thật từ DB."
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "rounding-modes",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "BigDecimal a = new BigDecimal(\"2.5\");\nBigDecimal b = new BigDecimal(\"-2.5\");\nSystem.out.println(a.setScale(0, RoundingMode.HALF_EVEN));\nSystem.out.println(b.setScale(0, RoundingMode.HALF_UP));\nSystem.out.println(Math.round(-2.5));",
+      "options": ["2 / -3 / -2", "3 / -3 / -3", "2 / -2 / -2", "3 / -2 / -3"],
+      "answer": 0,
+      "explanation": "`HALF_EVEN` đưa 2,5 về số chẵn 2. `HALF_UP` làm tròn ra xa số 0 nên -2,5 thành -3. `Math.round` làm tròn về số gần nhất, khi hoà thì về phía dương vô cùng (Javadoc Java 7+), nên -2,5 thành -2."
+    },
+    {
+      "id": "hashmap-scale",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Map<BigDecimal, String> hash = new HashMap<>();\nhash.put(new BigDecimal(\"10.0\"), \"x\");\nMap<BigDecimal, String> tree = new TreeMap<>(hash);\nSystem.out.println(hash.get(new BigDecimal(\"10.00\")));\nSystem.out.println(tree.get(new BigDecimal(\"10.00\")));",
+      "options": ["null / x", "x / x", "null / null", "x / null"],
+      "answer": 0,
+      "explanation": "`HashMap` dùng `hashCode` và `equals`, cả hai phụ thuộc scale nên `10.00` không khớp `10.0`. `TreeMap` dùng `compareTo`, chỉ so giá trị nên tìm thấy."
+    },
+    {
+      "id": "split-loss",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "BigDecimal total = new BigDecimal(\"100000\");\nBigDecimal part = total.divide(BigDecimal.valueOf(3), 0, RoundingMode.HALF_UP);\nSystem.out.println(part.multiply(BigDecimal.valueOf(3)));",
+      "options": ["99999", "100000", "100001", "ArithmeticException"],
+      "answer": 0,
+      "explanation": "Mỗi phần làm tròn thành 33333, nhân lại ra 99999: mất 1 đồng. Có scale và `RoundingMode` nên không ném lỗi. Cách đúng là dồn phần dư vào một phần."
+    },
+    {
+      "id": "db-column-type",
+      "kind": "single",
+      "prompt": "Cột lưu số tiền trong PostgreSQL nên dùng kiểu nào?",
+      "options": ["`NUMERIC(19, 4)`", "`DOUBLE PRECISION`", "`REAL`", "`money`"],
+      "answer": 0,
+      "explanation": "`NUMERIC` lưu thập phân chính xác. `DOUBLE PRECISION` và `REAL` là số thực nhị phân có sai số; `money` phụ thuộc cài đặt `lc_monetary` của session nên dễ hiểu sai khi đổi môi trường."
+    }
+  ]
+}
