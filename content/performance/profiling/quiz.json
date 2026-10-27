@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cpu-vs-wall",
+      "kind": "single",
+      "prompt": "Mỗi request làm 5ms tính toán rồi chờ downstream 45ms. Profile `cpu` của thread xử lý request sẽ cho thấy gì về lời gọi downstream?",
+      "options": [
+        "Gần như không có mẫu nào, vì thread đang chờ không dùng CPU",
+        "Khoảng 90% số mẫu, vì nó chiếm 90% thời gian của request",
+        "Khoảng 50% số mẫu, vì profiler chia đều theo số method",
+        "Toàn bộ mẫu bị gán cho GC, vì thread chờ nằm ở safepoint"
+      ],
+      "answer": 0,
+      "explanation": "Profile `cpu` chỉ lấy mẫu thread đang chạy trên CPU. Thử thật với async-profiler: lời gọi downstream chiếm dưới 1% mẫu `cpu`, trong khi profile wall-clock lọc theo thread request cho thấy nó chiếm khoảng 90%. Latency cao mà CPU thấp thì dùng wall-clock, lock profile hoặc trace."
+    },
+    {
+      "id": "wall-whole-process",
+      "kind": "single",
+      "prompt": "Chạy `asprof -e wall` trên cả process có 200 thread Tomcat, chỉ 6 thread đang xử lý request. Flame graph gần như toàn khối `Unsafe.park`. Vì sao?",
+      "options": [
+        "Wall đếm mọi thread, nên thread rảnh đang park chiếm gần hết mẫu",
+        "Ứng dụng đang deadlock nên mọi thread đều đứng ở `Unsafe.park`",
+        "Wall chỉ lấy mẫu thread đang chờ, bỏ qua thread đang tính toán",
+        "async-profiler không hỗ trợ wall-clock với thread của Tomcat"
+      ],
+      "answer": 0,
+      "explanation": "Wall-clock lấy mẫu thread bất kể trạng thái, nên 194 thread rảnh chờ việc (park trong hàng đợi của pool) chiếm gần hết số mẫu. Không có deadlock: đó là trạng thái bình thường của pool rảnh. Lọc theo thread (`-t`, rồi chỉ xem thread đang xử lý request) hoặc theo khoảng thời gian có request chậm."
+    },
+    {
+      "id": "flat-profile",
+      "kind": "single",
+      "prompt": "`jfr view hot-methods` cho thấy method nóng nhất chỉ 4,6%, mười method đầu đều dưới 5% và phần lớn thuộc Jackson. Kết luận nào hợp lý nhất?",
+      "options": [
+        "Cần xem cây gọi theo tổng: các method đó có thể chung một cha",
+        "CPU dàn trải đều, không có chỗ nào đáng tối ưu, nên scale thêm",
+        "Profile bị sai do safepoint bias, cần chạy lại bằng JFR khác",
+        "Jackson chậm, nên thay bằng thư viện JSON khác cho toàn hệ thống"
+      ],
+      "answer": 0,
+      "explanation": "`hot-methods` là self time. Hàng chục method nhỏ của cùng một thư viện cùng nóng thường là dấu hiệu chúng được gọi từ một chỗ chung. Flame graph hoặc call tree theo tổng sẽ cho thấy nhánh cha, ví dụ `toJson` chiếm 56% vì tạo `ObjectMapper` mới mỗi lần. JFR lấy mẫu không cần safepoint, và Jackson dùng đúng cách thì không chậm."
+    },
+    {
+      "id": "alloc-not-leak",
+      "kind": "single",
+      "prompt": "Allocation profile cho thấy một method chiếm 60% số byte cấp phát. Heap sau GC phẳng ở 400 MB suốt 2 ngày. Điều đó nói gì?",
+      "options": [
+        "Method đó tạo nhiều rác ngắn hạn, gây young GC dày, không phải leak",
+        "Method đó đang rò bộ nhớ, sớm muộn sẽ gây OutOfMemoryError",
+        "Allocation profile sai vì nó chỉ đo object còn sống sau GC",
+        "Heap sẽ đầy khi tải tăng, vì 60% byte cấp phát vẫn bị giữ lại"
+      ],
+      "answer": 0,
+      "explanation": "Allocation profile đếm byte được cấp phát, không đếm byte còn sống. Heap sau GC phẳng nghĩa là object đó chết nhanh: chi phí là CPU cho việc cấp phát và GC chạy dày hơn, không phải leak. Leak thì heap sau GC tăng dần và cần heap dump."
+    }
+  ]
+}

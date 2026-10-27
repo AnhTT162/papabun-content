@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "tail-latency",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Tail latency, timeout & retry",
+  "summary": "Vì sao p99 của backend thành trải nghiệm thường gặp khi fan-out, đuôi đến từ GC, hàng đợi gần bão hoà và node chậm. Timeout theo ngân sách và deadline truyền xuống, retry khuếch đại tải tới metastable failure, hedged và tied request, bỏ việc đã quá hạn, kèm số liệu mô phỏng.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 16,
+  "prerequisites": ["perf-methodology", "resilience-patterns", "server-tuning"],
+  "terms": ["tail-latency", "timeout", "deadline-propagation", "retry-budget", "hedged-request", "retry-storm", "fan-out", "gray-failure", "metastable-failure", "clock-skew", "load-shedding", "jit", "coordinated-omission", "idempotency", "compaction", "jitter"],
+  "references": [
+    { "title": "Dean & Barroso: The Tail at Scale (Communications of the ACM, 2013)", "url": "https://research.google/pubs/the-tail-at-scale/" },
+    { "title": "gRPC: Retry and hedging (gRFC A6)", "url": "https://github.com/grpc/proposal/blob/master/A6-client-retries.md" },
+    { "title": "Metastable Failures in Distributed Systems (HotOS 2021)", "url": "https://sigops.org/s/conferences/hotos/2021/papers/hotos21-s11-bronson.pdf" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hedging gửi gấp đôi request, sao không làm sập backend?\" Vì chỉ gửi bản thứ hai cho phần request chưa xong sau ngưỡng hedge: hedge ở p95 thì chỉ khoảng 5% request có bản sao. Nhưng điều đó chỉ đúng khi chậm là ngẫu nhiên; khi cả cụm quá tải, gần như mọi request đều vượt ngưỡng và hedging thành gấp đôi tải. Vì vậy cần ngân sách hedge và tắt hedging khi dependency báo quá tải." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tăng timeout khi dependency chậm. Timeout dài giữ thread và connection lâu hơn, nên một dependency chậm làm cạn pool của bên gọi. Timeout phải nằm trong ngân sách của request; vượt ngân sách thì trả lỗi nhanh, chuyển sang xử lý bất đồng bộ, hoặc dùng kết quả xuống cấp." }
+  ]
+}

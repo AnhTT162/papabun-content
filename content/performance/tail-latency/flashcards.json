@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "fan-out-tail", "front": "Fan-out 100 lời gọi thì bao nhiêu request dính p99 của backend?", "back": "Khoảng 63% (1 − 0,99^100), vì request phải chờ lời gọi chậm nhất." },
+    { "id": "queue-tail", "front": "Vì sao p99 tăng vọt khi tải gần capacity?", "back": "Thời gian chờ trong hàng đợi tỉ lệ với 1/(1 − utilization): từ 50% lên 90% tải là gấp 5 lần." },
+    { "id": "timeout-budget", "front": "Chọn timeout của một lời gọi thế nào?", "back": "Từ p99.9 của dependency lúc bình thường, nhưng không vượt thời gian còn lại trong ngân sách của request." },
+    { "id": "deadline", "front": "Deadline propagation là gì?", "back": "Truyền thời gian còn lại của request xuống các tầng dưới để chúng tự đặt timeout và bỏ việc khi bên gọi đã bỏ cuộc." },
+    { "id": "retry-amp", "front": "Retry tối đa 3 lần khuếch đại tải bao nhiêu khi lỗi f?", "back": "1 + f + f²: 1,75 lần khi f = 50%, 2,71 lần khi f = 90%." },
+    { "id": "metastable", "front": "Metastable failure là gì?", "back": "Hệ thống bị đẩy vào quá tải bởi một nguyên nhân ngắn, rồi tự duy trì quá tải (thường do retry) cả khi nguyên nhân đã hết." },
+    { "id": "hedge", "front": "Hedged request là gì?", "back": "Gửi bản thứ hai khi bản đầu chưa xong sau một ngưỡng (khoảng p95), lấy kết quả về trước và huỷ bản còn lại." },
+    { "id": "hedge-cost", "front": "Hedge ở p95 tốn thêm bao nhiêu tải?", "back": "Khoảng 5%, vì chỉ request chưa xong sau p95 mới có bản sao; khi cả cụm quá tải thì gần gấp đôi." },
+    { "id": "drop-expired", "front": "Vì sao bỏ request đã quá deadline trong hàng đợi?", "back": "Client đã bỏ đi nên xử lý nó chỉ tốn tài nguyên; bỏ sớm giúp backend thoát quá tải nhanh hơn." }
+  ]
+}

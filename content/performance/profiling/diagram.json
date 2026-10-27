@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ mẫu stack tới flame graph",
+  "nodes": [
+    {"id": "threads", "label": "Thread đang chạy", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "samples", "label": "Mẫu stack 100/giây", "kind": "generic", "x": 0.85, "y": 0.05},
+    {"id": "merge", "label": "Gộp stack giống nhau", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "flame", "label": "Flame graph", "kind": "generic", "x": 0.85, "y": 0.5},
+    {"id": "event", "label": "Chọn event", "kind": "generic", "x": 0.1, "y": 0.95},
+    {"id": "answer", "label": "Nhánh rộng nhất", "kind": "generic", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "threads-samples", "from": "threads", "to": "samples", "label": "chụp stack"},
+    {"id": "samples-merge", "from": "samples", "to": "merge", "label": "đếm theo stack"},
+    {"id": "merge-flame", "from": "merge", "to": "flame", "label": "rộng = nhiều mẫu"},
+    {"id": "event-threads", "from": "event", "to": "threads", "label": "cpu, wall, alloc"},
+    {"id": "flame-answer", "from": "flame", "to": "answer", "label": "đọc theo tổng"}
+  ],
+  "steps": [
+    {"caption": "Sampling profiler không đo từng lời gọi. Cứ khoảng 10ms nó chụp stack của các thread đang chạy, nên chi phí thấp và dùng được trên production.", "show": ["threads", "samples", "threads-samples"], "highlight": ["threads-samples"]},
+    {"caption": "Các mẫu có cùng stack được gộp và đếm. Một method xuất hiện trong 56% mẫu nghĩa là nó (hoặc thứ nó gọi) đang chạy trong khoảng 56% thời gian CPU đo được.", "show": ["merge", "samples-merge"], "highlight": ["samples-merge"]},
+    {"caption": "Flame graph vẽ mỗi khung thành một khối: chiều rộng là số mẫu, chiều cao là độ sâu stack, khối con nằm trên khối gọi nó. Trục ngang không phải thời gian; các khối chỉ được xếp theo tên.", "show": ["flame", "merge-flame"], "highlight": ["merge-flame"]},
+    {"caption": "Mẫu là gì do event quyết định: `cpu` chỉ đếm thread đang dùng CPU, `wall` đếm cả thread đang chờ, `alloc` đếm theo byte cấp phát, `lock` theo thời gian chờ khoá. Chọn sai event là không bao giờ thấy nguyên nhân.", "show": ["event", "event-threads"], "highlight": ["event-threads"]},
+    {"caption": "Đọc từ dưới lên, theo nhánh rộng nhất. Trong ca catalog-api, không method nào tự chiếm quá 5% (self), nhưng nhánh `AuditLogger.toJson` rộng 56%: bên trong là Jackson dựng lại serializer mỗi lần vì code tạo `ObjectMapper` mới cho mỗi request.", "show": ["answer", "flame-answer"], "highlight": ["flame-answer"]}
+  ]
+}

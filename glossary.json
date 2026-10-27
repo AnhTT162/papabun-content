@@ -174,7 +174,7 @@
       "meaning": "Profiler định kỳ chụp stack của các thread (ví dụ 100 lần/giây) rồi thống kê method nào xuất hiện nhiều nhất. Overhead thấp nên chạy được trên production.",
       "example": "async-profiler, JFR.",
       "related": ["flame-graph", "jfr"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "profiling"]
     },
     {
       "id": "flame-graph",
@@ -182,7 +182,7 @@
       "meaning": "Biểu đồ gộp các stack mẫu: mỗi khối là một method, độ rộng tỉ lệ với thời gian CPU, method gọi nằm dưới method được gọi.",
       "example": "Một khối `java.util.regex.Pattern$Loop.match` chiếm 90% chiều rộng chỉ ra ngay thủ phạm.",
       "related": ["sampling-profiler"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "profiling"]
     },
     {
       "id": "jfr",
@@ -190,7 +190,7 @@
       "meaning": "Công cụ ghi sự kiện tích hợp sẵn trong JDK (CPU sample, GC, lock, IO) với overhead thấp, xem bằng JDK Mission Control hoặc lệnh `jfr`.",
       "example": "`jcmd <pid> JFR.start duration=60s settings=profile filename=cpu.jfr`.",
       "related": ["sampling-profiler"],
-      "topics": ["java-high-cpu", "slow-api"]
+      "topics": ["java-high-cpu", "slow-api", "profiling"]
     },
     {
       "id": "catastrophic-backtracking",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency"]
     },
     {
       "id": "memory-barrier",
@@ -1605,7 +1605,7 @@
       "meaning": "Quá trình gộp các file dữ liệu của LSM-tree, bỏ bản cũ và bản đã xoá, để giảm số file phải đọc và dung lượng.",
       "example": "Compaction không theo kịp lượng ghi thì RocksDB chặn ghi (write stall).",
       "related": ["lsm-tree", "write-amplification"],
-      "topics": ["storage-engine"]
+      "topics": ["storage-engine", "tail-latency"]
     },
     {
       "id": "write-amplification",
@@ -2525,7 +2525,7 @@
       "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
-      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture"]
+      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture", "tail-latency"]
     },
     {
       "id": "cache-aside",
@@ -4629,7 +4629,7 @@
       "meaning": "Giới hạn thời gian chờ một thao tác qua mạng; hết giờ thì bỏ chờ. Timeout không cho biết bên kia chậm, chết hay đã làm xong.",
       "example": "`HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(2))`; không đặt thì JDK `HttpClient` chờ vô hạn.",
       "related": ["partial-failure"],
-      "topics": ["distributed-fundamentals", "resilience-patterns", "server-tuning", "thread-pool-exhaustion", "slow-api"]
+      "topics": ["distributed-fundamentals", "resilience-patterns", "server-tuning", "thread-pool-exhaustion", "slow-api", "tail-latency"]
     },
     {
       "id": "fallacies-of-distributed-computing",
@@ -4645,7 +4645,7 @@
       "meaning": "Lỗi một phần khó thấy: node vẫn qua health check nhưng xử lý request thật chậm hoặc lỗi một phần.",
       "example": "Pod trả `200` cho `/health` nhưng 30% request thật timeout vì disk chậm.",
       "related": ["partial-failure"],
-      "topics": ["distributed-fundamentals"]
+      "topics": ["distributed-fundamentals", "tail-latency"]
     },
     {
       "id": "network-partition",
@@ -4813,7 +4813,7 @@
       "meaning": "Tính chất của thao tác mà làm nhiều lần cho cùng trạng thái hệ thống như làm một lần; điều kiện để retry an toàn.",
       "example": "`UPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING'` chạy hai lần vẫn chỉ đổi một lần.",
       "related": ["idempotency-key", "idempotent-consumer"],
-      "topics": ["idempotency", "cqrs-event-sourcing", "multi-region-active-active"]
+      "topics": ["idempotency", "cqrs-event-sourcing", "multi-region-active-active", "tail-latency"]
     },
     {
       "id": "reconciliation",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns", "rate-limiting"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency"]
     },
     {
       "id": "fallback",
@@ -4845,7 +4845,7 @@
       "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
       "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
       "related": ["backpressure", "circuit-breaker"],
-      "topics": ["resilience-patterns", "rate-limiting"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency"]
     },
     {
       "id": "retry-budget",
@@ -4853,7 +4853,7 @@
       "meaning": "Giới hạn tổng số retry theo tỉ lệ với số request (ví dụ không quá 10%), để retry không nhân tải lên một dependency đang quá tải.",
       "example": "Trong 10 giây có 1.000 request thì cho tối đa 100 lần retry; vượt thì trả lỗi ngay.",
       "related": ["retry-backoff", "jitter"],
-      "topics": ["resilience-patterns"]
+      "topics": ["resilience-patterns", "tail-latency"]
     },
     {
       "id": "microservices",
@@ -4885,7 +4885,7 @@
       "meaning": "Trạng thái hỏng tự duy trì: sau khi nguyên nhân ban đầu đã hết, tải phát sinh (retry, timeout, hàng đợi dồn) vẫn giữ hệ thống quá tải cho tới khi có can thiệp.",
       "example": "Database hồi phục sau 30 giây, nhưng retry ở ba tầng giữ tải gấp 45 lần nên hệ thống vẫn sập thêm 40 phút.",
       "related": ["retry-budget", "load-shedding"],
-      "topics": ["resilience-patterns"]
+      "topics": ["resilience-patterns", "tail-latency"]
     },
     {
       "id": "service-mesh",
@@ -5037,7 +5037,7 @@
       "meaning": "Lưu lượng tăng vọt do nhiều client hoặc nhiều tầng cùng retry khi một service đang lỗi, làm nó càng khó hồi phục.",
       "example": "Gateway, mesh và app mỗi tầng thử 3 lần: một request lỗi thành 27 lời gọi tới service đang quá tải.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "tail-latency"]
     },
     {
       "id": "slo",
@@ -5365,7 +5365,7 @@
       "meaning": "Độ lệch giữa đồng hồ của các máy tại cùng một thời điểm. NTP giữ nó nhỏ nhưng không bằng 0, và có thể lớn đột ngột khi NTP hỏng.",
       "example": "Máy A chỉ 10:00:05 trong khi máy B chỉ 10:00:03: skew 2 giây, đủ để last-write-wins chọn sai.",
       "related": ["ntp", "wall-clock", "last-write-wins"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "tail-latency"]
     },
     {
       "id": "wall-clock",
@@ -5605,7 +5605,7 @@
       "meaning": "Latency của phần chậm nhất trong các request (p99, p99.9). Bị khuếch đại khi một request gọi tới nhiều backend, vì chỉ cần một backend chậm là cả request chậm.",
       "example": "Gọi 100 backend, mỗi cái 1% chậm, thì khoảng 63% request tổng bị chậm.",
       "related": ["percentile"],
-      "topics": ["perf-methodology", "slow-api"]
+      "topics": ["perf-methodology", "slow-api", "tail-latency"]
     },
     {
       "id": "bottleneck",
@@ -5653,7 +5653,7 @@
       "meaning": "Lỗi đo của công cụ tạo tải: khi hệ thống chậm, công cụ chờ response rồi mới gửi request tiếp, nên bỏ sót thời gian chờ mà người dùng thật phải chịu và báo latency đẹp hơn thực tế.",
       "example": "Server đứng 5 giây nhưng công cụ chỉ ghi một mẫu chậm thay vì hàng trăm.",
       "related": ["percentile", "latency"],
-      "topics": ["perf-methodology", "slow-api"]
+      "topics": ["perf-methodology", "slow-api", "tail-latency"]
     },
     {
       "id": "mitigation",
@@ -6006,6 +6006,62 @@
       "example": "`log_min_duration = 500ms` ghi plan của lần chạy chậm với `$1 = 8000`, thứ chạy thử bằng tay không tái hiện được.",
       "related": ["execution-plan", "pg-stat-statements"],
       "topics": ["db-performance"]
+    },
+    {
+      "id": "wall-clock-profiling",
+      "term": "Wall-clock profiling",
+      "meaning": "Kiểu profile lấy mẫu mọi thread theo thời gian thực, bất kể thread đang chạy, chờ I/O hay chờ khoá. Dùng khi latency cao mà CPU thấp.",
+      "example": "`asprof -e wall -t <pid>` rồi chỉ xem thread `http-nio-*`: 90% thời gian request nằm ở lời gọi downstream.",
+      "related": ["sampling-profiler", "flame-graph", "async-profiler"],
+      "topics": ["profiling"]
+    },
+    {
+      "id": "allocation-profiling",
+      "term": "Allocation profiling",
+      "meaning": "Kiểu profile lấy mẫu theo byte được cấp phát để biết code nào tạo nhiều object nhất, tức nguồn gây GC dày. Không đo object còn sống.",
+      "example": "async-profiler `-e alloc` cho thấy `ObjectMapper.<init>` chiếm 19% byte cấp phát của service.",
+      "related": ["sampling-profiler", "flame-graph", "jfr"],
+      "topics": ["profiling"]
+    },
+    {
+      "id": "self-time",
+      "term": "Self time",
+      "meaning": "Phần thời gian (số mẫu) mà chính method đó đang ở đỉnh stack, không tính các method nó gọi. Total time thì tính cả mọi thứ bên dưới.",
+      "example": "`HashMap.putVal` có self 4,6% nhưng không nói gì về việc ai gọi nó nhiều; nhánh `toJson` có total 56%.",
+      "related": ["flame-graph", "sampling-profiler"],
+      "topics": ["profiling"]
+    },
+    {
+      "id": "async-profiler",
+      "term": "async-profiler",
+      "meaning": "Sampling profiler mã nguồn mở cho JVM, lấy mẫu CPU, wall-clock, allocation, lock với chi phí thấp, thấy cả khung native và kernel, không bị safepoint bias. Xuất flame graph HTML hoặc JFR.",
+      "example": "`asprof -d 30 -e cpu -f cpu.html <pid>` ghi 30 giây profile CPU thành flame graph.",
+      "related": ["sampling-profiler", "flame-graph", "safepoint-bias"],
+      "topics": ["profiling"]
+    },
+    {
+      "id": "safepoint-bias",
+      "term": "Safepoint bias",
+      "meaning": "Sai lệch của profiler chỉ lấy được stack khi thread dừng ở safepoint, nên mẫu dồn vào các điểm gần safepoint (cuối vòng lặp, lời gọi method) thay vì code thật sự tốn CPU.",
+      "example": "Profiler cũ đổ lỗi cho lời gọi ngay sau một vòng lặp đếm nóng; async-profiler và JFR lấy mẫu không cần safepoint.",
+      "related": ["sampling-profiler", "async-profiler"],
+      "topics": ["profiling"]
+    },
+    {
+      "id": "deadline-propagation",
+      "term": "Deadline propagation",
+      "meaning": "Truyền thời gian còn lại của một request xuống mọi lời gọi phía sau, để mỗi tầng tự đặt timeout không vượt ngân sách và bỏ việc khi bên gọi đã bỏ cuộc.",
+      "example": "Gateway gửi `X-Request-Timeout-Ms: 750`; checkout gọi payment với timeout `min(500, còn lại − 100)` ms. gRPC tự truyền deadline qua các lời gọi.",
+      "related": ["timeout", "tail-latency", "load-shedding"],
+      "topics": ["tail-latency"]
+    },
+    {
+      "id": "hedged-request",
+      "term": "Hedged request",
+      "meaning": "Gửi thêm một bản của cùng request (thường tới node khác) khi bản đầu chưa trả lời sau một ngưỡng như p95, lấy kết quả về trước rồi huỷ bản còn lại. Chỉ dùng cho thao tác idempotent.",
+      "example": "Hedge ở p95 kéo p99 từ 650ms xuống khoảng 40ms với khoảng 5% lời gọi thêm, khi đuôi là do node khựng ngẫu nhiên.",
+      "related": ["tail-latency", "idempotency", "retry-budget"],
+      "topics": ["tail-latency"]
     }
   ]
 }

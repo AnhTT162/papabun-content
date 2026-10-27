@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "sampling", "front": "Sampling profiler đo bằng cách nào?", "back": "Chụp stack của thread định kỳ (khoảng 100 lần/giây) rồi đếm; tỉ lệ mẫu xấp xỉ tỉ lệ thời gian, chi phí thấp nên chạy được trên production." },
+    { "id": "flame-axis", "front": "Trục ngang của flame graph là gì?", "back": "Số mẫu, không phải thời gian; khối được xếp theo tên, khối con nằm trên khối gọi nó." },
+    { "id": "self-total", "front": "Self time khác total time thế nào?", "back": "Self là mẫu có method ở đỉnh stack; total là mẫu có method ở bất kỳ đâu trong stack, gồm mọi thứ nó gọi." },
+    { "id": "cpu-blind", "front": "Profile `cpu` không thấy gì?", "back": "Thời gian thread chờ: DB, HTTP, khoá, sleep. Cần wall-clock hoặc lock profile." },
+    { "id": "wall-filter", "front": "Vì sao profile wall-clock phải lọc theo thread?", "back": "Wall đếm mọi thread kể cả đang rảnh, nên thread pool nhàn rỗi chiếm gần hết mẫu và che mất thread xử lý request." },
+    { "id": "alloc", "front": "Allocation profile trả lời câu hỏi gì?", "back": "Code nào cấp phát nhiều byte nhất, tức nguồn gây young GC dày; nó không chứng minh leak." },
+    { "id": "jfr-continuous", "front": "Chạy JFR liên tục trên production thế nào?", "back": "`-XX:StartFlightRecording=maxage=6h,settings=default` giữ bản ghi vòng tròn; khi có sự cố `jcmd <pid> JFR.dump` lấy đúng khoảng đó." },
+    { "id": "objectmapper", "front": "Vì sao `new ObjectMapper()` mỗi request tốn CPU?", "back": "Serializer được cache trong từng mapper, nên mapper mới phải introspect lại class bằng reflection; constructor chỉ là phần nhỏ." },
+    { "id": "container-perf", "front": "async-profiler trong container bị chặn perf_events thì làm sao?", "back": "Dùng `-e ctimer` hoặc `-e itimer` thay cho `-e cpu` dựa trên perf_events." }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "fan-out-prob",
+      "kind": "output",
+      "prompt": "Mỗi backend có 1% lời gọi chậm hơn p99, độc lập với nhau. Một request gọi song song 100 backend. Đoạn code in ra gì?",
+      "code": "int calls = 100;\ndouble slowAtLeastOne = 1 - Math.pow(0.99, calls);\nSystem.out.printf(\"%.0f%%%n\", slowAtLeastOne * 100);",
+      "options": ["63%", "1%", "100%", "37%"],
+      "answer": 0,
+      "explanation": "Xác suất cả 100 lời gọi đều nhanh là 0,99^100 ≈ 0,366, nên xác suất ít nhất một lời gọi chậm là khoảng 63%. Request phải chờ lời gọi chậm nhất, nên với fan-out 100, đa số request dính đuôi của backend. 37% là xác suất ngược lại (mọi lời gọi đều nhanh)."
+    },
+    {
+      "id": "retry-amplify",
+      "kind": "single",
+      "prompt": "Backend quá tải nên 90% lần thử bị timeout. Client thử tối đa 3 lần (1 lần đầu + 2 lần retry). Mỗi request gốc tạo trung bình bao nhiêu lời gọi tới backend?",
+      "options": ["Khoảng 2,71 lời gọi", "Đúng 3 lời gọi", "Khoảng 1,90 lời gọi", "Khoảng 1,10 lời gọi"],
+      "answer": 0,
+      "explanation": "Lần đầu luôn được gửi (1), lần hai khi lần đầu lỗi (0,9), lần ba khi cả hai lỗi (0,81): tổng 2,71. Tải tới backend gần gấp ba đúng lúc nó đã quá tải, và 73% request vẫn lỗi sau ba lần. Đó là cơ chế của retry storm; retry budget giới hạn số lần thử lại ở khoảng 10% số request gốc."
+    },
+    {
+      "id": "hedge-when",
+      "kind": "single",
+      "prompt": "Trường hợp nào hedged request giúp giảm p99 mà không gây hại?",
+      "options": [
+        "Đọc idempotent, đuôi do một node khựng ngẫu nhiên",
+        "Ghi đơn hàng không có idempotency key, đuôi do lock",
+        "Cả cụm backend quá tải nên mọi lời gọi đều chậm",
+        "Gọi một backend duy nhất đang bị nghẽn ở database"
+      ],
+      "answer": 0,
+      "explanation": "Hedging thắng khi chậm là ngẫu nhiên và độc lập giữa các lời gọi: bản thứ hai thường tới một node khác và về nhanh. Ghi không có idempotency key có thể bị thực hiện hai lần. Khi cả cụm quá tải hay nghẽn ở một database chung, bản thứ hai cũng chậm và chỉ thêm tải vào đúng chỗ đang nghẽn."
+    },
+    {
+      "id": "queue-near-full",
+      "kind": "single",
+      "prompt": "Service có thời gian xử lý trung bình 10ms, hàng đợi kiểu M/M/1. Tải tăng từ 50% lên 90% capacity. p99 thay đổi thế nào?",
+      "options": [
+        "Tăng khoảng 5 lần, từ khoảng 92ms lên khoảng 460ms",
+        "Tăng khoảng 1,8 lần, đúng theo tỉ lệ tải 90/50",
+        "Gần như không đổi vì thời gian xử lý vẫn là 10ms",
+        "Tăng khoảng 10 lần, từ khoảng 10ms lên khoảng 100ms"
+      ],
+      "answer": 0,
+      "explanation": "Với M/M/1, thời gian phản hồi tỉ lệ với `1 / (1 − ρ)`: từ 1/0,5 = 2 lên 1/0,1 = 10, tức gấp 5. p99 xấp xỉ `4,6 × 10ms / (1 − ρ)`: khoảng 92ms ở 50% và 460ms ở 90%, khớp với mô phỏng. Latency không tăng tuyến tính theo tải; gần trần, một chút tải thêm làm đuôi tăng vọt."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Ngân sách 800ms cho nút \"Đặt hàng\"",
+  "prompt": "Luồng đặt hàng: app → API gateway → checkout-service. checkout gọi song song pricing (đọc, p99 60ms, p99.9 400ms vì thỉnh thoảng một node khựng GC) và inventory (giữ hàng, có idempotency key, p99 120ms, p99.9 300ms), sau đó gọi payment (bên thứ ba, p99 400ms, p99.9 2,5 giây, nhận idempotency key), rồi ghi đơn vào database (p99 15ms). SLA: p99 của nút \"Đặt hàng\" dưới 800ms, tính tại gateway. Hiện trạng: mọi HTTP client dùng read timeout 30 giây, app thử tối đa 3 lần, gateway tối đa 2 lần, checkout tối đa 3 lần với mọi lỗi. Tháng trước payment chậm 10 phút và cả checkout sập theo. Thiết kế timeout, retry, hedging và deadline cho luồng này.",
+  "hints": [
+    "Bắt đầu từ 800ms tại gateway: trừ đi phần của mạng và của chính checkout, mỗi chặng còn bao nhiêu?",
+    "Chặng nào nối tiếp, chặng nào song song? Chặng song song tốn thời gian bằng cái chậm nhất.",
+    "Hiện một lần bấm có thể thành bao nhiêu lời gọi tới payment? Tầng nào nên là tầng duy nhất retry?",
+    "Pricing có đuôi do một node khựng. Đó là kiểu chậm mà hedging xử lý tốt hay kém?"
+  ],
+  "solution": "**Ngân sách**: gateway giữ 800ms và truyền xuống deadline còn lại (header `X-Request-Timeout-Ms`, hoặc deadline của gRPC). Gateway dành khoảng 50ms cho mạng và chính nó, checkout nhận khoảng 750ms. Chia trong checkout:\n- Chặng song song pricing + inventory: 150ms.\n- Payment: 500ms.\n- Ghi database: 50ms.\n- Biên cho code của checkout: 50ms.\n\n**Pricing (đọc, idempotent)**: timeout 150ms. Không retry; hedge sau 60ms (khoảng p99) sang một node khác, lấy kết quả về trước, huỷ cái thua. Đuôi của pricing là một node khựng ngẫu nhiên, đúng kiểu hedging xử lý tốt, và chỉ thêm khoảng 1% lời gọi. p99 của pricing đã nằm trong ngân sách, nên hedge chủ yếu cắt p99.9 (400ms) chứ không phải để đạt SLA p99. Đặt ngân sách hedge (tối đa 5% số request) và tắt khi pricing báo lỗi hoặc quá tải. Hết 150ms mà vẫn chưa có giá thì dùng giá trong cache gần nhất nếu còn hạn ngắn, hoặc trả lỗi nhanh.\n\n**Inventory (giữ hàng)**: timeout 150ms, không hedge: dù có idempotency key, bản thứ hai vẫn tranh khoá trên cùng mặt hàng và thêm tải vào đúng chỗ có thể đang nghẽn, trong khi p99 120ms đã nằm trong ngân sách. Hết giờ thì trả lỗi; lần bấm lại của người dùng dùng cùng idempotency key nên không giữ hàng hai lần.\n\n**Payment**: timeout = `min(500ms, thời gian còn lại − 100ms)`. p99.9 của payment (2,5 giây) vượt cả SLA, nên một phần rất nhỏ lời gọi sẽ chạm timeout: khi đó đơn chuyển sang `PAYMENT_PENDING`, trả cho app trạng thái \"đang xử lý\", và một job hỏi lại payment theo idempotency key (hoặc chờ webhook). Không retry đồng bộ trong request: không còn thời gian, và payment chậm thì retry chỉ thêm tải. Circuit breaker và bulkhead riêng cho payment (tối đa 50 lời gọi đồng thời; theo Little's law đủ cho khoảng 125 lời gọi/giây ở p99 400ms, tính lại theo tải thật) để payment chậm không ăn hết thread của checkout như tháng trước.\n\n**Retry**: một tầng duy nhất, ở checkout, chỉ cho lỗi kết nối nhanh (connect refused, `503` có `Retry-After`) và chỉ khi còn đủ thời gian, kèm retry budget 10%. Gateway và app không tự retry; app chỉ cho người dùng bấm lại với cùng key. Hiện trạng tối đa 3 × 2 × 3 = 18 lời gọi tới payment cho một lần bấm, đúng lúc payment đang chậm, là thứ đã làm checkout sập.\n\n**Bỏ việc quá hạn**: checkout kiểm tra deadline trước mỗi lời gọi; còn dưới 100ms (phần cho DB và code) thì trả lỗi ngay thay vì gọi payment. Một filter đọc header deadline và bỏ request đã chờ quá hạn trước khi vào controller; Tomcat không tự làm việc này.\n\n**Đo**: histogram latency từng chặng, tỉ lệ timeout, tỉ lệ hedge, số lời gọi trên mỗi lần bấm (phải gần 1), p99 tại gateway so với SLA.",
+  "tradeoffs": [
+    {
+      "option": "Deadline truyền xuống từ gateway, timeout từng chặng theo ngân sách",
+      "pros": ["Không chặng nào làm việc sau khi bên gọi đã bỏ cuộc", "Tổng thời gian chờ bị chặn bởi SLA"],
+      "cons": ["Mọi service phải đọc và tôn trọng header deadline", "Phải chỉnh ngân sách khi thêm chặng mới"]
+    },
+    {
+      "option": "Hedging cho pricing",
+      "pros": ["Cắt đuôi do một node khựng với ít tải thêm", "Không cần sửa code của pricing"],
+      "cons": ["Chỉ dùng được cho thao tác idempotent", "Làm tình hình tệ hơn khi cả cụm pricing quá tải, cần ngân sách và cơ chế tắt"]
+    },
+    {
+      "option": "Giữ timeout dài và retry ở mọi tầng như hiện tại",
+      "pros": ["Ít lỗi hiện ra với người dùng khi dependency chỉ chậm thoáng qua"],
+      "cons": ["Một lần bấm thành tới 18 lời gọi payment đúng lúc nó đang chậm", "Thread và connection bị giữ tới 30 giây, sự cố lan sang mọi luồng khác"]
+    }
+  ]
+}

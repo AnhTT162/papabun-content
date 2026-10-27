@@ -1,0 +1,192 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "catalog-api tốn gấp đôi CPU sau một release nhỏ",
+  "symptom": "Sau release 4.12 của catalog-api, CPU trung bình của các pod tăng từ 35% lên 78% dù traffic không đổi (khoảng 1.800 request/giây). p99 tăng từ 90ms lên 260ms, vẫn dưới SLO 300ms nhưng chỉ còn rất ít headroom. Release 4.12 gồm 14 commit nhỏ, không đổi thư viện nào.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "catalog-api: 6 pod, JDK 21, Spring Boot 3.5, G1, mỗi pod limit 2 CPU\n\n                   4.11      4.12\nreq/s (tổng)       1,790     1,810\nCPU mỗi pod        35%       78%\np99                90ms      260ms\nGC young/phút      38        141\nGC pause p99       6ms       11ms\nthread Tomcat bận  14/200    31/200\n\nKhông có lỗi mới trong log. Không có endpoint nào chậm hẳn: mọi endpoint chậm đều nhau.",
+      "evidenceFormat": "monospace",
+      "question": "CPU tăng gấp đôi ở cùng lượng traffic, GC chạy gần gấp bốn. Bước đầu tiên?",
+      "choices": [
+        {
+          "label": "Ghi profile CPU 60 giây bằng JFR trên một pod có traffic",
+          "quality": "good",
+          "feedback": "Đúng. CPU tăng mà không có endpoint nào nổi bật thì cần biết CPU đi vào đâu; JFR có sẵn trong JDK và đủ nhẹ để chạy trên production.",
+          "next": "hot-methods"
+        },
+        {
+          "label": "Chụp vài thread dump để xem các thread đang chạy code gì",
+          "quality": "ok",
+          "feedback": "Thread dump hợp với ca có thread kẹt. Ở đây CPU dàn trải trên nhiều thread và mỗi lần chụp là một ảnh tức thời, nên khó thấy chi phí cộng dồn.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Tăng CPU limit mỗi pod từ 2 lên 4 để lấy lại headroom",
+          "quality": "poor",
+          "feedback": "Trả gấp đôi tiền máy cho 14 commit nhỏ mà không biết commit nào tốn. Đó là giải pháp tạm khi đang cháy, không phải lúc này.",
+          "next": "more-cpu"
+        }
+      ]
+    },
+    {
+      "id": "more-cpu",
+      "evidence": "limit 4 CPU mỗi pod, deploy lúc 10:00\n\nCPU mỗi pod     39% của 4 CPU (khoảng 1,56 core, như trước)\np99             190ms\nGC young/phút   140\n\nChi phí hạ tầng của catalog-api tăng gấp đôi. Nguyên nhân vẫn chưa rõ.",
+      "evidenceFormat": "monospace",
+      "question": "Có thêm headroom nhưng mỗi request vẫn tốn gấp đôi CPU. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Ghi profile CPU 60 giây bằng JFR trên một pod",
+          "quality": "good",
+          "feedback": "Đúng. Cần biết CPU đi vào đâu để sửa tận gốc rồi trả limit về như cũ.",
+          "next": "hot-methods"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump",
+      "evidence": "3 dump cách nhau 5 giây, chỉ lấy thread http-nio-8080-exec-* đang RUNNABLE (không đọc socket):\n\ndump 1: 9 thread\n  3  com.fasterxml.jackson.databind.introspect.POJOPropertiesCollector.collectAll\n  2  org.springframework.web.servlet.DispatcherServlet.doDispatch\n  2  java.lang.Class.getRecordComponents0\n  1  com.fasterxml.jackson.core.json.WriterBasedJsonGenerator.writeString\n  1  org.hibernate.engine.jdbc...ResultSetReturnImpl.extract\ndump 2: 11 thread, 8 stack khác nhau\ndump 3: 8 thread, 7 stack khác nhau\n\nKhông thread nào giữ nguyên một stack qua cả 3 lần.",
+      "evidenceFormat": "monospace",
+      "question": "Thread chạy ở nhiều chỗ khác nhau, có vài khung của Jackson. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Ghi profile CPU 60 giây bằng JFR để có số liệu cộng dồn",
+          "quality": "good",
+          "feedback": "Đúng. Vài chục ảnh tức thời không đủ để đo tỉ lệ; profiler lấy hàng nghìn mẫu và gộp chúng lại.",
+          "next": "hot-methods"
+        }
+      ]
+    },
+    {
+      "id": "hot-methods",
+      "evidence": "$ jcmd 1 JFR.start settings=profile duration=60s filename=/tmp/cpu.jfr\n$ jfr view hot-methods /tmp/cpu.jfr\n\n                  Java Methods that Execute the Most\n\nMethod                                                              Samples Percent\n------------------------------------------------------------------- ------- -------\njava.util.HashMap.putVal(int, Object, Object, boolean, boolean)        1012   4.62%\ncom.fasterxml.jackson.databind.type.TypeFactory._fromAny(...)            641   2.93%\njava.lang.Class.copyMethods(Method[])                                    598   2.73%\norg.hibernate.sql.results...JdbcValuesResultSetImpl.next()              574   2.62%\njava.util.concurrent.ConcurrentHashMap.get(Object)                       441   2.01%\ncom.fasterxml.jackson.databind.util.RootNameLookup.<init>()              392   1.79%\ncom.fasterxml.jackson.core.json.WriterBasedJsonGenerator._writeString2   347   1.58%\n...",
+      "evidenceFormat": "monospace",
+      "question": "Không method nào chiếm quá 5%. Kết luận gì?",
+      "choices": [
+        {
+          "label": "Đây chỉ là self time; xem cây gọi theo tổng để tìm nhánh chung",
+          "quality": "good",
+          "feedback": "Đúng. `hot-methods` đếm method ở đỉnh stack. Chi phí có thể nằm rải trong hàng trăm method con của cùng một lời gọi cha; phải xem flame graph hoặc call tree theo tổng.",
+          "next": "flame"
+        },
+        {
+          "label": "CPU dàn trải đều, không có hotspot, nên chỉ có thể scale thêm",
+          "quality": "poor",
+          "feedback": "Danh sách phẳng không cho biết các method đó được gọi từ đâu. Hàng chục method nhỏ của Jackson cùng xuất hiện là dấu hiệu chúng có chung một cha.",
+          "next": "flame"
+        },
+        {
+          "label": "Tối ưu HashMap.putVal vì đó là method nóng nhất trong danh sách",
+          "quality": "poor",
+          "feedback": "`HashMap.putVal` của JDK không chậm đi giữa hai release; câu hỏi là ai gọi nó nhiều hơn trước. Self time không trả lời được điều đó.",
+          "next": "flame"
+        }
+      ]
+    },
+    {
+      "id": "flame",
+      "evidence": "async-profiler 4.4, -e cpu, 60 giây, gộp theo tổng (khung chứa trong stack):\n\n 56.1%  com.example.catalog.audit.AuditLogger.toJson\n 52.7%    ObjectMapper.writeValueAsString\n 47.6%      SerializerProvider.findTypedValueSerializer\n 46.0%        SerializerProvider._createAndCacheUntypedSerializer\n 43.4%          BeanSerializerFactory.createSerializer\n 25.3%            POJOPropertiesCollector.collectAll\n  3.1%      BeanSerializer.serialize            (ghi JSON thật)\n  3.3%    ObjectMapper.<init>\n 18.9%  org.hibernate... (đọc DB)\n  9.4%  org.springframework.web... (MVC, filter)\n\nasync-profiler -e alloc: AuditLogger.toJson chiếm 61% byte cấp phát, trong đó ObjectMapper.<init> 19%.",
+      "evidenceFormat": "monospace",
+      "question": "Hơn nửa CPU nằm trong `AuditLogger.toJson`, chủ yếu là dựng serializer, còn ghi JSON chỉ 3%. Giải thích nào khớp?",
+      "choices": [
+        {
+          "label": "Serializer bị dựng lại vì cache nằm trong từng ObjectMapper",
+          "quality": "good",
+          "feedback": "Đúng. Jackson chỉ introspect class một lần cho mỗi `ObjectMapper` rồi cache serializer trong mapper đó. Tạo mapper mới mỗi lần là mỗi lần introspect lại bằng reflection, và tạo rất nhiều rác cho GC.",
+          "next": "code"
+        },
+        {
+          "label": "Event audit quá lớn, cần bớt field hoặc nén trước khi ghi log",
+          "quality": "poor",
+          "feedback": "Ghi JSON thật (`BeanSerializer.serialize`) chỉ 3,1%. Thời gian nằm ở việc dựng serializer, không phụ thuộc kích thước dữ liệu.",
+          "next": "code"
+        },
+        {
+          "label": "Constructor của ObjectMapper chậm, cần một mapper nhẹ hơn nhiều",
+          "quality": "poor",
+          "feedback": "`ObjectMapper.<init>` chỉ 3,3% CPU. Phần đắt là lần serialize đầu tiên của mỗi class trên một mapper mới, không phải constructor.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "// AuditLogger.java, commit \"audit: log product views as JSON\" trong release 4.12\n@Component\nclass AuditLogger {\n    void productViewed(long productId, String actor) {\n        var event = new AuditEvent(\"VIEW\", productId, actor, Instant.now().toString());\n        log.info(toJson(event));\n    }\n\n    private String toJson(Object value) {\n        try {\n            return new ObjectMapper().writeValueAsString(value);   // mỗi lần gọi một mapper mới\n        } catch (JsonProcessingException e) {\n            return String.valueOf(value);\n        }\n    }\n}\n\nproductViewed được gọi trên mọi request xem sản phẩm, khoảng 1.500 lần/giây.",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Inject ObjectMapper của Spring hoặc dùng chung một mapper",
+          "quality": "good",
+          "feedback": "Đúng. `ObjectMapper` thread-safe sau khi cấu hình xong; dùng chung một instance thì serializer chỉ dựng một lần. Bean của Spring Boot còn mang sẵn cấu hình (module Java time, naming).",
+          "next": "verify"
+        },
+        {
+          "label": "Giữ một ObjectMapper riêng cho mỗi thread bằng ThreadLocal",
+          "quality": "ok",
+          "feedback": "Chạy được và hết chi phí dựng lại, nhưng không cần: `ObjectMapper` đã thread-safe. ThreadLocal chỉ thêm 200 bản cache giống nhau và rủi ro rò bộ nhớ khi thread pool tái dùng thread.",
+          "next": "verify-threadlocal"
+        },
+        {
+          "label": "Cache chuỗi JSON theo productId để khỏi serialize lại nhiều lần",
+          "quality": "poor",
+          "feedback": "Mỗi event có actor và thời điểm khác nhau nên cache gần như không trúng, và vẫn tạo mapper mới mỗi lần trượt cache.",
+          "next": "verify-cache"
+        }
+      ]
+    },
+    {
+      "id": "verify-cache",
+      "evidence": "Deploy cache Caffeine maximumSize=100000 cho JSON theo productId.\n\ncache hit ratio   0.4%\nCPU mỗi pod       79%\nheap sau GC       tăng thêm 180 MB\n\nProfile: AuditLogger.toJson vẫn 55%, giờ thêm Caffeine.put.",
+      "evidenceFormat": "monospace",
+      "question": "Cache gần như không trúng. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Bỏ cache, dùng chung một ObjectMapper",
+          "quality": "good",
+          "feedback": "Đúng. Gốc vấn đề là mapper mới mỗi lần, không phải việc serialize.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify-threadlocal",
+      "evidence": "Deploy 4.12.1 với ThreadLocal<ObjectMapper> trên 1 pod canary.\n\n                   4.12      4.12.1 (ThreadLocal)\nCPU mỗi pod        78%       35%\np99                260ms     91ms\nGC young/phút      141       39\nThread Tomcat      200       200 (mỗi thread giữ một ObjectMapper và cache serializer riêng)\n\nProfile: AuditLogger.toJson 2.6%. Vài phút đầu sau deploy CPU cao hơn một chút vì mỗi thread phải tự dựng serializer lần đầu.",
+      "evidenceFormat": "monospace",
+      "question": "CPU đã về, nhưng mỗi thread giữ một bản cache giống nhau. Có nên giữ cách này?",
+      "choices": [
+        {
+          "label": "Chuyển sang một ObjectMapper dùng chung, vì nó đã thread-safe",
+          "quality": "good",
+          "feedback": "Đúng. Một mapper dùng chung cho cùng kết quả mà không cần 200 bản cache, không phải dựng lại cho thread mới, và không có rủi ro rò qua ThreadLocal.",
+          "next": "verify"
+        },
+        {
+          "label": "Giữ ThreadLocal vì kết quả đo đã tốt đúng như mong muốn ban đầu",
+          "quality": "ok",
+          "feedback": "Chạy được, nhưng giữ một cơ chế phức tạp hơn mà không được gì thêm. Lần sau ai đó copy pattern này sang executor tạo thread liên tục sẽ dựng serializer liên tục.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "evidence": "Deploy 4.12.1 (AuditLogger dùng ObjectMapper inject từ Spring) trên 1 pod canary, rồi cả 6 pod.\n\n                   4.12      4.12.1\nCPU mỗi pod        78%       34%\np99                260ms     88ms\nGC young/phút      141       37\n\nProfile sau sửa: AuditLogger.toJson 2.4%, không còn BeanSerializerFactory trong nhánh của nó.",
+      "evidenceFormat": "monospace",
+      "question": "Đã về như cũ. Làm gì để lần sau phát hiện sớm hơn?",
+      "choices": [
+        {
+          "label": "Theo dõi CPU mỗi request theo release, bật JFR liên tục",
+          "quality": "good",
+          "feedback": "Đúng. CPU trên mỗi request (CPU chia req/s) so với release trước bắt được hồi quy ngay trên canary; JFR chạy liên tục cho phép dump profile của đúng khoảng thời gian có vấn đề.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: một commit nhỏ trong release 4.12 tạo `new ObjectMapper()` cho mỗi event audit, khoảng 1.500 lần mỗi giây. Jackson cache serializer bên trong từng `ObjectMapper`, nên mapper mới nào cũng phải introspect lại class bằng reflection (`POJOPropertiesCollector`, `BeanSerializerFactory`) trước khi ghi được một byte. Phần ghi JSON thật chỉ tốn 3% CPU; dựng serializer tốn hơn 40%, và lượng object tạm khổng lồ làm young GC chạy gần gấp bốn.\n\n**Vì sao khó thấy**: không endpoint nào chậm hẳn, thread dump mỗi lần một khác, và danh sách hot method của JFR không có method nào quá 5%. Chỉ khi gộp theo tổng (flame graph, call tree) mới thấy mọi method nhỏ đó có chung một cha.\n\n**Phòng ngừa**:\n- Dùng chung `ObjectMapper` (bean của Spring Boot), tương tự với mọi object đắt và thread-safe: `HttpClient`, `DateTimeFormatter`, `Pattern`, `JAXBContext`.\n- Đọc profile theo tổng thời gian trước, rồi mới nhìn self time.\n- Theo dõi CPU trên mỗi request và số GC mỗi phút theo phiên bản; so canary với bản cũ trước khi rollout hết.\n- Bật JFR liên tục với cấu hình `default` và dump khi cần; dùng flame graph so sánh trước/sau (differential) để xác nhận bản sửa.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

@@ -10,19 +10,19 @@
       "question": "Container bị kernel giết vì chạm limit, JVM không ném lỗi nào. Bước đầu tiên?",
       "choices": [
         {
-          "label": "So heap sau GC, heap committed và RSS để biết phần nào đang tăng",
+          "label": "So heap sau GC, heap committed và RSS để biết phần nào tăng",
           "quality": "good",
           "feedback": "Đúng. OOMKilled là tổng bộ nhớ của process vượt limit, không nhất thiết là heap. Phải biết heap hay native tăng trước khi chọn công cụ.",
           "next": "breakdown"
         },
         {
-          "label": "Chụp heap dump của một pod đang gần 2 GiB để tìm leak",
+          "label": "Chụp heap dump của một pod đang gần chạm 2 GiB để tìm leak",
           "quality": "ok",
           "feedback": "Heap dump chỉ cho thấy bên trong heap. Nếu phần tăng nằm ngoài heap, bạn tốn vài phút dừng ứng dụng mà không thấy gì.",
           "next": "heap-dump"
         },
         {
-          "label": "Tăng MaxRAMPercentage lên 85 để heap có thêm chỗ chứa",
+          "label": "Tăng MaxRAMPercentage lên 85 để heap có thêm chỗ chứa object",
           "quality": "poor",
           "feedback": "Limit của container không đổi. Cho heap lớn hơn là bớt chỗ cho phần native, và chưa biết phần nào đang tăng.",
           "next": "bigger-heap"

@@ -1,0 +1,368 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Retry storm: hết nguyên nhân mà vẫn không hồi phục",
+  "instructions": "Backend đang chạy 70% capacity, client có timeout 1 giây và retry tối đa 3 lần. Bấm \"Đỉnh tải +30%\" rồi \"Hết đỉnh tải\" để thấy hệ thống tự hồi phục. Làm lại, nhưng lần này bấm \"Client timeout, retry\" trước khi hết đỉnh, rồi thử thoát ra bằng retry budget hoặc load shedding.",
+  "config": {
+    "states": [
+      {
+        "id": "stable",
+        "label": "Ổn định",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "Backend nhận 70% capacity. Hàng đợi ngắn, p99 khoảng 200ms, gần như không request nào chạm timeout 1 giây."
+      },
+      {
+        "id": "spike",
+        "label": "Đỉnh tải",
+        "x": 0.85,
+        "y": 0.05,
+        "note": "Tải gốc chạm 100% capacity. Hàng đợi dài ra, latency tăng nhanh (gần trần, thời gian chờ tăng theo 1/(1 − utilization)), một phần request bắt đầu vượt timeout 1 giây."
+      },
+      {
+        "id": "storm",
+        "label": "Retry storm",
+        "x": 0.85,
+        "y": 0.5,
+        "note": "Mỗi lần thử timeout sinh thêm một lần thử nữa. Backend vẫn làm nốt cả những request mà client đã bỏ, nên phần lớn công sức là vô ích."
+      },
+      {
+        "id": "stuck",
+        "label": "Kẹt (metastable)",
+        "x": 0.1,
+        "y": 0.5,
+        "note": "Đỉnh tải đã qua, tải gốc chỉ còn 70%, nhưng retry giữ backend quá tải: hệ thống tự duy trì trạng thái hỏng. Restart hay scale nhẹ thường không đủ vì retry kéo nó trở lại ngay."
+      },
+      {
+        "id": "shed",
+        "label": "Load shedding",
+        "x": 0.5,
+        "y": 0.95,
+        "note": "Backend chỉ nhận tới mức nó xử lý kịp, phần dư trả `503` ngay kèm `Retry-After`. Request được nhận chạy nhanh trở lại, nên timeout và retry giảm theo."
+      }
+    ],
+    "initial": "stable",
+    "events": [
+      {
+        "id": "spike",
+        "label": "Đỉnh tải +30%"
+      },
+      {
+        "id": "spike-end",
+        "label": "Hết đỉnh tải"
+      },
+      {
+        "id": "retry",
+        "label": "Client timeout, retry"
+      },
+      {
+        "id": "budget",
+        "label": "Bật retry budget 10%"
+      },
+      {
+        "id": "shed",
+        "label": "Bật load shedding"
+      },
+      {
+        "id": "drain",
+        "label": "Hàng đợi đã vơi"
+      }
+    ],
+    "counters": [
+      {
+        "id": "base",
+        "label": "Tải gốc (% capacity)",
+        "initial": 70
+      },
+      {
+        "id": "load",
+        "label": "Tải thực tới backend (% capacity)",
+        "initial": 70
+      },
+      {
+        "id": "budget",
+        "label": "Retry budget (0 tắt, 1 bật)",
+        "initial": 0
+      }
+    ],
+    "transitions": [
+      {
+        "id": "go-spike",
+        "from": "stable",
+        "event": "spike",
+        "to": "spike",
+        "label": "đỉnh tải",
+        "effects": [
+          {
+            "counter": "base",
+            "set": 100
+          },
+          {
+            "counter": "load",
+            "set": 100
+          }
+        ],
+        "note": "Một đợt khuyến mãi đẩy tải gốc lên 100% capacity. Chưa có retry nào: tải thực bằng tải gốc."
+      },
+      {
+        "id": "spike-recover",
+        "from": "spike",
+        "event": "spike-end",
+        "to": "stable",
+        "label": "tự hồi phục",
+        "effects": [
+          {
+            "counter": "base",
+            "set": 70
+          },
+          {
+            "counter": "load",
+            "set": 70
+          },
+          {
+            "counter": "budget",
+            "set": 0
+          }
+        ],
+        "note": "Không có retry nhân tải: hết đỉnh thì hàng đợi vơi và hệ thống tự về trạng thái cũ. Đây là quá tải bình thường, không phải metastable. Bộ đếm retry budget được đặt lại để bạn thử lại kịch bản."
+      },
+      {
+        "id": "spike-retry-budget",
+        "from": "spike",
+        "event": "retry",
+        "to": "spike",
+        "label": "retry ≤ 10%",
+        "guard": {
+          "counter": "budget",
+          "eq": 1
+        },
+        "effects": [
+          {
+            "counter": "load",
+            "set": 110
+          }
+        ],
+        "note": "Retry budget chỉ cho số lần thử lại tối đa 10% số request gốc: tải thực dừng ở 110% thay vì bị nhân lên. Vẫn quá tải trong lúc đỉnh, nhưng hết đỉnh là hồi phục."
+      },
+      {
+        "id": "spike-budget",
+        "from": "spike",
+        "event": "budget",
+        "to": "spike",
+        "label": "retry budget",
+        "effects": [
+          {
+            "counter": "budget",
+            "set": 1
+          }
+        ],
+        "note": "Bật retry budget trước khi retry kịp nhân tải: đây là cách phòng ngừa tốt nhất. Lần retry sau chỉ được thêm tối đa 10% tải."
+      },
+      {
+        "id": "spike-shed",
+        "from": "spike",
+        "event": "shed",
+        "to": "shed",
+        "label": "shed tải",
+        "effects": [
+          {
+            "counter": "load",
+            "set": 100
+          }
+        ],
+        "note": "Backend chỉ nhận tới mức xử lý kịp ngay từ đầu đỉnh, phần dư trả `503` ngay. Request được nhận không chạm timeout nên retry không kịp nhân tải."
+      },
+      {
+        "id": "to-storm",
+        "from": "spike",
+        "event": "retry",
+        "to": "storm",
+        "label": "retry",
+        "effects": [
+          {
+            "counter": "load",
+            "set": 175
+          }
+        ],
+        "note": "Khoảng 50% lần thử timeout. Với tối đa 3 lần thử, mỗi request gốc thành trung bình 1 + 0,5 + 0,25 = 1,75 lần gọi: tải thực 175% capacity."
+      },
+      {
+        "id": "storm-worse",
+        "from": "storm",
+        "event": "retry",
+        "to": "storm",
+        "label": "retry nữa",
+        "guard": {
+          "counter": "load",
+          "lt": 271
+        },
+        "effects": [
+          {
+            "counter": "load",
+            "set": 271
+          }
+        ],
+        "note": "Quá tải nặng hơn nên 90% lần thử timeout: 1 + 0,9 + 0,81 = 2,71 lần gọi cho mỗi request gốc, tải thực 271%, và 73% request vẫn lỗi sau cả ba lần thử."
+      },
+      {
+        "id": "storm-same",
+        "from": "storm",
+        "event": "retry",
+        "to": "storm",
+        "label": "retry nữa",
+        "note": "Đã ở mức tệ nhất của 3 lần thử: gần như mọi request gốc đều dùng hết cả ba lần."
+      },
+      {
+        "id": "to-stuck",
+        "from": "storm",
+        "event": "spike-end",
+        "to": "stuck",
+        "label": "hết đỉnh",
+        "effects": [
+          {
+            "counter": "base",
+            "set": 70
+          },
+          {
+            "counter": "load",
+            "set": 190
+          }
+        ],
+        "note": "Tải gốc về 70%, nhưng hàng đợi đang đầy nên tỉ lệ timeout không giảm mà còn tăng lên khoảng 90%: 70% × 2,71 ≈ 190%. Nguyên nhân ban đầu đã hết mà hệ thống vẫn hỏng."
+      },
+      {
+        "id": "stuck-retry",
+        "from": "stuck",
+        "event": "retry",
+        "to": "stuck",
+        "label": "retry",
+        "note": "Không có gì thay đổi: retry chính là thứ giữ backend ở 190%."
+      },
+      {
+        "id": "stuck-budget",
+        "from": "stuck",
+        "event": "budget",
+        "to": "stable",
+        "label": "retry budget",
+        "effects": [
+          {
+            "counter": "budget",
+            "set": 1
+          },
+          {
+            "counter": "load",
+            "set": 70
+          }
+        ],
+        "note": "Retry budget cắt số lần thử lại xuống tối đa 10% số request gốc, nên tải thực chỉ còn nhỉnh hơn 70% một chút, dưới capacity. Hàng đợi vơi, timeout biến mất, retry về 0 và tải thực trở lại đúng 70%."
+      },
+      {
+        "id": "storm-budget",
+        "from": "storm",
+        "event": "budget",
+        "to": "spike",
+        "label": "retry budget",
+        "effects": [
+          {
+            "counter": "budget",
+            "set": 1
+          },
+          {
+            "counter": "load",
+            "set": 110
+          }
+        ],
+        "note": "Đỉnh vẫn còn nên vẫn quá tải (110%), nhưng không còn vòng nhân tải. Hết đỉnh là hệ thống tự hồi phục."
+      },
+      {
+        "id": "stuck-shed",
+        "from": "stuck",
+        "event": "shed",
+        "to": "shed",
+        "label": "shed tải",
+        "effects": [
+          {
+            "counter": "load",
+            "set": 100
+          }
+        ],
+        "note": "Backend chỉ nhận tới 100% capacity, phần dư bị từ chối ngay. Từ chối một request tốn vài micro giây, nhỏ hơn rất nhiều so với xử lý nó."
+      },
+      {
+        "id": "storm-shed",
+        "from": "storm",
+        "event": "shed",
+        "to": "shed",
+        "label": "shed tải",
+        "effects": [
+          {
+            "counter": "load",
+            "set": 100
+          }
+        ],
+        "note": "Backend chỉ nhận tới 100% capacity, phần dư trả `503` ngay. Đỉnh còn thì vẫn có request bị từ chối, nhưng request được nhận không còn chạm timeout."
+      },
+      {
+        "id": "shed-retry",
+        "from": "shed",
+        "event": "retry",
+        "to": "shed",
+        "label": "retry có jitter",
+        "note": "Client tôn trọng `Retry-After` và backoff có jitter, nên lần thử lại rải ra theo thời gian thay vì dồn vào cùng một lúc."
+      },
+      {
+        "id": "shed-spike-end",
+        "from": "shed",
+        "event": "spike-end",
+        "to": "shed",
+        "label": "hết đỉnh",
+        "guard": {
+          "counter": "base",
+          "gte": 100
+        },
+        "effects": [
+          {
+            "counter": "base",
+            "set": 70
+          }
+        ],
+        "note": "Tải gốc về 70%. Backend vẫn đang shed phần retry còn sót lại; bấm \"Hàng đợi đã vơi\" khi hàng đợi ngắn trở lại."
+      },
+      {
+        "id": "shed-drain",
+        "from": "shed",
+        "event": "drain",
+        "to": "stable",
+        "label": "hồi phục",
+        "effects": [
+          {
+            "counter": "base",
+            "set": 70
+          },
+          {
+            "counter": "load",
+            "set": 70
+          },
+          {
+            "counter": "budget",
+            "set": 0
+          }
+        ],
+        "note": "Hàng đợi ngắn lại, request được nhận chạy dưới timeout, retry giảm dần về 0. Tắt shedding không cần thiết: nó chỉ hoạt động khi quá tải.",
+        "guard": {
+          "counter": "base",
+          "lt": 100
+        }
+      },
+      {
+        "id": "shed-drain-wait",
+        "from": "shed",
+        "event": "drain",
+        "to": "shed",
+        "label": "vẫn đỉnh",
+        "note": "Đỉnh tải vẫn còn nên backend vẫn phải từ chối phần vượt capacity. Hàng đợi ngắn, request được nhận chạy nhanh, nhưng chưa phải lúc hồi phục hoàn toàn."
+      }
+    ],
+    "invalidNote": "Sự kiện này không đổi trạng thái ở đây. Retry chỉ xảy ra khi có timeout (đang quá tải); retry budget và load shedding chỉ có tác dụng khi đang quá tải; \"Hàng đợi đã vơi\" chỉ có nghĩa sau khi bật load shedding."
+  }
+}

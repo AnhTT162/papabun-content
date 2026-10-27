@@ -1,0 +1,31 @@
+## Quick
+
+[[tail-latency|Tail latency]] là phần đuôi của phân bố (p99, p99.9). Ở quy mô lớn, đuôi không còn hiếm: một request gọi song song 100 backend phải chờ cái chậm nhất, nên **p99 của backend trở thành trải nghiệm thường gặp của người dùng**. Ba công cụ chính: [[timeout|timeout]] lấy từ ngân sách thời gian và [[deadline-propagation|deadline truyền xuống]] các tầng, retry có giới hạn ([[retry-budget|retry budget]]), và [[hedged-request|hedged request]] cho thao tác đọc [[idempotency|idempotent]]. **Retry không giới hạn biến một đợt quá tải ngắn thành [[retry-storm|retry storm]].**
+
+## Interview
+
+**Vì sao đuôi quan trọng**: xác suất ít nhất một trong N lời gọi chậm hơn p99 là `1 − 0,99^N`: 10 lời gọi là 9,6%, 100 lời gọi là 63%. Mô phỏng một backend có p50 12ms, p99 650ms: request [[fan-out|fan-out]] 100 lời gọi có **p50** tới khoảng 730ms.
+
+**Đuôi đến từ đâu**: GC pause, hàng đợi gần bão hoà, một node chậm (máy dùng chung, [[gray-failure|gray failure]]), gửi lại gói TCP, cache miss, việc nền như [[compaction|compaction]]. Riêng hàng đợi: với hàng đợi M/M/1, p99 xấp xỉ `4,6 × S / (1 − ρ)`, tức service 10ms có p99 khoảng 92ms ở 50% tải nhưng khoảng 460ms ở 90% tải.
+
+**Timeout theo ngân sách**: bắt đầu từ SLA đầu-cuối, chia cho từng tầng. Timeout của một lời gọi lấy từ p99.9 của dependency lúc bình thường, nhưng không vượt **thời gian còn lại** của request. Truyền deadline xuống (gRPC gửi `grpc-timeout` tự động; HTTP thì gửi số ms còn lại trong header) để tầng dưới bỏ việc khi bên gọi đã bỏ cuộc. Timeout tầng dưới lớn hơn tầng trên là vô nghĩa: tầng trên đã trả lỗi trong khi tầng dưới vẫn làm.
+
+**Retry khuếch đại tải**: lần thử thất bại với xác suất f thì 3 lần thử tạo `1 + f + f²` lời gọi cho mỗi request: f = 50% là 1,75 lần, f = 90% là 2,71 lần. Đúng lúc backend quá tải, retry nhân tải lên và giữ nó quá tải cả khi nguyên nhân đã hết ([[metastable-failure|metastable failure]]). Cách làm đúng (một tầng retry, [[jitter|jitter]], budget khoảng 10%) ở bài Timeout, retry, circuit breaker, bulkhead.
+
+**Hedging**: gửi lời gọi thứ hai khi lời gọi đầu chưa xong sau khoảng p95, lấy kết quả về trước, huỷ cái còn lại. Với backend ở trên, hedge ở p95 kéo p99 từ 650ms xuống khoảng 40ms, đổi lại thêm khoảng 5% tải. Chỉ dùng cho thao tác idempotent, và chỉ có ích khi chậm là ngẫu nhiên từng lời gọi; khi cả cụm quá tải, hedging chỉ thêm tải.
+
+## Deep
+
+- **Số liệu mô phỏng** (2 triệu lời gọi, 97% quanh 12ms, 3% bị khựng 150–900ms): p50 12ms, p95 25ms, p99 651ms. Hedge ở p95 (25ms): p99 39ms, p99.9 56ms, thêm 5% lời gọi. Hedge ở 50ms: p99 64ms, thêm 3%. Fan-out 10: p50 22ms; fan-out 100: p50 728ms. Hedging thắng lớn vì đuôi ở đây là khựng ngẫu nhiên và độc lập giữa các lời gọi.
+- **Hàng đợi gần trần**: thời gian phản hồi tăng phi tuyến theo tải (công thức trung bình ở bài Phương pháp phân tích hiệu năng); đuôi còn tăng mạnh hơn, p99 của M/M/1 xấp xỉ `4,6 × S / (1 − ρ)`. Vì vậy giữ headroom (bài Capacity planning) là cách giảm tail rẻ nhất, và một đợt tăng tải 20% có thể làm p99 tăng gấp vài lần.
+- **Tied request** (Dean và Barroso, "The Tail at Scale"): gửi cùng lúc tới hai server, mỗi bản mang tên server kia; server nào bắt đầu xử lý trước báo huỷ cho bản còn lại. Tốn ít tải hơn hedging vì phần lớn bản sao bị huỷ khi còn trong hàng đợi.
+- **Hedging có sẵn ở đâu**: gRPC có `hedgingPolicy` trong service config (`maxAttempts`, `hedgingDelay`, `nonFatalStatusCodes`), loại trừ với `retryPolicy` trên cùng method. Envoy có `hedge_policy` với `hedge_on_per_try_timeout: true` (gửi thêm khi một lần thử chạm `per_try_timeout`; thiếu cờ này thì lần thử bị huỷ và retry). gRPC dùng `retryThrottling` làm ngân sách chung cho retry và hedge. Trong code Java có thể dựng bằng `CompletableFuture.anyOf` với lời gọi thứ hai hẹn giờ, nhớ huỷ lời gọi thua để trả connection.
+- **Giới hạn hedging**: đặt ngân sách (ví dụ không quá 5–10% số request) và tắt khi tỉ lệ lỗi hay tải của dependency cao. Không hedge thao tác ghi không có idempotency key (bài Idempotency).
+- **Deadline trong gRPC-Java**: deadline chỉ tự truyền sang lời gọi ra khi lời gọi đó chạy trong `Context` của server call. Chuyển việc sang executor khác mà không `Context.current().wrap(...)` (hoặc `Context.currentContextExecutor`) thì lời gọi ra mất deadline.
+- **Deadline tuyệt đối hay tương đối**: gửi thời điểm hết hạn tuyệt đối thì phụ thuộc đồng hồ của hai máy ([[clock-skew|lệch đồng hồ]]); gửi số ms còn lại rồi trừ dần ở mỗi tầng an toàn hơn. Mỗi lời gọi đặt timeout = `min(timeout riêng, thời gian còn lại − biên an toàn)`, và không gọi nữa nếu thời gian còn lại đã quá ít.
+- **Bỏ việc đã quá hạn**: request chờ trong hàng đợi lâu hơn deadline thì client đã bỏ đi; xử lý nó chỉ tốn tài nguyên. Kiểm tra deadline khi lấy request ra khỏi hàng đợi và trước mỗi lời gọi tốn kém. Đây là một dạng [[load-shedding|load shedding]] rẻ và hiệu quả khi quá tải.
+- **Response timeout không phải deadline**: read timeout của HTTP client giới hạn khoảng chờ giữa hai lần nhận dữ liệu, nên một response nhỏ giọt có thể kéo dài mãi (bài Tuning server & HTTP client). Cần thêm một deadline tổng cho cả lời gọi.
+- **Chọn timeout bằng số liệu**: timeout bằng p50 × 3 thường quá thấp với dependency có đuôi dài; timeout 30 giây mặc định thì giữ thread và connection quá lâu. Lấy p99.9 lúc bình thường, kiểm tra tổng các timeout nối tiếp vẫn nằm trong SLA, và theo dõi tỉ lệ timeout như một metric riêng.
+- **Đuôi riêng của JVM**: GC pause (ZGC hay Shenandoah giữ pause dưới mili giây đổi lấy CPU; ZGC thế hệ có từ JDK 21, mặc định từ JDK 23 và là chế độ duy nhất từ JDK 24), [[jit|JIT]] chưa nóng sau deploy, safepoint, CPU throttling trong container (bài Điều tra API chậm).
+- **Đo đuôi cho đúng**: dùng histogram (Micrometer `percentiles-histogram`, HdrHistogram) rồi gộp histogram giữa các pod; không lấy trung bình của p99 (bài Phương pháp phân tích hiệu năng). Load test phải tránh [[coordinated-omission|coordinated omission]] (bài Load & performance testing), nếu không sẽ không thấy đuôi.
+- **Retry storm hay đến từ nhiều tầng**: mobile app retry, gateway retry, service retry, mỗi tầng 3 lần là tối đa 27 lời gọi cho một hành động. Chọn một tầng retry (thường là tầng gần dependency nhất, nơi biết lỗi có tạm thời không), các tầng khác chỉ timeout.

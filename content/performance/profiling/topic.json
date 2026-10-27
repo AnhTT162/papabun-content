@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "profiling",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Profiling",
+  "summary": "Sampling profiler và flame graph: đọc theo tổng chứ không theo self time, chọn event cpu, wall, alloc, lock theo câu hỏi, lọc thread khi profile wall-clock. async-profiler và JFR trên production, JFR chạy liên tục, đọc bản ghi bằng jfr view, khung bị inline và differential flame graph.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 15,
+  "prerequisites": ["java-high-cpu", "perf-methodology"],
+  "terms": ["sampling-profiler", "flame-graph", "wall-clock-profiling", "allocation-profiling", "self-time", "async-profiler", "jfr", "safepoint-bias", "jit"],
+  "references": [
+    { "title": "async-profiler: README và Profiler Options", "url": "https://github.com/async-profiler/async-profiler" },
+    { "title": "JDK 21 Tools: jfr (view, print, summary)", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jfr.html" },
+    { "title": "JEP 509: JFR CPU-Time Profiling (Experimental)", "url": "https://openjdk.org/jeps/509" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"API chậm nhưng CPU chỉ 20%, profile CPU không thấy gì, bạn làm gì?\" Profile `cpu` chỉ đếm thread đang chạy trên CPU, nên thời gian chờ DB, HTTP hay khoá không xuất hiện. Dùng wall-clock (`asprof -e wall -t`) và chỉ xem thread xử lý request, hoặc profile `lock` nếu nghi tranh khoá. Thêm trace để biết chờ dependency nào." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng kết luận từ danh sách hot method. Đó là self time: method ở đỉnh stack. Khi chi phí rải trong hàng trăm method nhỏ của một thư viện, mỗi cái chỉ vài phần trăm và trông như \"không có hotspot\", trong khi nhánh cha của chúng chiếm hơn nửa CPU." }
+  ]
+}
