@@ -1,0 +1,164 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "502 lẻ tẻ ở load balancer sau một lần đổi cấu hình",
+  "symptom": "Từ chiều thứ Ba, order-api thỉnh thoảng trả 502 Bad Gateway, khoảng 0,3% request. Lỗi rải rác cả ngày, tỉ lệ cao hơn vào ban đêm khi ít tải. Log ứng dụng không có exception nào, latency p99 vẫn bình thường.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "order-api: 6 pod, Spring Boot 3.5, Tomcat nhúng, sau AWS Application Load Balancer (idle timeout 60s)\n\nCloudWatch (1 giờ, 02:00-03:00):\n  RequestCount                 41,200\n  HTTPCode_ELB_502_Count          188   (0.46%)\n  HTTPCode_Target_5XX_Count         0\n  TargetResponseTime p99        180ms\n\nThay đổi gần đây:\n  Thứ Ba 14:05  deploy v2.31: nâng Jackson 2.18 -> 2.19;\n                application.yml: server.tomcat.connection-timeout: 5s\n                (ticket \"giảm thời gian giữ kết nối chậm, chống slowloris\")",
+      "evidenceFormat": "monospace",
+      "question": "502 do load balancer sinh ra, còn target không trả 5xx nào. Bạn xem gì tiếp?",
+      "choices": [
+        {
+          "label": "Đọc access log của ALB cho các request bị 502",
+          "quality": "good",
+          "feedback": "Đúng. `HTTPCode_Target_5XX_Count` bằng 0 nghĩa là 502 do chính ALB tạo ra. Access log của ALB cho biết nó đã gửi được request tới target chưa và target phản hồi ra sao.",
+          "next": "alb-log"
+        },
+        {
+          "label": "Tìm exception trong log ứng dụng quanh giờ có 502",
+          "quality": "ok",
+          "feedback": "Nên kiểm tra, nhưng metric đã gợi ý rằng ứng dụng không trả lỗi. Nếu request chưa từng tới được ứng dụng thì log ứng dụng sẽ trống.",
+          "next": "app-log"
+        },
+        {
+          "label": "Thêm pod để giảm tải cho mỗi pod",
+          "quality": "poor",
+          "feedback": "Lỗi nhiều hơn khi ít tải, CPU và latency bình thường: không có dấu hiệu quá tải. Thêm pod chỉ tốn tiền; quay lại nhìn chính các request bị 502 trong access log của ALB.",
+          "next": "alb-log"
+        }
+      ]
+    },
+    {
+      "id": "app-log",
+      "evidence": "Lọc log order-api 02:00-03:00 theo trace id của 20 request bị 502 (lấy từ header X-Amzn-Trace-Id):\n  0 / 20 request có dòng log nào\n\nCác request thành công cùng giờ đều có log \"Completed 200\".",
+      "evidenceFormat": "monospace",
+      "question": "Request bị 502 không để lại dấu vết nào trong ứng dụng. Điều đó nói gì?",
+      "choices": [
+        {
+          "label": "Request chưa tới được Tomcat; xem access log của ALB để biết nó dừng ở đâu",
+          "quality": "good",
+          "feedback": "Đúng. Lỗi xảy ra giữa ALB và Tomcat, ở tầng kết nối. Cần nhìn từ phía ALB.",
+          "next": "alb-log"
+        },
+        {
+          "label": "Logback bỏ dòng log khi quá tải, nên vẫn có thể lỗi trong ứng dụng",
+          "quality": "poor",
+          "feedback": "Tải đang thấp và mọi request thành công đều có log. Không có lý do để nghĩ chỉ đúng các request lỗi bị mất log.",
+          "next": "alb-log"
+        }
+      ]
+    },
+    {
+      "id": "alb-log",
+      "evidence": "ALB access log (rút gọn), các request bị 502:\n  time                 target            req_proc  target_proc  resp_proc  elb  target\n  02:14:07.103812Z     10.0.3.41:8080    0.000     -1           -1         502  -\n  02:21:55.006140Z     10.0.3.17:8080    0.000     -1           -1         502  -\n  02:33:12.541907Z     10.0.3.52:8080    0.001     -1           -1         502  -\n\ntarget_proc = -1: ALB không nhận được response nào từ target.\n\nThống kê 188 request bị 502: thời gian từ lần dùng trước của cùng kết nối tới target\n  < 4.9s        0\n  4.9s - 5.1s   188\n  > 5.1s        0",
+      "evidenceFormat": "monospace",
+      "question": "Mọi 502 rơi vào kết nối đã nhàn rỗi đúng khoảng 5 giây. Giả thuyết nào khớp nhất?",
+      "choices": [
+        {
+          "label": "Tomcat đóng kết nối keep-alive sau 5 giây, ALB vẫn gửi request vào kết nối đó",
+          "quality": "good",
+          "feedback": "Đúng. `connection-timeout: 5s` cũng thành keep-alive timeout của Tomcat vì `keep-alive-timeout` không được đặt riêng. ALB giữ kết nối tới 60 giây nên có lúc gửi request đúng lúc Tomcat đang đóng nó.",
+          "next": "tcpdump"
+        },
+        {
+          "label": "Jackson 2.19 làm một số response serialize lỗi nên Tomcat ngắt kết nối",
+          "quality": "poor",
+          "feedback": "Lỗi serialize sẽ để lại exception trong log và không chọn đúng các kết nối nhàn rỗi 5 giây. Bằng chứng chỉ ra thời gian nhàn rỗi, không phải nội dung response.",
+          "next": "tcpdump"
+        },
+        {
+          "label": "Một pod lỗi mạng nên ALB thỉnh thoảng không gửi được request tới nó",
+          "quality": "poor",
+          "feedback": "502 rải đều trên nhiều target (10.0.3.41, .17, .52), và chỉ ở kết nối nhàn rỗi khoảng 5 giây. Một pod hỏng không tạo ra mẫu đó.",
+          "next": "tcpdump"
+        }
+      ]
+    },
+    {
+      "id": "tcpdump",
+      "evidence": "tcpdump trên pod 10.0.3.41, kết nối từ ALB 10.0.1.17:41822 (rút gọn):\n\n02:14:02.098  10.0.1.17.41822 > 10.0.3.41.8080  [P.] GET /orders/88123   (request cuối thành công)\n02:14:02.101  10.0.3.41.8080 > 10.0.1.17.41822  [P.] HTTP/1.1 200\n          ... 5 giây không có gì ...\n02:14:07.101  10.0.3.41.8080 > 10.0.1.17.41822  [F.]   Tomcat đóng kết nối\n02:14:07.102  10.0.1.17.41822 > 10.0.3.41.8080  [P.] GET /orders/88140   (ALB gửi trước khi kịp xử lý FIN)\n02:14:07.102  10.0.3.41.8080 > 10.0.1.17.41822  [R]    socket đã đóng, trả RST\n\nTomcat connector (đọc qua JMX): connectionTimeout=5000, keepAliveTimeout=5000",
+      "evidenceFormat": "monospace",
+      "question": "Đã xác nhận: Tomcat đóng sau 5 giây nhàn rỗi, ALB gửi request vào kết nối đang đóng. Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Đặt `keep-alive-timeout` 75s riêng, giữ `connection-timeout` 5s",
+          "quality": "good",
+          "feedback": "Đúng. Keep-alive của target dài hơn idle timeout 60 giây của ALB, nên ALB luôn là bên đóng kết nối nhàn rỗi. `connection-timeout` vẫn giới hạn client gửi request chậm.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Revert `connection-timeout` về mặc định 60 giây",
+          "quality": "ok",
+          "feedback": "Hết 502 nhanh, nhưng mất mục tiêu chống kết nối gửi chậm. Và 60 giây bằng đúng idle timeout của ALB: hai bên đóng cùng lúc vẫn có thể va nhau. Nên đặt keep-alive dài hơn hẳn idle timeout.",
+          "next": "mitigated-revert"
+        },
+        {
+          "label": "Giảm idle timeout của ALB xuống 4 giây cho thấp hơn Tomcat",
+          "quality": "ok",
+          "feedback": "Hết 502 vì ALB đóng trước Tomcat. Nhưng idle timeout của ALB áp cho cả phía client: kết nối từ trình duyệt, app di động bị đóng sau 4 giây, nên client phải bắt tay TCP và TLS lại thường xuyên hơn.",
+          "next": "mitigated-alb"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "Cấu hình cuối: server.tomcat.keep-alive-timeout: 75s, connection-timeout: 5s, ALB idle timeout 60s\n\nCloudWatch 24 giờ sau:\n  HTTPCode_ELB_502_Count    0\n  TargetResponseTime p99    178ms",
+      "evidenceFormat": "monospace",
+      "question": "502 đã hết. Phòng ngừa thế nào?",
+      "choices": [
+        {
+          "label": "Ghi thứ tự timeout vào checklist, alert riêng theo ELB_502_Count",
+          "quality": "good",
+          "feedback": "Đúng. Quy tắc idle timeout tăng dần theo chiều request đi vào là kiến thức dễ quên; ghi lại và alert riêng cho 502 do ALB sinh ra để phát hiện ngay.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Cấm đổi timeout của Tomcat, luôn giữ mọi giá trị mặc định",
+          "quality": "ok",
+          "feedback": "Tránh được lần này nhưng bỏ luôn lý do chính đáng để chỉnh (chống kết nối gửi chậm). Thứ cần là hiểu quan hệ giữa các timeout, không phải cấm đổi.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Bật retry ở client cho mọi request khi nhận 502",
+          "quality": "poor",
+          "feedback": "ALB không có cài đặt retry tới target. Retry ở client che được lỗi nhưng không sửa nguyên nhân, và nguy hiểm với `POST` không idempotent.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "mitigated-revert",
+      "evidence": "Deploy v2.32: bỏ server.tomcat.connection-timeout (về 60s, keep-alive cũng 60s)\n\nCloudWatch 24 giờ sau:\n  HTTPCode_ELB_502_Count    3\n  TargetResponseTime p99    181ms\n\nTomcat và ALB cùng đóng kết nối nhàn rỗi ở 60 giây: thỉnh thoảng hai bên vẫn va nhau.\nTicket chống slowloris bị mở lại.",
+      "evidenceFormat": "monospace",
+      "question": "502 gần hết nhưng còn lẻ tẻ và mất mục tiêu ban đầu. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Đặt `keep-alive-timeout` 75s riêng, đặt lại `connection-timeout` 5s",
+          "quality": "good",
+          "feedback": "Đúng. Tách hai timeout: keep-alive dài hơn idle timeout của ALB, `connection-timeout` ngắn để chống client gửi chậm.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated-alb",
+      "evidence": "ALB idle timeout: 60s -> 4s\n\nCloudWatch 24 giờ sau:\n  HTTPCode_ELB_502_Count    0\n  NewConnectionCount        tăng 6 lần\n  TargetResponseTime p99    182ms\n\nApp di động báo p50 tăng khoảng 120ms ở màn hình đầu: kết nối từ client bị đóng sau 4 giây nhàn rỗi, phải bắt tay TCP và TLS lại.",
+      "evidenceFormat": "monospace",
+      "question": "Hết 502 nhưng client trả giá. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Trả idle timeout của ALB về 60s, đặt `keep-alive-timeout` của Tomcat 75s",
+          "quality": "good",
+          "feedback": "Đúng. Idle timeout của ALB áp cho cả phía client, nên sửa ở target mới không ảnh hưởng người dùng.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `server.tomcat.connection-timeout: 5s` được thêm để chống client gửi request chậm. Tomcat dùng `connectionTimeout` làm luôn `keepAliveTimeout` khi không đặt riêng, nên kết nối keep-alive nhàn rỗi bị đóng sau 5 giây. ALB giữ kết nối tới target tới 60 giây và dùng lại chúng. Khi một request tới đúng lúc Tomcat gửi FIN, ALB gửi request vào kết nối đang đóng, nhận RST và trả 502. Ban đêm ít tải nên kết nối hay nhàn rỗi đủ 5 giây, tỉ lệ lỗi cao hơn.\n\n**Vì sao khó thấy**: request không tới ứng dụng nên log ứng dụng trống; `HTTPCode_Target_5XX_Count` bằng 0; latency bình thường. Dấu hiệu duy nhất là `target_processing_time = -1` trong access log của ALB.\n\n**Phòng ngừa**:\n- Idle timeout tăng dần theo chiều request đi vào: client < load balancer < server. Với ALB 60 giây, keep-alive của Tomcat đặt 65–75 giây.\n- Đặt `keep-alive-timeout` riêng, không để nó ngầm theo `connection-timeout`.\n- Alert riêng cho `HTTPCode_ELB_502_Count` và `ELB_5XX` tách khỏi lỗi của target.\n- Thay đổi timeout là thay đổi hành vi mạng: test với đúng load balancer trên staging, có cả khoảng nhàn rỗi giữa các request chứ không chỉ tải liên tục.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cwv-thresholds", "front": "Ngưỡng tốt của ba Core Web Vitals?", "back": "LCP ≤ 2,5 giây, INP ≤ 200ms, CLS ≤ 0,1; xét ở p75 lượt tải trang của người dùng thật, tách mobile và desktop." },
+    { "id": "inp-vs-fid", "front": "INP khác FID thế nào?", "back": "FID chỉ đo độ trễ trước khi xử lý lần tương tác đầu; INP đo cả thời gian tới khi màn hình phản hồi, xét mọi lần tương tác. INP thay FID từ tháng 3/2024." },
+    { "id": "lcp-parts", "front": "LCP chia thành bốn phần nào?", "back": "TTFB, độ trễ trước khi bắt đầu tải tài nguyên LCP, thời gian tải nó, và thời gian render." },
+    { "id": "lazy-lcp", "front": "Vì sao không gắn `loading=\"lazy\"` cho ảnh LCP?", "back": "Trình duyệt trì hoãn tải ảnh lazy tới khi biết nó nằm trong màn hình, làm LCP muộn. Ảnh LCP nên có `fetchpriority=\"high\"`." },
+    { "id": "immutable-assets", "front": "Header cache cho file tĩnh có hash trong tên và cho HTML?", "back": "File có hash: `public, max-age=31536000, immutable`. HTML: `no-cache` kèm `ETag`, để luôn kiểm tra lại và trỏ tới file mới sau deploy." },
+    { "id": "no-compress-images", "front": "Vì sao không nén gzip cho JPEG, PNG, video?", "back": "Chúng đã được nén sẵn; gzip gần như không giảm kích thước mà tốn CPU ở cả hai đầu." },
+    { "id": "brotli-levels", "front": "Dùng Brotli cho file tĩnh và response động thế nào?", "back": "File tĩnh nén trước lúc build ở mức cao; response động dùng mức thấp (4–5) vì mức cao rất chậm và làm tăng TTFB." },
+    { "id": "chatty-api", "front": "12 lời gọi API nối tiếp trên 4G (RTT 100ms, server 50ms) tốn bao lâu?", "back": "Khoảng 12 × 150ms = 1,8 giây chỉ vì chờ nối tiếp; gộp thành một lời gọi hoặc trả kèm trong response chính." },
+    { "id": "lab-vs-field", "front": "Dữ liệu lab và dữ liệu field khác nhau thế nào?", "back": "Lab (Lighthouse) là một lần đo giả lập, lặp lại được, để tìm nguyên nhân; field (RUM, CrUX) là người dùng thật, để biết có vấn đề và bản sửa có hiệu quả." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "tomcat-defaults", "front": "Ba giới hạn chính của Tomcat nhúng trong Spring Boot và giá trị mặc định?", "back": "`threads.max` 200 (request xử lý đồng thời), `max-connections` 8192 (kết nối giữ được), `accept-count` 100 (hàng đợi kết nối của hệ điều hành khi đã đủ max-connections)." },
+    { "id": "tomcat-keepalive", "front": "Keep-alive timeout của Tomcat mặc định là bao nhiêu?", "back": "Bằng `connectionTimeout` (60 giây ở Tomcat nhúng) nếu không đặt riêng; giảm `connection-timeout` là giảm luôn keep-alive." },
+    { "id": "lb-keepalive-order", "front": "Keep-alive của server nên so với idle timeout của load balancer thế nào?", "back": "Dài hơn, để load balancer luôn là bên đóng kết nối nhàn rỗi. Ngược lại, LB gửi request vào kết nối server vừa đóng và trả 502." },
+    { "id": "hc5-pool-defaults", "front": "Pool mặc định của Apache HttpClient 5?", "back": "Tối đa 25 kết nối, 5 cho mỗi route (host); chờ mượn kết nối và connect tới 3 phút, response timeout không giới hạn." },
+    { "id": "three-timeouts", "front": "Ba timeout cần đặt cho một HTTP client có pool?", "back": "Connect timeout (mở TCP/TLS), response timeout (chờ dữ liệu response), connection request timeout (chờ mượn kết nối từ pool)." },
+    { "id": "response-timeout-scope", "front": "Response timeout có giới hạn tổng thời gian một lời gọi không?", "back": "Không, nó giới hạn khoảng chờ giữa hai lần nhận dữ liệu. Giới hạn tổng thời gian cần thêm deadline ở tầng trên." },
+    { "id": "pool-sizing", "front": "Tính kích thước pool HTTP client tới một downstream thế nào?", "back": "Little's law: RPS tới downstream × latency p99 của nó, cộng phần dư. 300 req/s × 150ms ≈ 45 kết nối." },
+    { "id": "virtual-thread-limit", "front": "Bật virtual thread cho Tomcat thì giới hạn đồng thời nằm ở đâu?", "back": "`threads.max` không còn giới hạn; phải giới hạn bằng pool DB, pool HTTP client hoặc semaphore trước downstream." },
+    { "id": "stale-connection", "front": "`NoHttpResponseException` lẻ tẻ khi gọi một service thường do đâu?", "back": "Client dùng lại kết nối nhàn rỗi mà server đã đóng vì keep-alive của server ngắn hơn; đặt `evictIdleConnections` ngắn hơn keep-alive của server." }
+  ]
+}

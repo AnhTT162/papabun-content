@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "client-performance",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Hiệu năng phía client",
+  "summary": "Thời gian người dùng thấy được đi vào đâu: số round-trip, số byte, cache. Core Web Vitals (LCP, INP, CLS) đo ở p75 dữ liệu thật; chia LCP thành bốn phần; nén gzip, Brotli, zstd và BREACH; payload thừa và API gọi nối tiếp; cache bất biến bằng tên file có hash; CDN.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 14,
+  "prerequisites": ["http-request-lifecycle", "caching-basics"],
+  "terms": ["core-web-vitals", "lcp", "inp", "cls", "ttfb", "rtt", "http-compression", "http-caching", "cache-busting", "cdn", "bff", "etag", "csrf"],
+  "references": [
+    { "title": "web.dev: Web Vitals", "url": "https://web.dev/articles/vitals" },
+    { "title": "web.dev: Optimize Largest Contentful Paint", "url": "https://web.dev/articles/optimize-lcp" },
+    { "title": "MDN: Compression in HTTP", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lighthouse cho 95 điểm mà người dùng vẫn kêu chậm, vì sao?\" Lighthouse là dữ liệu lab: một lần tải, một máy, một mạng giả lập, cache trống. Người dùng thật có máy yếu hơn, mạng chập chờn, và tương tác sau khi tải xong, thứ Lighthouse không đo được (INP). Core Web Vitals được đánh giá ở p75 của dữ liệu thật (RUM, CrUX), tách mobile và desktop. Dùng lab để tìm nguyên nhân và kiểm tra bản sửa, dùng dữ liệu thật để biết có vấn đề hay không." },
+    { "type": "callout", "style": "warning", "markdown": "Không đặt `Cache-Control: max-age` dài cho file có tên cố định như `app.js`. Deploy bản mới xong, người dùng vẫn chạy JS cũ tới khi hết hạn, và CDN cũng giữ bản cũ. Cache dài chỉ dành cho file có hash nội dung trong tên (`app.3f9c2b.js`); HTML trỏ tới chúng thì dùng `no-cache` để luôn được kiểm tra lại." }
+  ]
+}

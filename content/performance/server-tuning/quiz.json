@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hc5-defaults-output",
+      "kind": "output",
+      "prompt": "Với Apache HttpClient 5, đoạn code in ra gì?",
+      "code": "var pool = new PoolingHttpClientConnectionManager();\nSystem.out.println(pool.getMaxTotal() + \" \" + pool.getDefaultMaxPerRoute());",
+      "options": [
+        "25 5",
+        "20 2",
+        "200 200",
+        "2147483647 2147483647"
+      ],
+      "answer": 0,
+      "explanation": "HttpClient 5 mặc định tối đa 25 kết nối, 5 cho mỗi route. \"20 2\" là mặc định của HttpClient 4.x. Pool không lấy theo số thread Tomcat và không mặc định vô hạn. Với 50 thread cùng gọi một host, 45 thread phải chờ mượn kết nối, tới 3 phút theo `connectionRequestTimeout` mặc định."
+    },
+    {
+      "id": "threads-vs-littles-law",
+      "kind": "single",
+      "prompt": "Một API nhận 400 request/giây. Bình thường latency 50ms; khi DB chậm, latency lên 1,5 giây và Tomcat báo `threads.busy` 200/200 và thread dump cho thấy gần hết thread đang chờ truy vấn DB. Tăng `threads.max` lên 800 có giải quyết được không?",
+      "options": [
+        "Không: cần khoảng 600 request đồng thời và thread chỉ chuyển sang chờ DB pool",
+        "Có: 800 thread đủ cho 400 request/giây vì mỗi thread xử lý 1 request mỗi giây",
+        "Có: Tomcat dùng NIO nên thread nhiều hơn không tốn thêm tài nguyên",
+        "Không: Tomcat không cho đặt `threads.max` lớn hơn `accept-count`"
+      ],
+      "answer": 0,
+      "explanation": "Little's law: 400 × 1,5 giây = 600 request đồng thời. Con số đủ trên giấy, nhưng thread đang chờ DB: thêm thread chỉ thêm người xếp hàng ở connection pool (HikariCP mặc định 10) và dồn thêm truy vấn vào DB đang chậm. NIO giúp kết nối nhàn rỗi không giữ thread, không làm thread rẻ đi. `threads.max` và `accept-count` là hai giới hạn độc lập. Cách đúng là tìm vì sao DB chậm và đặt timeout cho truy vấn."
+    },
+    {
+      "id": "keepalive-order",
+      "kind": "single",
+      "prompt": "ALB có idle timeout 60 giây. Muốn vẫn dùng keep-alive mà tránh 502 do kết nối bị đóng, đặt keep-alive timeout của Tomcat thế nào?",
+      "options": [
+        "Dài hơn 60 giây, ví dụ 75 giây, để ALB luôn là bên đóng trước",
+        "Ngắn hơn 60 giây, ví dụ 30 giây, để giải phóng kết nối sớm",
+        "Đúng 60 giây để hai bên đóng kết nối cùng một lúc",
+        "Tắt keep-alive để mỗi request mở kết nối mới, không còn kết nối cũ"
+      ],
+      "answer": 0,
+      "explanation": "Bên nào đóng kết nối nhàn rỗi trước thì bên kia có thể gửi request vào kết nối đang đóng. Keep-alive của Tomcat dài hơn idle timeout của ALB nghĩa là ALB luôn đóng trước, nên không bao giờ dùng kết nối Tomcat đã đóng. Đặt bằng nhau vẫn có lúc va nhau. Tắt keep-alive tránh được lỗi nhưng mỗi request tốn thêm bắt tay TCP và tạo nhiều socket `TIME_WAIT`."
+    },
+    {
+      "id": "response-timeout-trickle",
+      "kind": "single",
+      "prompt": "Client đặt response timeout 1 giây. Một downstream lỗi gửi response rất chậm: cứ 800ms gửi vài byte, tổng cộng mất 40 giây. Chuyện gì xảy ra?",
+      "options": [
+        "Lời gọi kéo dài khoảng 40 giây vì timeout tính giữa hai lần nhận dữ liệu",
+        "Lời gọi bị huỷ sau 1 giây vì response timeout tính cho cả response",
+        "Lời gọi bị huỷ sau 3 phút theo connection request timeout mặc định",
+        "Lời gọi bị huỷ sau 1 giây vì connect timeout cũng là 1 giây"
+      ],
+      "answer": 0,
+      "explanation": "Response timeout (socket timeout) giới hạn thời gian chờ giữa hai lần đọc được dữ liệu. Mỗi lần dữ liệu tới cách nhau 800ms, dưới 1 giây, nên không bao giờ hết giờ. Connection request timeout chỉ áp lúc chờ mượn kết nối, connect timeout chỉ áp lúc mở kết nối. Muốn giới hạn tổng thời gian thì thêm deadline ở tầng trên, ví dụ `TimeLimiter` hoặc `orTimeout`."
+    }
+  ]
+}

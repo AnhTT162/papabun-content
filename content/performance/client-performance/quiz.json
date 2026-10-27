@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lcp-delay-cause",
+      "kind": "single",
+      "prompt": "Một trang có LCP 4 giây. TTFB 300ms, ảnh LCP chỉ 60 KB và tải trong 100ms, nhưng nó bắt đầu tải ở giây thứ 3,4. Nguyên nhân nào hợp lý nhất?",
+      "options": [
+        "Ảnh được JS chèn vào hoặc gắn lazy nên trình duyệt phát hiện nó muộn",
+        "Ảnh chưa được nén gzip nên phải tải lại nhiều lần trên mạng di động",
+        "Server trả HTML chậm nên mọi tài nguyên phía sau đều bắt đầu muộn",
+        "CDN chưa cache ảnh nên mỗi lần tải ảnh phải đi về tận server gốc"
+      ],
+      "answer": 0,
+      "explanation": "TTFB và thời gian tải ảnh đều nhỏ; phần lớn LCP là độ trễ trước khi bắt đầu tải. Đó là dấu hiệu trình duyệt biết tới ảnh muộn: ảnh nằm trong JS, trong CSS, hoặc có `loading=\"lazy\"`. Ảnh đã nén sẵn, gzip không giúp gì. TTFB 300ms không giải thích được 3 giây chờ. CDN chậm thì thời gian tải ảnh mới lớn, không phải thời điểm bắt đầu tải."
+    },
+    {
+      "id": "fixed-name-cache",
+      "kind": "single",
+      "prompt": "Đội đặt `Cache-Control: max-age=86400` cho `/static/app.js` (tên cố định). Sau khi deploy bản sửa lỗi, nhiều người dùng vẫn gặp lỗi cũ suốt một ngày. Cách nào vừa cho bản mới tới ngay ở lần deploy sau, vừa vẫn cache file tĩnh lâu?",
+      "options": [
+        "Thêm hash nội dung vào tên file và cache dài; HTML trỏ tới nó dùng `no-cache`",
+        "Đặt `no-store` cho mọi file tĩnh để người dùng luôn tải bản mới nhất",
+        "Giảm `max-age` xuống 60 giây để bản mới tới người dùng nhanh hơn",
+        "Thêm `ETag` cho `app.js` để trình duyệt tự phát hiện bản mới ngay"
+      ],
+      "answer": 0,
+      "explanation": "Trong thời hạn `max-age`, trình duyệt dùng bản cache mà không hỏi server, nên `ETag` không được kiểm tra tới khi hết hạn. Đổi tên file theo nội dung (`app.3f9c2b.js`) nghĩa là bản mới là URL mới, không có trong cache; file cũ có thể cache một năm với `immutable`. HTML phải `no-cache` để luôn lấy danh sách file mới. `no-store` hay `max-age` ngắn cho bản mới tới nhanh nhưng bỏ mất lợi ích cache. Bản đã nằm trong cache của người dùng thì không cứu được tới khi hết hạn; cách sửa có tác dụng từ lần deploy tiếp theo."
+    },
+    {
+      "id": "inp-long-task",
+      "kind": "single",
+      "prompt": "Trang danh sách có LCP tốt nhưng INP p75 420ms: bấm nút lọc phải chờ gần nửa giây mới thấy phản hồi. Profile trên điện thoại thấy task 380ms parse và render 2.000 sản phẩm mỗi lần lọc. Hướng sửa nào đúng?",
+      "options": [
+        "Chia nhỏ task, chỉ render phần đang thấy và trả ít dữ liệu hơn",
+        "Bật CDN và cache dài cho API lọc để response tới nhanh hơn",
+        "Nén Brotli cho response JSON để giảm thời gian tải xuống",
+        "Preload font và ảnh để trình duyệt vẽ trang lần đầu sớm hơn"
+      ],
+      "answer": 0,
+      "explanation": "INP đo từ lúc bấm tới khi màn hình vẽ lại. Thời gian ở đây nằm trên main thread của trình duyệt: một task 380ms chặn mọi phản hồi. Chia nhỏ việc (nhường main thread giữa các phần), ảo hoá danh sách để chỉ render phần đang thấy, và giảm dữ liệu phải xử lý mới rút ngắn được nó. CDN, nén hay preload giúp mạng và lần tải đầu, không giúp task đang chạy trên main thread."
+    },
+    {
+      "id": "compress-what",
+      "kind": "single",
+      "prompt": "Bật nén ở gateway cho mọi response, mọi kích thước. CPU gateway tăng 30% mà băng thông chỉ giảm 8%. Phần lớn lưu lượng là gì?",
+      "options": [
+        "Ảnh JPEG và video MP4, vốn đã được nén sẵn từ trước",
+        "Response JSON lớn từ API danh sách sản phẩm của trang chủ",
+        "File HTML render phía server cho trang danh sách sản phẩm",
+        "File CSS và JavaScript chưa được minify khi build frontend"
+      ],
+      "answer": 0,
+      "explanation": "JPEG, PNG, MP4 đã nén sẵn: nén thêm gần như không nhỏ đi mà vẫn tốn CPU. JSON, HTML, CSS, JS là text, gzip thường giảm 70–90%, nên nếu chúng chiếm phần lớn thì băng thông đã giảm nhiều. Chỉ nén kiểu text (Spring Boot mặc định chỉ nén các MIME text, JSON, XML, từ 2 KB trở lên) và nén trước file tĩnh lúc build."
+    },
+    {
+      "id": "breach",
+      "kind": "single",
+      "prompt": "Trang HTTPS được nén, chứa CSRF token cố định và phản chiếu lại tham số tìm kiếm người dùng gửi lên. Rủi ro bảo mật nào xuất hiện?",
+      "options": [
+        "BREACH: đoán token dần bằng cách so kích thước response đã nén",
+        "Downgrade: kẻ tấn công ép trình duyệt bỏ HTTPS về lại HTTP",
+        "Cache poisoning: CDN lưu bản nén sai và trả cho người khác",
+        "XSS: nội dung nén được trình duyệt giải nén và chạy như script"
+      ],
+      "answer": 0,
+      "explanation": "Nén làm chuỗi lặp lại ngắn đi. Nếu input phản chiếu trùng một phần token, response nhỏ hơn một chút; thử nhiều lần và đo kích thước (dù đã mã hoá) là đoán được token từng ký tự. Giảm rủi ro bằng cách che token ngẫu nhiên mỗi lần trả (Spring Security 6 làm vậy với CSRF token), hoặc không phản chiếu input vào cùng response với secret. Nén không liên quan tới downgrade HTTPS hay XSS."
+    }
+  ]
+}

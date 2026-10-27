@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "server-tuning",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Tuning server & HTTP client",
+  "summary": "Thread, max-connections và accept-count của Tomcat; connection-timeout và keep-alive phải dài hơn idle timeout của load balancer; pool và ba loại timeout của Apache HttpClient 5 và JDK HttpClient; tính kích thước pool bằng Little's law; virtual thread, Undertow ở Spring Boot 4, nén response, graceful shutdown.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool", "http-request-lifecycle"],
+  "terms": ["thread-pool", "accept-count", "keep-alive", "timeout", "read-timeout", "connection-pool", "http-compression", "littles-law", "bulkhead", "load-balancer", "hikaricp", "virtual-thread"],
+  "references": [
+    { "title": "Spring Boot Reference: Common Application Properties (Server)", "url": "https://docs.spring.io/spring-boot/appendix/application-properties/index.html#appendix.application-properties.server" },
+    { "title": "Apache Tomcat 10.1: The HTTP Connector", "url": "https://tomcat.apache.org/tomcat-10.1-doc/config/http.html" },
+    { "title": "AWS: Application Load Balancer connection idle timeout", "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-load-balancer-attributes.html#connection-idle-timeout" },
+    { "title": "Apache HttpClient 5.6.x", "url": "https://hc.apache.org/httpcomponents-client-5.6.x/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"API chậm, tăng `server.tomcat.threads.max` từ 200 lên 1.000 có giúp không?\" Chỉ giúp khi chỗ nghẽn đúng là thiếu thread và phía sau còn sức. Áp Little's law: số request đồng thời = RPS × latency. Nếu thread đang chờ DB hay downstream, thêm thread chỉ thêm người xếp hàng ở connection pool (HikariCP mặc định 10) hoặc dồn thêm tải vào downstream đang chậm. Trả lời tốt là: xem `tomcat.threads.busy` và thread dump để biết thread chờ gì, sửa chỗ đó, và đặt timeout để request treo không giữ thread mãi." },
+    { "type": "callout", "style": "warning", "markdown": "Không tạo HTTP client mới cho mỗi request: `CloseableHttpClient` của Apache, `java.net.http.HttpClient`, hay `RestClient`/`RestTemplate` kèm request factory mới. Mỗi client như vậy có pool riêng, nên kết nối không bao giờ được dùng lại: mỗi lời gọi tốn thêm TCP và TLS handshake, và socket đóng dồn ở trạng thái `TIME_WAIT` tới mức cạn port. Tạo một bean cho mỗi downstream và dùng chung." }
+  ]
+}

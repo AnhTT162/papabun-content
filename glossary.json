@@ -47,7 +47,7 @@
       "meaning": "Thời gian để một gói tin đi từ client tới server và nhận được phản hồi quay lại. Mỗi bước handshake tốn ít nhất một RTT.",
       "example": "Từ Hà Nội tới server ở Singapore RTT khoảng 40ms, nên TCP + TLS 1.3 tốn khoảng 80ms trước khi gửi request.",
       "related": ["tcp-handshake", "tls-handshake"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "client-performance"]
     },
     {
       "id": "tcp-handshake",
@@ -71,7 +71,7 @@
       "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
       "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
       "related": ["tcp-handshake", "connection-pool"],
-      "topics": ["http-request-lifecycle", "load-balancing"]
+      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning"]
     },
     {
       "id": "load-balancer",
@@ -103,7 +103,7 @@
       "meaning": "Tập kết nối mở sẵn để tái sử dụng, tránh chi phí mở kết nối mới cho mỗi lần gọi. Hết kết nối trong pool thì người gọi phải chờ.",
       "example": "HikariCP giữ 10 kết nối tới PostgreSQL; request thứ 11 chờ tới khi có kết nối được trả lại.",
       "related": ["keep-alive", "thread-pool"],
-      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db"]
+      "topics": ["http-request-lifecycle", "transaction-isolation", "n-plus-one", "jdbc-basics", "connection-pool", "locking-deadlock-db", "server-tuning"]
     },
     {
       "id": "multiplexing",
@@ -214,7 +214,7 @@
       "meaning": "Nhóm thread tạo sẵn và tái sử dụng để chạy nhiều task, thay vì tạo và huỷ thread cho mỗi task.",
       "example": "`ThreadPoolExecutor` với 10 thread xử lý 10.000 task lần lượt.",
       "related": ["core-pool-size", "work-queue", "connection-pool"],
-      "topics": ["executor-thread-pool", "threadlocal"]
+      "topics": ["executor-thread-pool", "threadlocal", "server-tuning"]
     },
     {
       "id": "core-pool-size",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning"]
     },
     {
       "id": "virtual-thread",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning"]
     },
     {
       "id": "hash-spreading",
@@ -2413,7 +2413,7 @@
       "meaning": "Cơ chế cache của HTTP (RFC 9111, cộng các mở rộng như `stale-while-revalidate` ở RFC 5861) điều khiển bằng header như `Cache-Control`, `ETag`, `Vary`, áp cho trình duyệt, proxy và CDN.",
       "example": "`Cache-Control: private, max-age=60` cho dữ liệu riêng của người dùng.",
       "related": ["cdn", "etag"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "client-performance"]
     },
     {
       "id": "cdn",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics"]
+      "topics": ["caching-basics", "client-performance"]
     },
     {
       "id": "local-cache",
@@ -4629,7 +4629,7 @@
       "meaning": "Giới hạn thời gian chờ một thao tác qua mạng; hết giờ thì bỏ chờ. Timeout không cho biết bên kia chậm, chết hay đã làm xong.",
       "example": "`HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(2))`; không đặt thì JDK `HttpClient` chờ vô hạn.",
       "related": ["partial-failure"],
-      "topics": ["distributed-fundamentals", "resilience-patterns"]
+      "topics": ["distributed-fundamentals", "resilience-patterns", "server-tuning"]
     },
     {
       "id": "fallacies-of-distributed-computing",
@@ -4693,7 +4693,7 @@
       "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó.",
       "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
       "related": ["graphql"],
-      "topics": ["service-communication", "api-gateway-service-mesh"]
+      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance"]
     },
     {
       "id": "headless-service",
@@ -5790,6 +5790,78 @@
       "example": "`{service=\"order-api\", level=\"error\"} | json | trace_id=\"4bf9...\"`",
       "related": ["structured-logging"],
       "topics": ["production-logging"]
+    },
+    {
+      "id": "accept-count",
+      "term": "acceptCount (accept queue)",
+      "meaning": "Độ dài hàng đợi kết nối của hệ điều hành mà Tomcat khai báo khi mở cổng. Kết nối mới chờ ở đây khi Tomcat đã giữ đủ `max-connections`; đầy nữa thì kết nối bị từ chối hoặc client hết giờ khi kết nối.",
+      "example": "`server.tomcat.accept-count=100` (mặc định); hệ điều hành có thể cắt bớt theo `net.core.somaxconn`.",
+      "related": ["thread-pool", "keep-alive"],
+      "topics": ["server-tuning"]
+    },
+    {
+      "id": "read-timeout",
+      "term": "Read timeout (response timeout)",
+      "meaning": "Thời gian tối đa chờ giữa hai lần nhận được dữ liệu trên một kết nối đã mở. Không giới hạn tổng thời gian của cả lời gọi.",
+      "example": "HttpClient 5: `RequestConfig.custom().setResponseTimeout(Timeout.ofSeconds(1))`; mặc định không giới hạn.",
+      "related": ["timeout", "connection-pool"],
+      "topics": ["server-tuning"]
+    },
+    {
+      "id": "http-compression",
+      "term": "HTTP compression",
+      "meaning": "Nén thân response (hoặc request) bằng gzip, Brotli (`br`) hay zstd. Client báo loại hỗ trợ qua `Accept-Encoding`, server trả `Content-Encoding`. Chỉ có lợi với text; ảnh, video đã nén sẵn.",
+      "example": "JSON 1,8 MB còn khoảng 250 KB với gzip; `server.compression.enabled=true` bật nén ở Spring Boot.",
+      "related": ["http-caching", "cdn"],
+      "topics": ["server-tuning", "client-performance"]
+    },
+    {
+      "id": "core-web-vitals",
+      "term": "Core Web Vitals",
+      "meaning": "Ba chỉ số Google dùng để đánh giá trải nghiệm trang web: LCP (tải), INP (phản hồi), CLS (ổn định bố cục), xét ở p75 dữ liệu người dùng thật.",
+      "example": "Trang đạt khi p75 LCP ≤ 2,5 giây, INP ≤ 200ms, CLS ≤ 0,1.",
+      "related": ["lcp", "inp", "cls"],
+      "topics": ["client-performance"]
+    },
+    {
+      "id": "lcp",
+      "term": "LCP",
+      "meaning": "Largest Contentful Paint: thời điểm phần tử nội dung lớn nhất trong khung nhìn (thường là ảnh hoặc khối chữ lớn) hiện ra, tính từ lúc bắt đầu điều hướng.",
+      "example": "Ảnh banner 1,4 MB do JS chèn vào làm LCP lên 4,6 giây; tốt khi ≤ 2,5 giây.",
+      "related": ["core-web-vitals", "ttfb"],
+      "topics": ["client-performance"]
+    },
+    {
+      "id": "inp",
+      "term": "INP",
+      "meaning": "Interaction to Next Paint: độ trễ từ lúc người dùng bấm, chạm hay gõ phím tới khi màn hình vẽ lại, lấy gần mức tệ nhất trong cả phiên. Thay FID từ tháng 3/2024.",
+      "example": "Bấm nút lọc mà main thread đang parse JSON 2 MB: INP 380ms; tốt khi ≤ 200ms.",
+      "related": ["core-web-vitals"],
+      "topics": ["client-performance"]
+    },
+    {
+      "id": "cls",
+      "term": "CLS",
+      "meaning": "Cumulative Layout Shift: điểm đo mức nội dung bị xô lệch bất ngờ trong lúc dùng trang, ví dụ ảnh không khai báo kích thước hay banner chèn vào sau.",
+      "example": "Banner khuyến mãi chèn trên danh sách sau 1 giây đẩy mọi thứ xuống: CLS 0,27; tốt khi ≤ 0,1.",
+      "related": ["core-web-vitals"],
+      "topics": ["client-performance"]
+    },
+    {
+      "id": "ttfb",
+      "term": "TTFB",
+      "meaning": "Time to First Byte: thời gian từ lúc bắt đầu request tới khi nhận byte đầu tiên của response, gồm DNS, kết nối, TLS, thời gian server xử lý và đường mạng.",
+      "example": "Server xử lý 250ms nhưng TTFB 1,1 giây vì origin ở xa và chưa có CDN.",
+      "related": ["lcp", "rtt"],
+      "topics": ["client-performance"]
+    },
+    {
+      "id": "cache-busting",
+      "term": "Cache busting",
+      "meaning": "Đổi URL của tài nguyên mỗi khi nội dung đổi (thường gắn hash nội dung vào tên file), để vừa cache rất lâu vừa nhận bản mới ngay sau deploy.",
+      "example": "`app.3f9c2b.js` với `Cache-Control: public, max-age=31536000, immutable`; HTML trỏ tới tên mới.",
+      "related": ["http-caching", "cdn"],
+      "topics": ["client-performance"]
     }
   ]
 }
