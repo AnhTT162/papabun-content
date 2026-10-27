@@ -262,7 +262,7 @@
       "meaning": "Cơ chế để phía xử lý chậm báo ngược lại làm chậm phía gửi, thay vì để việc dồn lên vô hạn.",
       "example": "`CallerRunsPolicy` bắt thread nộp task tự chạy task, nên nó không nộp thêm được cho tới khi xong.",
       "related": ["rejection-policy"],
-      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive", "resilience-patterns", "thread-pool-exhaustion"]
+      "topics": ["executor-thread-pool", "messaging-fundamentals", "producer-consumer", "reactive", "resilience-patterns", "thread-pool-exhaustion", "realtime-rpc-protocols"]
     },
     {
       "id": "cpu-bound",
@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns", "idempotency"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns", "idempotency", "rest-api-design"]
     },
     {
       "id": "race-condition",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design"]
     },
     {
       "id": "orm",
@@ -1381,7 +1381,7 @@
       "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại nó trong `If-None-Match` để hỏi có đổi không (không đổi thì server trả `304`), hoặc trong `If-Match` khi sửa để server chỉ ghi nếu phiên bản còn khớp (không thì `412 Precondition Failed`).",
       "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
       "related": ["optimistic-locking", "lost-update"],
-      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency"]
+      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency", "rest-api-design"]
     },
     {
       "id": "skip-locked",
@@ -1541,7 +1541,7 @@
       "meaning": "Phân trang bằng cách nhớ khoá của dòng cuối trang trước và lấy các dòng sau khoá đó (`WHERE (created_at, id) < (?, ?)`), thay vì bỏ qua N dòng bằng `OFFSET`. Còn gọi là seek method.",
       "example": "Trang nào cũng chỉ đọc 50 dòng nhờ index `(created_at, id)`, dù đang ở trang thứ 10.000.",
       "related": ["sargable"],
-      "topics": ["query-patterns", "sharding-strategies", "search-elasticsearch"]
+      "topics": ["query-patterns", "sharding-strategies", "search-elasticsearch", "rest-api-design"]
     },
     {
       "id": "upsert",
@@ -2461,7 +2461,7 @@
       "meaning": "Publish/subscribe: bên gửi publish lên một topic, mỗi subscriber nhận một bản riêng của message.",
       "example": "SNS topic `order-placed` đẩy cùng một sự kiện sang queue của email, kho và phân tích.",
       "related": ["message-queue", "fan-out"],
-      "topics": ["messaging-fundamentals", "local-cache", "kafka-architecture"]
+      "topics": ["messaging-fundamentals", "local-cache", "kafka-architecture", "realtime-rpc-protocols"]
     },
     {
       "id": "competing-consumers",
@@ -2989,7 +2989,7 @@
       "meaning": "Nguyên tắc consumer chỉ đọc trường mình cần và bỏ qua trường lạ, để producer thêm trường không làm vỡ consumer.",
       "example": "Jackson tắt `FAIL_ON_UNKNOWN_PROPERTIES`.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution"]
+      "topics": ["event-schema-evolution", "rest-api-design"]
     },
     {
       "id": "consumer-lag",
@@ -3245,7 +3245,7 @@
       "meaning": "Định dạng body lỗi chuẩn cho HTTP API theo RFC 9457, gồm `type`, `title`, `status`, `detail`, `instance`; Spring 6 có class `ProblemDetail` và `ErrorResponse`.",
       "example": "`ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, \"Đơn đã thanh toán\")`.",
       "related": ["dispatcher-servlet"],
-      "topics": ["spring-mvc-flow", "clean-hexagonal", "service-communication"]
+      "topics": ["spring-mvc-flow", "clean-hexagonal", "service-communication", "rest-api-design"]
     },
     {
       "id": "mass-assignment",
@@ -3445,7 +3445,7 @@
       "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF hoặc cookie `SameSite`.",
       "example": "Form ẩn trên trang độc hại tự submit `POST /transfer` tới ngân hàng đang đăng nhập trong cùng trình duyệt.",
       "related": ["security-filter-chain"],
-      "topics": ["spring-security-architecture"]
+      "topics": ["spring-security-architecture", "realtime-rpc-protocols"]
     },
     {
       "id": "api-gateway",
@@ -4661,7 +4661,7 @@
       "meaning": "Framework gọi hàm từ xa dùng Protobuf trên HTTP/2, có sinh code client cho nhiều ngôn ngữ, streaming hai chiều và deadline truyền qua các lời gọi.",
       "example": "`inventoryStub.withDeadlineAfter(300, MILLISECONDS).reserve(request)`.",
       "related": ["protobuf", "multiplexing"],
-      "topics": ["service-communication", "http2-http3"]
+      "topics": ["service-communication", "http2-http3", "realtime-rpc-protocols"]
     },
     {
       "id": "graphql",
@@ -4677,7 +4677,7 @@
       "meaning": "Protocol Buffers: định dạng nhị phân có schema (`.proto`); field nhận diện bằng số nên thêm field mới vẫn tương thích ngược.",
       "example": "`message Order { string id = 1; int64 total = 2; reserved 3; }`.",
       "related": ["grpc"],
-      "topics": ["service-communication"]
+      "topics": ["service-communication", "realtime-rpc-protocols"]
     },
     {
       "id": "dataloader",
@@ -4773,7 +4773,7 @@
       "meaning": "Load balancer gắn một client với cùng một instance (thường qua cookie), để dùng session lưu trong bộ nhớ instance đó.",
       "example": "Cookie `AWSALB` khiến người dùng luôn về instance B; B chết thì mất giỏ hàng trong `HttpSession`.",
       "related": ["load-balancer"],
-      "topics": ["load-balancing"]
+      "topics": ["load-balancing", "realtime-rpc-protocols"]
     },
     {
       "id": "causal-consistency",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols"]
     },
     {
       "id": "fallback",
@@ -4869,7 +4869,7 @@
       "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
       "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
       "related": ["contract-test", "microservices"],
-      "topics": ["microservices-tradeoffs"]
+      "topics": ["microservices-tradeoffs", "rest-api-design"]
     },
     {
       "id": "sidecar",
@@ -6053,7 +6053,7 @@
       "meaning": "Truyền thời gian còn lại của một request xuống mọi lời gọi phía sau, để mỗi tầng tự đặt timeout không vượt ngân sách và bỏ việc khi bên gọi đã bỏ cuộc.",
       "example": "Gateway gửi `X-Request-Timeout-Ms: 750`; checkout gọi payment với timeout `min(500, còn lại − 100)` ms. gRPC tự truyền deadline qua các lời gọi.",
       "related": ["timeout", "tail-latency", "load-shedding"],
-      "topics": ["tail-latency"]
+      "topics": ["tail-latency", "realtime-rpc-protocols"]
     },
     {
       "id": "hedged-request",
@@ -6757,7 +6757,7 @@
       "meaning": "Một cặp request–response có id riêng trong một kết nối HTTP/2; frame của nhiều stream đan xen trên cùng kết nối. Số stream đồng thời bị giới hạn bởi `SETTINGS_MAX_CONCURRENT_STREAMS`.",
       "example": "Tomcat mặc định cho 100 stream đồng thời mỗi kết nối; request thứ 101 phải chờ phía client.",
       "related": ["multiplexing", "hpack"],
-      "topics": ["http2-http3"]
+      "topics": ["http2-http3", "realtime-rpc-protocols"]
     },
     {
       "id": "hpack",
@@ -6782,6 +6782,142 @@
       "example": "`Alt-Svc: h3=\":443\"; ma=86400`: lần sau trình duyệt thử QUIC trên UDP 443 trong 24 giờ.",
       "related": ["quic", "http2-stream"],
       "topics": ["http2-http3"]
+    },
+    {
+      "id": "long-polling",
+      "term": "Long polling",
+      "meaning": "Client gửi request, server giữ nó tới khi có dữ liệu mới hoặc hết hạn rồi mới trả lời; client nhận xong gửi ngay request kế tiếp. Cách đơn giản nhất để server \"đẩy\" dữ liệu qua HTTP thường.",
+      "example": "Client gọi `GET /updates?after=120`, server giữ tối đa 25 giây; có event 121 thì trả ngay, client gọi lại với `after=121`.",
+      "related": ["server-sent-events", "websocket"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "server-sent-events",
+      "term": "SSE (Server-Sent Events)",
+      "meaning": "Server trả một response HTTP `text/event-stream` không kết thúc và ghi từng event vào đó. Chỉ một chiều, chỉ text; `EventSource` của trình duyệt tự nối lại và gửi `Last-Event-ID`.",
+      "example": "Server ghi `id: 42` rồi `data: {\"score\":\"2-1\"}` và một dòng trống; khi nối lại trình duyệt gửi `Last-Event-ID: 42`.",
+      "related": ["websocket", "long-polling", "heartbeat"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "websocket",
+      "term": "WebSocket",
+      "meaning": "Giao thức hai chiều (RFC 6455) bắt đầu bằng request HTTP có `Upgrade: websocket`; server trả `101 Switching Protocols`, sau đó hai bên gửi frame text hoặc nhị phân tuỳ ý trên cùng kết nối TCP.",
+      "example": "Chat: client gửi frame `{\"type\":\"message\",\"text\":\"Tới chưa?\"}`, server đẩy tin nhắn của shipper xuống cùng kết nối.",
+      "related": ["server-sent-events", "heartbeat", "stomp"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "grpc-streaming",
+      "term": "gRPC streaming",
+      "meaning": "Lời gọi gRPC mà một hoặc cả hai phía gửi nhiều message trên cùng một stream HTTP/2: server streaming, client streaming, hoặc hai chiều. Có flow control của HTTP/2 để bên nhận chậm không bị dồn.",
+      "example": "`rpc WatchPrices(WatchRequest) returns (stream Price);` trả giá mới liên tục cho tới khi client huỷ.",
+      "related": ["grpc", "http2-stream", "backpressure"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "grpc-web",
+      "term": "gRPC-Web",
+      "meaning": "Biến thể của gRPC cho trình duyệt, vì JavaScript trong trình duyệt không điều khiển được frame HTTP/2 và trailer. Cần proxy (như Envoy) dịch sang gRPC thật; hỗ trợ unary và server streaming, không có client streaming.",
+      "example": "Web app gọi `/shop.OrderService/GetOrder` qua Envoy, Envoy chuyển thành gRPC tới service.",
+      "related": ["grpc"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "heartbeat",
+      "term": "Heartbeat",
+      "meaning": "Message nhỏ gửi định kỳ trên kết nối dài để giữ nó không bị proxy, load balancer cắt vì im lặng, và để phát hiện sớm kết nối đã chết.",
+      "example": "Gửi WebSocket ping hoặc dòng comment SSE `: ping` mỗi 25 giây khi idle timeout của load balancer là 60 giây.",
+      "related": ["websocket", "server-sent-events", "tcp-keepalive"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "reconnect-storm",
+      "term": "Reconnect storm",
+      "meaning": "Rất nhiều client cùng nối lại trong một khoảnh khắc, thường sau khi một instance giữ kết nối bị deploy hay sập, làm quá tải phần xác thực và các instance còn lại.",
+      "example": "Pod giữ 20.000 WebSocket tắt; nếu client nối lại ngay, 20.000 handshake và lần tải lại dữ liệu dồn vào một giây. Sửa bằng đóng dần và backoff có jitter.",
+      "related": ["jitter", "retry-backoff", "websocket"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "push-notification",
+      "term": "Push notification",
+      "meaning": "Thông báo gửi qua dịch vụ của hệ điều hành di động (APNs của Apple, FCM của Google) tới thiết bị, kể cả khi app đang ở nền hay đã tắt; app không cần giữ kết nối riêng.",
+      "example": "Đơn đã tới: backend gọi FCM với token thiết bị, điện thoại hiện thông báo dù app không mở.",
+      "related": ["websocket"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "stomp",
+      "term": "STOMP",
+      "meaning": "Giao thức message dạng text đơn giản (lệnh `CONNECT`, `SUBSCRIBE`, `SEND`) thường chạy trên WebSocket; Spring dùng nó để định tuyến message theo destination và chuyển tiếp tới broker như RabbitMQ.",
+      "example": "Client `SUBSCRIBE /topic/order.881`; server `convertAndSend(\"/topic/order.881\", update)`.",
+      "related": ["websocket", "pub-sub"],
+      "topics": ["realtime-rpc-protocols"]
+    },
+    {
+      "id": "rest",
+      "term": "REST",
+      "meaning": "Kiểu thiết kế API xoay quanh tài nguyên có URL, thao tác bằng method HTTP theo đúng ngữ nghĩa của chúng, và dùng status code, header, cache của HTTP thay vì tự đặt quy ước riêng.",
+      "example": "`GET /orders/881` đọc, `PATCH /orders/881` sửa một phần, `POST /orders` tạo mới trả `201` với `Location`.",
+      "related": ["safe-method", "hateoas", "problem-detail"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "safe-method",
+      "term": "Method an toàn (safe)",
+      "meaning": "Method HTTP mà client không yêu cầu thay đổi gì trên server (`GET`, `HEAD`, `OPTIONS`), nên crawler, cache, prefetch được gọi tuỳ ý. An toàn thì cũng idempotent, nhưng idempotent (như `PUT`, `DELETE`) chưa chắc an toàn.",
+      "example": "Một link `GET /orders/881/cancel` sẽ bị prefetch của trình duyệt hay bot vô tình gọi và huỷ đơn; hành động phải là `POST`.",
+      "related": ["rest", "idempotency"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "json-merge-patch",
+      "term": "JSON Merge Patch",
+      "meaning": "Định dạng `PATCH` theo RFC 7396 (`application/merge-patch+json`): gửi object chỉ chứa các trường cần đổi, trường có giá trị `null` nghĩa là xoá, trường không có thì giữ nguyên.",
+      "example": "`PATCH /customers/42` với `{\"phone\":\"0901234567\",\"note\":null}` đổi số điện thoại, xoá ghi chú, giữ nguyên mọi thứ khác.",
+      "related": ["rest", "etag"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "cursor-pagination",
+      "term": "Cursor pagination",
+      "meaning": "Phân trang mà server trả một chuỗi mờ (cursor) đánh dấu vị trí sau dòng cuối của trang; client gửi lại để lấy trang tiếp. Bên dưới thường là keyset pagination, nên không sót hay lặp khi dữ liệu thay đổi.",
+      "example": "Response có `\"nextCursor\": \"eyJ1IjoiMjAyNi0xMC0yN1QwODowMDowMFoiLCJpZCI6ODgxfQ\"`, mã hoá `(updated_at, id)` của dòng cuối.",
+      "related": ["keyset-pagination", "rest"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "breaking-change",
+      "term": "Breaking change",
+      "meaning": "Thay đổi API làm client đang chạy hỏng mà không đổi code của họ: xoá hay đổi tên trường, đổi kiểu, thêm tham số bắt buộc, siết validate, đổi status code, thêm giá trị enum trong response.",
+      "example": "Thêm trạng thái `PARTIALLY_REFUNDED`: client Java có enum ba giá trị ném `InvalidFormatException` khi đọc cả trang lịch sử đơn.",
+      "related": ["api-versioning", "tolerant-reader"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "api-versioning",
+      "term": "API versioning",
+      "meaning": "Cách cho nhiều phiên bản không tương thích của API cùng chạy: version trong URL (`/v2/orders`), trong header hay trong media type. Chỉ cần khi có breaking change; mỗi version là một bản phải bảo trì.",
+      "example": "`/v1/orders` vẫn chạy 12 tháng sau khi có `/v2`, trả header `Sunset: Sat, 31 Oct 2027 23:59:59 GMT`.",
+      "related": ["breaking-change", "openapi"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "openapi",
+      "term": "OpenAPI",
+      "meaning": "Chuẩn mô tả HTTP API bằng YAML hoặc JSON: endpoint, tham số, schema request và response, mã lỗi. Dùng để sinh tài liệu, sinh client, và so hai phiên bản để phát hiện breaking change.",
+      "example": "springdoc-openapi sinh `/v3/api-docs` từ controller; CI so spec mới với spec đã phát hành và chặn merge nếu có trường bị xoá.",
+      "related": ["api-versioning", "consumer-driven-contract"],
+      "topics": ["rest-api-design"]
+    },
+    {
+      "id": "hateoas",
+      "term": "HATEOAS",
+      "meaning": "Hypermedia as the Engine of Application State: response kèm link tới các hành động hợp lệ tiếp theo, để client đi theo link thay vì tự ghép URL. Là mức 3 của mô hình Richardson, ít API thực tế làm đầy đủ.",
+      "example": "Đơn chưa giao trả `\"_links\": {\"cancel\": {\"href\": \"/orders/881/cancellation\"}}`; đơn đã giao không có link `cancel`.",
+      "related": ["rest"],
+      "topics": ["rest-api-design"]
     }
   ]
 }

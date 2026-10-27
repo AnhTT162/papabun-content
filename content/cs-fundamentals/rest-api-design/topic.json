@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "rest-api-design",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Thiết kế REST API",
+  "summary": "Tài nguyên và method: an toàn, idempotent, `PUT` và `PATCH` (JSON Merge Patch); status code hay dùng sai (`400`/`422`, `401`/`403`/`404`, `409`/`412`, `202`); lỗi theo RFC 9457; phân trang bằng cursor; thay đổi tương thích ngược, enum mới là breaking change, Jackson 2 và 3 với trường lạ; id 64 bit trong JavaScript; versioning, `Deprecation` và `Sunset`; `ETag` và `If-Match`; OpenAPI và contract test.",
+  "level": "mid",
+  "order": 13,
+  "minutes": 14,
+  "prerequisites": ["http-request-lifecycle", "idempotency"],
+  "terms": ["rest", "safe-method", "idempotency-key", "problem-detail", "cursor-pagination", "keyset-pagination", "breaking-change", "tolerant-reader", "api-versioning", "etag", "json-merge-patch", "openapi", "consumer-driven-contract", "hateoas", "lost-update"],
+  "references": [
+    { "title": "RFC 9110: HTTP Semantics", "url": "https://www.rfc-editor.org/rfc/rfc9110.html" },
+    { "title": "RFC 9457: Problem Details for HTTP APIs", "url": "https://www.rfc-editor.org/rfc/rfc9457.html" },
+    { "title": "RFC 7396: JSON Merge Patch", "url": "https://www.rfc-editor.org/rfc/rfc7396.html" },
+    { "title": "RFC 9745: The Deprecation HTTP Response Header Field", "url": "https://www.rfc-editor.org/rfc/rfc9745.html" },
+    { "title": "RFC 8594: The Sunset HTTP Header Field", "url": "https://www.rfc-editor.org/rfc/rfc8594.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đổi API mà không làm hỏng client đang chạy?\" Trả lời: chỉ thêm (trường tuỳ chọn, endpoint, tham số tuỳ chọn), không xoá, không đổi tên, không đổi kiểu, không siết validate; coi giá trị enum mới trong response là thay đổi cần báo trước. Client đọc theo kiểu tolerant reader. CI so OpenAPI mới với bản đã phát hành để chặn breaking change. Khi buộc phải phá vỡ, ra version mới, chạy song song, gửi `Deprecation` và `Sunset`, và đo ai còn gọi bản cũ trước khi tắt." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng trả `200 OK` với body `{\"success\": false}`. Load balancer, retry của client, metric tỉ lệ lỗi, cache và circuit breaker đều đọc status code, không đọc body: lỗi bị đếm thành thành công, có khi còn bị cache. Dùng đúng mã 4xx/5xx và body ProblemDetail." }
+  ]
+}

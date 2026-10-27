@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thiết kế API đơn hàng cho đối tác bán hàng",
+  "prompt": "Sàn thương mại điện tử mở API cho khoảng 2.000 shop đối tác (tự viết phần mềm quản lý kho, đủ mọi ngôn ngữ) để: tạo đơn từ kênh bán riêng của họ; đồng bộ toàn bộ đơn thay đổi về hệ thống của họ mỗi 5 phút (shop lớn có 3 triệu đơn); cập nhật địa chỉ giao và ghi chú của đơn, trong khi nhân viên của sàn cũng có thể sửa cùng đơn; huỷ đơn. Ràng buộc: mạng của shop không ổn định, phần mềm của họ hay tự retry; nhiều shop chỉ cập nhật tích hợp một hai lần mỗi năm; sàn muốn thêm tính năng (trạng thái mới, trường mới) mỗi quý mà không làm hỏng tích hợp cũ; mỗi shop tối đa 20 request mỗi giây. Thiết kế URL, method, status code, lỗi, phân trang cho đồng bộ, chống ghi đè và chiến lược thay đổi API.",
+  "hints": [
+    "Phần mềm của shop tự retry `POST /orders` khi timeout. Làm sao để không có hai đơn?",
+    "Đồng bộ đơn thay đổi của 3 triệu đơn mỗi 5 phút: phân trang theo cái gì để không sót đơn bị sửa trong lúc đang đọc?",
+    "Shop và nhân viên sàn cùng sửa địa chỉ của một đơn. Ai thắng, và người thua biết bằng cách nào?",
+    "Shop chỉ sửa code một lần mỗi năm. Những thay đổi nào sàn được làm mà không cần version mới?"
+  ],
+  "solution": "**Tài nguyên và method**:\n- `POST /v1/orders`: tạo đơn, bắt buộc header `Idempotency-Key` (thiếu thì `400`). Trả `201` với `Location: /v1/orders/{id}` và body đơn. Cùng key, cùng nội dung: trả lại đúng response cũ; cùng key, nội dung khác: `422`; request đầu đang xử lý: `409` (bài Idempotency).\n- `GET /v1/orders/{id}`: trả đơn kèm `ETag` theo version của dòng.\n- `PATCH /v1/orders/{id}` với `application/merge-patch+json`, chỉ cho phép `shippingAddress` và `note`, **bắt buộc** `If-Match` (thiếu thì `428 Precondition Required`).\n- Huỷ là một hành động có luật nghiệp vụ, không phải xoá dữ liệu: `POST /v1/orders/{id}/cancellation` (idempotent theo trạng thái: đơn đã huỷ thì trả lại kết quả cũ). Đơn đã giao thì `409` với `type` riêng.\n\n**Chống ghi đè**: `ETag` là version tăng mỗi lần ghi. Nhân viên sàn sửa trước, shop gửi `If-Match` cũ thì nhận `412` kèm ProblemDetail; shop `GET` lại, trộn thay đổi, gửi lại. Không dùng `PUT` cả đơn: phần mềm cũ không biết trường mới sẽ ghi đè trường đó thành rỗng.\n\n**Đồng bộ đơn thay đổi**: `GET /v1/orders?updatedSince=2026-10-27T08:00:00Z&limit=100` trả `items` và `nextCursor`. Cursor mã hoá `(updated_at, id)` của dòng cuối, được ký HMAC, và chứa cả bộ lọc. Bên dưới là keyset `WHERE shop_id = ? AND (updated_at, id) > (?, ?) ORDER BY updated_at, id` có index `(shop_id, updated_at, id)`. Đơn bị sửa trong lúc đọc chỉ được đẩy ra sau, nên sẽ xuất hiện ở trang cuối hoặc lần đồng bộ kế tiếp; không có `OFFSET` để sót hay lặp. Lùi `updatedSince` vài giây so với lần trước (chấp nhận nhận trùng, shop upsert theo `id`) để không sót các transaction commit muộn. Không trả `totalCount`. `limit` tối đa 200.\n\n**Lỗi**: mọi lỗi là `application/problem+json` với `type` cố định như `https://api.shop.example.com/problems/order-already-shipped`; lỗi validate có thêm `errors` theo từng trường. Ghi danh sách `type` trong tài liệu để shop xử lý theo mã, không theo câu chữ. `429` kèm `Retry-After` khi vượt 20 request mỗi giây.\n\n**Thay đổi API**:\n- Được làm không cần version: thêm trường trong response, thêm endpoint, thêm tham số tuỳ chọn, nới validate.\n- Enum: ngay từ v1, tài liệu ghi rõ `status` có thể có giá trị mới và client phải xử lý giá trị lạ; SDK chính thức có sẵn `UNKNOWN`. Trạng thái mới quan trọng thì thêm trường mới thay vì đổi ý nghĩa trường cũ.\n- Id trả dạng chuỗi, tiền là số nguyên đồng, thời gian ISO 8601 có offset.\n- Breaking change (xoá trường, đổi kiểu, trường bắt buộc mới) thì ra `/v2`, chạy song song ít nhất 12 tháng, gửi header `Deprecation` và `Sunset` trên `/v1`, đo từng shop còn gọi `/v1` và liên hệ trực tiếp trước khi tắt.\n- OpenAPI là nguồn chính; CI so spec mới với spec đã phát hành và chặn merge khi có breaking change chưa được duyệt.",
+  "tradeoffs": [
+    {
+      "option": "Cursor theo `(updated_at, id)` cho đồng bộ",
+      "pros": [
+        "Không sót, không lặp khi dữ liệu đổi giữa các trang",
+        "Mỗi trang tốn như nhau dù đã đọc sâu tới đâu"
+      ],
+      "cons": [
+        "Không nhảy thẳng tới trang 500 được",
+        "Phải có index đúng thứ tự và xử lý commit muộn"
+      ]
+    },
+    {
+      "option": "Phân trang `page` và `size` (`OFFSET`)",
+      "pros": [
+        "Dễ hiểu, hiện được số trang và tổng số",
+        "Đối tác nào cũng quen"
+      ],
+      "cons": [
+        "Trang sâu chậm dần với 3 triệu đơn",
+        "Đơn bị sửa trong lúc đọc làm lệch trang, sót hoặc lặp đơn"
+      ]
+    },
+    {
+      "option": "Webhook đẩy thay đổi thay cho đồng bộ định kỳ",
+      "pros": [
+        "Gần realtime, shop không phải hỏi liên tục",
+        "Giảm tải đọc khi ít thay đổi"
+      ],
+      "cons": [
+        "Shop phải dựng endpoint công khai và xử lý gửi lại",
+        "Vẫn cần API đồng bộ để bù webhook bị mất"
+      ]
+    }
+  ]
+}

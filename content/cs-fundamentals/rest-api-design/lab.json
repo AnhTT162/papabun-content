@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm một trạng thái đơn hàng, service khác không xem được lịch sử đơn",
+  "context": "Order API (`/v1/orders`) phục vụ app di động và vài service nội bộ. Đội order vừa thêm tính năng hoàn tiền một phần: response có thêm trường `refundedAmount` và trạng thái mới `PARTIALLY_REFUNDED`. Họ coi đây là thay đổi tương thích vì \"chỉ thêm, không xoá gì\", nên không tăng version. Service chăm sóc khách hàng (Spring Boot 4, Jackson 3) gọi API này bằng `RestClient` để hiện lịch sử đơn của khách.",
+  "buggyCode": "// Service chăm sóc khách hàng, viết từ hồi API chỉ có ba trạng thái\nenum OrderStatus { PENDING, PAID, SHIPPED }\n\nrecord OrderSummary(long id, OrderStatus status, long total) {}\n\nrecord OrderPage(List<OrderSummary> items, String nextCursor) {}\n\nOrderPage history(long customerId) {\n    return orderClient.get()\n            .uri(\"/v1/orders?customerId={id}\", customerId)\n            .retrieve()\n            .body(OrderPage.class);\n}\n\n// Response của Order API sau khi deploy tính năng mới:\n// {\"items\":[{\"id\":1,\"status\":\"PAID\",\"total\":120000},\n//            {\"id\":2,\"status\":\"PARTIALLY_REFUNDED\",\"total\":90000,\"refundedAmount\":30000}],\n//  \"nextCursor\":\"eyJpZCI6Mn0\"}",
+  "symptom": {
+    "description": "Ngay sau khi Order API deploy, nhân viên chăm sóc khách hàng mở hồ sơ một số khách thì màn hình lịch sử đơn báo lỗi, kể cả với khách chỉ có một đơn hoàn tiền giữa hàng chục đơn bình thường. Khách không có đơn hoàn tiền thì vẫn xem được. Log của service chăm sóc khách hàng (đã chạy với Spring Framework 7.0.10, Jackson 3.2.4):",
+    "output": "org.springframework.web.client.RestClientException: Error while extracting response for type [OrderPage] and content type [application/json]\nCaused by: org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Cannot deserialize value of type `OrderStatus` from String \"PARTIALLY_REFUNDED\": not one of the values accepted for Enum class: [SHIPPED, PAID, PENDING]\nCaused by: tools.jackson.databind.exc.InvalidFormatException: Cannot deserialize value of type `OrderStatus` from String \"PARTIALLY_REFUNDED\": not one of the values accepted for Enum class: [SHIPPED, PAID, PENDING]\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); byte offset: #UNKNOWN] (through reference chain: OrderPage[\"items\"]->java.util.ArrayList[1]->OrderSummary[\"status\"])"
+  },
+  "diagnosis": {
+    "question": "Vì sao một thay đổi \"chỉ thêm\" lại làm hỏng client?",
+    "options": [
+      "Enum mới trong response là breaking change: client cũ không đọc được nên hỏng cả trang",
+      "Trường lạ `refundedAmount` làm Jackson báo lỗi vì mặc định không cho trường không khai báo",
+      "Order API đổi `Content-Type` khi thêm tính năng nên client chọn sai converter",
+      "Cursor phân trang đổi định dạng nên client không đọc được trang có đơn hoàn tiền"
+    ],
+    "answer": 0,
+    "explanation": "Lỗi nói rõ: chuỗi `PARTIALLY_REFUNDED` không thuộc enum `OrderStatus` của client. Thêm giá trị enum vào response là breaking change, vì client đã phát hành chỉ biết các giá trị cũ, và một phần tử lỗi làm hỏng việc đọc cả response (đường dẫn trong lỗi là `items[1].status`). Trường lạ `refundedAmount` không gây lỗi: Jackson 3 mặc định bỏ qua trường không khai báo, và ObjectMapper do Spring tạo cho Jackson 2 cũng vậy (chỉ `new ObjectMapper()` của Jackson 2 mới báo lỗi). `Content-Type` vẫn là `application/json` như trong log, và lỗi không nằm ở `nextCursor`."
+  },
+  "fix": {
+    "code": "// 1. Phía client: tolerant reader, giá trị lạ thành UNKNOWN thay vì làm hỏng cả trang\nenum OrderStatus { PENDING, PAID, SHIPPED, @JsonEnumDefaultValue UNKNOWN }\n\nrecord OrderSummary(\n        long id,\n        @JsonFormat(with = JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)\n        OrderStatus status,\n        long total) {}\n// Màn hình hiện \"Trạng thái khác\" cho UNKNOWN; switch trên OrderStatus phải có nhánh default.\n\n// 2. Phía server: tài liệu OpenAPI ghi rõ enum có thể có thêm giá trị\n//    (x-extensible-enum), và thay đổi enum đi qua contract test của các consumer.\n//    Hoặc giữ nguyên status cũ cho client v1 và thêm trường mới:\n// {\"id\":2,\"status\":\"PAID\",\"refundStatus\":\"PARTIAL\",\"refundedAmount\":30000,\"total\":90000}",
+    "explanation": "Sửa ở cả hai phía. Client cũ được làm cho chịu được giá trị lạ: `@JsonEnumDefaultValue` cùng `READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE` đọc `PARTIALLY_REFUNDED` thành `UNKNOWN` (đã chạy: trang trả về đủ hai đơn, đơn thứ hai có `status=UNKNOWN`). Phía server phải coi thêm giá trị enum trong response là thay đổi cần báo trước: ghi trong hợp đồng rằng enum mở rộng được để client chuẩn bị nhánh mặc định, kiểm tra bằng consumer-driven contract test, hoặc giữ nguyên ý nghĩa trường cũ và đưa thông tin mới vào trường mới. Với app di động đã phát hành, không sửa client kịp được, nên cách cuối thường là cách duy nhất."
+  }
+}

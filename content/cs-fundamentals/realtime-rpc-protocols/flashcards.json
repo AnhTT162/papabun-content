@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "long-polling-how", "front": "Long polling chạy thế nào?", "back": "Server giữ request tới khi có dữ liệu hoặc hết hạn; client nhận xong gửi ngay request mới, kèm vị trí đã đọc tới để không mất event giữa hai lần hỏi." },
+    { "id": "sse-reconnect", "front": "SSE nối lại mà không mất event bằng cách nào?", "back": "Mỗi event có `id:`; khi nối lại, `EventSource` gửi header `Last-Event-ID` để server phát tiếp từ event đó." },
+    { "id": "ws-handshake", "front": "Kết nối WebSocket bắt đầu thế nào?", "back": "Request HTTP/1.1 có `Upgrade: websocket` và `Sec-WebSocket-Key`; server trả `101 Switching Protocols` kèm `Sec-WebSocket-Accept`." },
+    { "id": "ws-1006", "front": "Mã đóng WebSocket `1006` nghĩa là gì?", "back": "Kết nối đứt mà không có frame close (proxy cắt vì idle, mất mạng). Mã này không bao giờ được gửi trên dây, client tự đặt." },
+    { "id": "grpc-four-kinds", "front": "gRPC có những kiểu lời gọi nào?", "back": "Unary, server streaming, client streaming và streaming hai chiều; mỗi lời gọi là một stream HTTP/2." },
+    { "id": "grpc-status-trailer", "front": "Lỗi gRPC nằm ở đâu trong response?", "back": "Trong trailer `grpc-status` và `grpc-message`; HTTP status gần như luôn là `200`, nên metric 5xx không thấy lỗi gRPC." },
+    { "id": "grpc-max-message", "front": "grpc-java mặc định nhận message tối đa bao nhiêu?", "back": "4 MiB; lớn hơn thì client nhận `RESOURCE_EXHAUSTED`. Dữ liệu lớn nên chia thành streaming hoặc trả link object storage." },
+    { "id": "heartbeat-idle", "front": "Vì sao kết nối dài cần heartbeat?", "back": "Proxy và load balancer cắt kết nối im lặng quá idle timeout (ALB, Nginx mặc định 60 giây); heartbeat đều đặn với chu kỳ ngắn hơn timeout nhỏ nhất trên đường đi, ví dụ 25 giây." },
+    { "id": "fanout-instances", "front": "Event sinh ở một instance, người nhận nối vào instance khác: giải quyết thế nào?", "back": "Các instance giữ kết nối subscribe một tầng pub/sub (Redis Pub/Sub, broker STOMP, Kafka); nơi sinh event chỉ publish lên kênh." },
+    { "id": "reconnect-storm", "front": "Tránh reconnect storm khi deploy thế nào?", "back": "Server đóng kết nối dần theo lô, client nối lại với exponential backoff có jitter để rải đều các lần nối lại." }
+  ]
+}

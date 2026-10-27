@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "grpc-deadline-server-output",
+      "kind": "output",
+      "prompt": "grpc-java 1.85.1. Method `slow` ở server ngủ 1 giây rồi in trạng thái cancel của context. Client gọi với deadline 300 ms. Chương trình in ra gì (theo thứ tự)?",
+      "code": "// server\n(request, observer) -> {\n    sleep(1000);\n    System.out.println(\"server: cancelled=\" + Context.current().isCancelled());\n    observer.onNext(result);\n    observer.onCompleted();\n}\n\n// client\ntry {\n    ClientCalls.blockingUnaryCall(channel, slow,\n            CallOptions.DEFAULT.withDeadlineAfter(300, MILLISECONDS), request);\n} catch (StatusRuntimeException e) {\n    System.out.println(\"client: \" + e.getStatus().getCode());\n}",
+      "options": [
+        "client: DEADLINE_EXCEEDED rồi server: cancelled=true",
+        "client: DEADLINE_EXCEEDED, server bị ngắt nên không in gì",
+        "server: cancelled=false rồi client: DEADLINE_EXCEEDED",
+        "client: CANCELLED rồi server: cancelled=true"
+      ],
+      "answer": 0,
+      "explanation": "Sau 300 ms client nhận `DEADLINE_EXCEEDED`, và server được báo huỷ: `Context.current().isCancelled()` thành `true`. Nhưng gRPC không ngắt thread đang chạy, nên server vẫn ngủ hết 1 giây rồi in dòng của nó (đã chạy). Muốn dừng việc thừa, code server phải tự kiểm tra cancel hoặc truyền deadline xuống lời gọi tiếp theo. `CANCELLED` là khi client chủ động huỷ, không phải khi hết deadline."
+    },
+    {
+      "id": "sse-30-seconds",
+      "kind": "single",
+      "prompt": "Dashboard dùng `EventSource` tới endpoint Spring MVC trả `new SseEmitter()`, chạy trên Tomcat của Spring Boot, không cấu hình gì thêm. Log trình duyệt cho thấy kết nối đứt rồi nối lại đều đặn mỗi 30 giây, kể cả khi đang có event. Nguyên nhân?",
+      "options": [
+        "Async request mặc định của Tomcat hết hạn sau 30 giây",
+        "ALB cắt kết nối im lặng sau idle timeout 30 giây",
+        "`EventSource` tự nối lại mỗi 30 giây để làm mới",
+        "Nginx buffer response nên đóng sau mỗi 30 giây"
+      ],
+      "answer": 0,
+      "explanation": "`SseEmitter` không có timeout thì dùng `spring.mvc.async.request-timeout`, không đặt nữa thì dùng mặc định của server, với Tomcat là 30 giây. Đứt đều cả khi đang có event nên không phải idle timeout (idle timeout của ALB mặc định là 60 giây và chỉ tính khi im lặng). `EventSource` chỉ nối lại khi kết nối đứt. Sửa: `new SseEmitter(Duration.ofMinutes(30).toMillis())` hoặc đặt timeout chung, cộng heartbeat."
+    },
+    {
+      "id": "ws-multi-instance",
+      "kind": "single",
+      "prompt": "Ứng dụng chat dùng Spring STOMP với `enableSimpleBroker(\"/topic\")`. Chạy một instance thì ổn. Scale lên 3 instance sau load balancer, người dùng báo chỉ nhận được khoảng một phần ba tin nhắn của phòng. Vì sao?",
+      "options": [
+        "Simple broker chỉ giữ subscription của instance đó",
+        "Load balancer không hỗ trợ Upgrade nên rơi về long polling",
+        "WebSocket chỉ cho một kết nối mỗi người, kết nối khác bị huỷ",
+        "Thiếu sticky session nên mỗi frame đi tới một instance khác"
+      ],
+      "answer": 0,
+      "explanation": "Simple broker chỉ biết các subscription trên chính instance đó. Tin nhắn gửi vào instance A chỉ tới người đang nối vào A. Cần broker relay (RabbitMQ, ActiveMQ qua STOMP) hoặc tự publish qua Redis Pub/Sub, Kafka. Sticky session không liên quan: mọi frame của một kết nối WebSocket vốn đã đi trên cùng một kết nối TCP tới cùng một instance."
+    },
+    {
+      "id": "grpc-status-200",
+      "kind": "single",
+      "prompt": "Service gRPC sau ALB trả lỗi `UNAVAILABLE` cho 5% lời gọi, nhưng dashboard tỉ lệ lỗi dựa trên mã HTTP 5xx của load balancer vẫn gần 0%. Giải thích hợp lý nhất?",
+      "options": [
+        "Status gRPC nằm trong trailer, HTTP status vẫn là 200",
+        "ALB tự retry lời gọi lỗi nên client không thấy lỗi",
+        "Lỗi `UNAVAILABLE` được map sang HTTP 429, không phải 5xx",
+        "Lời gọi lỗi đi qua stream khác nên ALB không đếm được"
+      ],
+      "answer": 0,
+      "explanation": "gRPC trả kết quả trong trailer `grpc-status`, còn HTTP status gần như luôn là `200`. Metric đếm 5xx ở tầng HTTP không thấy lỗi gRPC; phải theo dõi theo `grpc-status` (metric của chính gRPC, của mesh, hoặc của load balancer có hỗ trợ gRPC). Client vẫn thấy lỗi, nên không phải chuyện bị retry che đi."
+    },
+    {
+      "id": "pick-sse",
+      "kind": "single",
+      "prompt": "Trang web hiển thị tỉ số trận đấu, server đẩy cập nhật vài giây một lần, người xem không gửi gì lên. Lựa chọn hợp lý nhất?",
+      "options": [
+        "SSE qua HTTP/2, kèm `id` để nối lại không mất event",
+        "WebSocket, vì chỉ WebSocket đẩy được dữ liệu xuống",
+        "gRPC server streaming gọi thẳng từ trình duyệt",
+        "Long polling, vì SSE không đi qua được load balancer"
+      ],
+      "answer": 0,
+      "explanation": "Dữ liệu chỉ đi một chiều xuống, nên SSE đủ: là HTTP thường, `EventSource` tự nối lại với `Last-Event-ID`, và qua HTTP/2 không bị giới hạn 6 kết nối mỗi domain. WebSocket cũng làm được nhưng phải tự lo nối lại và phát lại. Trình duyệt không gọi thẳng gRPC được (cần gRPC-Web qua proxy). SSE đi qua load balancer bình thường, chỉ cần tắt buffering ở proxy."
+    }
+  ]
+}

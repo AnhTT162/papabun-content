@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn giao thức realtime cho app giao đồ ăn",
+  "prompt": "App giao đồ ăn cần bốn luồng realtime: (1) khách đang có đơn xem vị trí shipper cập nhật mỗi 3 giây; (2) khách và shipper chat với nhau, tin nhắn không được mất; (3) màn hình web của nhà hàng nhận đơn mới ngay khi khách đặt; (4) service định vị nhận vị trí từ 50.000 shipper (mỗi người 3 giây một lần, khoảng 17.000 bản ghi mỗi giây) và chuyển cho service điều phối, service ETA, kho lịch sử. Ràng buộc: giờ cao điểm 200.000 khách có đơn đang chạy; đi qua AWS ALB (idle timeout 60 giây); mạng di động chập chờn; deploy vài lần mỗi ngày; khi app ở nền người dùng vẫn phải biết đơn đã tới. Chọn giao thức cho từng luồng và thiết kế tầng giữ kết nối.",
+  "hints": [
+    "Luồng nào chỉ cần server đẩy xuống, luồng nào client cũng gửi lên nhiều? Luồng nào có client là trình duyệt, luồng nào chỉ là service với service?",
+    "Order service đổi trạng thái đơn, nhưng kết nối của khách đang nằm trên một trong mười mấy pod. Event đi tới đúng pod bằng cách nào?",
+    "Pod bị deploy giữa lúc 20.000 người đang nối vào nó. Làm sao để họ không mất tin nhắn và không cùng nối lại trong một giây?",
+    "Khi app bị hệ điều hành đẩy xuống nền, socket còn sống không?"
+  ],
+  "solution": "**Chọn theo luồng**:\n- Vị trí shipper và chat cho app khách: **một WebSocket** cho mỗi phiên có đơn đang chạy. Chat cần hai chiều, và gộp vị trí vào cùng kết nối thì mỗi khách chỉ giữ một socket thay vì hai.\n- Màn hình nhà hàng: **SSE** qua HTTP/2. Chỉ cần server đẩy xuống, `EventSource` tự nối lại và gửi `Last-Event-ID`, nên server phát lại các đơn bị lỡ từ bảng đơn hàng. Xác thực bằng cookie phiên của trang quản trị.\n- App ở nền: **push notification** (APNs, FCM) cho các mốc quan trọng (shipper nhận đơn, đơn tới). Không cố giữ socket khi app ở nền.\n- Vị trí từ shipper vào hệ thống: app shipper gửi lô vị trí qua HTTP hoặc cùng WebSocket; service định vị ghi vào **Kafka** topic `courier-locations` (partition theo `courierId`) để điều phối, ETA, kho lịch sử mỗi bên đọc độc lập. Lời gọi đồng bộ nội bộ như hỏi ETA dùng **gRPC unary** có deadline.\n\n**Tầng giữ kết nối (gateway WebSocket)**:\n- Tách thành service riêng, không xử lý nghiệp vụ. 200.000 kết nối, đặt trần đo được mỗi pod (ví dụ 20.000) rồi tính số pod và dự phòng theo bài Capacity planning. Chạy trên Netty (WebFlux) hoặc nâng `max-connections` của Tomcat (mặc định 8192) và `ulimit -n`.\n- Heartbeat mỗi 25 giây (server gửi ping frame và client tự trả pong, vì JavaScript trong trình duyệt không gửi được ping; hoặc message heartbeat ở tầng ứng dụng; hoặc comment `: ping` cho SSE), ngắn hơn idle timeout 60 giây của ALB.\n- Giao event: khi khách mở đơn 881, pod của họ subscribe trên Redis Pub/Sub kênh `order:881` (trạng thái, chat) và kênh `courier:<id>` của shipper đang giao đơn đó (vị trí). Order service và service định vị chỉ publish lên kênh, không cần biết pod nào. Publish vị trí theo shipper chứ không theo đơn: một shipper có thể giao vài đơn cùng lúc, nên vẫn là khoảng 17.000 publish mỗi giây thay vì nhân lên theo số đơn.\n\n**Không mất tin nhắn**: chat được ghi vào database trước, có `seq` tăng dần theo cuộc trò chuyện, rồi mới publish. Client nhớ `seq` cuối đã nhận; nối lại thì gửi `seq` đó và pod mới đọc phần còn thiếu từ database. Vị trí shipper thì không cần phát lại: bản tiếp theo tới sau 3 giây.\n\n**Deploy và nối lại**: pod nhận `SIGTERM` thì ngừng nhận kết nối mới (readiness thất bại), rồi đóng kết nối hiện có theo lô trong khoảng 1–2 phút với mã `1001`. Client nối lại với exponential backoff có full jitter (ngẫu nhiên từ 0 tới 1, 2, 4... giây, trần 30 giây), nên 20.000 kết nối được rải ra thay vì dồn vào một giây. Đặt `terminationGracePeriodSeconds` dài hơn thời gian đóng dần.\n\n**Xác thực**: app gọi API thường để lấy vé dùng một lần sống 30 giây, gửi trong query string khi mở WebSocket; server kiểm tra `Origin` với client web. Token phiên hết hạn thì server gửi message yêu cầu làm mới, quá hạn mới đóng với `1008`.\n\n**Theo dõi**: số kết nối mỗi pod, tốc độ mở kết nối mới (đỉnh lúc deploy), số mã đóng `1006`, độ trễ từ lúc publish tới lúc client nhận, số client bị đóng vì buffer gửi đầy.",
+  "tradeoffs": [
+    {
+      "option": "WebSocket cho app khách (vị trí và chat chung một kết nối)",
+      "pros": [
+        "Hai chiều, một kết nối cho mọi luồng realtime của phiên",
+        "Frame nhỏ, ít overhead khi cập nhật mỗi 3 giây"
+      ],
+      "cons": [
+        "Tự làm ack, số thứ tự, phát lại khi nối lại",
+        "Một số mạng và proxy chặn hoặc cắt Upgrade"
+      ]
+    },
+    {
+      "option": "SSE cho vị trí, chat gửi lên bằng HTTP POST",
+      "pros": [
+        "Có sẵn nối lại và `Last-Event-ID`",
+        "Là HTTP thường, đi qua proxy dễ, dùng chung xác thực"
+      ],
+      "cons": [
+        "Chỉ một chiều, tin nhắn gửi lên là request riêng",
+        "Trên HTTP/1.1 bị giới hạn khoảng 6 kết nối mỗi domain"
+      ]
+    },
+    {
+      "option": "Long polling",
+      "pros": [
+        "Chạy qua mọi proxy và mạng công ty",
+        "Không cần hạ tầng giữ kết nối riêng"
+      ],
+      "cons": [
+        "Mỗi event tốn một request và header đầy đủ",
+        "200.000 khách hỏi lại liên tục làm tốn tải hơn hẳn"
+      ]
+    }
+  ]
+}

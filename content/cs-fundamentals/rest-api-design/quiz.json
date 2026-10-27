@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "jackson2-unknown-field-output",
+      "kind": "output",
+      "prompt": "Jackson 2.22.4, `ObjectMapper` tạo trực tiếp (không qua Spring). Server vừa thêm trường `refundedAmount` vào response. Chương trình in ra gì?",
+      "code": "record OrderSummary(long id, String status, long total) {}\n\nString json = \"\"\"\n        {\"id\":2,\"status\":\"PAID\",\"total\":90000,\"refundedAmount\":30000}\"\"\";\ntry {\n    System.out.println(new ObjectMapper().readValue(json, OrderSummary.class));\n} catch (Exception e) {\n    System.out.println(e.getClass().getSimpleName());\n}",
+      "options": [
+        "UnrecognizedPropertyException",
+        "OrderSummary[id=2, status=PAID, total=90000]",
+        "InvalidFormatException",
+        "JsonParseException"
+      ],
+      "answer": 0,
+      "explanation": "`new ObjectMapper()` của Jackson 2 bật `FAIL_ON_UNKNOWN_PROPERTIES`, nên trường lạ `refundedAmount` ném `UnrecognizedPropertyException` (đã chạy). ObjectMapper do Spring tạo đã tắt tính năng này, và Jackson 3 tắt sẵn: cùng đoạn code với `JsonMapper.builder().build()` của Jackson 3.2.4 in ra record bình thường. `InvalidFormatException` là lỗi của giá trị enum lạ, không phải trường lạ."
+    },
+    {
+      "id": "patch-vs-put-old-client",
+      "kind": "single",
+      "prompt": "API hồ sơ khách hàng vừa thêm trường `taxCode`. Một khách đã nhập mã số thuế qua web. Sau đó app di động bản cũ (chưa biết `taxCode`) sửa số điện thoại bằng `PUT /customers/42` gửi đầy đủ các trường nó biết. Chuyện gì xảy ra?",
+      "options": [
+        "`taxCode` bị xoá vì `PUT` thay cả tài nguyên",
+        "`taxCode` giữ nguyên vì app không gửi trường đó",
+        "Server trả `412` vì app không gửi trường mới",
+        "Server trả `422` vì body thiếu trường `taxCode`"
+      ],
+      "answer": 0,
+      "explanation": "`PUT` nghĩa là thay toàn bộ tài nguyên bằng bản client gửi, nên trường thiếu thành rỗng: app cũ vô tình xoá dữ liệu nó không biết tới. Đây là lý do nên dùng `PATCH` (JSON Merge Patch chỉ đổi trường có trong body) khi có nhiều phiên bản client. `412` chỉ xảy ra khi có `If-Match` không khớp; `422` chỉ khi server bắt buộc trường đó, mà bắt buộc trường mới lại là breaking change."
+    },
+    {
+      "id": "offset-sync-skip",
+      "kind": "single",
+      "prompt": "Đối tác đồng bộ đơn bằng `GET /orders?sort=createdAt,desc&page=N&size=100`, đọc lần lượt từ trang 0. Ngay sau khi họ đọc xong trang 3 (vị trí 300–399), có 5 đơn mới được tạo. Hệ quả?",
+      "options": [
+        "Trang 4 lặp lại 5 đơn đã có ở cuối trang 3",
+        "Trang 4 bỏ sót 5 đơn nằm ngay sau trang 3",
+        "Không có gì, vì mỗi trang là một query riêng",
+        "Trang 4 bắt đầu bằng 5 đơn mới vừa tạo"
+      ],
+      "answer": 0,
+      "explanation": "Sắp xếp mới nhất trước, 5 đơn mới chen vào đầu danh sách và đẩy mọi đơn lùi 5 vị trí; `OFFSET 400` giờ bắt đầu từ 5 đơn đã nằm cuối trang 3; đơn mới nằm ở trang 0, client đã đọc qua nên không thấy. Ngược lại, nếu có đơn bị xoá thì trang sau bỏ sót. Cursor theo `(created_at, id)` của dòng cuối không bị ảnh hưởng, vì trang sau bắt đầu ngay sau dòng đã đọc, không theo vị trí."
+    },
+    {
+      "id": "if-match-412",
+      "kind": "single",
+      "prompt": "Client `GET /orders/881` nhận `ETag: \"7\"`. Trong lúc người dùng đang sửa, nhân viên khác đã lưu đơn thành version 8. Client gửi `PATCH /orders/881` kèm `If-Match: \"7\"`. Server nên trả gì?",
+      "options": [
+        "`412 Precondition Failed`, client tải lại rồi sửa",
+        "`409 Conflict`, kèm bản đơn mới nhất để ghi đè",
+        "`200 OK`, ghi đè vì người sửa sau luôn thắng",
+        "`304 Not Modified`, vì client đang giữ bản cũ"
+      ],
+      "answer": 0,
+      "explanation": "`If-Match` là điều kiện: chỉ ghi khi ETag hiện tại còn khớp. Không khớp thì RFC 9110 quy định `412 Precondition Failed`, và client phải tải lại, trộn thay đổi rồi gửi lại; nhờ vậy không có lost update. `409` dùng cho xung đột trạng thái nghiệp vụ (huỷ đơn đã giao). `304` là câu trả lời cho `GET` có `If-None-Match`, không áp dụng cho ghi."
+    },
+    {
+      "id": "js-long-id",
+      "kind": "single",
+      "prompt": "API trả `{\"id\": 1850123456789012345}` (id kiểu Snowflake, `long` trong Java). Web app JavaScript dùng `id` này để gọi `GET /orders/{id}` và luôn nhận `404`. Vì sao?",
+      "options": [
+        "Số trong JS là `double`, id vượt 2^53 bị làm tròn",
+        "Id quá dài nên URL bị cắt bớt ở reverse proxy",
+        "JSON không cho phép số nguyên dài hơn 15 chữ số",
+        "Jackson ghi `long` thành chuỗi nên client đọc sai"
+      ],
+      "answer": 0,
+      "explanation": "Số trong JavaScript là `double`, chỉ biểu diễn chính xác số nguyên tới 2^53 − 1. `JSON.parse` với id trên ra `1850123456789012200` (đã chạy trên Node), nên client gọi một id khác. JSON không giới hạn độ dài số; vấn đề nằm ở bên đọc. Jackson mặc định ghi `long` là số, không phải chuỗi. Cách sửa: trả id dạng chuỗi."
+    }
+  ]
+}

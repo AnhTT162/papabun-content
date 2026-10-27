@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "safe-vs-idempotent", "front": "Method an toàn khác method idempotent thế nào?", "back": "An toàn là không đổi dữ liệu (`GET`, `HEAD`); idempotent là gửi nhiều lần cho cùng trạng thái như một lần (`GET`, `PUT`, `DELETE`). `POST` không phải cả hai." },
+    { "id": "put-vs-patch", "front": "Vì sao `PATCH` an toàn hơn `PUT` khi có client cũ?", "back": "`PUT` thay cả tài nguyên nên client cũ không biết trường mới sẽ xoá nó; `PATCH` (JSON Merge Patch) chỉ đổi trường có trong body." },
+    { "id": "status-400-422", "front": "`400` khác `422` thế nào?", "back": "`400`: request sai cú pháp hoặc thiếu tham số; `422`: đúng dạng nhưng vi phạm luật nghiệp vụ. Quan trọng nhất là nhất quán và có `type` máy đọc được." },
+    { "id": "status-404-hide", "front": "Khi nào trả `404` thay vì `403`?", "back": "Khi không muốn lộ là tài nguyên tồn tại, như đơn hàng của người dùng khác." },
+    { "id": "problem-detail-fields", "front": "Body lỗi theo RFC 9457 gồm gì?", "back": "`type` (URI định danh loại lỗi), `title`, `status`, `detail`, `instance`, và các trường mở rộng như `errors`; content type `application/problem+json`." },
+    { "id": "cursor-pagination", "front": "Cursor pagination hơn `page`/`size` ở đâu?", "back": "Trang sau bắt đầu ngay sau dòng cuối đã đọc, nên không sót hay lặp khi dữ liệu thay đổi, và trang sâu vẫn nhanh nhờ keyset." },
+    { "id": "enum-breaking", "front": "Thêm giá trị enum vào response có tương thích ngược không?", "back": "Không: client cũ không đọc được giá trị lạ và hỏng cả response. Phải báo trước rằng enum mở rộng được, và client cần nhánh `UNKNOWN`." },
+    { "id": "etag-if-match", "front": "`If-Match` chống lost update thế nào?", "back": "Client gửi lại `ETag` đã đọc; server chỉ ghi nếu version hiện tại còn khớp, không thì trả `412 Precondition Failed`." },
+    { "id": "202-accepted", "front": "Việc chạy vài phút nên trả gì?", "back": "`202 Accepted` kèm `Location` tới tài nguyên trạng thái; client hỏi lại tài nguyên đó hoặc nhận webhook khi xong." },
+    { "id": "long-id-string", "front": "Vì sao id 64 bit nên trả dạng chuỗi trong JSON?", "back": "JavaScript đọc số thành `double`, chỉ chính xác tới 2^53 − 1; id lớn hơn bị làm tròn thành id khác." }
+  ]
+}

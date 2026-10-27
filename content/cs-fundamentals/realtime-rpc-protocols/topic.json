@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "realtime-rpc-protocols",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "gRPC, WebSocket, SSE & long polling",
+  "summary": "Bốn cách để server chủ động gửi dữ liệu: long polling, SSE, WebSocket, gRPC streaming; handshake và mã đóng WebSocket, `Last-Event-ID`, giới hạn 6 kết nối của SSE trên HTTP/1.1, xác thực và kiểm tra `Origin`; gRPC trên dây, status trong trailer, deadline, giới hạn 4 MB, keepalive `too_many_pings`, backpressure; kết nối dài sau load balancer: heartbeat, giao event giữa các pod, reconnect storm khi deploy, push notification khi app ở nền.",
+  "level": "mid",
+  "order": 12,
+  "minutes": 14,
+  "prerequisites": ["http2-http3", "proxy-nginx"],
+  "terms": ["long-polling", "server-sent-events", "websocket", "grpc-streaming", "grpc", "grpc-web", "heartbeat", "pub-sub", "reconnect-storm", "jitter", "push-notification", "csrf", "backpressure", "stomp", "sticky-session", "protobuf", "http2-stream", "deadline-propagation"],
+  "references": [
+    { "title": "RFC 6455: The WebSocket Protocol", "url": "https://www.rfc-editor.org/rfc/rfc6455.html" },
+    { "title": "HTML Living Standard: Server-sent events", "url": "https://html.spec.whatwg.org/multipage/server-sent-events.html" },
+    { "title": "gRPC over HTTP2 (PROTOCOL-HTTP2.md)", "url": "https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md" },
+    { "title": "gRPC: Keepalive", "url": "https://grpc.io/docs/guides/keepalive/" },
+    { "title": "Spring Framework Reference: WebSockets", "url": "https://docs.spring.io/spring-framework/reference/web/websocket.html" },
+    { "title": "RFC 8441: Bootstrapping WebSockets with HTTP/2", "url": "https://www.rfc-editor.org/rfc/rfc8441.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống có 10 pod giữ WebSocket, làm sao gửi thông báo cho đúng một người dùng?\" Trả lời: nơi sinh event không biết người dùng nối vào pod nào, nên các pod subscribe một tầng pub/sub (Redis Pub/Sub theo kênh của người dùng hay của đơn, hoặc broker STOMP), nơi sinh event chỉ publish. Hỏi tiếp \"pod chết thì sao\": Pub/Sub không giữ message cho ai đang mất kết nối, nên dữ liệu không được mất phải lưu bền trước kèm số thứ tự, client nối lại và gửi số thứ tự cuối để lấy phần còn thiếu." },
+    { "type": "callout", "style": "warning", "markdown": "Trình duyệt không áp dụng CORS cho handshake WebSocket, và cookie vẫn được gửi kèm. Trang độc hại có thể mở WebSocket tới server của bạn bằng phiên đăng nhập của nạn nhân nếu server không kiểm tra header `Origin`. Luôn giới hạn origin được phép (Spring mặc định chỉ cùng origin; đừng đặt `setAllowedOrigins(\"*\")` khi xác thực bằng cookie)." }
+  ]
+}

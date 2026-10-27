@@ -115,8 +115,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 9 | `tcp-deep` | TCP chuyên sâu | mid | Handshake, flow/congestion control, `TIME_WAIT`, backlog, Nagle, RST; cạn port vì `TIME_WAIT` | L D T | ✅ |
 | 10 | `tls-https` | TLS & HTTPS | mid | TLS 1.2 và 1.3, chuỗi chứng chỉ, SNI, mTLS, sự cố chứng chỉ hết hạn | L D T | ✅ |
 | 11 | `http2-http3` | ✚ HTTP/1.1, HTTP/2 & HTTP/3 | mid | Keep-alive, multiplexing, head-of-line blocking, QUIC; ảnh hưởng tới connection pool | L D | ✅ |
-| 12 | `realtime-rpc-protocols` | ✚ gRPC, WebSocket, SSE & long polling | mid | gRPC qua HTTP/2, streaming, WebSocket và SSE, chọn cho realtime và giao tiếp nội bộ | L D Sc | ⬜ |
-| 13 | `rest-api-design` | Thiết kế REST API | mid | Method idempotent, status code, phân trang, versioning và tương thích ngược, ETag, lỗi theo RFC 9457 | L B Sc | ⬜ |
+| 12 | `realtime-rpc-protocols` | ✚ gRPC, WebSocket, SSE & long polling | mid | gRPC qua HTTP/2, streaming, WebSocket và SSE, chọn cho realtime và giao tiếp nội bộ | L D Sc | ✅ |
+| 13 | `rest-api-design` | Thiết kế REST API | mid | Method idempotent, status code, phân trang, versioning và tương thích ngược, ETag, lỗi theo RFC 9457 | L B Sc | ✅ |
 | 14 | `algorithms-interview` | Thuật toán hay gặp khi phỏng vấn | mid | Hai con trỏ, sliding window, BFS/DFS, binary search, DP cơ bản | L B | ⬜ |
 | 15 | `linux-troubleshooting` | Lệnh Linux để điều tra sự cố | mid | `top`, `vmstat`, `iostat`, `ss`, `lsof`, `strace`, `tcpdump` | L T | ⬜ |
 | 16 | `advanced-data-structures` | ✚ Cấu trúc dữ liệu trong hệ thống lớn | senior | Skip list, Bloom filter, LSM tree, HyperLogLog, Count-Min Sketch, trie; Redis, Cassandra, Kafka dùng chúng ở đâu | L D | ⬜ |

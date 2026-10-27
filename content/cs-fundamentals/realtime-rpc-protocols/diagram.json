@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đẩy event tới đúng kết nối WebSocket khi có nhiều pod",
+  "nodes": [
+    { "id": "client", "label": "App khách", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "lb", "label": "Load balancer L7", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "pod-a", "label": "WS pod A", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "pod-b", "label": "WS pod B", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "pubsub", "label": "Redis Pub/Sub", "kind": "cache", "x": 0.1, "y": 0.95 },
+    { "id": "order", "label": "Order service", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-lb", "from": "client", "to": "lb", "label": "Upgrade, 101" },
+    { "id": "lb-pod-a", "from": "lb", "to": "pod-a", "label": "kết nối dính pod A" },
+    { "id": "order-pubsub", "from": "order", "to": "pubsub", "label": "publish order:881" },
+    { "id": "pubsub-pod-a", "from": "pubsub", "to": "pod-a", "label": "pod A đã subscribe" },
+    { "id": "pod-a-client", "from": "pod-a", "to": "client", "label": "push seq=42" },
+    { "id": "lb-pod-b", "from": "lb", "to": "pod-b", "label": "nối lại từ seq=42" }
+  ],
+  "steps": [
+    { "caption": "App mở WebSocket qua load balancer L7: request HTTP có Upgrade, server trả 101, từ đó là kênh hai chiều.", "show": ["client", "lb", "client-lb"], "highlight": ["client-lb"] },
+    { "caption": "Kết nối nằm trên pod A suốt đời nó. Pod A subscribe kênh của đơn hàng mà người dùng này đang xem.", "show": ["pod-a", "lb-pod-a"], "highlight": ["lb-pod-a"] },
+    { "caption": "Trạng thái đơn đổi ở order service, nơi không biết người dùng đang nối vào pod nào, nên nó chỉ publish lên kênh order:881.", "show": ["order", "pubsub", "order-pubsub"], "highlight": ["order-pubsub"] },
+    { "caption": "Redis Pub/Sub giao cho mọi pod đã subscribe kênh đó; pod A đẩy xuống client kèm số thứ tự event.", "show": ["pubsub-pod-a", "pod-a-client"], "highlight": ["pubsub-pod-a", "pod-a-client"] },
+    { "caption": "Deploy: pod A đóng kết nối với mã 1001. Client chờ một khoảng ngẫu nhiên rồi nối lại, lần này vào pod B.", "show": ["pod-b", "lb-pod-b"], "highlight": ["lb-pod-b"] },
+    { "caption": "Client gửi seq cuối đã nhận; pod B đọc event bị lỡ từ nơi lưu bền (database, Kafka), vì Pub/Sub không giữ lại message cho ai đang mất kết nối.", "show": [], "highlight": ["pod-b", "lb-pod-b"] }
+  ]
+}
