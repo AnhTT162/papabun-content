@@ -1,0 +1,5 @@
+Một toà nhà văn phòng cho nhiều công ty thuê. Mỗi công ty có sơ đồ phòng riêng: "phòng 301" của công ty A và "phòng 301" của công ty B là hai chỗ khác nhau, và không công ty nào đi lạc sang chỗ của công ty kia. Công ty ký thuê 50 phòng, nhưng ban quản lý chỉ giao phòng thật khi nhân viên dọn vào; phòng chưa dùng vẫn để trống.
+
+Nhân viên cùng một công ty ngồi chung văn phòng, dùng chung tủ hồ sơ. Lễ tân phát chìa khoá tủ có đánh số, mỗi công ty chỉ được giữ một số chìa nhất định. Những phòng chưa ai thuê, ban quản lý tận dụng làm kho chứa hồ sơ hay dùng; công ty nào cần chỗ thì dọn kho ra. Khi cả toà đã chật mà vẫn có người đòi thêm phòng, ban quản lý buộc công ty chiếm nhiều chỗ nhất phải dọn đi ngay, không báo trước.
+
+Mỗi công ty là một [[process]], sơ đồ phòng riêng là [[virtual-memory|virtual memory]], lúc nhân viên dọn vào phòng mới là một [[page-fault|page fault]], và nhân viên là thread. Chìa khoá tủ là [[file-descriptor|file descriptor]] với hạn mức [[ulimit]], kho tận dụng phòng trống là [[page-cache|page cache]], còn người buộc công ty dọn đi là [[oom-killer|OOM killer]].

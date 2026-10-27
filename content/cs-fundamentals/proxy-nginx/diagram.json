@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Request vào qua Nginx, gọi ra qua forward proxy",
+  "nodes": [
+    { "id": "client", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "nginx", "label": "Nginx", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "app1", "label": "App 1 :8080", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "app2", "label": "App 2 :8080", "kind": "service", "x": 0.85, "y": 0.95 },
+    { "id": "egress", "label": "Forward proxy", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "partner", "label": "API đối tác", "kind": "external", "x": 0.85, "y": 0.05 }
+  ],
+  "edges": [
+    { "id": "client-nginx", "from": "client", "to": "nginx", "label": "HTTPS :443" },
+    { "id": "nginx-app1", "from": "nginx", "to": "app1", "label": "HTTP + X-Forwarded" },
+    { "id": "nginx-app2", "from": "nginx", "to": "app2", "label": "keepalive" },
+    { "id": "app1-egress", "from": "app1", "to": "egress", "label": "CONNECT api:443" },
+    { "id": "egress-partner", "from": "egress", "to": "partner", "label": "nguồn: IP proxy" }
+  ],
+  "steps": [
+    { "caption": "Trình duyệt mở HTTPS tới shop.example.com; DNS trỏ về Nginx, không phải app.", "show": ["client", "nginx", "client-nginx"], "highlight": ["client-nginx"] },
+    { "caption": "Nginx giữ chứng chỉ và giải mã TLS, rồi chọn một server trong upstream theo round robin.", "show": ["app1", "app2"], "highlight": ["nginx"] },
+    { "caption": "Request vào App 1 bằng HTTP thường; Nginx thêm X-Forwarded-For, X-Forwarded-Proto và Host gốc để app biết khách thật.", "show": ["nginx-app1"], "highlight": ["nginx-app1"] },
+    { "caption": "Nginx giữ sẵn kết nối nhàn rỗi tới backend (keepalive) để request sau không phải handshake lại.", "show": ["nginx-app2"], "highlight": ["nginx-app2"] },
+    { "caption": "Response được buffer ở Nginx: App 1 trả xong là rảnh, Nginx tự gửi dần cho client mạng chậm.", "show": [], "highlight": ["nginx", "app1"] },
+    { "caption": "App 1 cần gọi API đối tác: mạng chỉ cho đi ra qua forward proxy, app gửi CONNECT api:443 tới proxy.", "show": ["egress", "app1-egress"], "highlight": ["app1-egress"] },
+    { "caption": "Proxy nối đường ống TCP tới đối tác; đối tác chỉ thấy IP của proxy, nên whitelist đúng IP đó.", "show": ["partner", "egress-partner"], "highlight": ["egress-partner"] }
+  ]
+}

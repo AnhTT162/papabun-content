@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "JVM trong container giới hạn 2 GB",
+  "nodes": [
+    { "id": "jvm", "label": "JVM process", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "pagetable", "label": "Bảng page", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "ram", "label": "RAM của cgroup", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "pagecache", "label": "Page cache", "kind": "cache", "x": 0.85, "y": 0.95 },
+    { "id": "disk", "label": "SSD", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "oom", "label": "OOM killer", "kind": "generic", "x": 0.85, "y": 0.05 }
+  ],
+  "edges": [
+    { "id": "jvm-pt", "from": "jvm", "to": "pagetable", "label": "page fault" },
+    { "id": "pt-ram", "from": "pagetable", "to": "ram", "label": "cấp page mới" },
+    { "id": "disk-cache", "from": "disk", "to": "pagecache", "label": "đọc file" },
+    { "id": "cache-ram", "from": "pagecache", "to": "ram", "label": "tính vào cgroup" },
+    { "id": "oom-jvm", "from": "oom", "to": "jvm", "label": "SIGKILL, exit 137" }
+  ],
+  "steps": [
+    { "caption": "JVM khởi động với -Xmx1500m: đặt trước 1,5 GB địa chỉ ảo cho heap, VSZ lớn nhưng RSS mới vài chục MB.", "show": ["jvm"] },
+    { "caption": "Lần đầu chạm một page của heap, CPU báo page fault; kernel ghi ánh xạ mới vào bảng page.", "show": ["pagetable", "jvm-pt"], "highlight": ["jvm-pt"] },
+    { "caption": "Kernel lấy một page RAM trống trong hạn mức của cgroup. RSS tăng dần theo lượng heap được chạm tới.", "show": ["ram", "pt-ram"], "highlight": ["pt-ram"] },
+    { "caption": "App đọc file log và file tạm: dữ liệu đi qua page cache, lần đọc sau không chạm SSD.", "show": ["disk", "pagecache", "disk-cache"], "highlight": ["disk-cache"] },
+    { "caption": "Page cache cũng tính vào bộ nhớ của container, nhưng kernel thu hồi nó trước khi giết ai.", "show": ["cache-ram"], "highlight": ["cache-ram"] },
+    { "caption": "Heap, metaspace, stack thread và buffer native cộng lại chạm 2 GB, không còn cache để thu hồi.", "show": [], "highlight": ["ram"] },
+    { "caption": "OOM killer giết JVM bằng SIGKILL: không log, không heap dump, Kubernetes báo OOMKilled và exit code 137.", "show": ["oom", "oom-jvm"], "highlight": ["oom-jvm"] }
+  ]
+}

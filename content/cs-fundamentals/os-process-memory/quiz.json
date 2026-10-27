@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "maxfdlimit-output",
+      "kind": "output",
+      "prompt": "Trong shell Linux đã đặt `ulimit -Sn 1024` và `ulimit -Hn 4096`. Chạy chương trình dưới hai lần: `java FdLimit.java` rồi `java -XX:-MaxFDLimit FdLimit.java`. Hai lần in ra gì?",
+      "code": "import java.lang.management.ManagementFactory;\nimport com.sun.management.UnixOperatingSystemMXBean;\n\npublic class FdLimit {\n    public static void main(String[] args) {\n        var os = (UnixOperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();\n        System.out.println(os.getMaxFileDescriptorCount());\n    }\n}",
+      "options": [
+        "4096 / 1024",
+        "1024 / 1024",
+        "4096 / 4096",
+        "1024 / 4096"
+      ],
+      "answer": 0,
+      "explanation": "HotSpot mặc định bật `-XX:+MaxFDLimit`: lúc khởi động nó nâng soft limit lên bằng hard limit, nên lần đầu thấy 4096. Tắt cờ này thì JVM giữ nguyên soft limit 1024 của shell. Vì vậy với app Java, con số cần kiểm là hard limit trong `/proc/<pid>/limits`, không phải `ulimit -n` (chỉ in soft limit). Hành vi này đã chạy thử trên macOS với JDK 27 (soft 256, hard 400 ra 400 và 256); trên Linux HotSpot dùng cùng logic."
+    },
+    {
+      "id": "free-low",
+      "kind": "single",
+      "prompt": "Máy chạy Kafka 32 GB RAM. `free -h` báo `used` 8 GB, `free` 400 MB, `buff/cache` 23 GB, `available` 23 GB, swap 0. Đồng nghiệp đề nghị nâng RAM gấp. Bạn đánh giá thế nào?",
+      "options": [
+        "Chưa thiếu RAM: page cache thu hồi được khi cần",
+        "Thiếu RAM: chỉ còn 400 MB nên sắp bị OOM killer",
+        "Có leak: `buff/cache` 23 GB là bộ nhớ không giải phóng",
+        "Cần chạy `drop_caches` định kỳ để giải phóng bộ nhớ"
+      ],
+      "answer": 0,
+      "explanation": "Linux dùng RAM trống làm page cache, và Kafka cố ý dựa vào nó để consumer đọc dữ liệu mới không chạm đĩa. `available` 23 GB cho biết lượng bộ nhớ app còn xin được. Xoá cache định kỳ chỉ làm Kafka đọc đĩa nhiều hơn. Dấu hiệu thiếu RAM thật là `available` thấp, major page fault tăng hoặc swap hoạt động."
+    },
+    {
+      "id": "exit-137",
+      "kind": "single",
+      "prompt": "Pod Spring Boot (memory limit 1 GiB, `-Xmx900m`) thỉnh thoảng restart. Log cuối cùng là một request bình thường, không có `OutOfMemoryError`; `kubectl describe pod` báo `Last State: Terminated, Exit Code: 137`. Giải thích nào hợp lý nhất?",
+      "options": [
+        "Kernel giết JVM vì container chạm memory limit",
+        "JVM ném `OutOfMemoryError` nhưng log bị buffer mất",
+        "Kubernetes gửi SIGTERM và JVM tắt êm do liveness lỗi",
+        "Heap đầy nên GC dừng app cho tới khi probe hết hạn"
+      ],
+      "answer": 0,
+      "explanation": "137 = 128 + 9 là SIGKILL. Heap 900 MiB cộng metaspace, stack thread, code cache và buffer native vượt 1 GiB, OOM killer của cgroup giết process ngay nên không có log hay dump; kiểm `Reason: OOMKilled` để xác nhận. JVM tắt êm sau SIGTERM sẽ ra 143. `OutOfMemoryError` của heap được ném trong JVM và thường có stack trace. Cách sửa: chừa 25–30% limit cho phần ngoài heap, xem bài Bộ nhớ tăng dần & OOM."
+    },
+    {
+      "id": "close-wait-leak",
+      "kind": "single",
+      "prompt": "Sau vài ngày chạy, service ném `SocketException: Too many open files`. `ls /proc/<pid>/fd | wc -l` ra 65.000 và tăng đều; `ss -tanp` cho thấy hàng chục nghìn kết nối tới API đối tác ở trạng thái `CLOSE_WAIT`. Nên làm gì?",
+      "options": [
+        "Tìm chỗ không đóng HTTP response tới API đối tác",
+        "Tăng `LimitNOFILE` lên 1 triệu để đủ chỗ cho socket",
+        "Giảm `tcp_fin_timeout` để kernel dọn socket sớm hơn",
+        "Bật `SO_REUSEADDR` để dùng lại các port đang bận"
+      ],
+      "answer": 0,
+      "explanation": "`CLOSE_WAIT` nghĩa là bên kia đã đóng kết nối, kernel đang chờ chính app gọi `close()`. Socket chỉ thoát trạng thái này khi app đóng nó, nên đây là rò rỉ trong code: thường là không đóng body của response hoặc thiếu `try-with-resources`. `tcp_fin_timeout` áp dụng cho `FIN_WAIT_2` phía đã đóng trước, `SO_REUSEADDR` liên quan tới `TIME_WAIT`. Tăng limit chỉ làm sự cố đến muộn hơn."
+    },
+    {
+      "id": "vsz-large",
+      "kind": "single",
+      "prompt": "Một JVM chạy với `-Xmx4g`. `ps` báo VSZ 12 GB, RSS 1,1 GB, heap used sau GC ổn định 600 MB. Kết luận nào đúng?",
+      "options": [
+        "Bình thường: VSZ gồm địa chỉ ảo JVM đặt trước",
+        "Leak native: VSZ vượt `-Xmx` tới 8 GB",
+        "Máy đang swap 11 GB của JVM ra đĩa",
+        "Cần hạ `-Xmx` vì JVM đã chiếm 12 GB RAM"
+      ],
+      "answer": 0,
+      "explanation": "VSZ đếm mọi vùng địa chỉ ảo đã đặt trước: cả 4 GB heap, compressed class space, code cache, stack của từng thread và các thư viện, dù chưa page nào được chạm tới. RSS 1,1 GB mới là RAM thật. Leak native nhìn ở RSS tăng dần khi heap phẳng, không nhìn VSZ."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "process-vs-thread", "front": "Process và thread khác nhau ở điểm cốt lõi nào?", "back": "Process có không gian bộ nhớ và bảng file descriptor riêng; các thread trong một process dùng chung chúng, mỗi thread chỉ có stack và thanh ghi riêng." },
+    { "id": "context-switch-cost", "front": "Context switch tốn gì ngoài vài micro giây của kernel?", "back": "Cache CPU và TLB bị nguội, thread mới chạy chậm hơn một lúc. Quá nhiều thread chạy được thì CPU mất phần đáng kể cho việc chuyển qua lại." },
+    { "id": "vsz-rss", "front": "JVM `-Xmx4g` có VSZ 12 GB, RSS 900 MB. Có phải leak không?", "back": "Không. VSZ là địa chỉ ảo đã đặt trước (heap, class space, stack); RSS mới là RAM thật đang chiếm." },
+    { "id": "free-available", "front": "`free -h` báo `free` 300 MB, `buff/cache` 10 GB. Máy có thiếu RAM không?", "back": "Chưa chắc: page cache thu hồi được khi cần. Nhìn cột `available`, và nhìn major page fault hay swap." },
+    { "id": "too-many-open-files", "front": "`Too many open files` kèm nhiều socket `CLOSE_WAIT` nói lên gì?", "back": "App không `close()` kết nối sau khi bên kia đã đóng, thường do quên đóng HTTP response. Tăng `ulimit` chỉ hoãn sự cố." },
+    { "id": "jvm-maxfdlimit", "front": "Soft limit 1024, hard limit 65536: JVM mở được bao nhiêu file descriptor?", "back": "Khoảng 65536: HotSpot tự nâng soft lên bằng hard lúc khởi động (`-XX:+MaxFDLimit` bật mặc định)." },
+    { "id": "oom-killer-choice", "front": "OOM killer chọn process nào để giết?", "back": "Process có `oom_score` cao nhất: theo phần trăm bộ nhớ đang chiếm cộng `oom_score_adj`. Kubernetes đặt −997 cho Guaranteed, 1000 cho BestEffort." },
+    { "id": "exit-137", "front": "Exit code 137 và 143 nghĩa là gì?", "back": "128 + số tín hiệu: 137 là SIGKILL (OOM killer, hết grace period), 143 là SIGTERM (tắt bình thường)." },
+    { "id": "pid1-shell", "front": "Vì sao entrypoint là script gọi `java` không có `exec` làm pod tắt chậm?", "back": "Shell thành PID 1, không chuyển SIGTERM cho JVM; Kubernetes chờ hết grace period rồi SIGKILL." }
+  ]
+}

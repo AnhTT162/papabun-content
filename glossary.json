@@ -71,7 +71,7 @@
       "meaning": "Giữ kết nối TCP/TLS mở sau một response để các request sau dùng lại, bỏ qua DNS và handshake. Là mặc định của HTTP/1.1.",
       "example": "Request thứ hai tới cùng host chỉ tốn 1 RTT thay vì 3 RTT.",
       "related": ["tcp-handshake", "connection-pool"],
-      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning", "network-basics"]
+      "topics": ["http-request-lifecycle", "load-balancing", "server-tuning", "network-basics", "proxy-nginx"]
     },
     {
       "id": "load-balancer",
@@ -79,7 +79,7 @@
       "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
       "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
       "related": ["reverse-proxy", "tls-termination"],
-      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api", "proxy-nginx"]
     },
     {
       "id": "reverse-proxy",
@@ -87,7 +87,7 @@
       "meaning": "Server đứng trước backend, nhận request thay cho backend rồi chuyển tiếp; client không biết backend thật là ai. Thường kiêm cache, nén, TLS termination.",
       "example": "Nginx nhận `https://shop.example.com` và chuyển tới `http://10.0.1.5:8080`.",
       "related": ["load-balancer", "tls-termination"],
-      "topics": ["http-request-lifecycle"]
+      "topics": ["http-request-lifecycle", "proxy-nginx"]
     },
     {
       "id": "tls-termination",
@@ -95,7 +95,7 @@
       "meaning": "Giải mã HTTPS tại load balancer hoặc reverse proxy; đoạn phía sau đi bằng HTTP thường hoặc được mã hoá lại.",
       "example": "Chứng chỉ cài trên load balancer, các app server chỉ nghe HTTP trong mạng nội bộ.",
       "related": ["tls-handshake", "load-balancer"],
-      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "proxy-nginx"]
     },
     {
       "id": "connection-pool",
@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory"]
     },
     {
       "id": "full-gc",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion", "os-process-memory"]
     },
     {
       "id": "pinning",
@@ -621,7 +621,7 @@
       "meaning": "Kỹ thuật cho hai bên dùng chung dữ liệu tới khi một bên ghi, lúc đó mới sao chép phần bị ghi. Áp dụng cho collection trong Java, và cho bộ nhớ của process sau `fork`, như khi Redis tạo snapshot.",
       "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn. Với Redis: snapshot trong lúc ghi nhiều làm các page bị ghi được sao chép, RAM có thể tăng gần gấp đôi.",
       "related": ["immutable", "fail-fast"],
-      "topics": ["collections-overview", "redis-internals", "structural-patterns"]
+      "topics": ["collections-overview", "redis-internals", "structural-patterns", "os-process-memory"]
     },
     {
       "id": "sequenced-collection",
@@ -4741,7 +4741,7 @@
       "meaning": "Thuật toán cân bằng tải gửi request lần lượt cho từng instance theo vòng; có thể kèm trọng số khi instance không đều.",
       "example": "Request 1 tới A, 2 tới B, 3 tới C, 4 lại tới A.",
       "related": ["least-connections", "load-balancer"],
-      "topics": ["load-balancing"]
+      "topics": ["load-balancing", "proxy-nginx"]
     },
     {
       "id": "least-connections",
@@ -4749,7 +4749,7 @@
       "meaning": "Thuật toán cân bằng tải gửi request tới instance đang có ít kết nối (hoặc ít request chưa xong) nhất; hợp khi chi phí request chênh lệch.",
       "example": "A đang chạy 3 báo cáo nặng, B chỉ có 1 request; request mới đi tới B.",
       "related": ["round-robin", "load-balancer"],
-      "topics": ["load-balancing"]
+      "topics": ["load-balancing", "proxy-nginx"]
     },
     {
       "id": "health-check",
@@ -4757,7 +4757,7 @@
       "meaning": "Cách load balancer hay orchestrator kiểm tra instance còn phục vụ được không: chủ động (gọi endpoint định kỳ) hoặc bị động (đếm lỗi của request thật).",
       "example": "LB gọi `/actuator/health/readiness` mỗi 5 giây, ba lần lỗi liên tiếp thì rút instance khỏi vòng quay.",
       "related": ["load-balancer", "connection-draining"],
-      "topics": ["load-balancing", "thread-pool-exhaustion"]
+      "topics": ["load-balancing", "thread-pool-exhaustion", "proxy-nginx"]
     },
     {
       "id": "connection-draining",
@@ -5893,7 +5893,7 @@
       "meaning": "Trạng thái của kết nối TCP sau khi bên chủ động đóng gửi ACK cuối, giữ một thời gian (60 giây trên Linux) để gói trễ không lẫn vào kết nối mới cùng cổng. Mở và đóng kết nối liên tục làm số socket TIME_WAIT tăng vọt.",
       "example": "Ứng dụng mở một kết nối mới cho mỗi request, 400 req/s: khoảng 24.000 socket ở TIME_WAIT.",
       "related": ["keep-alive", "conntrack"],
-      "topics": ["slow-api"]
+      "topics": ["slow-api", "proxy-nginx"]
     },
     {
       "id": "out-of-memory-error",
@@ -5909,7 +5909,7 @@
       "meaning": "Trạng thái Kubernetes báo khi kernel giết container vì tổng bộ nhớ vượt memory limit. Process bị SIGKILL ngay (exit code 137), không kịp ghi log hay heap dump.",
       "example": "`kubectl describe pod` hiện `Reason: OOMKilled`, `Exit Code: 137` dù log không có `OutOfMemoryError`.",
       "related": ["out-of-memory-error", "rss"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "os-process-memory"]
     },
     {
       "id": "rss",
@@ -5917,7 +5917,7 @@
       "meaning": "Resident Set Size: lượng bộ nhớ vật lý process đang thực sự chiếm. Với JVM gồm heap đã dùng tới, metaspace, stack của thread, buffer native và malloc của thư viện.",
       "example": "Heap 1 GiB nhưng `ps -o rss` báo 1,9 GiB: 900 MiB còn lại là bộ nhớ native.",
       "related": ["oomkilled", "native-memory-tracking"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "os-process-memory"]
     },
     {
       "id": "memory-leak",
@@ -6229,7 +6229,7 @@
       "meaning": "Port tạm kernel cấp cho phía client khi mở kết nối đi ra. Linux mặc định dùng dải `32768–60999` (`net.ipv4.ip_local_port_range`).",
       "example": "App gọi `10.0.2.30:5432` từ `10.0.1.12:41822`; 41822 là ephemeral port.",
       "related": ["network-port", "time-wait"],
-      "topics": ["network-basics"]
+      "topics": ["network-basics", "proxy-nginx"]
     },
     {
       "id": "route-table",
@@ -6245,7 +6245,7 @@
       "meaning": "Thiết bị đổi địa chỉ trong gói khi đi qua ranh giới mạng, thường thay IP nguồn private bằng IP public của nó (SNAT) và ghi lại để chuyển response về đúng máy.",
       "example": "Cả 20 pod ra Internet qua một NAT gateway nên đối tác chỉ cần whitelist một IP.",
       "related": ["private-ip", "conntrack"],
-      "topics": ["network-basics"]
+      "topics": ["network-basics", "proxy-nginx"]
     },
     {
       "id": "security-group",
@@ -6309,7 +6309,7 @@
       "meaning": "Cache trong CPU giữ các bản dịch từ địa chỉ ảo sang địa chỉ vật lý theo page. Truy cập ngẫu nhiên trên vùng nhớ lớn làm TLB miss nhiều; huge page giảm số page cần dịch.",
       "example": "Heap 32 GB với page 4 KB có tám triệu page; dùng page 2 MB chỉ còn 16.384.",
       "related": ["cpu-cache"],
-      "topics": ["computer-architecture"]
+      "topics": ["computer-architecture", "os-process-memory"]
     },
     {
       "id": "numa",
@@ -6326,6 +6326,126 @@
       "example": "Mỗi lần đọc 100 µs, đọc lần lượt thì tối đa 10.000 IOPS; EBS gp3 cho mặc định 3.000 IOPS.",
       "related": ["latency", "throughput"],
       "topics": ["computer-architecture"]
+    },
+    {
+      "id": "forward-proxy",
+      "term": "Forward proxy",
+      "meaning": "Proxy đứng thay client khi đi ra ngoài: client gửi request cho proxy, proxy gọi tới server đích, nên server chỉ thấy IP của proxy. Dùng để lọc, ghi log và gom IP đi ra.",
+      "example": "App trong mạng công ty đặt `-Dhttps.proxyHost=proxy.corp` và gửi `CONNECT api.partner.com:443`; đối tác chỉ cần whitelist IP của proxy.",
+      "related": ["reverse-proxy", "nat"],
+      "topics": ["proxy-nginx"]
+    },
+    {
+      "id": "nginx-upstream",
+      "term": "Upstream",
+      "meaning": "Phía backend mà proxy chuyển request tới. Trong Nginx, khối `upstream` là nhóm server cùng chức năng, kèm thuật toán chia tải và kết nối keepalive.",
+      "example": "`upstream orders { least_conn; server 10.0.1.12:8080; server 10.0.1.13:8080; }` rồi `proxy_pass http://orders;`.",
+      "related": ["reverse-proxy", "load-balancer"],
+      "topics": ["proxy-nginx"]
+    },
+    {
+      "id": "x-forwarded-for",
+      "term": "X-Forwarded-For",
+      "meaning": "Header mỗi proxy nối thêm IP của kết nối nó nhận, để backend biết IP client gốc. Phần bên trái do client gửi được nên chỉ tin phần do proxy tin cậy thêm vào.",
+      "example": "`X-Forwarded-For: 203.0.113.9, 10.0.1.5` với kết nối từ `10.0.2.7`: đi từ phải sang, bỏ hai proxy tin cậy, client là `203.0.113.9`.",
+      "related": ["reverse-proxy", "load-balancer"],
+      "topics": ["proxy-nginx"]
+    },
+    {
+      "id": "proxy-buffering",
+      "term": "Proxy buffering",
+      "meaning": "Reverse proxy đọc response của backend vào bộ nhớ (hoặc file tạm) thật nhanh rồi tự gửi dần cho client. Backend được giải phóng sớm, đổi lại response dạng stream bị gom thành cục.",
+      "example": "Nginx `proxy_buffering on` mặc định; endpoint Server-Sent Events cần `proxy_buffering off` hoặc header `X-Accel-Buffering: no`.",
+      "related": ["reverse-proxy"],
+      "topics": ["proxy-nginx"]
+    },
+    {
+      "id": "process",
+      "term": "Process",
+      "meaning": "Chương trình đang chạy, có không gian virtual memory, bảng file descriptor và tài nguyên riêng, cô lập với process khác. Một process có một hoặc nhiều thread dùng chung bộ nhớ đó.",
+      "example": "Mỗi JVM là một process; `ps -o pid,nlwp,rss -p <pid>` cho biết số thread và RAM thật nó đang chiếm.",
+      "related": ["context-switch", "virtual-memory"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "context-switch",
+      "term": "Context switch",
+      "meaning": "Kernel dừng một thread, lưu trạng thái thanh ghi rồi cho thread khác chạy trên core đó. Tốn vài micro giây trực tiếp, cộng thêm cache CPU và TLB bị nguội.",
+      "example": "`pidstat -w` cho thấy `nvcswch/s` cao: thread bị giành CPU liên tục vì quá nhiều thread chạy được trên ít core.",
+      "related": ["process", "virtual-thread"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "virtual-memory",
+      "term": "Virtual memory",
+      "meaning": "Mỗi process thấy một dải địa chỉ riêng; kernel dùng bảng page ánh xạ từng page sang RAM thật, và chỉ cấp RAM khi page được chạm tới lần đầu.",
+      "example": "JVM `-Xmx4g` có VSZ hàng GB ngay khi khởi động, nhưng RSS chỉ tăng khi heap thật sự được dùng.",
+      "related": ["page-fault", "rss", "tlb"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "page-fault",
+      "term": "Page fault",
+      "meaning": "CPU báo cho kernel khi process chạm một page chưa được ánh xạ. Minor fault chỉ cần ánh xạ page đã có trong RAM; major fault phải đọc từ đĩa nên chậm hơn hàng nghìn lần.",
+      "example": "`ps -o min_flt,maj_flt -p <pid>`: `maj_flt` tăng liên tục khi app đang chạy là dấu hiệu thiếu RAM thật.",
+      "related": ["virtual-memory", "swap"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "page-cache",
+      "term": "Page cache",
+      "meaning": "Phần RAM kernel dùng để cache nội dung file. Mọi lần đọc ghi file thường đều đi qua nó; kernel thu hồi khi process cần bộ nhớ.",
+      "example": "`free -h` báo `buff/cache` 23 GB trên máy Kafka: dữ liệu mới được consumer đọc thẳng từ RAM, không chạm đĩa.",
+      "related": ["zero-copy", "fsync"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "file-descriptor",
+      "term": "File descriptor",
+      "meaning": "Số nguyên process dùng để chỉ một file, socket hay pipe đang mở. Mỗi process có giới hạn số descriptor, hết thì mọi thao tác mở mới đều lỗi.",
+      "example": "`ls /proc/<pid>/fd | wc -l` ra 65.000 và Java ném `SocketException: Too many open files`.",
+      "related": ["ulimit"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "ulimit",
+      "term": "ulimit",
+      "meaning": "Giới hạn tài nguyên của từng process (số file descriptor, số process, kích thước stack), gồm soft limit đang áp dụng và hard limit là trần của nó.",
+      "example": "`/proc/<pid>/limits` báo `Max open files 1024 524288`; HotSpot tự nâng soft lên 524288 lúc khởi động.",
+      "related": ["file-descriptor"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "oom-killer",
+      "term": "OOM killer",
+      "meaning": "Cơ chế của Linux giết một process bằng SIGKILL khi RAM của máy hoặc memory limit của cgroup hết và không thu hồi được nữa. Chọn theo `oom_score` (bộ nhớ đang chiếm cộng `oom_score_adj`).",
+      "example": "`dmesg` có dòng `Memory cgroup out of memory: Killed process 4321 (java)`; Kubernetes báo `OOMKilled`, exit code 137.",
+      "related": ["oomkilled", "rss"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "swap",
+      "term": "Swap",
+      "meaning": "Vùng đĩa kernel dùng để chứa page ít dùng khi RAM chật. Tránh OOM được một lúc, nhưng chạm lại page đã bị swap thì chậm hàng nghìn lần.",
+      "example": "GC duyệt heap có page đã bị swap ra đĩa làm pause kéo dài cả giây; server Java thường tắt swap hoặc đặt `vm.swappiness` thấp.",
+      "related": ["page-fault", "oom-killer"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "vsz",
+      "term": "VSZ",
+      "meaning": "Virtual Set Size: tổng vùng địa chỉ ảo process đã đặt trước, kể cả phần chưa từng chạm tới. Thường lớn hơn RSS nhiều và không cho biết RAM thật đang dùng.",
+      "example": "JVM `-Xmx4g` có VSZ 12 GB vì đặt trước heap, class space, code cache và stack thread, trong khi RSS chỉ 1,1 GB.",
+      "related": ["rss", "virtual-memory"],
+      "topics": ["os-process-memory"]
+    },
+    {
+      "id": "cgroup",
+      "term": "cgroup",
+      "meaning": "Control group: cơ chế của Linux gom process thành nhóm và giới hạn CPU, bộ nhớ, số process cho cả nhóm. Container và pod Kubernetes dựa vào nó để áp `limits`.",
+      "example": "Pod có memory limit 1 GiB nghĩa là `memory.max` của cgroup là 1 GiB; vượt thì OOM killer chỉ chọn process trong cgroup đó.",
+      "related": ["oom-killer", "cpu-throttling"],
+      "topics": ["os-process-memory"]
     }
   ]
 }

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "proxy-nginx",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Forward proxy, reverse proxy & Nginx",
+  "summary": "Forward proxy đứng thay client, reverse proxy đứng thay server; Nginx làm TLS termination, cân bằng tải, buffer và timeout ra sao; header `X-Forwarded-*`, quy tắc dấu `/` của `proxy_pass`, keepalive tới backend theo phiên bản, và đọc 502, 504, 499, 413.",
+  "level": "junior",
+  "order": 4,
+  "minutes": 12,
+  "prerequisites": ["network-basics", "http-request-lifecycle"],
+  "terms": ["forward-proxy", "reverse-proxy", "nginx-upstream", "x-forwarded-for", "proxy-buffering", "tls-termination", "load-balancer", "keep-alive", "nat", "round-robin", "least-connections", "health-check", "time-wait", "ephemeral-port"],
+  "references": [
+    { "title": "nginx: Module ngx_http_proxy_module", "url": "https://nginx.org/en/docs/http/ngx_http_proxy_module.html" },
+    { "title": "nginx: Module ngx_http_upstream_module", "url": "https://nginx.org/en/docs/http/ngx_http_upstream_module.html" },
+    { "title": "RFC 7239: Forwarded HTTP Extension", "url": "https://www.rfc-editor.org/rfc/rfc7239.html" },
+    { "title": "Java SE: Networking Properties (proxy)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/net/doc-files/net-properties.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Người dùng báo lỗi 502 và 504 qua Nginx, bạn đọc thế nào?\" 504 là Nginx chờ backend quá `proxy_read_timeout` (mặc định 60 giây): nhìn request chậm ở backend. 502 là kết nối tới backend bị từ chối, bị đóng giữa chừng hoặc response sai định dạng: đọc `error.log` (`connect() failed (111: Connection refused)`, `upstream prematurely closed connection`) và đối chiếu thời điểm pod restart hay deploy. 499 là client tự đóng kết nối trước khi có response, thường vì timeout của client ngắn hơn thời gian xử lý." },
+    { "type": "callout", "style": "warning", "markdown": "Nginx bản mã nguồn mở phân giải tên miền trong `proxy_pass` và `upstream` một lần lúc khởi động hoặc reload. Backend là load balancer trên cloud hay service đổi IP thì Nginx vẫn gửi tới IP cũ cho tới lần reload sau. Dùng `resolver` kèm tham số `resolve` trong `upstream` (mã nguồn mở từ 1.27.3, cần `zone`), hoặc đặt tên miền vào biến trong `proxy_pass`." }
+  ]
+}

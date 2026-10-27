@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "xff-trusted-output",
+      "kind": "output",
+      "prompt": "App đứng sau hai proxy tin cậy (`10.0.1.5` và `10.0.2.7`). Hàm lấy IP client từ `X-Forwarded-For` và IP của kết nối. Chương trình in ra gì?",
+      "code": "static final Set<String> TRUSTED = Set.of(\"10.0.1.5\", \"10.0.2.7\");\n\nstatic String clientIp(String remoteAddr, String xff) {\n    List<String> hops = new ArrayList<>(Arrays.asList(xff.split(\"\\\\s*,\\\\s*\")));\n    hops.add(remoteAddr);\n    for (int i = hops.size() - 1; i >= 0; i--) {\n        if (!TRUSTED.contains(hops.get(i))) return hops.get(i);\n    }\n    return hops.get(0);\n}\n\npublic static void main(String[] args) {\n    System.out.println(clientIp(\"10.0.2.7\", \"203.0.113.9, 10.0.1.5\"));\n    System.out.println(clientIp(\"10.0.2.7\", \"1.2.3.4, 198.51.100.20, 10.0.1.5\"));\n    System.out.println(clientIp(\"198.51.100.77\", \"1.2.3.4\"));\n}",
+      "options": [
+        "203.0.113.9 / 198.51.100.20 / 198.51.100.77",
+        "203.0.113.9 / 1.2.3.4 / 1.2.3.4",
+        "203.0.113.9 / 1.2.3.4 / 198.51.100.77",
+        "10.0.1.5 / 10.0.1.5 / 198.51.100.77"
+      ],
+      "answer": 0,
+      "explanation": "Hàm đi từ phải sang trái và dừng ở IP đầu tiên không phải proxy tin cậy. Dòng hai: client tự gửi `X-Forwarded-For: 1.2.3.4`, proxy nối thêm IP thật `198.51.100.20`, nên `1.2.3.4` là giả mạo và bị bỏ qua. Dòng ba: kết nối đến thẳng từ `198.51.100.77`, không qua proxy tin cậy, nên header do chính client tự đặt không được tin. Lấy phần tử bên trái nhất là sai lầm hay gặp nhất."
+    },
+    {
+      "id": "504-report",
+      "kind": "single",
+      "prompt": "Endpoint xuất báo cáo chạy khoảng 90 giây. Qua Nginx, người dùng nhận 504 sau đúng 60 giây, còn log của app vẫn ghi báo cáo chạy xong ở giây 90. Nguyên nhân là gì?",
+      "options": [
+        "`proxy_read_timeout` mặc định 60 giây hết hạn",
+        "`proxy_connect_timeout` 60 giây hết khi mở kết nối",
+        "`keepalive_timeout` 60 giây của upstream đóng kết nối",
+        "Tomcat cắt request sau `connection-timeout` 60 giây"
+      ],
+      "answer": 0,
+      "explanation": "504 là Nginx chờ backend quá lâu. `proxy_read_timeout` tính khoảng im lặng giữa hai lần đọc từ backend; báo cáo không gửi byte nào trong 60 giây nên Nginx bỏ cuộc trong khi app vẫn làm tiếp. Kết nối đã mở được ngay nên không phải connect timeout. `keepalive_timeout` chỉ áp dụng cho kết nối nhàn rỗi. `connection-timeout` của Tomcat là thời gian chờ dữ liệu request, không cắt request đang xử lý. Cách sửa: tách `location` riêng với timeout dài hơn, hoặc chuyển báo cáo sang job bất đồng bộ."
+    },
+    {
+      "id": "proxy-pass-uri",
+      "kind": "single",
+      "prompt": "Cấu hình `location /api/ { proxy_pass http://orders:8080/; }`. Client gọi `GET /api/orders/7`. Backend nhận đường dẫn nào?",
+      "options": [
+        "`/orders/7`",
+        "`/api/orders/7`",
+        "`/api/api/orders/7`",
+        "`/7`"
+      ],
+      "answer": 0,
+      "explanation": "Khi `proxy_pass` có phần URI (ở đây là `/`), Nginx thay phần đường dẫn khớp với `location` (`/api/`) bằng URI đó, nên còn `/orders/7`. Viết `proxy_pass http://orders:8080;` không có dấu `/` thì backend nhận nguyên `/api/orders/7`. Lệch dấu `/` này là nguyên nhân phổ biến của 404 sau khi đặt app sau proxy."
+    },
+    {
+      "id": "redirect-http",
+      "kind": "single",
+      "prompt": "Nginx làm TLS termination rồi gửi HTTP vào Spring Boot. Sau khi đăng nhập, app redirect người dùng sang `http://shop.example.com/home` thay vì `https://`. Sửa ở đâu?",
+      "options": [
+        "Gửi `X-Forwarded-Proto` và để app tin header từ proxy",
+        "Bật `proxy_buffering off` để Nginx trả redirect nguyên vẹn",
+        "Đổi `proxy_pass` sang cổng 443 để giữ đúng scheme gốc",
+        "Đổi `proxy_http_version` sang 1.1 để giữ đúng scheme gốc"
+      ],
+      "answer": 0,
+      "explanation": "App nhận kết nối HTTP từ Nginx nên tưởng request là `http` và dựng URL redirect theo đó. Nginx phải gửi `X-Forwarded-Proto $scheme` (cùng `Host` và `X-Forwarded-For`), và app phải được cấu hình tin các header này từ proxy (Spring Boot: `server.forward-headers-strategy`). Đổi cổng của `proxy_pass` không làm app biết scheme gốc, còn buffering và phiên bản HTTP không liên quan tới scheme."
+    },
+    {
+      "id": "sse-chunked",
+      "kind": "single",
+      "prompt": "App gửi Server-Sent Events mỗi giây một sự kiện. Gọi thẳng vào app thì mượt, qua Nginx thì trình duyệt nhận sự kiện theo từng cục vài chục cái một lúc. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "`proxy_buffering` mặc định bật nên Nginx gom response",
+        "`proxy_read_timeout` quá ngắn nên kết nối bị cắt lại",
+        "`worker_connections` quá ít nên sự kiện phải xếp hàng",
+        "Nginx mặc định nén gzip mọi response từ backend"
+      ],
+      "answer": 0,
+      "explanation": "Với `proxy_buffering on`, Nginx đọc response vào buffer rồi mới chuyển cho client, nên sự kiện nhỏ bị gom lại. Tắt bằng `proxy_buffering off` cho `location` đó, hoặc backend gửi header `X-Accel-Buffering: no`. Timeout ngắn sẽ làm kết nối đứt rồi nối lại, không gom sự kiện. Thiếu `worker_connections` làm từ chối kết nối mới. `gzip` mặc định tắt trong Nginx."
+    }
+  ]
+}

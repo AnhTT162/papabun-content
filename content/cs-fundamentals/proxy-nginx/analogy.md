@@ -1,0 +1,5 @@
+Bạn nhờ dịch vụ mua hộ đặt một món hàng ở cửa hàng nước ngoài. Cửa hàng chỉ thấy người mua hộ: địa chỉ, tên, cách thanh toán đều là của họ. Công ty bạn cũng chỉ cho nhân viên mua qua đúng một dịch vụ được duyệt, để dễ kiểm soát.
+
+Ở chiều ngược lại, bạn vào ngân hàng và nói chuyện với giao dịch viên ở quầy. Bạn không biết hồ sơ được chuyển vào phòng nào, ai xử lý. Giao dịch viên kiểm tra giấy tờ, chia việc cho các phòng đang rảnh, ghi lên phiếu "khách tên gì, mã khách hàng nào" để phòng phía sau biết đang phục vụ ai. Khách nói chậm thì giao dịch viên ngồi nghe hết rồi mới chuyển một phiếu gọn vào trong, phòng phía sau không phải chờ.
+
+Người mua hộ là [[forward-proxy|forward proxy]]: đứng thay client. Giao dịch viên là [[reverse-proxy|reverse proxy]] như Nginx: đứng thay server, làm [[tls-termination|TLS termination]], chia request cho các backend trong [[nginx-upstream|upstream]], ghi IP thật của khách vào [[x-forwarded-for|`X-Forwarded-For`]], và [[proxy-buffering|buffer]] để client chậm không giữ chân backend.

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "os-process-memory",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Process, thread & bộ nhớ của hệ điều hành",
+  "summary": "Process và thread khác nhau thế nào, context switch tốn gì; virtual memory, page fault, VSZ và RSS của JVM; page cache và vì sao `free` thấp chưa phải thiếu RAM; file descriptor, `ulimit` và lỗi Too many open files; OOM killer chọn ai để giết, kể cả trong Kubernetes.",
+  "level": "junior",
+  "order": 5,
+  "minutes": 12,
+  "prerequisites": ["computer-architecture"],
+  "terms": ["process", "context-switch", "virtual-memory", "page-fault", "rss", "page-cache", "file-descriptor", "ulimit", "oom-killer", "oomkilled", "swap", "tlb", "cpu-throttling", "virtual-thread", "copy-on-write", "vsz", "cgroup"],
+  "references": [
+    { "title": "Linux kernel: Concepts overview (memory management)", "url": "https://docs.kernel.org/admin-guide/mm/concepts.html" },
+    { "title": "Kubernetes: Node-pressure Eviction (oom_score_adj, working set)", "url": "https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" },
+    { "title": "man7: getrlimit(2)", "url": "https://man7.org/linux/man-pages/man2/getrlimit.2.html" },
+    { "title": "Linux kernel: Control Group v2 (memory controller)", "url": "https://docs.kernel.org/admin-guide/cgroup-v2.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pod Java restart với exit code 137 mà log không có `OutOfMemoryError`, bạn làm gì?\" 137 là 128 + 9 (SIGKILL). Kiểm `kubectl describe pod` có `Reason: OOMKilled` không: có thì tổng bộ nhớ của container (heap, native, cả page cache không thu hồi được) đã chạm memory limit và kernel giết process. Không có thì có thể là kubelet giết vì liveness probe hoặc hết grace period khi tắt. Bước điều tra heap hay native nằm ở bài Bộ nhớ tăng dần & OOM." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chạy app bằng script entrypoint gọi `java -jar app.jar` mà không có `exec`. Shell thành PID 1, nhận SIGTERM nhưng không chuyển cho JVM; JVM không tắt êm, Kubernetes chờ hết `terminationGracePeriodSeconds` (mặc định 30 giây) rồi SIGKILL, request đang chạy bị cắt. Viết `exec java ...` hoặc dùng dạng exec của `ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]`." }
+  ]
+}

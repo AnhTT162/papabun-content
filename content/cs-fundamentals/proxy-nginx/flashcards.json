@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "forward-vs-reverse", "front": "Forward proxy và reverse proxy khác nhau ở đâu?", "back": "Forward proxy đứng thay client (server đích thấy IP proxy); reverse proxy đứng thay server (client không biết backend thật là ai)." },
+    { "id": "https-through-proxy", "front": "Client gọi HTTPS qua forward proxy thì proxy thấy gì?", "back": "Chỉ thấy `CONNECT host:443` và SNI rồi nối đường ống TCP; nội dung được mã hoá, trừ khi công ty cài CA riêng để giải mã." },
+    { "id": "java-proxy-env", "front": "JVM có đọc biến môi trường `HTTPS_PROXY` không?", "back": "Không. Dùng `-Dhttps.proxyHost`/`-Dhttps.proxyPort`; Apache HttpClient 5 còn cần `createSystem()` hoặc `useSystemProperties()`." },
+    { "id": "proxy-pass-slash", "front": "`location /api/ { proxy_pass http://orders/; }` gửi `/api/orders/7` vào backend thành gì?", "back": "`/orders/7`: `proxy_pass` có phần URI nên phần khớp `location` bị thay. Bỏ dấu `/` cuối thì backend nhận nguyên `/api/orders/7`." },
+    { "id": "504-meaning", "front": "Nginx trả 504 sau đúng 60 giây nghĩa là gì?", "back": "Backend không gửi gì trong `proxy_read_timeout` (mặc định 60 giây, tính giữa hai lần đọc). Backend có thể vẫn đang xử lý." },
+    { "id": "499-meaning", "front": "Mã 499 trong access log của Nginx là gì?", "back": "Client đóng kết nối trước khi Nginx trả response, thường vì timeout phía client ngắn hơn thời gian xử lý. Đây là mã riêng của Nginx." },
+    { "id": "xff-read", "front": "Lấy IP client từ `X-Forwarded-For` thế nào cho đúng?", "back": "Đi từ phải sang trái, bỏ qua IP của các proxy tin cậy; IP đầu tiên còn lại là client. Phần bên trái do client tự gửi được." },
+    { "id": "buffering-sse", "front": "Vì sao Server-Sent Events qua Nginx tới client theo từng cục?", "back": "`proxy_buffering on` mặc định gom response vào buffer. Tắt bằng `proxy_buffering off` cho location đó hoặc header `X-Accel-Buffering: no`." },
+    { "id": "keepalive-version", "front": "Nginx bản nào tự giữ kết nối keepalive tới backend?", "back": "Từ 1.29.7 (stable 1.30): mặc định HTTP/1.1 và `keepalive 32`. Bản cũ hơn dùng HTTP/1.0, mỗi request một kết nối mới nếu không tự cấu hình." }
+  ]
+}
