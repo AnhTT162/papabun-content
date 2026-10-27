@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "closed-throughput",
+      "kind": "output",
+      "prompt": "Load test mô hình đóng: 200 virtual user, không có think time. Server chậm đi, thời gian phản hồi trung bình từ 110ms lên 2 giây. Đoạn code in ra gì?",
+      "code": "int users = 200;\ndouble thinkSeconds = 0;\nfor (double responseSeconds : new double[]{0.11, 2.0}) {\n    System.out.printf(\"%.0f req/s%n\", users / (responseSeconds + thinkSeconds));\n}",
+      "options": ["1818 req/s rồi 100 req/s", "1818 req/s rồi 1818 req/s", "200 req/s rồi 200 req/s", "1818 req/s rồi 3636 req/s"],
+      "answer": 0,
+      "explanation": "Mỗi user chỉ gửi request mới khi request trước xong, nên throughput = số user / (R + Z): 200 / 0,11 ≈ 1.818 và 200 / 2 = 100. Server càng chậm thì tải sinh ra càng ít, đúng lúc lẽ ra phải thấy hàng đợi dồn lên. Mô hình mở giữ tốc độ đến cố định, và tải không giảm theo latency."
+    },
+    {
+      "id": "co-percentile",
+      "kind": "single",
+      "prompt": "Test 200 giây, mục tiêu 100 req/s. Server trả trong 1ms nhưng đứng đúng một lần, kéo dài 10 giây. Công cụ dùng một user vòng kín và đo từ lúc gửi thật. p99 báo ra khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 1ms, vì chỉ có một mẫu chậm trong 19.001 mẫu",
+        "Khoảng 8 giây, vì mọi request trong lúc đứng đều phải chờ",
+        "Khoảng 10 giây, vì p99 luôn bằng giá trị chậm nhất",
+        "Khoảng 500ms, trung bình của thời gian đứng chia đều"
+      ],
+      "answer": 0,
+      "explanation": "Trong 10 giây đứng, user vòng kín chỉ có một request đang chờ, nên chỉ ghi một mẫu 10 giây; 999 request lẽ ra được gửi không bao giờ được đo. p99 và p99.9 đều ra 1ms. Đo từ lúc request lẽ ra được gửi (mô hình mở) cho 20.000 mẫu và p99 khoảng 8,2 giây: đó là con số người dùng thật thấy."
+    },
+    {
+      "id": "achieved-vs-target",
+      "kind": "single",
+      "prompt": "k6 chạy `constant-arrival-rate` 3.000 req/s, `maxVUs` 500. Kết quả: throughput đạt 2.100 req/s, `dropped_iterations` rất lớn, p99 600ms. Kết luận nào đúng?",
+      "options": [
+        "Test chưa tạo đủ tải; p99 600ms không phải p99 ở 3.000 req/s",
+        "Trần của server là 2.100 req/s, với p99 khoảng 600ms",
+        "Server từ chối 900 req/s nên tỉ lệ lỗi thật là khoảng 30%",
+        "Phải chuyển sang `constant-vus` để k6 tự cân bằng tải lại"
+      ],
+      "answer": 0,
+      "explanation": "`dropped_iterations` là lần lặp k6 không bắt đầu được vì hết VU: 500 VU chỉ đủ cho khoảng 2.000–2.100 req/s khi mỗi lần lặp mất khoảng 240ms (Little's law). Server không hề thấy 900 req/s còn lại, nên đó không phải lỗi phía server, và 2.100 req/s cũng không phải trần của server vì tải chưa từng vượt mức đó. Tăng `maxVUs`, kiểm tra máy tạo tải, chạy lại; chuyển sang `constant-vus` là quay về mô hình đóng."
+    },
+    {
+      "id": "fast-503",
+      "kind": "single",
+      "prompt": "Tăng tải từ 2.000 lên 2.800 req/s, p99 giảm từ 280ms xuống 190ms. Cùng lúc tỉ lệ `503` tăng từ 0,1% lên 6%. Giải thích hợp lý nhất?",
+      "options": [
+        "Request bị từ chối trả rất nhanh, kéo p99 của toàn bộ xuống",
+        "JIT đã nóng hơn nên mọi request đều chạy nhanh hơn trước",
+        "Tải cao hơn làm cache hit tăng nên database nhẹ hơn hẳn",
+        "Autoscale đã thêm pod nên latency của mọi request giảm"
+      ],
+      "answer": 0,
+      "explanation": "Load shedding hay rate limit trả `503` trong vài mili giây, nên khi 6% request là lỗi nhanh, percentile tính chung bị kéo xuống. Hệ thống thật ra đã quá tải ở 2.800 req/s. Đọc latency riêng cho request thành công và đặt threshold tỉ lệ lỗi; các giải thích còn lại cần bằng chứng riêng (thời gian chạy, cache hit ratio, số pod) và không đi kèm lỗi tăng."
+    }
+  ]
+}

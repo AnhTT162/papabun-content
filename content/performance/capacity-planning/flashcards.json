@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "instance-count", "front": "Tính số instance cho tải đỉnh thế nào?", "back": "Tải đỉnh / (capacity đo được của một instance × utilization mục tiêu), rồi kiểm tra lại khi mất một AZ." },
+    { "id": "per-instance-ceiling", "front": "Trần capacity của một instance là điểm nào?", "back": "Mức tải cao nhất mà p99 còn trong SLO, đo bằng load test; thường thấp hơn nhiều so với điểm CPU 100%." },
+    { "id": "headroom-why", "front": "Vì sao lên kế hoạch ở 50–70% trần?", "back": "p99 tăng theo 1/(1 − ρ): service 10ms có p99 khoảng 92ms ở 50% tải nhưng 460ms ở 90%." },
+    { "id": "az-loss", "front": "Chạy trên 3 AZ, mất một AZ thì sao?", "back": "Hai AZ còn lại gánh gấp 1,5 lần tải mỗi instance, và vẫn phải nằm dưới trần." },
+    { "id": "hpa-formula", "front": "HPA tính số replica mong muốn thế nào?", "back": "`ceil(số pod hiện tại × giá trị metric hiện tại / mục tiêu)`, bỏ qua nếu tỉ lệ lệch 1 không quá 10%." },
+    { "id": "cpu-io-bound", "front": "Vì sao HPA theo CPU không hợp với service chờ I/O?", "back": "Thread chờ database hay HTTP không tốn CPU, nên service quá tải mà CPU vẫn thấp; scale theo request đang xử lý hoặc lag của queue." },
+    { "id": "cpu-saturation-hpa", "front": "CPU đã chạm 100%, HPA mục tiêu 80% thấy tải tăng bao nhiêu?", "back": "Tối đa 1,25 lần mỗi vòng, dù tải thật tăng nhiều hơn, nên đỉnh lớn cần nhiều vòng scale." },
+    { "id": "prescale", "front": "Đỉnh tải biết trước thì xử lý thế nào?", "back": "Nâng `minReplicas` trước theo lịch để node, pod và JIT sẵn sàng, HPA chỉ lo phần vượt dự báo." },
+    { "id": "downstream-limit", "front": "Thêm pod không giúp được gì?", "back": "Database primary, cache, bên thứ ba có rate limit và `max_connections`; thêm pod còn có thể làm chúng quá tải." }
+  ]
+}

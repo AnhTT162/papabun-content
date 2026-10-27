@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "capacity-planning",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Capacity planning & autoscaling",
+  "summary": "Ước lượng tải đỉnh, đo trần của một instance, chọn headroom theo đường cong hàng đợi và kiểm tra khi mất một AZ. HPA tính số pod thế nào, vì sao CPU bão hoà làm nó phản ứng chậm, metric nào hợp với service chờ I/O, scale trước theo lịch, và các giới hạn phía sau như database và connection.",
+  "level": "senior",
+  "order": 14,
+  "minutes": 16,
+  "prerequisites": ["perf-methodology", "connection-pool", "tail-latency"],
+  "terms": ["headroom", "n-plus-1", "autoscaling", "hpa", "keda", "cluster-autoscaler", "universal-scalability-law", "jit", "rate-limiting", "load-shedding", "cpu-throttling", "littles-law", "kafka-partition", "slo"],
+  "references": [
+    { "title": "Kubernetes: Horizontal Pod Autoscaling", "url": "https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/" },
+    { "title": "Google SRE book: Handling Overload", "url": "https://sre.google/sre-book/handling-overload/" },
+    { "title": "KEDA: Apache Kafka scaler", "url": "https://keda.sh/docs/latest/scalers/apache-kafka/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đã có autoscaling rồi, sao còn cần capacity planning?\" Vì autoscaling chỉ thêm đúng thứ nó điều khiển (pod, node) và phản ứng theo phút: metric, khởi động JVM, JIT, thêm node. Nó không biết database primary, `max_connections`, rate limit của bên thứ ba hay số partition Kafka. Capacity planning quyết định `maxReplicas`, mức headroom, trần của cả hệ thống và việc làm gì khi tải vượt trần." },
+    { "type": "callout", "style": "warning", "markdown": "Đặt mục tiêu CPU của HPA cao (80–90%) để tiết kiệm là đổi lấy p99 cao và phản ứng chậm: mỗi pod chạy sát trần, và khi CPU chạm 100% thì HPA chỉ thấy tải tăng 1,1–1,25 lần mỗi vòng. Mục tiêu nên tính ngược từ mức tải mỗi pod giữ được SLO, kèm headroom." }
+  ]
+}

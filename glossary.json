@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning"]
     },
     {
       "id": "full-gc",
@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing"]
     },
     {
       "id": "virtual-thread",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing"]
     },
     {
       "id": "memory-barrier",
@@ -2653,7 +2653,7 @@
       "meaning": "Một phần của topic Kafka: log chỉ ghi nối có thứ tự, nằm trên một broker leader và được sao chép sang các follower. Đơn vị song song và đơn vị giữ thứ tự.",
       "example": "Topic `orders` có 12 partition; message key `order-42` luôn vào cùng một partition.",
       "related": ["kafka-offset", "consumer-group"],
-      "topics": ["kafka-architecture", "service-communication", "event-driven-architecture"]
+      "topics": ["kafka-architecture", "service-communication", "event-driven-architecture", "capacity-planning"]
     },
     {
       "id": "kafka-offset",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning"]
     },
     {
       "id": "redis-sentinel",
@@ -4845,7 +4845,7 @@
       "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
       "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
       "related": ["backpressure", "circuit-breaker"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "capacity-planning"]
     },
     {
       "id": "retry-budget",
@@ -5029,7 +5029,7 @@
       "meaning": "Đưa phiên bản mới cho một phần nhỏ lưu lượng (1%, 10%) trước, theo dõi lỗi và latency rồi mới tăng dần; có vấn đề thì chuyển lưu lượng về bản cũ.",
       "example": "Mesh gửi 5% request tới `orders-v2`, tỉ lệ `5xx` tăng thì chuyển hết về `orders-v1`.",
       "related": ["service-mesh", "feature-flag"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "load-testing"]
     },
     {
       "id": "retry-storm",
@@ -5037,7 +5037,7 @@
       "meaning": "Lưu lượng tăng vọt do nhiều client hoặc nhiều tầng cùng retry khi một service đang lỗi, làm nó càng khó hồi phục.",
       "example": "Gateway, mesh và app mỗi tầng thử 3 lần: một request lỗi thành 27 lời gọi tới service đang quá tải.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["api-gateway-service-mesh", "tail-latency"]
+      "topics": ["api-gateway-service-mesh", "tail-latency", "load-testing"]
     },
     {
       "id": "slo",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing"]
     },
     {
       "id": "compensating-transaction",
@@ -5653,7 +5653,7 @@
       "meaning": "Lỗi đo của công cụ tạo tải: khi hệ thống chậm, công cụ chờ response rồi mới gửi request tiếp, nên bỏ sót thời gian chờ mà người dùng thật phải chịu và báo latency đẹp hơn thực tế.",
       "example": "Server đứng 5 giây nhưng công cụ chỉ ghi một mẫu chậm thay vì hàng trăm.",
       "related": ["percentile", "latency"],
-      "topics": ["perf-methodology", "slow-api", "tail-latency"]
+      "topics": ["perf-methodology", "slow-api", "tail-latency", "load-testing"]
     },
     {
       "id": "mitigation",
@@ -6062,6 +6062,118 @@
       "example": "Hedge ở p95 kéo p99 từ 650ms xuống khoảng 40ms với khoảng 5% lời gọi thêm, khi đuôi là do node khựng ngẫu nhiên.",
       "related": ["tail-latency", "idempotency", "retry-budget"],
       "topics": ["tail-latency"]
+    },
+    {
+      "id": "headroom",
+      "term": "Headroom",
+      "meaning": "Phần capacity chừa lại giữa mức tải chạy thường và trần của hệ thống, để chịu đỉnh bất ngờ, mất một node hay zone mà latency không vọt lên.",
+      "example": "Pod giữ SLO tới 400 req/s nhưng chỉ lên kế hoạch 240 req/s: headroom 40%.",
+      "related": ["saturation", "n-plus-1"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "n-plus-1",
+      "term": "N+1",
+      "meaning": "Dự phòng thêm ít nhất một đơn vị (instance, node, zone) so với số cần cho tải đỉnh, để mất một đơn vị vẫn đủ capacity.",
+      "example": "Cần 2 AZ để gánh đỉnh thì chạy 3 AZ, mỗi AZ dưới 2/3 trần.",
+      "related": ["headroom"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "autoscaling",
+      "term": "Autoscaling",
+      "meaning": "Tự động thêm hay bớt instance theo một metric (CPU, số request, độ dài queue) hoặc theo lịch.",
+      "example": "HPA tăng từ 6 lên 12 pod khi CPU trung bình vượt mục tiêu 50%.",
+      "related": ["hpa", "cluster-autoscaler"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "hpa",
+      "term": "HPA",
+      "meaning": "Horizontal Pod Autoscaler của Kubernetes: định kỳ (mặc định 15 giây) tính số replica = ceil(số pod × metric hiện tại / mục tiêu) rồi chỉnh Deployment.",
+      "example": "4 pod ở CPU 90%, mục tiêu 60%: ceil(4 × 90 / 60) = 6 pod.",
+      "related": ["autoscaling", "keda"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "keda",
+      "term": "KEDA",
+      "meaning": "Kubernetes Event-driven Autoscaling: lấy metric từ nguồn bên ngoài (lag Kafka, độ dài queue, lịch cron) để điều khiển HPA, kể cả scale về 0.",
+      "example": "Scale consumer theo lag của consumer group, tối đa bằng số partition.",
+      "related": ["hpa", "consumer-lag"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "cluster-autoscaler",
+      "term": "Cluster Autoscaler",
+      "meaning": "Thành phần thêm node khi có pod không xếp được chỗ (Pending) và bớt node rảnh. Thêm node thường mất vài phút.",
+      "example": "HPA tạo 10 pod mới nhưng chỉ đủ chỗ cho 6; 4 pod chờ node mới khoảng 3 phút.",
+      "related": ["hpa", "autoscaling"],
+      "topics": ["capacity-planning"]
+    },
+    {
+      "id": "universal-scalability-law",
+      "term": "Universal Scalability Law",
+      "meaning": "Mô hình của Neil Gunther: throughput khi thêm instance bị giới hạn bởi phần tuần tự (như Amdahl) và còn giảm vì chi phí đồng bộ giữa các instance.",
+      "example": "Từ 8 lên 16 node throughput chỉ tăng 20% vì các node tranh nhau cùng một khoá.",
+      "related": ["amdahls-law"],
+      "topics": ["capacity-planning", "perf-methodology", "load-testing"]
+    },
+    {
+      "id": "open-workload-model",
+      "term": "Open workload model",
+      "meaning": "Mô hình tải mở: request đến theo tốc độ định trước, không phụ thuộc request trước đã xong chưa. Giống người dùng thật trên internet.",
+      "example": "k6 `constant-arrival-rate` 3.000 req/s vẫn gửi đủ 3.000 req/s khi server chậm.",
+      "related": ["closed-workload-model", "coordinated-omission"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "closed-workload-model",
+      "term": "Closed workload model",
+      "meaning": "Mô hình tải đóng: một số user cố định, mỗi user chờ response rồi mới gửi tiếp, nên throughput = số user / (thời gian phản hồi + think time).",
+      "example": "200 user không nghỉ: 1.818 req/s khi R = 110ms, chỉ 100 req/s khi R = 2 giây.",
+      "related": ["open-workload-model", "think-time"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "virtual-user",
+      "term": "Virtual user (VU)",
+      "meaning": "Một luồng giả lập người dùng trong công cụ tạo tải, chạy kịch bản lặp đi lặp lại.",
+      "example": "k6 cần khoảng 330 VU để giữ 3.000 req/s khi mỗi lần lặp mất 110ms.",
+      "related": ["closed-workload-model"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "think-time",
+      "term": "Think time",
+      "meaning": "Khoảng nghỉ giữa hai thao tác của một user giả lập, mô phỏng thời gian người dùng đọc hay thao tác.",
+      "example": "200 user, think time 1 giây, R = 110ms: khoảng 180 req/s.",
+      "related": ["closed-workload-model", "virtual-user"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "stress-test",
+      "term": "Stress test",
+      "meaning": "Test tăng tải vượt mức dự kiến tới khi hệ thống vỡ, để tìm trần và xem hệ thống hỏng ra sao, có tự hồi phục không.",
+      "example": "Tăng mỗi 10 phút thêm 400 req/s tới khi p99 vượt SLO hay lỗi vượt 1%.",
+      "related": ["soak-test"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "soak-test",
+      "term": "Soak test",
+      "meaning": "Test chạy tải vừa phải trong nhiều giờ để thấy lỗi chỉ xuất hiện theo thời gian: rò bộ nhớ, rò connection, đĩa đầy, log phình.",
+      "example": "Chạy 2.000 req/s trong 8 giờ, heap sau GC tăng đều mỗi giờ.",
+      "related": ["stress-test"],
+      "topics": ["load-testing"]
+    },
+    {
+      "id": "hdrhistogram",
+      "term": "HdrHistogram",
+      "meaning": "Thư viện histogram của Gil Tene lưu latency với độ chính xác cố định trên dải rất rộng, gộp được giữa các máy, có hàm bù coordinated omission.",
+      "example": "`recordValueWithExpectedInterval(latency, 10)` thêm các mẫu bị bỏ sót khi biết request lẽ ra gửi mỗi 10ms.",
+      "related": ["coordinated-omission", "percentile"],
+      "topics": ["load-testing"]
     }
   ]
 }

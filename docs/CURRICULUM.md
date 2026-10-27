@@ -306,8 +306,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 11 | `db-performance` | Database chậm trên production | senior | `pg_stat_statements`, lock wait, cạn connection pool, replica lag | L T | ✅ |
 | 12 | `profiling` | Profiling | senior | async-profiler, flame graph CPU/allocation/lock, đọc JFR recording | L D T | ✅ |
 | 13 | `tail-latency` | Tail latency, timeout & retry | senior | Retry khuếch đại tải, timeout budget, hedging | L S Sc | ✅ |
-| 14 | `capacity-planning` | Capacity planning & autoscaling | senior | Ước lượng tải, headroom, autoscale theo metric nào | L Sc | ⬜ |
-| 15 | `load-testing` | Load & performance testing | senior | Mô hình tải, k6/Gatling, coordinated omission, đọc kết quả | L Sc | ⬜ |
+| 14 | `capacity-planning` | Capacity planning & autoscaling | senior | Ước lượng tải, headroom, autoscale theo metric nào | L Sc | ✅ |
+| 15 | `load-testing` | Load & performance testing | senior | Mô hình tải, k6/Gatling, coordinated omission, đọc kết quả | L Sc | ✅ |
 
 ### 11. Design (`design`)
 

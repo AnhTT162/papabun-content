@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "load-testing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Load & performance testing",
+  "summary": "Chọn loại test theo câu hỏi, mô hình tải mở và đóng, vì sao virtual user vòng kín gây coordinated omission (kèm số liệu mô phỏng), k6 và Gatling cấu hình thế nào, làm tải và dữ liệu giống production, nhận ra máy tạo tải bão hoà và đọc kết quả cho đúng.",
+  "level": "senior",
+  "order": 15,
+  "minutes": 16,
+  "prerequisites": ["perf-methodology", "tail-latency", "capacity-planning"],
+  "terms": ["open-workload-model", "closed-workload-model", "virtual-user", "think-time", "stress-test", "soak-test", "hdrhistogram", "coordinated-omission", "jit", "retry-storm", "canary-release", "littles-law", "slo", "universal-scalability-law"],
+  "references": [
+    { "title": "Grafana k6: Open and closed models", "url": "https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/" },
+    { "title": "Gatling: Injection profiles", "url": "https://docs.gatling.io/concepts/injection/" },
+    { "title": "HdrHistogram (Gil Tene), có phần về coordinated omission", "url": "https://github.com/HdrHistogram/HdrHistogram" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Load test của bạn báo p99 200ms, sao production lại 2 giây?\" Kiểm tra theo thứ tự: mô hình đóng che mất hàng đợi (coordinated omission); máy tạo tải bão hoà nên không đạt tải mục tiêu; dữ liệu và phân bố truy cập khác production (cache hit, kích thước database); dependency giả lập trả về ngay; lỗi trả nhanh được tính chung vào percentile; máy tạo tải đặt cạnh server, đi tắt qua load balancer, CDN và mạng thật nên không thấy hàng đợi trên đường đi của người dùng." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng kết luận từ một con số CPU: \"CPU mới 45% ở 1.800 req/s nên 3.000 req/s vẫn ổn\" là ngoại suy tuyến tính trên một đường cong không tuyến tính, và bỏ qua mọi tài nguyên khác (database, connection pool, dependency). Trần phải đo bằng cách tăng tải tới khi p99 vượt SLO." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "test-types", "front": "Load, stress, spike, soak test khác nhau thế nào?", "back": "Load: ở đỉnh dự kiến. Stress: tăng tới khi vỡ. Spike: tăng đột ngột. Soak: chạy nhiều giờ để thấy rò rỉ." },
+    { "id": "closed-model", "front": "Throughput của mô hình đóng tính thế nào?", "back": "Số user / (thời gian phản hồi + think time); server chậm đi thì tải tự giảm." },
+    { "id": "open-model", "front": "Mô hình mở khác mô hình đóng ở đâu?", "back": "Request đến theo tốc độ định trước, không phụ thuộc request trước đã xong chưa, giống người dùng thật trên internet." },
+    { "id": "co-def", "front": "Coordinated omission là gì?", "back": "Công cụ chờ response rồi mới gửi tiếp, nên khi server đứng nó bỏ sót các request lẽ ra đã gửi và báo latency đẹp hơn thật." },
+    { "id": "co-fix", "front": "Tránh coordinated omission thế nào?", "back": "Dùng mô hình mở (k6 arrival-rate, Gatling `injectOpen`) và đo từ lúc request lẽ ra được gửi; hoặc bù bằng HdrHistogram." },
+    { "id": "dropped-iterations", "front": "`dropped_iterations` của k6 báo gì?", "back": "Số lần lặp không bắt đầu được vì hết VU trong executor arrival-rate: tải thực tế thấp hơn mục tiêu." },
+    { "id": "generator-bottleneck", "front": "Dấu hiệu máy tạo tải là nút cổ chai?", "back": "CPU máy tạo tải cao, latency phía client tăng trong khi latency phía server không đổi, throughput không lên nữa." },
+    { "id": "fast-errors", "front": "Vì sao phải tách request lỗi khi đọc latency?", "back": "Lỗi trả nhanh như `503` trong 2ms kéo p99 xuống, che mất việc hệ thống đang quá tải." },
+    { "id": "realistic-data", "front": "Dữ liệu test sai làm kết quả sai thế nào?", "back": "Ít id thì cache hit gần 100%; database nhỏ thì vừa trong bộ nhớ và plan khác production." }
+  ]
+}

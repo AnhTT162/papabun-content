@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Campaign 20:00 thứ Sáu: gấp 6 lần tải trong 2 phút",
+  "prompt": "Service catalog-checkout chạy trên Kubernetes, trải đều 3 AZ. Đỉnh bình thường 1.200 req/s, đang chạy 6 pod (`requests` = `limits` = 2 vCPU), HPA theo CPU với mục tiêu 80%, `minReplicas` 4, `maxReplicas` 40. Load test một pod: 250 req/s thì CPU 53%, p99 110ms; 400 req/s thì CPU 85%, p99 280ms; 450 req/s thì p99 1,4 giây. SLO: p99 dưới 300ms. Pod khởi động mất 40 giây, và 2 phút đầu p99 gấp 3 lần vì JIT chưa nóng. Cụm còn chỗ cho khoảng 6 pod nữa; thêm node mất khoảng 3 phút. Mỗi pod có HikariCP pool 20; PostgreSQL `max_connections` 500, trong đó 100 dành cho service khác và batch. Mỗi request giữ connection trung bình 10ms. Database primary dùng 35% CPU ở 1.200 req/s, 80% tải đó là đọc catalog. Marketing dự báo campaign 20:00 thứ Sáu đạt 6 lần đỉnh (7.200 req/s) trong 2 phút đầu và kéo dài 30 phút. Campaign trước, HPA mất 6 phút mới đủ pod và p99 ở mức 4 giây suốt thời gian đó. Lập kế hoạch capacity và autoscale.",
+  "hints": [
+    "Trần của một pod là bao nhiêu req/s, và bạn muốn mỗi pod chạy ở bao nhiêu phần trăm của trần?",
+    "Mất một AZ thì số pod còn lại phải gánh bao nhiêu req/s mỗi pod?",
+    "Khi CPU đã chạm 100%, HPA với mục tiêu 80% thấy tải tăng bao nhiêu lần mỗi vòng? Một vòng thực tế dài bao lâu?",
+    "Thêm pod thì tài nguyên nào phía sau không tăng theo? Tính connection và CPU của database ở 7.200 req/s."
+  ],
+  "solution": "**Capacity một pod**: trần là 400 req/s (p99 280ms, còn trong SLO); ở 450 req/s p99 đã 1,4 giây. Kế hoạch ở 60% trần: 240 req/s mỗi pod, CPU khoảng 51%. Đỉnh 7.200 req/s cần 30 pod, 10 pod mỗi AZ. Mất một AZ còn 20 pod, mỗi pod 360 req/s: vẫn dưới trần, p99 tăng nhưng còn trong SLO.\n\n**Vì sao lần trước mất 6 phút**: CPU không vượt 100% (`requests` bằng `limits`), nên với mục tiêu 80% HPA chỉ thấy tải gấp 1,25 lần mỗi vòng dù thật ra gấp 6. Mỗi vòng phải chờ pod mới khởi động, ready và có mẫu CPU (HPA coi pod chưa ready là 0% khi scale up), tức khoảng một phút chứ không phải 15 giây. Sau khoảng 12 pod thì hết chỗ trên node, phải chờ thêm 3 phút. Từ 6 pod, dãy là 6 → 8 → 10 → 13 → 17 → 20 rồi dừng vì CPU 77% đã nằm trong tolerance của mục tiêu 80%: mỗi pod khoảng 360 req/s, 90% trần, nên p99 vẫn sát SLO cả khi đã scale xong.\n\n**Scale trước, không chờ HPA**:\n- 19:30 nâng `minReplicas` lên 30 (KEDA cron scaler hoặc CronJob sửa HPA), 20:45 hạ về. Node được thêm sẵn và JIT đã nóng trước 20:00.\n- Hạ mục tiêu CPU của HPA xuống 50% (khoảng 235 req/s mỗi pod) để còn headroom và HPA thấy được tải gấp đôi mỗi vòng nếu thực tế vượt dự báo.\n- `maxReplicas` 45, cửa sổ scale down 15 phút trong thời gian campaign để không bỏ pod khi lưu lượng dao động.\n- Readiness chỉ báo ready sau khi chạy warm-up; giữ vài pod giữ chỗ priority thấp để pod tăng thêm không phải chờ node.\n\n**Database là trần thật**: CPU database tăng theo tải, 6 lần của 35% là 210%, không thể chạy. Cache phần đọc catalog (giá, tồn kho hiển thị chỉ cần mới trong vài giây) với hit 90%: tải đọc còn 10%, CPU database còn khoảng 59%. Cache phải được làm ấm trước 20:00 (cùng lúc nâng `minReplicas`), nếu không vài phút đầu database nhận gần đủ tải đọc gấp 6. Ở mức 70% CPU database, hệ thống chịu được khoảng 8.500 req/s; đó mới là trần của cả hệ thống, không phải 30 pod × 400 = 12.000.\n\n**Connection**: pool 20 × 30 pod là 600, vượt 400 connection còn lại. Theo Little's law, 240 req/s × 10ms chỉ cần 2,4 connection mỗi pod (3,6 khi mất một AZ), nên pool 8 là dư: 30 pod dùng 240, `maxReplicas` 45 dùng 360, vẫn dưới 400. Không deploy trong campaign, vì `maxSurge` sẽ thêm pod và connection.\n\n**Khi vượt kế hoạch**: rate limit tổng ở gateway khoảng 8.500 req/s (trần của database), trên mức đó đưa người dùng vào hàng chờ ảo; load shedding cho gợi ý sản phẩm và đánh giá để giữ capacity cho checkout.\n\n**Kiểm chứng trước thứ Sáu**: load test theo arrival rate (mô hình mở) ở 7.200 và 8.500 req/s với dữ liệu giống production và cache lạnh lúc bắt đầu; diễn tập tắt một AZ ở 7.200 req/s; dashboard theo dõi p99, CPU database, connection đang dùng, tỉ lệ cache hit, số pod chưa ready.",
+  "tradeoffs": [
+    {
+      "option": "Scale trước theo lịch, HPA chỉ xử lý phần vượt dự báo",
+      "pros": ["Đủ pod, node và JIT đã nóng trước khi tải tới", "Không phụ thuộc tốc độ phản ứng của HPA và Cluster Autoscaler"],
+      "cons": ["Trả tiền cho 30 pod từ 19:30 dù tải chưa tới", "Dự báo sai giờ hay sai độ lớn thì vẫn phải dựa vào HPA và rate limit"]
+    },
+    {
+      "option": "Chỉ dựa vào HPA theo CPU",
+      "pros": ["Không cần biết trước lịch campaign", "Ít cấu hình riêng cho từng sự kiện"],
+      "cons": ["Mất nhiều phút cho đỉnh tăng 6 lần trong 2 phút", "CPU bão hoà làm HPA đánh giá thấp tải, pod mới chưa nóng JIT"]
+    },
+    {
+      "option": "Chạy 30 pod cả ngày",
+      "pros": ["Đơn giản, luôn sẵn sàng cho đỉnh bất ngờ"],
+      "cons": ["Khoảng 5 lần chi phí so với tải thường ngày", "Không giải quyết trần của database và connection"]
+    }
+  ]
+}

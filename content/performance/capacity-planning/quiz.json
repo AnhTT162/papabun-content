@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hpa-saturated-cpu",
+      "kind": "output",
+      "prompt": "Đang có 5 pod, `requests` = `limits`. Tải tăng 6 lần nên CPU mọi pod chạm 100%. HPA có mục tiêu CPU 80%. Đoạn code tính như HPA, in ra gì?",
+      "code": "int currentReplicas = 5;\ndouble currentCpu = 100, targetCpu = 80;\nint desired = (int) Math.ceil(currentReplicas * currentCpu / targetCpu);\nSystem.out.println(desired);",
+      "options": ["7", "30", "6", "10"],
+      "answer": 0,
+      "explanation": "5 × 100 / 80 = 6,25, làm tròn lên là 7. CPU không thể vượt 100% khi `requests` bằng `limits`, nên HPA chỉ thấy tải gấp 1,25 lần dù thật ra gấp 6. 10 là kết quả nếu mục tiêu là 50%. Đỉnh lớn vì vậy phải qua nhiều vòng scale, mỗi vòng chờ pod mới ready; mục tiêu thấp hơn (50%) hay scale trước theo lịch giúp tới đích nhanh hơn."
+    },
+    {
+      "id": "plan-pods",
+      "kind": "single",
+      "prompt": "Một pod giữ p99 trong SLO tới 400 req/s. Kế hoạch chạy ở 60% trần, trải đều 3 AZ, đỉnh dự báo 7.200 req/s. Cần bao nhiêu pod, và mất một AZ thì sao?",
+      "options": [
+        "30 pod; mất một AZ thì mỗi pod 360 req/s, vẫn dưới trần",
+        "18 pod; mỗi pod chạy đúng 400 req/s ở trần SLO đã đo",
+        "30 pod; mất một AZ thì mỗi pod 600 req/s, vượt trần",
+        "45 pod; phải chạy dư 50% để không AZ nào bị quá tải"
+      ],
+      "answer": 0,
+      "explanation": "60% của 400 là 240 req/s; 7.200 / 240 = 30 pod, 10 pod mỗi AZ. Mất một AZ còn 20 pod, mỗi pod 7.200 / 20 = 360 req/s, vẫn dưới trần 400. 18 pod chạy ngay ở trần nên không còn headroom và p99 sát SLO; mất một AZ là vượt."
+    },
+    {
+      "id": "metric-io-bound",
+      "kind": "single",
+      "prompt": "Service chủ yếu chờ một API bên thứ ba. Khi tải tăng gấp đôi, p99 tăng từ 200ms lên 2 giây, thread pool đầy, nhưng CPU vẫn 25%. Nên autoscale theo gì?",
+      "options": [
+        "Số request đang xử lý mỗi pod so với mục tiêu",
+        "CPU, nhưng hạ mục tiêu từ 70% xuống còn 20%",
+        "p99 latency của service, mục tiêu là 300ms",
+        "Memory, vì thread chờ vẫn giữ stack và heap"
+      ],
+      "answer": 0,
+      "explanation": "Thread chờ I/O không tốn CPU, nên CPU không phản ánh việc pool đã bão hoà; hạ mục tiêu CPU thì service luôn chạy dư thừa lúc bình thường. Scale theo latency sai vì nếu bên thứ ba chậm, thêm pod chỉ thêm lời gọi tới nó. Số request đang xử lý (Little's law: throughput × thời gian) đo đúng tài nguyên đang cạn. Lưu ý thêm pod không tăng rate limit của bên thứ ba."
+    },
+    {
+      "id": "scale-db-limit",
+      "kind": "single",
+      "prompt": "Service tự scale từ 10 lên 40 pod, mỗi pod HikariCP pool cố định 20. PostgreSQL `max_connections` 500. Điều gì xảy ra trước tiên?",
+      "options": [
+        "Pod mới không lấy được connection, database báo quá số connection",
+        "Không có gì, PostgreSQL tự xếp hàng các connection còn lại",
+        "HikariCP tự chia lại pool để tổng không vượt 500 connection",
+        "HPA tự dừng lại khi database bắt đầu báo lỗi connection"
+      ],
+      "answer": 0,
+      "explanation": "40 × 20 = 800 connection, vượt 500: PostgreSQL từ chối connection mới với lỗi `sorry, too many clients already`, và pod mới có thể không khởi động được hay lỗi ngay khi nhận tải. HikariCP không biết các pod khác, HPA không biết database. Tính ngân sách connection theo `maxReplicas` (cộng surge khi deploy) và cỡ pool theo Little's law, thường nhỏ hơn nhiều so với 20."
+    }
+  ]
+}

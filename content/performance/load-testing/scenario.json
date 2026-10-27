@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Load test báo đạt, production vẫn sập",
+  "prompt": "Trước campaign, team chạy k6 trên staging để xác nhận API sản phẩm và checkout chịu được 3.000 req/s. Kịch bản: executor `constant-vus` với 200 VU, không có `sleep`, mỗi vòng lặp gọi `GET /products/{id}` với id chọn ngẫu nhiên trong 10 sản phẩm, rồi `POST /orders`. Chạy 15 phút từ một máy tạo tải 4 vCPU (CPU máy này 95% suốt test). Kết quả: 1.800 req/s, p99 180ms, 4% request lỗi `503` (trả trong 2–3ms). Server CPU 45%. Team kết luận: CPU mới 45% nên 3.000 req/s sẽ vẫn ổn. Database staging có 50.000 sản phẩm, production có 1 triệu với phân bố truy cập lệch. Payment dùng stub trả về ngay. Ngày campaign, ở 2.400 req/s p99 lên 3 giây, database primary CPU 100%. Chỉ ra những chỗ test sai và thiết kế lại test.",
+  "hints": [
+    "Với 200 VU không nghỉ, throughput phụ thuộc gì? Nếu server chậm đi thì tải sinh ra thay đổi ra sao?",
+    "1.800 req/s có phải là trần của server không? Máy tạo tải đang ở trạng thái nào?",
+    "10 sản phẩm và 50.000 dòng làm cache và database khác production thế nào?",
+    "Các request `503` trả trong 2ms ảnh hưởng gì tới p99? Stub payment trả về ngay ảnh hưởng gì tới số thread và connection đang giữ?"
+  ],
+  "solution": "**Những chỗ sai**:\n- *Mô hình đóng*: 200 VU không nghỉ cho throughput = 200 / R. 1.800 req/s chỉ là hệ quả của R ≈ 111ms (Little's law), không phải tải chọn trước. Server chậm đi thì k6 tự gửi ít đi, nên không bao giờ thấy được hàng đợi dồn lên ở 3.000 req/s, và p99 bị coordinated omission làm đẹp.\n- *Máy tạo tải bão hoà*: ở CPU 95%, event loop của k6 bị nghẽn nên cả số đo latency lẫn tốc độ gửi đều méo. R ≈ 111ms và 1.800 req/s không còn phản ánh server, nên test này chưa cho biết trần của server.\n- *Ngoại suy từ CPU*: CPU 45% ở 1.800 req/s không nói gì về 3.000 req/s; nút cổ chai lần này là database, và latency tăng phi tuyến gần trần, không theo tỉ lệ CPU.\n- *Dữ liệu không thật*: 10 sản phẩm thì cache hit gần 100% và database gần như không bị đọc; 50.000 dòng thì index và cache của database chứa hết. Production có 1 triệu sản phẩm, phân bố lệch, nên phần đọc rơi xuống database lớn hơn nhiều.\n- *Lỗi bị tính chung*: 4% `503` trả trong 2–3ms kéo p99 xuống, trong khi đúng ra đó là dấu hiệu quá tải cần dừng lại điều tra.\n- *Stub trả về ngay*: payment thật có p50 khoảng 150ms, p99 400ms, mỗi request giữ thread và connection lâu hơn nhiều; theo Little's law số request đồng thời của checkout tăng gấp nhiều lần so với staging.\n\n**Thiết kế lại**:\n- *Câu hỏi*: tải cao nhất mà p99 dưới 300ms và lỗi dưới 1%, so với mục tiêu 3.000 req/s và biên tới 3.600 req/s.\n- *Mô hình mở*: `ramping-arrival-rate`, tăng từng bậc 400 req/s, mỗi bậc giữ 10 phút, từ 1.200 tới 3.600 req/s. `preAllocatedVUs` 500, `maxVUs` 6.000 (đủ cho 3.000 req/s khi latency lên 2 giây), threshold `dropped_iterations` bằng 0 để biết k6 có thiếu VU không.\n- *Máy tạo tải*: chia ra 3–4 máy (k6 chạy phân tán, hoặc Grafana Cloud k6), theo dõi CPU và port của từng máy, giữ dưới 70%.\n- *Kịch bản*: tỉ lệ endpoint lấy từ access log (ví dụ 85% xem sản phẩm, 10% tìm kiếm, 5% đặt hàng), id sản phẩm lấy theo phân bố truy cập thật; database staging khôi phục từ bản sao production đã che dữ liệu cá nhân, hoặc sinh dữ liệu cùng kích thước và phân bố.\n- *Dependency*: stub payment có latency như thật (p50 150ms, p99 400ms, thỉnh thoảng timeout) và giới hạn đồng thời như bên thứ ba.\n- *Đọc kết quả*: p99 chỉ của request thành công, tỉ lệ lỗi riêng; cạnh mỗi bậc đặt CPU database, connection đang dùng, `pg_stat_statements` top query, cache hit ratio, thread busy của Tomcat. Kiểm tra số request đồng thời phía server ≈ throughput × latency trung bình.\n- *Thêm*: spike test 1.200 → 3.000 req/s trong 2 phút cho đúng hình dạng campaign, soak test 4 giờ ở 2.000 req/s.\n\nThreshold trong k6:\n```js\nexport const options = {\n  scenarios: {\n    browse_and_buy: {\n      executor: 'ramping-arrival-rate',\n      startRate: 1200, timeUnit: '1s',\n      preAllocatedVUs: 500, maxVUs: 6000,\n      stages: [\n        { target: 1200, duration: '10m' },\n        { target: 1600, duration: '30s' }, { target: 1600, duration: '10m' },\n        // ... từng bậc 400 req/s tới 3600\n      ],\n    },\n  },\n  thresholds: {\n    'http_req_duration{expected_response:true}': ['p(99)<300'],\n    http_req_failed: ['rate<0.01'],\n    dropped_iterations: ['count<1'],\n  },\n};\n```\nNếu bậc 2.400 req/s đã vượt SLO và CPU database chạm trần, kết quả đó trùng với sự cố thật, tức test đã giống production.",
+  "tradeoffs": [
+    {
+      "option": "Mô hình mở (arrival rate) với dữ liệu và phân bố giống production",
+      "pros": ["Thấy được hàng đợi và đuôi thật khi gần trần", "Kết quả dùng trực tiếp cho capacity planning"],
+      "cons": ["Cần nhiều VU và nhiều máy tạo tải khi server chậm", "Tốn công chuẩn bị dữ liệu, che dữ liệu cá nhân và stub có latency thật"]
+    },
+    {
+      "option": "Mô hình đóng có think time, mô phỏng phiên người dùng",
+      "pros": ["Hợp với hệ thống có số người dùng cố định (công cụ nội bộ, số máy POS)", "Dễ viết kịch bản theo phiên"],
+      "cons": ["Tải giảm khi server chậm, che mất quá tải", "Phải chọn số user và think time đúng thì throughput mới đúng"]
+    },
+    {
+      "option": "Shadow traffic hoặc canary trên production",
+      "pros": ["Dữ liệu, phân bố và dependency đều là thật", "Không cần dựng môi trường giống production"],
+      "cons": ["Không vượt được tải hiện tại để tìm trần", "Phải chặn ghi dữ liệu thật và tác dụng phụ như thanh toán, email"]
+    }
+  ]
+}
