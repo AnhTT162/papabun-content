@@ -62,14 +62,14 @@ Thứ tự **học** khác thứ tự **viết** (mục 4): học theo tầng xu
 
 ## 4. Thứ tự viết
 
-Thứ tự do người học chốt ngày 2026-10-24 (thay thứ tự cũ theo spec của app). Trong mỗi track, viết bài Nền trước rồi tới bài Vững và Sâu, để bài sau dùng được bài trước làm `prerequisites`.
+Thứ tự do người học chốt ngày 2026-10-24 (thay thứ tự cũ theo spec của app); ngày 2026-10-27 đưa Nền tảng CS, Core Java, JVM, System Design và Solution Architect lên trước Security, Testing, Cloud & DevOps. Trong mỗi track, viết bài Nền trước rồi tới bài Vững và Sâu, để bài sau dùng được bài trước làm `prerequisites`.
 
 | Đợt | Track |
 |---|---|
 | 1 | Database (phần còn lại) → Caching & Messaging → Spring → Concurrency (phần còn lại) |
 | 2 | Design → Distributed Systems → Performance & Troubleshooting |
-| 3 | Security → Testing → System Design → Cloud & DevOps |
-| 4 | Nền tảng CS, Core Java, JVM (phần còn lại) → Solution Architect |
+| 3 | Nền tảng CS, Core Java, JVM (phần còn lại) → System Design → Solution Architect |
+| 4 | Security → Testing → Cloud & DevOps |
 | Xen kẽ | Bài ở track khác khi một bài đang viết cần nó làm bài nền |
 
 ## 5. Khái niệm dùng chung: bài nào giải thích chính
