@@ -135,8 +135,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 7 | `collections-overview` | Collections Overview | junior | Chọn cài đặt theo Big-O, bất biến và view, đa luồng | A L Sc | ✅ |
 | 8 | `date-time-api` | java.time | junior | `Instant`, `ZonedDateTime`, DST, lưu thời gian đúng cách | L B | ✅ |
 | 9 | `bigdecimal-money` | Số thực & tiền tệ | junior | Sai số `double`, `BigDecimal` equals và compareTo, rounding | L B | ✅ |
-| 10 | `maven-gradle` | ✚ Maven, Gradle & quản lý dependency | junior | Lifecycle, scope, BOM, semantic versioning, dependency trung gian và xung đột phiên bản, build tái lập | L B T | ⬜ |
-| 11 | `java-logging` | ✚ Logging trong Java | junior | SLF4J và Logback/Log4j2, log level, chi phí logging, async appender, MDC, bài học Log4Shell | L B | ⬜ |
+| 10 | `maven-gradle` | ✚ Maven, Gradle & quản lý dependency | junior | Lifecycle, scope, BOM, semantic versioning, dependency trung gian và xung đột phiên bản, build tái lập | L B T | ✅ |
+| 11 | `java-logging` | ✚ Logging trong Java | junior | SLF4J và Logback/Log4j2, log level, chi phí logging, async appender, MDC, bài học Log4Shell | L B | ✅ |
 | 12 | `hashmap-internals` | HashMap Internals | mid | Hash spreading, resize, treeify | A L S B | ✅ |
 | 13 | `exceptions` | Exceptions | mid | Checked/unchecked, cause, try-with-resources, fast throw | L B | ✅ |
 | 14 | `generics` | Generics & type erasure | mid | Erasure, wildcard và PECS, bridge method, heap pollution | L B | ⬜ |

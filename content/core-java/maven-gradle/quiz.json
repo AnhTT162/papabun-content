@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "nearest-wins",
+      "kind": "single",
+      "prompt": "Project khai báo trực tiếp `guava:31.0`. Một thư viện trực tiếp khác kéo `guava:33.6` qua một tầng trung gian. Maven chọn bản nào?",
+      "options": ["`31.0`, khai báo trực tiếp gần gốc hơn", "`33.6`, vì Maven luôn chọn bản mới nhất", "Build lỗi vì hai phiên bản xung đột", "Cả hai cùng nằm trên classpath"],
+      "answer": 0,
+      "explanation": "Khai báo trực tiếp ở độ sâu 1, bản trung gian ở độ sâu 2, nên nearest-wins chọn 31.0 dù cũ hơn. Maven không báo lỗi; Gradle trong tình huống này mặc định chọn 33.6."
+    },
+    {
+      "id": "scope-runtime",
+      "kind": "single",
+      "prompt": "JDBC driver PostgreSQL nên khai báo scope nào trong Maven?",
+      "options": ["`runtime`", "`provided`", "`test`", "`import`"],
+      "answer": 0,
+      "explanation": "Code chỉ dùng API `java.sql`, driver chỉ cần lúc chạy. `runtime` đóng gói driver nhưng không cho code vô tình phụ thuộc trực tiếp vào class của nó. `provided` thì không đóng gói, `import` chỉ dành cho BOM."
+    },
+    {
+      "id": "lifecycle-phase",
+      "kind": "single",
+      "prompt": "Chạy `mvn package` thì phase nào sau đây **không** chạy?",
+      "options": ["`install`", "`compile`", "`test`", "`validate`"],
+      "answer": 0,
+      "explanation": "Gọi một phase chạy mọi phase đứng trước nó trong lifecycle. `install` đứng sau `package` (và `verify`) nên không chạy."
+    },
+    {
+      "id": "override-single-lib",
+      "kind": "single",
+      "prompt": "Project dùng Spring Boot BOM. Cần vá lỗ hổng ở `jackson-databind`. Cách nào an toàn nhất?",
+      "options": ["Đổi phiên bản cả bộ qua `jackson-bom.version`", "Khai báo riêng `jackson-databind` bản mới", "Exclude `jackson-databind` khỏi starter", "Đổi sang Gradle để chọn bản cao nhất"],
+      "answer": 0,
+      "explanation": "Các module Jackson phát hành cùng nhau; nâng riêng `jackson-databind` lên bản minor mới mà để `jackson-core`, `jackson-annotations` ở bản cũ dễ gây `NoSuchMethodError` (bản vá dạng `2.x.y.z` chỉ cho databind là ngoại lệ được thiết kế để thay riêng). Đổi property của BOM nâng cả bộ đồng bộ."
+    }
+  ]
+}

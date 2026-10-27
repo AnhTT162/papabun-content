@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-logging",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Logging trong Java",
+  "summary": "Facade và implementation (SLF4J, Logback, Log4j2, JUL), SLF4J tìm provider thế nào, ghép phiên bản SLF4J với backend, bridge và vòng lặp bridge, cây logger và additivity làm log in hai lần, bài học Log4Shell.",
+  "level": "junior",
+  "order": 11,
+  "minutes": 10,
+  "prerequisites": ["maven-gradle"],
+  "terms": ["logging-facade", "slf4j", "logger-additivity", "mdc", "log4shell", "jndi", "service-loader"],
+  "references": [
+    { "title": "SLF4J user manual", "url": "https://www.slf4j.org/manual.html" },
+    { "title": "Logback manual: Architecture (additivity)", "url": "https://logback.qos.ch/manual/architecture.html" },
+    { "title": "Apache Log4j Security Vulnerabilities", "url": "https://logging.apache.org/security.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Ứng dụng dùng Logback qua SLF4J thì có bị Log4Shell không?\" Không trực tiếp: lỗ hổng nằm ở `log4j-core` 2.x (từ 2.0-beta9 tới 2.14.1), không ở API SLF4J hay Logback. Spring Boot mặc định chỉ có `log4j-api` và `log4j-to-slf4j` (bridge về SLF4J), cũng không chứa lỗ hổng. Nhưng phải kiểm cả cây dependency: một thư viện trung gian có thể kéo `log4j-core` vào classpath và tự dùng nó. Vì thế lúc đó các team chạy `mvn dependency:tree | grep log4j-core` trên mọi service, không chỉ đọc code của mình." },
+    { "type": "callout", "style": "tip", "markdown": "Mức log, MDC, chi phí log, AsyncAppender, structured log và che dữ liệu nhạy cảm trên production được phân tích ở bài Log cho production. Bài này tập trung vào thư viện: ai gọi ai, nạp thế nào, cấu hình sai ra sao." }
+  ]
+}

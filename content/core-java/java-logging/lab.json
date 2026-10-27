@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Mỗi dòng log đơn hàng in hai lần",
+  "context": "Team muốn log của package `com.shop.order` ở mức INFO ngay cả khi root để WARN trên production, nên thêm một `<logger>` riêng và gắn appender cho nó. Từ đó mỗi dòng log của `OrderService` xuất hiện hai lần trong Loki, hoá đơn lưu trữ log tăng theo.",
+  "buggyCode": "<configuration>\n  <appender name=\"CONSOLE\" class=\"ch.qos.logback.core.ConsoleAppender\">\n    <encoder><pattern>%-5level %logger{20} - %msg%n</pattern></encoder>\n  </appender>\n\n  <logger name=\"com.shop.order\" level=\"INFO\">\n    <appender-ref ref=\"CONSOLE\"/>\n  </logger>\n\n  <root level=\"WARN\">\n    <appender-ref ref=\"CONSOLE\"/>\n  </root>\n</configuration>\n\n// OrderService\nprivate static final Logger log = LoggerFactory.getLogger(\"com.shop.order.OrderService\");\nlog.info(\"Đặt hàng {}\", 42);",
+  "symptom": {
+    "description": "Chạy với SLF4J 2.0.17 và Logback 1.5.18 trên JDK 27: một lời gọi `log.info` sinh hai dòng giống hệt.",
+    "output": "INFO  c.s.o.OrderService - Đặt hàng 42\nINFO  c.s.o.OrderService - Đặt hàng 42"
+  },
+  "diagnosis": {
+    "question": "Vì sao một event được ghi hai lần?",
+    "options": [
+      "Event đi tới appender của logger con rồi lên appender của root",
+      "Có hai SLF4J provider trên classpath nên mỗi cái ghi một lần",
+      "Root ở WARN nên Logback ghi lại event INFO ở mức WARN",
+      "`getLogger` gọi hai lần tạo hai logger cùng tên"
+    ],
+    "answer": 0,
+    "explanation": "Logback gửi event tới appender của logger phát ra nó và mọi logger tổ tiên (additivity mặc định `true`). `CONSOLE` được gắn ở cả `com.shop.order` và root nên ghi hai lần. Root ở WARN cũng không chặn: level chỉ được kiểm ở logger phát ra event (`com.shop.order` là INFO), không kiểm lại ở root. `LoggerFactory` trả cùng một logger cho cùng một tên."
+  },
+  "fix": {
+    "code": "<!-- Cách 1: chỉ đặt level, để log tự lên appender của root -->\n<logger name=\"com.shop.order\" level=\"INFO\"/>\n\n<!-- Cách 2: cần appender riêng thì tắt additivity -->\n<logger name=\"com.shop.order\" level=\"INFO\" additivity=\"false\">\n  <appender-ref ref=\"ORDER_FILE\"/>\n</logger>",
+    "explanation": "Logger con thường chỉ cần đổi level; appender gắn ở root là đủ. Chỉ gắn appender ở logger con khi muốn log đi nơi khác, và khi đó đặt `additivity=\"false\"` nếu không muốn nó lặp lại ở root. Lưu ý level của logger con quyết định event có được tạo không; level của root không chặn event đã đi lên từ logger con."
+  }
+}

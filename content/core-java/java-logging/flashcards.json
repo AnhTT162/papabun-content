@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "facade-vs-impl", "front": "SLF4J khác Logback thế nào?", "back": "SLF4J là facade (API code gọi); Logback là implementation thật sự ghi log. Đổi implementation không phải sửa code." },
+    { "id": "no-provider", "front": "SLF4J 2 không tìm thấy provider thì sao?", "back": "In cảnh báo `No SLF4J providers were found` rồi dùng NOP logger: mọi log bị bỏ." },
+    { "id": "provider-discovery", "front": "SLF4J 2.x tìm backend bằng cách nào?", "back": "`ServiceLoader` tìm `SLF4JServiceProvider` trên classpath; bản 1.x dùng class `StaticLoggerBinder`." },
+    { "id": "additivity", "front": "Additivity của logger là gì?", "back": "Event được gửi tới appender của logger và mọi tổ tiên. Gắn cùng appender ở logger con và root thì log in hai lần." },
+    { "id": "bridge-loop", "front": "Vì sao không được có cả `log4j-to-slf4j` và `log4j-slf4j2-impl`?", "back": "Hai bridge chuyển log theo hai chiều ngược nhau tạo vòng lặp; Log4j 2.24 phát hiện và ném lỗi khi khởi tạo." },
+    { "id": "slf4j-logback-pair", "front": "SLF4J 2.x đi với phiên bản Logback nào?", "back": "Logback 1.3 trở lên. Logback 1.2 đi với SLF4J 1.7; lệch cặp thì SLF4J rơi về NOP." },
+    { "id": "log4shell", "front": "Log4Shell khai thác cơ chế gì?", "back": "`log4j-core` 2.x xử lý lookup `${jndi:ldap://...}` ngay trong message người dùng gửi lên, làm server tải và chạy code từ xa." },
+    { "id": "logback-spring", "front": "Vì sao Spring Boot khuyên dùng `logback-spring.xml`?", "back": "Spring Boot nạp nó sau khi môi trường sẵn sàng nên dùng được `<springProfile>` và `<springProperty>`." }
+  ]
+}

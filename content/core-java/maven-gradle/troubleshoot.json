@@ -1,0 +1,109 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Không ai commit, CI vẫn đỏ",
+  "symptom": "Nhánh `main` của `order-service` build xanh lúc 18:00 thứ Năm. Sáng thứ Sáu, job build lại theo lịch đỏ ở bước test, dù commit vẫn là `a41c9e2`. Lỗi là `NoSuchMethodError` trong `ReportClient` khi chạy test tích hợp xuất báo cáo.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Job #812 (thu 5, 18:00)  commit a41c9e2  SUCCESS\nJob #813 (thu 6, 07:00)  commit a41c9e2  FAILED\n\n[ERROR] ReportExportIT.exportsMonthlyReport  Time elapsed: 0.84 s  <<< ERROR!\njava.lang.NoSuchMethodError: 'void com.example.report.ReportRequest.setLocale(java.lang.String)'\n\tat com.example.report.ReportClient.export(ReportClient.java:58)\n\tat com.example.order.ReportExportIT.exportsMonthlyReport(ReportExportIT.java:31)\n\nMaven 3.9.9 (wrapper), JDK 21, repository: Nexus nội bộ (proxy Maven Central)\nArtifact của mỗi job: target/, surefire-reports/, tree.txt (mvn dependency:tree -Dverbose)",
+      "evidenceFormat": "monospace",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "So cây dependency đã resolve của job #812 và #813",
+          "quality": "good",
+          "feedback": "Code không đổi mà kết quả đổi, nên thứ đổi phải là đầu vào khác: dependency, công cụ, môi trường. `NoSuchMethodError` là dấu hiệu điển hình của hai jar không khớp phiên bản, và cây dependency trả lời trực tiếp câu đó.",
+          "next": "tree-diff"
+        },
+        {
+          "label": "Chạy lại job, có thể test tích hợp bị flaky",
+          "quality": "ok",
+          "feedback": "Chạy lại một lần để loại trừ lỗi hạ tầng là hợp lý, nhưng `NoSuchMethodError` không phải lỗi ngẫu nhiên: nó nghĩa là class đã nạp thiếu method mà bytecode gọi. Chạy lại sẽ đỏ y hệt.",
+          "next": "rerun"
+        },
+        {
+          "label": "Xoá cache `~/.m2` trên agent CI rồi build lại",
+          "quality": "poor",
+          "feedback": "Xoá cache xoá luôn bằng chứng (jar nào đã được tải, lúc nào), và nếu nguyên nhân nằm ở repository thì build lại vẫn tải đúng bản gây lỗi.",
+          "next": "rerun"
+        }
+      ]
+    },
+    {
+      "id": "rerun",
+      "evidence": "Job #814 (thu 6, 07:40)  commit a41c9e2  FAILED\nDownloading from nexus: .../com/example/report-model/1.7.0/report-model-1.7.0.jar\njava.lang.NoSuchMethodError: 'void com.example.report.ReportRequest.setLocale(java.lang.String)'\n\tat com.example.report.ReportClient.export(ReportClient.java:58)",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi lặp lại y hệt. Tiếp theo?",
+      "choices": [
+        {
+          "label": "So cây dependency giữa bản build xanh và bản đỏ",
+          "quality": "good",
+          "feedback": "Lỗi tất định, không phải flaky. Giờ cần biết jar nào khác giữa hai lần build.",
+          "next": "tree-diff"
+        },
+        {
+          "label": "Thử build bằng JDK 25 xem có khác không",
+          "quality": "poor",
+          "feedback": "JDK không đổi giữa hai job, và `NoSuchMethodError` trên class của ứng dụng không liên quan phiên bản JDK. Đổi thêm biến số chỉ làm khó điều tra.",
+          "next": "tree-diff"
+        }
+      ]
+    },
+    {
+      "id": "tree-diff",
+      "evidence": "$ diff -u tree-812.txt tree-813.txt\n   +- com.example:report-client:jar:2.3.1:compile\n-  |  \\- com.example:report-model:jar:1.6.0:compile\n+  |  \\- com.example:report-model:jar:1.7.0:compile\n\nNexus: com.example:report-model:1.7.0 được deploy lúc 22:14 thứ Năm",
+      "evidenceFormat": "monospace",
+      "question": "`report-client` không đổi nhưng `report-model` đổi từ 1.6.0 sang 1.7.0. Bạn kiểm tra gì?",
+      "choices": [
+        {
+          "label": "Xem pom của `report-client:2.3.1` khai báo `report-model` thế nào",
+          "quality": "good",
+          "feedback": "Phiên bản của dependency trung gian do pom của thư viện cha quyết định (trừ khi bạn ghim). Một bản 1.7.0 vừa xuất hiện và được chọn ngay gợi ý pom đó không ghim cứng một phiên bản.",
+          "next": "pom"
+        },
+        {
+          "label": "Ghim `report-model:1.6.0` trong `dependencyManagement` rồi đóng ticket",
+          "quality": "ok",
+          "feedback": "Đây là biện pháp cầm máu đúng và nên làm ngay để `main` xanh lại. Nhưng chưa biết vì sao một bản mới lại tự chui vào build; không sửa gốc thì thư viện khác cũng có thể làm vậy.",
+          "next": "pom"
+        },
+        {
+          "label": "Báo team report rằng 1.7.0 có bug, yêu cầu rollback",
+          "quality": "poor",
+          "feedback": "Chưa chắc 1.7.0 có bug: có thể nó đổi `setLocale(String)` sang `setLocale(Locale)` một cách hợp lệ trong bản minor. Câu hỏi đúng là vì sao build của bạn nhận một bản chưa ai kiểm tra.",
+          "next": "pom"
+        }
+      ]
+    },
+    {
+      "id": "pom",
+      "evidence": "<!-- report-client-2.3.1.pom -->\n<dependency>\n  <groupId>com.example</groupId>\n  <artifactId>report-model</artifactId>\n  <version>[1.6,2.0)</version>\n</dependency>\n\n<!-- report-model 1.7.0, changelog -->\n- ReportRequest.setLocale(String) -> setLocale(Locale)",
+      "evidenceFormat": "monospace",
+      "question": "Phòng ngừa lâu dài thế nào?",
+      "choices": [
+        {
+          "label": "Ghim bản qua BOM/`dependencyManagement`, bật Enforcer cấm range",
+          "quality": "good",
+          "feedback": "Ghim làm build tái lập, Enforcer (`banDynamicVersions` hoặc kiểm tra tương đương) làm CI đỏ ngay khi có range hay SNAPSHOT mới. Báo thêm cho team report: đổi chữ ký method public là phá tương thích, phải tăng major.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đổi range trong pom của `report-client` thành `[1.6,1.7)`",
+          "quality": "ok",
+          "feedback": "Sửa được lần này nhưng vẫn là range: bản 1.6.x tiếp theo lại tự vào build. Và bạn có thể không sở hữu thư viện đó.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Bỏ build theo lịch để tránh nhận bản mới qua đêm",
+          "quality": "poor",
+          "feedback": "Build theo lịch chính là thứ phát hiện ra lỗi trước khi một bản deploy nhận phải nó. Tắt nó chỉ dời lỗi sang lúc release.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: pom của `report-client:2.3.1` khai báo `report-model` bằng version range `[1.6,2.0)`. Maven resolve range thành **bản cao nhất có trong repository lúc build**, nên khi `report-model:1.7.0` được deploy lúc 22:14, build sáng hôm sau của cùng commit tự nhận bản mới. Bản 1.7.0 đổi `setLocale(String)` thành `setLocale(Locale)` (phá tương thích trong bản minor), và `report-client` đã biên dịch với 1.6 nên gọi method không còn tồn tại: `NoSuchMethodError`.\n\n**Phòng ngừa**:\n- Ghim phiên bản mọi dependency trung gian quan trọng bằng BOM hoặc `dependencyManagement`; Gradle thì bật dependency locking.\n- Maven Enforcer cấm version range và SNAPSHOT trong bản release.\n- Giữ `tree.txt` làm artifact của mỗi job như đã làm: nhờ nó mà sự cố này tìm ra trong vài phút.\n- Thư viện nội bộ tuân thủ semantic versioning; chạy kiểm tra tương thích binary (japicmp, revapi) trên CI của thư viện."
+    }
+  ]
+}

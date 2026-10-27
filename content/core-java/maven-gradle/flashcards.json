@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "maven-mediation", "front": "Maven chọn phiên bản nào khi hai dependency trung gian xung đột?", "back": "Bản gần gốc nhất trong cây (nearest-wins); cùng độ sâu thì bản xuất hiện trước." },
+    { "id": "gradle-mediation", "front": "Gradle chọn phiên bản nào khi xung đột?", "back": "Mặc định chọn bản cao nhất trong các bản được yêu cầu." },
+    { "id": "provided-scope", "front": "Scope `provided` nghĩa là gì?", "back": "Có khi biên dịch nhưng không đóng gói, vì môi trường chạy đã có sẵn (Servlet API trong Tomcat ngoài, Lombok)." },
+    { "id": "bom", "front": "BOM là gì?", "back": "Pom chỉ chứa danh sách phiên bản đã kiểm tra chạy cùng nhau, nhập bằng scope `import` để khai báo dependency không cần version." },
+    { "id": "dependency-management", "front": "`dependencyManagement` có thêm dependency vào project không?", "back": "Không. Nó chỉ định phiên bản cho nơi nào có dùng, kể cả dependency trung gian." },
+    { "id": "implementation-vs-api", "front": "Gradle `implementation` khác `api` thế nào?", "back": "`implementation` không lộ dependency sang module dùng mình; `api` lộ ra, nên thay đổi kéo theo biên dịch lại cả module kia." },
+    { "id": "range-snapshot", "front": "Vì sao version range và SNAPSHOT phá build tái lập?", "back": "Chúng được resolve theo những gì có trong repository lúc build, nên cùng commit có thể ra artifact khác nhau." },
+    { "id": "nosuchmethod", "front": "`NoSuchMethodError` lúc chạy thường báo hiệu gì?", "back": "Code được biên dịch với một phiên bản thư viện nhưng lúc chạy nạp phiên bản khác thiếu method đó." }
+  ]
+}

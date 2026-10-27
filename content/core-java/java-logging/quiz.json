@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "version-pairing",
+      "kind": "single",
+      "prompt": "Project Spring Boot 3 (SLF4J 2.x) ghi đè `logback-classic` về 1.2.13 vì một lý do cũ. Lúc chạy sẽ thế nào?",
+      "options": [
+        "SLF4J không thấy provider, dùng NOP và mất log",
+        "Chạy bình thường vì API SLF4J tương thích ngược",
+        "Log ra hai lần vì có hai bản Logback",
+        "Lỗi biên dịch vì thiếu class `Logger`"
+      ],
+      "answer": 0,
+      "explanation": "Logback 1.2 chỉ cung cấp binding kiểu SLF4J 1.7 (`StaticLoggerBinder`), còn SLF4J 2 tìm provider qua `ServiceLoader`, nên không thấy backend nào và rơi về NOP. Code vẫn biên dịch vì chỉ gọi API SLF4J."
+    },
+    {
+      "id": "level-inheritance",
+      "kind": "single",
+      "prompt": "Root ở WARN, `com.shop` ở DEBUG, không cấu hình gì cho `com.shop.order`. `log.debug(...)` trong `com.shop.order.OrderService` thì sao?",
+      "options": [
+        "Được ghi, vì kế thừa DEBUG từ `com.shop`",
+        "Bị bỏ, vì root đang ở WARN",
+        "Bị bỏ, vì logger chưa cấu hình mặc định INFO",
+        "Được ghi hai lần do additivity"
+      ],
+      "answer": 0,
+      "explanation": "Logger không đặt level kế thừa level của tổ tiên gần nhất có cấu hình, ở đây là `com.shop`. Additivity chỉ nhân đôi khi có appender gắn ở cả hai cấp."
+    },
+    {
+      "id": "log4shell-scope",
+      "kind": "single",
+      "prompt": "Service dùng SLF4J + Logback. Khi Log4Shell công bố, việc cần làm đầu tiên là gì?",
+      "options": [
+        "Kiểm cây dependency xem có `log4j-core` không",
+        "Không cần làm gì vì không dùng Log4j",
+        "Nâng Logback lên bản mới nhất",
+        "Tắt mọi log ở mức INFO"
+      ],
+      "answer": 0,
+      "explanation": "Lỗ hổng nằm ở `log4j-core`; code của bạn không gọi nó nhưng một thư viện trung gian có thể kéo vào và tự dùng. `mvn dependency:tree` hay `gradle dependencies` trả lời trong vài giây."
+    },
+    {
+      "id": "nop-logger",
+      "kind": "single",
+      "prompt": "Service chạy bình thường nhưng không có dòng log nào; lúc khởi động có cảnh báo `No SLF4J providers were found`. Nguyên nhân thường gặp là gì?",
+      "options": [
+        "Thiếu backend, SLF4J dùng NOP logger",
+        "Level của root bị đặt OFF trong `logback.xml`",
+        "Có hai backend nên SLF4J tắt cả hai",
+        "Logger chưa được khai báo `static final`"
+      ],
+      "answer": 0,
+      "explanation": "Không có provider thì SLF4J 2 dùng NOP logger và bỏ mọi log. Thường do exclude nhầm `spring-boot-starter-logging` hoặc trộn SLF4J 2 với binding kiểu 1.x. Hai backend thì SLF4J vẫn chọn một và chỉ cảnh báo."
+    }
+  ]
+}

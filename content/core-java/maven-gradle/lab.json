@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm SDK thanh toán, NoSuchMethodError lúc trả tiền",
+  "context": "Service hoá đơn đã dùng `invoice-lib:1.0`. Team thêm `payment-sdk:3.2`, build xanh, test của module hoá đơn qua. Lên staging, mọi lần gọi thanh toán đều lỗi. Cả hai thư viện đều dùng `money-util` (`invoice-lib` cần 1.0, `payment-sdk` cần 2.0 vì gọi `format(long, String)` mới có ở 2.0).",
+  "buggyCode": "<!-- pom.xml của service -->\n<dependencies>\n  <dependency>\n    <groupId>demo</groupId><artifactId>invoice-lib</artifactId><version>1.0</version>\n  </dependency>\n  <dependency>\n    <groupId>demo</groupId><artifactId>payment-sdk</artifactId><version>3.2</version>\n  </dependency>\n</dependencies>\n\n$ mvn dependency:tree -Dverbose\n[INFO] demo:app:jar:1.0\n[INFO] +- demo:invoice-lib:jar:1.0:compile\n[INFO] |  \\- demo:money-util:jar:1.0:compile\n[INFO] \\- demo:payment-sdk:jar:3.2:compile\n[INFO]    \\- (demo:money-util:jar:2.0:compile - omitted for conflict with 1.0)",
+  "symptom": {
+    "description": "Chạy trên Maven 3.10.0 và JDK 27: phần hoá đơn chạy đúng, gọi thanh toán ném lỗi.",
+    "output": "100000 VND\nException in thread \"main\" java.lang.NoSuchMethodError: 'java.lang.String demo.MoneyFormat.format(long, java.lang.String)'\n\tat demo.Payment.charge(Payment.java)\n\tat demo.App.main(App.java)"
+  },
+  "diagnosis": {
+    "question": "Vì sao classpath có `money-util:1.0` dù `payment-sdk` cần 2.0?",
+    "options": [
+      "Nearest-wins: cùng độ sâu thì bản khai báo trước thắng",
+      "Maven luôn chọn bản mới nhất như Gradle nhưng cache sai",
+      "`payment-sdk` khai báo `money-util` với scope `provided`",
+      "Cache `~/.m2` giữ bản 1.0 cũ nên Maven không tải 2.0"
+    ],
+    "answer": 0,
+    "explanation": "Maven dùng nearest-wins: bản ở độ sâu nhỏ nhất thắng, hoà thì bản xuất hiện trước trong cây. `invoice-lib` khai báo trước nên `money-util:1.0` được chọn, 2.0 bị bỏ (`omitted for conflict`). Biên dịch không lỗi vì service không gọi trực tiếp method mới; lỗi chỉ lộ khi `payment-sdk` chạy. Gradle với cùng cây sẽ chọn 2.0 (bản cao nhất)."
+  },
+  "fix": {
+    "code": "<dependencyManagement>\n  <dependencies>\n    <dependency>\n      <groupId>demo</groupId><artifactId>money-util</artifactId><version>2.0</version>\n    </dependency>\n  </dependencies>\n</dependencyManagement>\n\n<!-- và chặn tái diễn trên CI -->\n<plugin>\n  <artifactId>maven-enforcer-plugin</artifactId>\n  <executions><execution><goals><goal>enforce</goal></goals>\n    <configuration><rules><requireUpperBoundDeps/></rules></configuration>\n  </execution></executions>\n</plugin>",
+    "explanation": "Ghim phiên bản dùng chung ở `dependencyManagement` (hoặc BOM) sau khi kiểm 2.0 vẫn tương thích với `invoice-lib`. `requireUpperBoundDeps` làm build đỏ khi phiên bản được chọn thấp hơn bản mà một dependency yêu cầu. Đừng sửa bằng cách đổi thứ tự hai dependency: lần thêm thư viện sau sẽ hỏng lại."
+  }
+}

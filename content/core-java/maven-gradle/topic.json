@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "maven-gradle",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Maven, Gradle & quản lý dependency",
+  "summary": "Lifecycle và scope, dependency trung gian được chọn phiên bản thế nào (Maven nearest-wins và Gradle chọn bản cao nhất), BOM, semantic versioning, đọc `dependency:tree`, và build tái lập khi không ai commit mà CI vẫn đỏ.",
+  "level": "junior",
+  "order": 10,
+  "minutes": 12,
+  "prerequisites": ["java-basics-types"],
+  "terms": ["transitive-dependency", "dependency-mediation", "dependency-scope", "bom", "semantic-versioning", "snapshot-version", "reproducible-build", "fat-jar"],
+  "references": [
+    { "title": "Maven: Introduction to the Dependency Mechanism", "url": "https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html" },
+    { "title": "Gradle: Dependency resolution", "url": "https://docs.gradle.org/current/userguide/dependency_resolution.html" },
+    { "title": "Semantic Versioning 2.0.0", "url": "https://semver.org/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai thư viện cần hai phiên bản khác nhau của cùng một dependency thì làm sao?\" Trước hết xem có bản nào thoả cả hai không (thường là bản mới hơn, nếu tương thích ngược) và ép bằng `dependencyManagement` hay `constraints`. Nếu không có, mới tới các cách đắt hơn: shading (đổi package của một bản và nhúng vào), tách thành service riêng, hoặc classloader riêng. Chi tiết ở bài Classpath, JPMS & xung đột dependency." }
+  ]
+}
