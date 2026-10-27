@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ OrderService.java tới lệnh máy",
+  "nodes": [
+    { "id": "source", "label": "OrderService.java", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "classfile", "label": "OrderService.class", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "loader", "label": "ClassLoader + verifier", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "interp", "label": "Interpreter", "kind": "service", "x": 0.85, "y": 0.95 },
+    { "id": "jit", "label": "JIT C1 → C2", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "native", "label": "Mã máy trong code cache", "kind": "cache", "x": 0.85, "y": 0.05 }
+  ],
+  "edges": [
+    { "id": "javac", "from": "source", "to": "classfile", "label": "javac --release 21" },
+    { "id": "load", "from": "classfile", "to": "loader", "label": "lần dùng đầu" },
+    { "id": "run", "from": "loader", "to": "interp", "label": "chạy bytecode" },
+    { "id": "hot", "from": "interp", "to": "jit", "label": "method chạy nhiều" },
+    { "id": "compile", "from": "jit", "to": "native", "label": "biên dịch" },
+    { "id": "deopt", "from": "native", "to": "interp", "label": "deoptimize" }
+  ],
+  "steps": [
+    {
+      "caption": "Mã nguồn chỉ là văn bản. JVM không đọc file `.java` (trừ chế độ `java File.java`, vốn cũng biên dịch trong bộ nhớ trước).",
+      "show": ["source"]
+    },
+    {
+      "caption": "`javac` sinh class file: major version 65 với `--release 21`, constant pool và bytecode cho máy ngăn xếp, không gắn với CPU nào.",
+      "show": ["classfile", "javac"],
+      "highlight": ["javac"]
+    },
+    {
+      "caption": "Lần đầu code dùng tới class, ClassLoader đọc byte, verifier kiểm bytecode hợp lệ, rồi khối `static` chạy đúng một lần. Class file mới hơn JVM bị từ chối ngay ở đây.",
+      "show": ["loader", "load"],
+      "highlight": ["load"]
+    },
+    {
+      "caption": "Interpreter chạy từng lệnh bytecode và đếm số lần gọi, số vòng lặp của mỗi method. Chạy được ngay nhưng chậm hơn mã máy cả chục lần.",
+      "show": ["interp", "run"],
+      "highlight": ["run"]
+    },
+    {
+      "caption": "Method vượt ngưỡng được C1 biên dịch nhanh kèm thu profile; chạy tiếp đủ nhiều thì C2 biên dịch lại, tối ưu theo profile đó (kiểu thật của object, nhánh hay đi).",
+      "show": ["jit", "hot"],
+      "highlight": ["hot"]
+    },
+    {
+      "caption": "Mã máy nằm trong code cache, lần gọi sau chạy thẳng trên CPU. Đây là lý do ứng dụng Java nhanh dần trong vài phút đầu (warmup).",
+      "show": ["native", "compile"],
+      "highlight": ["compile"]
+    },
+    {
+      "caption": "Profile chỉ là dự đoán. Khi giả định sai (ví dụ xuất hiện lớp con mới), JVM bỏ mã máy đó và quay về interpreter, rồi biên dịch lại sau.",
+      "show": ["deopt"],
+      "highlight": ["deopt"]
+    }
+  ]
+}

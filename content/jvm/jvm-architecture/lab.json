@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thư viện build bằng JDK 21, service chạy Java 17 nổ lúc gọi API",
+  "context": "Nhóm platform phát hành thư viện `order-commons` cho các service. Máy dev và CI đã lên JDK 21, nhưng nhiều service vẫn chạy image Java 17, nên `pom.xml` ghi target 17. Bản mới qua hết test trên CI và service khởi động bình thường. Vài giờ sau, API lấy đơn mới nhất trả 500.",
+  "buggyCode": "<!-- pom.xml của order-commons, build trên CI bằng JDK 21 -->\n<properties>\n    <maven.compiler.source>17</maven.compiler.source>\n    <maven.compiler.target>17</maven.compiler.target>\n</properties>\n\n// OrderQueries.java trong order-commons\npackage com.example.orders;\n\nimport java.util.List;\n\npublic final class OrderQueries {\n    public record Order(String id, long amount) {}\n\n    // orders đã sắp xếp mới nhất trước\n    public static Order latest(List<Order> orders) {\n        return orders.getFirst();\n    }\n}",
+  "symptom": {
+    "description": "Service chạy `eclipse-temurin:17-jre` khởi động không lỗi, health check xanh. Chỉ request gọi `OrderQueries.latest` mới lỗi. Log khi build trên CI có một cảnh báo không ai đọc.",
+    "output": "# Log build trên CI (JDK 21)\n[WARNING] system modules path not set in conjunction with -source 17\n\n# Log service (Java 17)\njava.lang.NoSuchMethodError: 'java.lang.Object java.util.List.getFirst()'\n\tat com.example.orders.OrderQueries.latest(OrderQueries.java:10)\n\n$ javap -v -cp order-commons.jar com.example.orders.OrderQueries | grep -E 'major|getFirst'\n  major version: 61\n  #7 = InterfaceMethodref #8.#9   // java/util/List.getFirst:()Ljava/lang/Object;"
+  },
+  "diagnosis": {
+    "question": "Vì sao class nạp được trên Java 17 nhưng gọi method thì lỗi?",
+    "options": [
+      "`-source`/`-target` không kiểm API: `getFirst()` của Java 21 lọt vào class version 61",
+      "Class file version 65 của JDK 21 nên Java 17 nạp được nhưng không chạy được method",
+      "Classpath có hai bản `order-commons`, bản cũ hơn chưa có method `getFirst()`",
+      "`List.of` trả list bất biến, method `getFirst()` chỉ có trên `ArrayList`"
+    ],
+    "answer": 0,
+    "explanation": "`-target 17` chỉ quyết định version class file (61, Java 17 nạp được), còn `-source 17` chỉ quyết định cú pháp. API được kiểm theo thư viện của JDK đang chạy `javac`, tức JDK 21, nên `List.getFirst()` (thêm ở Java 21 cùng `SequencedCollection`) biên dịch bình thường. JVM chỉ resolve tham chiếu method ở lần đầu lệnh `invokeinterface` đó chạy, nên lỗi nổ đúng lúc gọi, không phải lúc khởi động. Nếu class thật sự là version 65, Java 17 đã từ chối nạp với `UnsupportedClassVersionError` ngay khi dùng tới class."
+  },
+  "fix": {
+    "code": "<!-- Kiểm API theo đúng Java 17, dù build bằng JDK nào -->\n<properties>\n    <maven.compiler.release>17</maven.compiler.release>\n</properties>\n\n// Build lại thì lỗi lộ ra lúc biên dịch:\n// OrderQueries.java:10: error: cannot find symbol\n//         return orders.getFirst();\n//   symbol:   method getFirst()\n\npublic static Order latest(List<Order> orders) {\n    return orders.get(0);\n}\n\n// Gradle: java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }",
+    "explanation": "`--release 17` (Maven `maven.compiler.release`) kiểm API theo bảng chữ ký của Java 17 đóng sẵn trong JDK, nên lỗi chuyển từ production về lúc build. Gradle toolchain còn tốt hơn: biên dịch và chạy test bằng chính JDK 17. Thêm một job CI chạy test trên phiên bản Java thấp nhất mà thư viện hỗ trợ, và coi cảnh báo `-source` thiếu system modules là lỗi (`-Werror`)."
+  }
+}

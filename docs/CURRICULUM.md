@@ -177,8 +177,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `jvm-architecture` | ✚ JDK, JRE, JVM & bytecode | foundation | Từ `.java` tới bytecode, class file, interpreter và JIT, các bản JDK (Temurin, Corretto...), LTS | A L D | ⬜ |
-| 2 | `jvm-memory-areas` | Vùng nhớ của JVM | junior | Heap, metaspace, stack, direct memory, code cache; các loại OOM | A L D | ⬜ |
+| 1 | `jvm-architecture` | ✚ JDK, JRE, JVM & bytecode | foundation | Từ `.java` tới bytecode, class file, interpreter và JIT, các bản JDK (Temurin, Corretto...), LTS | A L D | ✅ |
+| 2 | `jvm-memory-areas` | Vùng nhớ của JVM | junior | Heap, metaspace, stack, direct memory, code cache; các loại OOM | A L D | ✅ |
 | 3 | `gc-fundamentals` | GC hoạt động thế nào | mid | Reachability, strong/soft/weak/phantom reference, generational, mark-sweep-compact, safepoint, `Cleaner` thay `finalize` | A L S | ⬜ |
 | 4 | `jvm-diagnostic-tools` | Bộ công cụ chẩn đoán JVM | mid | `jcmd`, `jstack`, `jmap`, `jstat`, JFR cơ bản: lấy bằng chứng từ JVM đang chạy | L T | ⬜ |
 | 5 | `gc-algorithms` | G1, ZGC, Shenandoah, Parallel | senior | Pause và throughput, chọn GC, generational ZGC | L D Sc | ⬜ |

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "areas-list", "front": "Kể các vùng nhớ chính của một process JVM.", "back": "Heap (young, old), stack của mỗi thread, metaspace, code cache, direct memory, cộng cấu trúc của GC và phần native khác của JVM." },
+    { "id": "xmx-scope", "front": "`-Xmx` giới hạn những gì?", "back": "Chỉ heap. Metaspace, code cache, stack của thread và direct memory nằm ngoài, nên RSS luôn lớn hơn `-Xmx`." },
+    { "id": "stack-frame", "front": "Một stack frame chứa gì và khi nào bị dọn?", "back": "Biến cục bộ (giá trị primitive và tham chiếu) và ngăn xếp toán hạng. Frame mất ngay khi method trả về, không cần GC." },
+    { "id": "metaspace-contents", "front": "Metaspace chứa gì, khi nào được giải phóng?", "back": "Metadata của class (field, method, bytecode). Chỉ giải phóng khi classloader nạp class đó bị thu hồi. Mặc định không giới hạn." },
+    { "id": "string-pool-location", "front": "String pool và giá trị field `static` nằm ở đâu?", "back": "Trong heap: String pool từ Java 7, field `static` từ Java 8 (trong object `Class`). Không phải metaspace." },
+    { "id": "code-cache-full", "front": "Code cache đầy gây ra gì?", "back": "JIT ngừng biên dịch, code mới chạy ở interpreter nên chậm dần; chỉ có cảnh báo trong log, không có exception." },
+    { "id": "compressed-oops-32g", "front": "Vì sao nên giữ `-Xmx` dưới 32 GB?", "back": "Dưới ngưỡng đó tham chiếu chỉ 4 byte (compressed oops). Vượt qua thì mọi tham chiếu thành 8 byte, heap 34 GB có thể chứa ít object hơn heap 31 GB." },
+    { "id": "vietnamese-string-size", "front": "Chuỗi 100 ký tự có một chữ `ễ` tốn bao nhiêu byte dữ liệu?", "back": "200 byte: chỉ một ký tự ngoài Latin-1 là cả chuỗi lưu UTF-16, 2 byte mỗi ký tự (chưa tính header của `String` và mảng)." }
+  ]
+}

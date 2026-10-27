@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jvm-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "JDK, JRE, JVM & bytecode",
+  "summary": "Từ `.java` tới bytecode và mã máy: class file và số phiên bản, interpreter và JIT theo tầng, vòng đời của class, vì sao `-source/-target` không thay được `--release`, chọn bản JDK và LTS.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 11,
+  "prerequisites": [],
+  "terms": ["jvm", "jdk", "jre", "bytecode", "class-file", "interpreter", "jit", "tiered-compilation", "hotspot-jvm", "jlink", "lts", "openjdk", "invokedynamic", "native-image"],
+  "references": [
+    { "title": "JVM Specification chương 4: The class File Format (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-4.html" },
+    { "title": "JVM Specification chương 5: Loading, Linking, and Initializing (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-5.html" },
+    { "title": "JEP 247: Compile for Older Platform Versions", "url": "https://openjdk.org/jeps/247" },
+    { "title": "Oracle Java SE Support Roadmap", "url": "https://www.oracle.com/java/technologies/java-se-support-roadmap.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Java vừa biên dịch vừa thông dịch, vậy rốt cuộc là loại nào?\" Cả hai, ở hai thời điểm. `javac` biên dịch trước sang bytecode, không phải mã máy. Lúc chạy, JVM thông dịch bytecode và đồng thời biên dịch phần chạy nhiều thành mã máy (JIT), dựa trên profile thu được lúc chạy. Nhờ profile, JIT tối ưu được những thứ compiler biên dịch trước không biết, như inline một method interface chỉ có một lớp cài đặt đang được nạp; đổi lại là thời gian warmup và tốn CPU, bộ nhớ cho chính việc biên dịch. GraalVM native image chọn hướng ngược lại: biên dịch hết trước khi chạy." },
+    { "type": "callout", "style": "warning", "markdown": "`--release` không được cao hơn phiên bản Java của image chạy service, thường đặt bằng nhau. Đừng tin vào `maven.compiler.source`/`target`: build bằng JDK mới vẫn để API mới lọt qua và chỉ nổ `NoSuchMethodError` khi chạy tới đúng dòng đó. Dùng `maven.compiler.release` hoặc Gradle toolchain." }
+  ]
+}

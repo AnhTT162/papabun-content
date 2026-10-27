@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jvm-memory-areas",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "Vùng nhớ của JVM",
+  "summary": "Heap, stack, metaspace, code cache, direct memory: mỗi vùng chứa gì, giới hạn bằng cờ nào, đầy thì báo lỗi gì; vì sao `-Xmx` không phải bộ nhớ của process, và vì sao file 200 MB cần cả GB heap.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["jvm-architecture"],
+  "terms": ["jvm", "java-heap", "stack-frame", "metaspace", "code-cache", "direct-buffer", "out-of-memory-error", "string-pool", "young-generation", "tlab", "stack-overflow-error", "escape-analysis", "compressed-oops", "compact-strings", "compressed-class-space", "native-memory-tracking", "oomkilled"],
+  "references": [
+    { "title": "JVM Specification §2.5: Run-Time Data Areas (Java SE 21)", "url": "https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html#jvms-2.5" },
+    { "title": "Troubleshooting Guide: Understand the OutOfMemoryError Exception (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshooting-memory-leaks.html" },
+    { "title": "JEP 519: Compact Object Headers", "url": "https://openjdk.org/jeps/519" },
+    { "title": "JEP 534: Compact Object Headers by Default", "url": "https://openjdk.org/jeps/534" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Biến cục bộ có thread-safe không?\" Giá trị nằm trong frame thì có: mỗi thread có stack riêng, thread khác không đọc được biến `int count` của method đang chạy. Nhưng biến reference chỉ là tham chiếu: nếu object nó trỏ tới đã được chia sẻ (đưa vào field, collection dùng chung, hay lambda chạy ở thread khác), object đó trên heap vẫn bị nhiều thread cùng sửa. Thread-safe là tính chất của object được chia sẻ, không phải của biến (bài Race condition, atomicity & thread-safe)." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng sửa mọi `OutOfMemoryError` bằng cách tăng `-Xmx`. Chỉ `Java heap space`, `Requested array size exceeds VM limit` (và `GC overhead limit exceeded` với Parallel GC) liên quan tới heap. `Metaspace`, `unable to create native thread`, `Cannot reserve ... direct buffer memory` nằm ngoài heap: tăng heap trong container có limit cố định còn lấy bớt chỗ của chúng." }
+  ]
+}

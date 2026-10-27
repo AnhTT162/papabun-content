@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "array-limit-output",
+      "kind": "output",
+      "prompt": "Chạy với `-Xmx256m` trên JDK 27, dòng đầu tiên in ra là gì?",
+      "code": "public static void main(String[] args) {\n    int[] ids = new int[Integer.MAX_VALUE];\n}",
+      "options": [
+        "`OutOfMemoryError: Requested array size exceeds VM limit`",
+        "`OutOfMemoryError: Java heap space` vì mảng cần 8 GB",
+        "`NegativeArraySizeException` vì kích thước bị tràn số",
+        "Chạy xong không lỗi vì mảng chưa được dùng tới"
+      ],
+      "answer": 0,
+      "explanation": "JVM giới hạn số phần tử của mảng thấp hơn `Integer.MAX_VALUE` một chút, nên yêu cầu này bị từ chối trước cả khi xét heap còn bao nhiêu. Với `new int[Integer.MAX_VALUE - 8]` thì JDK 27 báo `Java heap space` khi `-Xmx256m`, và cấp được khi heap đủ chỗ cho mảng khoảng 8 GiB (chạy được với `-Xmx9g`). Kích thước không âm nên không có `NegativeArraySizeException`. Mảng được cấp ngay khi `new`, dù chưa dùng."
+    },
+    {
+      "id": "local-variable-location",
+      "kind": "single",
+      "prompt": "Trong method, `int count = 0;` và `List<Order> orders = new ArrayList<>();` nằm ở đâu?",
+      "options": [
+        "`count` và tham chiếu `orders` trong frame; `ArrayList` trên heap",
+        "Cả `count` lẫn object `ArrayList` đều nằm trong frame trên stack",
+        "`count` trên heap vì sẽ được boxing; tham chiếu `orders` trong frame",
+        "Cả hai trên heap; stack chỉ chứa địa chỉ trả về của từng method"
+      ],
+      "answer": 0,
+      "explanation": "Frame giữ biến cục bộ: giá trị `int` nằm thẳng trong frame, biến `orders` chỉ giữ tham chiếu. Object `ArrayList` và mảng bên trong nó luôn ở heap theo ngôn ngữ; escape analysis của JIT có thể bỏ cấp phát nhưng đó là tối ưu, không phải quy tắc. Không có boxing vì `count` là primitive."
+    },
+    {
+      "id": "container-xmx",
+      "kind": "single",
+      "prompt": "Pod có memory limit 2 GiB, JVM chạy `-Xmx2g`. Ứng dụng bị restart với exit code 137 mà không có `OutOfMemoryError` trong log. Vì sao?",
+      "options": [
+        "Heap và các vùng ngoài heap cộng lại vượt 2 GiB nên kernel giết process",
+        "Heap chạm `-Xmx` nhưng JVM chưa kịp ghi log `OutOfMemoryError`",
+        "Kubernetes giết pod khi heap dùng quá 90% của memory limit",
+        "`-Xmx2g` lớn hơn 2 GiB nên JVM bị giết ngay khi heap chạm 2 GB"
+      ],
+      "answer": 0,
+      "explanation": "`-Xmx` chỉ chặn heap. Phần ngoài heap (metaspace, code cache, stack của thread, direct buffer, cấu trúc GC) đẩy tổng RSS vượt limit, kernel gửi SIGKILL (137). Heap đầy thì JVM tự ném `OutOfMemoryError` có log. `2g` và `2Gi` là cùng 2.147.483.648 byte. Ngân sách bộ nhớ của container ở bài JVM trong container và bài Bộ nhớ tăng dần & OOM."
+    },
+    {
+      "id": "metaspace-oom-fix",
+      "kind": "single",
+      "prompt": "Service ném `OutOfMemoryError: Metaspace` sau vài ngày chạy, heap sau GC vẫn ổn định ở 40%. Hướng xử lý đúng là gì?",
+      "options": [
+        "Tìm nơi tạo class hoặc classloader mới liên tục; tăng `-Xmx` không giúp gì",
+        "Tăng `-Xmx` để metaspace có thêm chỗ, vì metaspace là một phần của heap",
+        "Gọi `System.gc()` định kỳ để dọn class không dùng nữa khỏi metaspace",
+        "Giảm số String tạo ra, vì String pool nằm trong metaspace từ Java 8"
+      ],
+      "answer": 0,
+      "explanation": "Metaspace là bộ nhớ native, tách khỏi heap; class chỉ được dọn khi classloader của nó không còn ai giữ. Lỗi tăng dần thường do sinh class động không giới hạn (proxy, script, template biên dịch mỗi lần) hoặc rò classloader khi redeploy. String pool nằm trong heap từ Java 7. Theo dõi số class đã nạp (`jvm.classes.loaded`) để thấy sớm."
+    },
+    {
+      "id": "code-cache-full",
+      "kind": "single",
+      "prompt": "Code cache đầy thì ứng dụng có triệu chứng gì?",
+      "options": [
+        "Chạy chậm dần vì code mới không còn được JIT; log chỉ có cảnh báo",
+        "Ném `OutOfMemoryError: Code cache` ở thread vừa gọi method mới",
+        "JVM bị kernel giết với exit code 137 vì vượt bộ nhớ native",
+        "Ném `OutOfMemoryError: Java heap space` vì mã máy nằm trong heap"
+      ],
+      "answer": 0,
+      "explanation": "Từ JDK 20, JVM thử gỡ mã máy lâu không dùng (qua GC) trước. Không giải phóng kịp thì JVM in `CodeCache is full. Compiler has been disabled.` và dừng biên dịch; method chưa được biên dịch tiếp tục chạy ở interpreter, chậm hơn cả chục lần. Không có exception nên dễ bị nhầm với vấn đề tải. Code cache là bộ nhớ native, không nằm trong heap, và có giới hạn riêng nên không làm process vượt limit. Xem bằng `jcmd <pid> Compiler.codecache`."
+    }
+  ]
+}

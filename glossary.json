@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing", "java-basics-types", "oop-java"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing", "java-basics-types", "oop-java", "jvm-architecture"]
     },
     {
       "id": "memory-barrier",
@@ -541,7 +541,7 @@
       "meaning": "Bảng trong JVM giữ một bản duy nhất cho mỗi chuỗi literal, để các literal cùng nội dung dùng chung một object.",
       "example": "Hai dòng `String a = \"hi\"; String b = \"hi\";` cho `a == b` là `true`.",
       "related": ["string-interning", "immutable"],
-      "topics": ["string-pool"]
+      "topics": ["string-pool", "jvm-memory-areas"]
     },
     {
       "id": "string-interning",
@@ -557,7 +557,7 @@
       "meaning": "Tối ưu của Java 9: String lưu dữ liệu trong `byte[]` kèm cờ `coder`; chuỗi chỉ có ký tự Latin-1 dùng 1 byte mỗi ký tự thay vì 2.",
       "example": "Chuỗi `\"order-42\"` tốn 8 byte dữ liệu thay vì 16.",
       "related": ["string-pool"],
-      "topics": ["string-pool"]
+      "topics": ["string-pool", "jvm-memory-areas"]
     },
     {
       "id": "constant-folding",
@@ -3101,7 +3101,7 @@
       "meaning": "GraalVM biên dịch ứng dụng Java trước thành file chạy native: khởi động trong vài chục mili giây và tốn ít RAM, nhưng reflection và proxy phải biết trước lúc build.",
       "example": "Spring Boot 3+ build native image bằng `mvn -Pnative native:compile`.",
       "related": ["jit", "spring-boot"],
-      "topics": ["spring-overview"]
+      "topics": ["spring-overview", "jvm-architecture"]
     },
     {
       "id": "ioc",
@@ -5901,7 +5901,7 @@
       "meaning": "Lỗi JVM ném khi một vùng nhớ của nó hết chỗ (heap, metaspace, direct buffer, thread). Thông điệp đi kèm cho biết vùng nào hết.",
       "example": "`java.lang.OutOfMemoryError: Java heap space` khi object còn sống vượt `-Xmx`.",
       "related": ["oomkilled", "heap-dump", "memory-leak"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas"]
     },
     {
       "id": "oomkilled",
@@ -5909,7 +5909,7 @@
       "meaning": "Trạng thái Kubernetes báo khi kernel giết container vì tổng bộ nhớ vượt memory limit. Process bị SIGKILL ngay (exit code 137), không kịp ghi log hay heap dump.",
       "example": "`kubectl describe pod` hiện `Reason: OOMKilled`, `Exit Code: 137` dù log không có `OutOfMemoryError`.",
       "related": ["out-of-memory-error", "rss"],
-      "topics": ["memory-growth-oom", "os-process-memory"]
+      "topics": ["memory-growth-oom", "os-process-memory", "jvm-memory-areas"]
     },
     {
       "id": "rss",
@@ -5933,7 +5933,7 @@
       "meaning": "Native Memory Tracking: tính năng của HotSpot chia bộ nhớ JVM cấp ngoài heap theo hạng mục (Class, Thread, Code, GC, Other...). Bật lúc khởi động bằng `-XX:NativeMemoryTracking=summary`.",
       "example": "`jcmd <pid> VM.native_memory baseline`, vài giờ sau `summary.diff` cho thấy `Other` tăng 300 MB.",
       "related": ["rss", "direct-buffer", "metaspace"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas"]
     },
     {
       "id": "metaspace",
@@ -5941,7 +5941,7 @@
       "meaning": "Vùng nhớ native chứa metadata của class đã load (thay PermGen từ Java 8). Mặc định không giới hạn kích thước.",
       "example": "Rò classloader sau mỗi lần redeploy làm metaspace tăng tới `OutOfMemoryError: Metaspace` hoặc OOMKilled.",
       "related": ["classloader", "native-memory-tracking"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas"]
     },
     {
       "id": "direct-buffer",
@@ -5949,7 +5949,7 @@
       "meaning": "`ByteBuffer` nằm ngoài heap, cấp bằng `ByteBuffer.allocateDirect`, dùng cho I/O không cần chép qua heap. Tổng bị giới hạn bởi `-XX:MaxDirectMemorySize` (mặc định bằng `-Xmx`).",
       "example": "Netty và NIO dùng direct buffer; metric `jvm.buffer.memory.used{id=direct}` đo phần cấp qua `allocateDirect`.",
       "related": ["native-memory-tracking", "zero-copy"],
-      "topics": ["memory-growth-oom", "java-io-nio"]
+      "topics": ["memory-growth-oom", "java-io-nio", "jvm-memory-areas"]
     },
     {
       "id": "dominator-tree",
@@ -7653,7 +7653,7 @@
       "meaning": "Lệnh bytecode (Java 7) để chỗ gọi được liên kết lúc chạy bởi một bootstrap method. Java dùng nó cho lambda (`LambdaMetafactory`) và ghép chuỗi (Java 9+).",
       "example": "`javap -c` một class có lambda thấy `invokedynamic #0:run`.",
       "related": ["lambda-expression"],
-      "topics": ["java-8-11-features"]
+      "topics": ["java-8-11-features", "jvm-architecture"]
     },
     {
       "id": "local-variable-type-inference",
@@ -7926,6 +7926,166 @@
       "example": "`liba` và `libb` cùng export `com.shop.util`: javac báo `reads package com.shop.util from both liba and libb`.",
       "related": ["jpms", "shading"],
       "topics": ["classpath-modules"]
+    },
+    {
+      "id": "jvm",
+      "term": "JVM",
+      "meaning": "Java Virtual Machine: máy ảo chạy bytecode theo đặc tả JVMS, lo nạp class, quản lý bộ nhớ, GC và JIT. Cùng một class file chạy được trên mọi hệ điều hành có JVM.",
+      "example": "`java -jar app.jar` khởi động một JVM (thường là HotSpot) để chạy bytecode trong jar.",
+      "related": ["jdk", "bytecode", "jit"],
+      "topics": ["jvm-architecture", "jvm-memory-areas"]
+    },
+    {
+      "id": "jdk",
+      "term": "JDK",
+      "meaning": "Java Development Kit: JVM cùng thư viện chuẩn và công cụ phát triển, chẩn đoán như `javac`, `jar`, `jcmd`, `jlink`.",
+      "example": "Temurin 21 JDK để build trên CI; image chạy có thể chỉ là JRE hoặc runtime tạo bằng `jlink`.",
+      "related": ["jre", "jvm", "openjdk"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "jre",
+      "term": "JRE",
+      "meaning": "Java Runtime Environment: JVM cộng thư viện chuẩn, đủ để chạy ứng dụng nhưng không có `javac`. Oracle ngừng phát hành JRE riêng từ JDK 11.",
+      "example": "Image `eclipse-temurin:21-jre` nhỏ hơn image JDK vì bỏ các công cụ phát triển.",
+      "related": ["jdk", "jlink"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "bytecode",
+      "term": "Bytecode",
+      "meaning": "Tập lệnh của JVM do `javac` sinh ra, viết cho một máy ngăn xếp và không gắn với CPU nào. Xem bằng `javap -c`.",
+      "example": "`total += i` thành `iload_1`, `iload_2`, `iadd`, `istore_1`.",
+      "related": ["class-file", "jvm", "jit"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "class-file",
+      "term": "Class file",
+      "meaning": "File `.class` do `javac` sinh: magic `CAFEBABE`, số phiên bản (major 61 là Java 17, 65 là Java 21), constant pool và bytecode của từng method.",
+      "example": "JVM 17 gặp class major 65 thì ném `UnsupportedClassVersionError`.",
+      "related": ["bytecode", "classloader"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "interpreter",
+      "term": "Interpreter",
+      "meaning": "Phần của JVM chạy bytecode từng lệnh một mà không biên dịch, đồng thời đếm số lần gọi để JIT biết method nào nóng. Khởi động ngay nhưng chậm hơn mã máy cả chục lần.",
+      "example": "Vòng lặp chạy với `-Xint` (chỉ interpreter) mất 250 ms, mặc định có JIT chỉ 18 ms.",
+      "related": ["jit", "tiered-compilation"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "tiered-compilation",
+      "term": "Tiered compilation",
+      "meaning": "Cách HotSpot biên dịch theo tầng: interpreter, rồi C1 biên dịch nhanh kèm thu profile, rồi C2 tối ưu mạnh dựa trên profile. Bật mặc định từ Java 8.",
+      "example": "`-XX:+PrintCompilation` cho thấy method qua tầng 3 (C1) rồi tầng 4 (C2).",
+      "related": ["jit", "interpreter"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "hotspot-jvm",
+      "term": "HotSpot",
+      "meaning": "JVM do OpenJDK phát triển, dùng trong Temurin, Corretto, Zulu, Oracle JDK... Tên đến từ việc tìm và biên dịch các đoạn code \"nóng\".",
+      "example": "`java -version` in `OpenJDK 64-Bit Server VM` là đang chạy HotSpot.",
+      "related": ["jvm", "openjdk", "jit"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "jlink",
+      "term": "jlink",
+      "meaning": "Công cụ của JDK (từ Java 9) tạo runtime riêng chỉ gồm các module ứng dụng cần, giúp image nhỏ hơn.",
+      "example": "`jlink --add-modules java.base,java.sql,java.naming --output runtime`",
+      "related": ["jre", "jpms"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "lts",
+      "term": "LTS",
+      "meaning": "Long-Term Support: bản Java được nhà phát hành vá trong nhiều năm. Từ Java 17, cứ hai năm có một bản LTS: 17, 21, 25, 29.",
+      "example": "Production dùng Java 21 hoặc 25; Java 27 không phải LTS nên chỉ có vá trong sáu tháng.",
+      "related": ["openjdk", "jdk"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "openjdk",
+      "term": "OpenJDK",
+      "meaning": "Dự án mã nguồn mở của Java SE. Temurin, Corretto, Zulu, Microsoft và Oracle JDK đều là bản build từ mã này, khác nhau ở lịch hỗ trợ và giấy phép.",
+      "example": "Đổi từ Oracle JDK sang Temurin cùng phiên bản không cần sửa cờ JVM.",
+      "related": ["jdk", "lts", "hotspot-jvm"],
+      "topics": ["jvm-architecture"]
+    },
+    {
+      "id": "java-heap",
+      "term": "Heap",
+      "meaning": "Vùng nhớ dùng chung của JVM chứa mọi object và mảng, do GC dọn. Kích thước tối đa đặt bằng `-Xmx`, mặc định 25% RAM.",
+      "example": "`new Order()` cấp object trên heap; hết chỗ thì `OutOfMemoryError: Java heap space`.",
+      "related": ["young-generation", "out-of-memory-error", "tlab"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "stack-frame",
+      "term": "Stack frame",
+      "meaning": "Khối nhớ đẩy lên stack của thread mỗi lần gọi method, chứa biến cục bộ và ngăn xếp toán hạng. Mất ngay khi method trả về.",
+      "example": "Đệ quy vài chục nghìn tầng là vài chục nghìn frame; vượt `-Xss` thì `StackOverflowError`.",
+      "related": ["stack-overflow-error", "java-heap"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "code-cache",
+      "term": "Code cache",
+      "meaning": "Vùng nhớ native chứa mã máy do JIT sinh ra, mặc định 240 MB. Đầy hẳn thì JIT ngừng biên dịch và ứng dụng chậm dần.",
+      "example": "`jcmd <pid> Compiler.codecache` cho biết đã dùng bao nhiêu.",
+      "related": ["jit", "metaspace"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "young-generation",
+      "term": "Young generation",
+      "meaning": "Phần heap chứa object mới tạo (eden và survivor). Phần lớn object chết ở đây và được dọn rẻ; object sống lâu được chuyển sang old generation.",
+      "example": "Object `OrderDto` của một request chết ngay sau khi trả response, không bao giờ tới old.",
+      "related": ["java-heap", "tlab", "full-gc"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "tlab",
+      "term": "TLAB",
+      "meaning": "Thread-Local Allocation Buffer: mảnh nhỏ của eden dành riêng cho một thread, để cấp object chỉ bằng cách tăng con trỏ mà không cần khoá.",
+      "example": "Hàng triệu `new` mỗi giây vẫn rẻ vì mỗi thread cấp trong TLAB của mình.",
+      "related": ["young-generation", "java-heap"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "stack-overflow-error",
+      "term": "StackOverflowError",
+      "meaning": "Lỗi khi stack của một thread hết chỗ, thường do đệ quy quá sâu hoặc vô hạn. Chỉ thread đó bị ảnh hưởng.",
+      "example": "`toString()` của hai entity trỏ nhau gọi qua lại tới khi tràn stack.",
+      "related": ["stack-frame"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "escape-analysis",
+      "term": "Escape analysis",
+      "meaning": "Phân tích của JIT xem object có thoát khỏi method hay thread không. Không thoát thì có thể bỏ cấp phát (tách thành biến cục bộ) hoặc bỏ khoá.",
+      "example": "Object `Point` tạo rồi chỉ đọc trong một vòng lặp có thể không bao giờ được cấp trên heap.",
+      "related": ["jit", "java-heap"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "compressed-oops",
+      "term": "Compressed oops",
+      "meaning": "Tham chiếu object 4 byte thay vì 8 trên JVM 64 bit, dùng được khi heap dưới khoảng 32 GB.",
+      "example": "Heap 31 GB có thể chứa nhiều object hơn heap 34 GB vì vượt ngưỡng thì mọi tham chiếu thành 8 byte.",
+      "related": ["java-heap"],
+      "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "compressed-class-space",
+      "term": "Compressed class space",
+      "meaning": "Vùng con của metaspace chứa cấu trúc class mà object trỏ tới bằng con trỏ nén; mặc định 1 GB, đầy thì `OutOfMemoryError: Compressed class space`.",
+      "example": "`-XX:CompressedClassSpaceSize=8m` cộng nạp class liên tục tái hiện lỗi này.",
+      "related": ["metaspace"],
+      "topics": ["jvm-memory-areas"]
     }
   ]
 }

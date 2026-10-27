@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "File khách hàng 200 MB làm job import hết heap 1 GB",
+  "context": "Job import nhận file CSV danh sách khách hàng từ đối tác, chạy với `-Xmx1g`. Trước giờ file chỉ vài MB. Tháng này đối tác gửi file 200 MB (2,5 triệu dòng, tên và địa chỉ tiếng Việt có dấu) và job chết ngay lúc đọc file. Dashboard cho thấy heap đang dùng chỉ khoảng 180 MB trước khi job bắt đầu.",
+  "buggyCode": "public void importCustomers(Path file) throws IOException {\n    byte[] raw = Files.readAllBytes(file);\n    String content = new String(raw, StandardCharsets.UTF_8);\n    String[] lines = content.split(\"\\n\");\n    for (String line : lines) {\n        customerRepository.save(parse(line));\n    }\n}",
+  "symptom": {
+    "description": "Job ném lỗi khi tạo `String` từ mảng byte, chưa ghi được dòng nào. Chạy lại với `-Xmx2g` thì qua. File mẫu: một dòng như `KH100001,Nguyễn Văn An,0901234567,Quận Bình Thạnh,TP Hồ Chí Minh,1000`.",
+    "output": "file=200 MB, maxHeap=1024 MB\nException in thread \"import-job\" java.lang.OutOfMemoryError: Java heap space\n\tat java.base/java.util.Arrays.copyOf(Arrays.java:3537)\n\tat java.base/java.lang.String.utf8(String.java:638)\n\tat java.base/java.lang.String.<init>(String.java:589)\n\tat java.base/java.lang.String.<init>(String.java:1699)\n\tat com.example.importer.CustomerImportJob.importCustomers(CustomerImportJob.java:21)\n\n# Heap còn sống sau từng bước nếu đủ chỗ (chạy với -Xmx3g, JDK 27)\nraw byte[]          203 MB\n+ String            551 MB   (182 triệu ký tự)\n+ String[] lines   1001 MB   (2.510.702 dòng)"
+  },
+  "diagnosis": {
+    "question": "Vì sao file 200 MB làm hết heap 1 GB ngay ở bước tạo `String`?",
+    "options": [
+      "Bản `byte[]`, mảng tạm khi giải mã và `String` UTF-16 cùng sống, vượt 1 GB",
+      "`readAllBytes` đọc file vào direct memory, chạm `MaxDirectMemorySize`",
+      "Mỗi chuỗi tạo ra được đưa vào String pool, pool đầy nên báo hết heap",
+      "String nằm trong metaspace, metaspace phình ra và lấn vào phần của heap"
+    ],
+    "answer": 0,
+    "explanation": "Lúc `new String(raw, UTF_8)` chạy, `raw` (203 MB) vẫn còn sống. Gặp ký tự có dấu, JDK cấp mảng tạm UTF-16 theo số byte đầu vào (khoảng 420 MB), rồi `Arrays.copyOf` sang mảng đúng cỡ 364 MB (182 triệu ký tự × 2 byte, vì chỉ một ký tự ngoài Latin-1 là cả chuỗi lưu UTF-16). Cộng 180 MB nền là vượt 1 GB, nên lỗi nổ ở dòng này. Dù qua được, `split` còn thêm khoảng 450 MB cho 2,5 triệu `String` (header, mảng riêng, tham chiếu): số đo với `-Xmx3g` cho thấy cần khoảng 1 GB chỉ cho dữ liệu còn sống. Chuỗi tạo lúc chạy không vào String pool trừ khi gọi `intern()`; pool và mọi `String` đều nằm trong heap, không phải metaspace. `readAllBytes` trả `byte[]` trên heap."
+  },
+  "fix": {
+    "code": "public void importCustomers(Path file) throws IOException {\n    List<Customer> batch = new ArrayList<>(1_000);\n    try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {\n        String line;\n        while ((line = reader.readLine()) != null) {\n            batch.add(parse(line));\n            if (batch.size() == 1_000) {\n                customerRepository.saveAll(batch);\n                batch.clear();\n            }\n        }\n    }\n    if (!batch.isEmpty()) customerRepository.saveAll(batch);\n}\n// Đọc hết 200 MB, đếm 2.510.702 dòng với -Xmx32m",
+    "explanation": "Đọc từng dòng thì chỉ một dòng và một lô 1.000 khách hàng sống cùng lúc, bộ nhớ không phụ thuộc kích thước file (đã chạy phần đọc với `-Xmx32m`). Với JPA, `saveAll` theo lô vẫn giữ entity trong persistence context, nên phải `flush`/`clear` sau mỗi lô (bài Spring Batch, bài Spring Data JPA). Đặt thêm giới hạn kích thước file đầu vào, và ước lượng heap theo dữ liệu thật: chuỗi tiếng Việt tốn gấp đôi số ký tự, mỗi object nhỏ tốn thêm vài chục byte. Lưu ý hành vi với dữ liệu hỏng cũng đổi: `new String(...)` âm thầm thay byte UTF-8 sai bằng `�`, còn `BufferedReader` từ `Files.newBufferedReader` ném `MalformedInputException`."
+  }
+}

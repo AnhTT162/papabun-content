@@ -1,0 +1,150 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một request chạm những vùng nhớ nào",
+  "nodes": [
+    {
+      "id": "stack",
+      "label": "Stack của thread",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "young",
+      "label": "Heap: young",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "old",
+      "label": "Heap: old",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "meta",
+      "label": "Metaspace",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "code",
+      "label": "Code cache",
+      "kind": "cache",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "direct",
+      "label": "Direct memory",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "alloc",
+      "from": "stack",
+      "to": "young",
+      "label": "new Order()"
+    },
+    {
+      "id": "promote",
+      "from": "young",
+      "to": "old",
+      "label": "sống qua vài lần GC"
+    },
+    {
+      "id": "lookup",
+      "from": "stack",
+      "to": "meta",
+      "label": "class, method"
+    },
+    {
+      "id": "jit",
+      "from": "meta",
+      "to": "code",
+      "label": "JIT biên dịch"
+    },
+    {
+      "id": "native",
+      "from": "young",
+      "to": "direct",
+      "label": "DirectByteBuffer"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Thread Tomcat gọi `placeOrder(request)`: một frame mới trên stack của thread đó, chứa biến cục bộ như `int quantity` và các tham chiếu. Method trả về là frame biến mất, không cần GC.",
+      "show": [
+        "stack"
+      ]
+    },
+    {
+      "caption": "`new Order(...)` cấp object trong TLAB của thread ở vùng young; biến `order` trong frame chỉ giữ tham chiếu (4 byte nhờ compressed oops) trỏ tới đó.",
+      "show": [
+        "young",
+        "alloc"
+      ],
+      "highlight": [
+        "alloc"
+      ]
+    },
+    {
+      "caption": "Hầu hết object chết ngay sau request và được GC young dọn rất rẻ. Object còn sống qua vài lần GC (cache, session, pool) được chuyển sang old. Cả hai phần cộng lại bị chặn bởi `-Xmx`.",
+      "show": [
+        "old",
+        "promote"
+      ],
+      "highlight": [
+        "promote"
+      ]
+    },
+    {
+      "caption": "Để gọi method, JVM cần cấu trúc của class `Order`: field, method, bytecode. Những thứ đó nằm trong metaspace, bộ nhớ native ngoài heap, mặc định không giới hạn.",
+      "show": [
+        "meta",
+        "lookup"
+      ],
+      "highlight": [
+        "lookup"
+      ]
+    },
+    {
+      "caption": "Method chạy đủ nhiều được JIT biên dịch, mã máy nằm trong code cache (mặc định 240 MB). Đầy hẳn thì JIT ngừng, ứng dụng chậm dần mà không có exception.",
+      "show": [
+        "code",
+        "jit"
+      ],
+      "highlight": [
+        "jit"
+      ]
+    },
+    {
+      "caption": "Ghi response qua NIO hay Netty dùng direct buffer: object `DirectByteBuffer` trên heap chỉ vài chục byte, nhưng trỏ tới vùng native lớn hơn nhiều, giới hạn bởi `MaxDirectMemorySize`.",
+      "show": [
+        "direct",
+        "native"
+      ],
+      "highlight": [
+        "native"
+      ]
+    },
+    {
+      "caption": "Bộ nhớ của process = heap + metaspace + code cache + stack của mọi thread + direct memory + phần của GC và JVM. `-Xmx` chỉ là một phần trong đó.",
+      "show": [],
+      "highlight": [
+        "young",
+        "old",
+        "meta",
+        "code",
+        "direct",
+        "stack"
+      ]
+    }
+  ]
+}

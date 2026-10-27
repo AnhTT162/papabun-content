@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "class-init-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "class Config {\n    static { System.out.println(\"init Config\"); }\n    static final int PORT = 8080;\n    static int retries = 3;\n}\n\nSystem.out.println(\"start\");\nSystem.out.println(Config.PORT);\nSystem.out.println(Config.retries);",
+      "options": [
+        "start / 8080 / init Config / 3",
+        "init Config / start / 8080 / 3",
+        "start / init Config / 8080 / 3",
+        "init Config / start / 3 / 8080"
+      ],
+      "answer": 0,
+      "explanation": "Class chỉ được khởi tạo ở lần dùng chủ động đầu tiên, nên `init Config` không in trước `start`. `PORT` là hằng số lúc biên dịch: `javac` chép thẳng 8080 vào class gọi, đọc nó không chạm tới `Config`. Đọc `retries` mới là lần dùng thật, khối `static` chạy ngay trước đó. (Đã chạy trên JDK 27.)"
+    },
+    {
+      "id": "release-mismatch",
+      "kind": "single",
+      "prompt": "Thư viện biên dịch với `--release 21` được đưa vào service chạy Java 17. Chuyện gì xảy ra?",
+      "options": [
+        "Nạp class đó thì ném `UnsupportedClassVersionError`",
+        "Chạy bình thường vì bytecode tương thích ngược",
+        "Chỉ lỗi khi gọi tới method dùng API của Java 21",
+        "JVM 17 tự chuyển class về version 61 khi nạp"
+      ],
+      "answer": 0,
+      "explanation": "`--release 21` sinh class file major 65; JVM 17 chỉ nhận tới 61 nên từ chối ngay lúc nạp class. Lỗi chỉ nổ lúc gọi method là trường hợp `-source/-target 17` biên dịch bằng JDK 21: class version 61 nhưng tham chiếu API Java 21. Tương thích ngược theo chiều ngược lại: JVM mới chạy được class cũ."
+    },
+    {
+      "id": "warmup-cause",
+      "kind": "single",
+      "prompt": "Sau mỗi lần deploy, p99 của service cao gấp ba trong khoảng hai phút đầu rồi tự về bình thường, dù tải không đổi. Nguyên nhân hợp lý nhất từ phía JVM là gì?",
+      "options": [
+        "Method nóng còn chạy bằng interpreter hoặc C1, C2 chưa biên dịch xong",
+        "Heap chưa cấp đủ nên GC chạy liên tục cho tới khi heap lớn hết cỡ",
+        "Verifier kiểm lại bytecode của mọi class ở mỗi request đầu tiên",
+        "JVM đọc bytecode từ file jar nén và giải nén dần theo từng request"
+      ],
+      "answer": 0,
+      "explanation": "Đây là warmup: code mới chạy ở interpreter (chậm cả chục lần), rồi C1, rồi C2 khi đủ profile. Nạp class lần đầu và cache rỗng cũng góp phần. Cách giảm: gửi request khởi động trước khi nhận tải thật, tăng tải dần (slow start ở load balancer), hoặc CDS/AOT (bài Khởi động nhanh). Verify chạy một lần cho mỗi class, không phải mỗi request."
+    },
+    {
+      "id": "jdk-vendors",
+      "kind": "single",
+      "prompt": "Phát biểu nào đúng về Temurin, Corretto và Oracle JDK?",
+      "options": [
+        "Đều build từ OpenJDK; khác ở lịch hỗ trợ, bản vá và giấy phép",
+        "Mỗi bản có JVM riêng nên cờ tuning của bản này không dùng cho bản kia",
+        "Chỉ Oracle JDK qua TCK nên chỉ nó được gọi là Java tương thích",
+        "Temurin và Corretto là JRE, muốn có `javac` phải cài Oracle JDK"
+      ],
+      "answer": 0,
+      "explanation": "Ba bản đều dùng HotSpot build từ mã OpenJDK và qua TCK, nên cờ JVM như nhau. Khác nhau ở thời gian hỗ trợ, bản vá backport và giấy phép (Oracle JDK chỉ miễn phí theo NFTC trong một khoảng thời gian). JVM khác hẳn là Eclipse OpenJ9, có bộ cờ riêng."
+    },
+    {
+      "id": "class-version-25",
+      "kind": "single",
+      "prompt": "`javap -v` cho thấy `major version: 69`. Class này cần JVM tối thiểu phiên bản nào?",
+      "options": [
+        "Java 25",
+        "Java 21",
+        "Java 17",
+        "Java 27"
+      ],
+      "answer": 0,
+      "explanation": "Major version bằng phiên bản Java cộng 44: 52 là 8, 61 là 17, 65 là 21, 69 là 25. JVM 25 trở lên nạp được class này; JVM cũ hơn ném `UnsupportedClassVersionError`."
+    }
+  ]
+}

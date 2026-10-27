@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "jdk-jre-jvm", "front": "JDK, JRE và JVM khác nhau thế nào?", "back": "JVM chạy bytecode; JRE = JVM + thư viện chuẩn; JDK = JRE + công cụ (`javac`, `jcmd`, `jlink`...). Từ JDK 11 Oracle không phát hành JRE riêng." },
+    { "id": "class-major-version", "front": "Major version trong class file của Java 8, 17, 21, 25 là bao nhiêu?", "back": "52, 61, 65, 69 (phiên bản Java + 44). Xem bằng `javap -v Foo.class | grep major`." },
+    { "id": "release-vs-target", "front": "`--release 17` khác `-source 17 -target 17` ở đâu?", "back": "`--release` còn kiểm API theo thư viện của Java 17. `-source/-target` kiểm API theo JDK đang build, nên API mới lọt qua và nổ `NoSuchMethodError` lúc chạy." },
+    { "id": "unsupported-class-version", "front": "Khi nào gặp `UnsupportedClassVersionError`?", "back": "Khi JVM nạp class có major version cao hơn nó hỗ trợ, ví dụ class build `--release 21` chạy trên Java 17. Lỗi nổ lúc nạp class." },
+    { "id": "tiered-compilation", "front": "Tiered compilation đi qua những tầng nào?", "back": "Interpreter chạy và đếm; C1 biên dịch nhanh kèm thu profile; C2 biên dịch tối ưu theo profile. Giả định sai thì deoptimize về interpreter." },
+    { "id": "class-init-lazy", "front": "Khối `static` của class chạy khi nào?", "back": "Ở lần dùng chủ động đầu tiên (tạo object, gọi method static, đọc field static không phải hằng), đúng một lần và an toàn giữa các thread." },
+    { "id": "lts-cadence", "front": "Java ra bản LTS theo nhịp nào?", "back": "Hai năm một lần từ Java 17: 17, 21, 25, rồi 29 (2027). Bản không LTS như 27 chỉ có vá tới khi bản kế tiếp ra." },
+    { "id": "openjdk-builds", "front": "Temurin, Corretto, Zulu có phải các JVM khác nhau không?", "back": "Không. Đều là HotSpot build từ OpenJDK và qua TCK; khác ở lịch hỗ trợ, bản vá và giấy phép. OpenJ9 mới là JVM khác." }
+  ]
+}
