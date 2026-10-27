@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "same-pool-child",
+      "kind": "output",
+      "prompt": "Pool chỉ có 1 thread. Task cha gửi task con vào cùng pool rồi chờ có timeout. Đoạn code in ra gì?",
+      "code": "ExecutorService pool = Executors.newFixedThreadPool(1);\nFuture<String> parent = pool.submit(() -> {\n    Future<String> child = pool.submit(() -> \"child done\");\n    try {\n        return child.get(1, TimeUnit.SECONDS);\n    } catch (TimeoutException e) {\n        return \"child timed out\";\n    }\n});\nSystem.out.println(parent.get());\npool.shutdown();",
+      "options": [
+        "child timed out",
+        "child done",
+        "Không in gì, chương trình treo mãi",
+        "RejectedExecutionException vì pool đã đầy"
+      ],
+      "answer": 0,
+      "explanation": "Thread duy nhất đang chạy task cha, nên task con nằm trong hàng đợi (không giới hạn) và không ai chạy nó. Sau 1 giây `get` ném `TimeoutException` và task cha trả \"child timed out\". Không có timeout thì chương trình treo mãi: đó là thread starvation deadlock. `newFixedThreadPool` dùng hàng đợi không giới hạn nên không từ chối task. Với pool 8 thread, chỉ cần 8 task cha cùng lúc là treo y hệt."
+    },
+    {
+      "id": "runnable-socket",
+      "kind": "single",
+      "prompt": "Thread dump có 150 thread `http-nio-8080-exec-*` ở trạng thái `RUNNABLE`, khung trên cùng là `sun.nio.ch.Net.poll`, bên dưới là `NioSocketImpl.read`, nhưng CPU chỉ 3%. Chúng đang làm gì?",
+      "options": [
+        "Chờ dữ liệu từ socket; trạng thái RUNNABLE không có nghĩa là đang tốn CPU",
+        "Đang xử lý request nặng; RUNNABLE nghĩa là thread đang chạy trên CPU",
+        "Đang bị GC dừng lại; thread trong lúc GC luôn hiện là RUNNABLE",
+        "Đang chờ khoá; JVM hiển thị chờ khoá socket là trạng thái RUNNABLE"
+      ],
+      "answer": 0,
+      "explanation": "Đọc socket chặn ở tầng hệ điều hành, nên JVM vẫn báo thread là `RUNNABLE` dù nó đang chờ mạng. CPU 3% xác nhận chúng không tính toán. Thường đây là lời gọi tới downstream hoặc DB thiếu read timeout. Thread chờ khoá `synchronized` hiện `BLOCKED`, chờ `ReentrantLock` hiện `WAITING (parking)`. Xem tiếp khung bên dưới để biết socket đó nối tới đâu."
+    },
+    {
+      "id": "boot-async-default",
+      "kind": "single",
+      "prompt": "Ứng dụng dùng `@Async` với executor mặc định của Spring Boot. Mỗi task gọi một API mất 5 giây, có 100 task được gửi mỗi giây. Chuyện gì xảy ra?",
+      "options": [
+        "Chỉ 8 thread chạy, hàng đợi dài vô hạn và bộ nhớ tăng dần",
+        "Pool tự tăng thread tới khi đủ chạy cả 500 task cùng lúc",
+        "Task thứ 9 trở đi bị từ chối với `TaskRejectedException`",
+        "Thread gửi task tự chạy task đó khi 8 thread đều đang bận"
+      ],
+      "answer": 0,
+      "explanation": "`applicationTaskExecutor` mặc định có 8 core thread, max và hàng đợi không giới hạn. Pool chỉ tạo thêm thread khi hàng đợi đầy, mà hàng đợi không bao giờ đầy, nên chỉ có 8 thread chạy được 1,6 task mỗi giây trong khi 100 task tới mỗi giây. Không có task nào bị từ chối và không có `CallerRunsPolicy`. Đặt `spring.task.execution.pool.queue-capacity`, `max-size` và một executor riêng cho việc gọi API chậm."
+    },
+    {
+      "id": "outer-timeout",
+      "kind": "single",
+      "prompt": "Controller gọi `future.get(30, SECONDS)` trên một task chạy trong pool riêng. Task đó đang chặn trên lời gọi HTTP không có read timeout tới một service đã treo. Sau 30 giây chuyện gì xảy ra?",
+      "options": [
+        "Thread Tomcat được giải phóng, nhưng worker vẫn kẹt ở lời gọi HTTP",
+        "Cả thread Tomcat lẫn worker đều được giải phóng và task bị huỷ",
+        "Worker được ngắt bằng interrupt và lời gọi HTTP dừng ngay lập tức",
+        "Không có gì thay đổi vì timeout chỉ áp dụng cho `CompletableFuture`"
+      ],
+      "answer": 0,
+      "explanation": "`get(timeout)` chỉ ngừng chờ ở phía gọi: thread Tomcat nhận `TimeoutException` và được trả về. Task vẫn chạy trên worker và không ai huỷ nó. Kể cả gọi `future.cancel(true)`, interrupt không gỡ được thread đang chặn đọc socket kiểu cũ. Worker chỉ được giải phóng khi chính lời gọi HTTP có timeout, nên timeout phải đặt ở tầng thấp nhất."
+    }
+  ]
+}

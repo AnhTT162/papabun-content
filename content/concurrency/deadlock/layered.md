@@ -28,6 +28,6 @@ Hai họ hàng: [[livelock]] là các thread vẫn chạy, liên tục nhường
 - **Không có `id` tự nhiên để sắp thứ tự**: có thể dùng `System.identityHashCode`, nhưng hai object có thể trùng giá trị đó, nên khi trùng phải khoá thêm một "tie lock" chung trước.
 - **`lockInterruptibly()`** cho phép interrupt thread đang chờ lock; `lock()` và `synchronized` thì không.
 - **Backoff ngẫu nhiên** khi `tryLock` thất bại để tránh livelock: nếu mọi thread chờ đúng cùng một khoảng thời gian rồi thử lại, chúng có thể va nhau mãi.
-- **Thread-starvation deadlock** không cần lock: task chạy trong một pool cố định gọi `future.get()` chờ task con nộp vào **cùng pool**; khi mọi thread đều đang chờ task con thì không còn thread nào chạy task con.
+- **[[thread-starvation-deadlock|Thread-starvation deadlock]]** không cần lock: task chạy trong một pool cố định gọi `future.get()` chờ task con nộp vào **cùng pool**; khi mọi thread đều đang chờ task con thì không còn thread nào chạy task con.
 - **Starvation**: `ReentrantLock` mặc định không công bằng (thread mới tới có thể chen lên). `new ReentrantLock(true)` ưu tiên thread chờ lâu nhất, giảm starvation nhưng throughput thấp hơn.
 - **Database cũng deadlock** khi hai transaction khoá các dòng theo thứ tự ngược nhau. Khác JVM, database tự phát hiện và huỷ một transaction, ứng dụng phải bắt lỗi và thử lại. Cách phòng giống nhau: cập nhật các dòng theo thứ tự cố định.

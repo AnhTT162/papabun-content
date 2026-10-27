@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "mean-hides-tail",
+      "kind": "output",
+      "prompt": "100 request, 98 cái mất 50ms và 2 cái mất 2 giây. Đoạn code in ra gì?",
+      "code": "List<Long> latenciesMs = new ArrayList<>();\nfor (int i = 0; i < 98; i++) latenciesMs.add(50L);\nlatenciesMs.add(2000L);\nlatenciesMs.add(2000L);\nCollections.sort(latenciesMs);\n\ndouble mean = latenciesMs.stream().mapToLong(Long::longValue).average().orElse(0);\nint n = latenciesMs.size();\nlong p50 = latenciesMs.get((int) Math.ceil(0.50 * n) - 1);   // nearest-rank\nlong p99 = latenciesMs.get((int) Math.ceil(0.99 * n) - 1);\nSystem.out.printf(\"mean=%.0f p50=%d p99=%d%n\", mean, p50, p99);",
+      "options": [
+        "mean=89 p50=50 p99=2000",
+        "mean=89 p50=50 p99=50",
+        "mean=50 p50=50 p99=2000",
+        "mean=1025 p50=50 p99=2000"
+      ],
+      "answer": 0,
+      "explanation": "Trung bình là (98 × 50 + 2 × 2000) / 100 = 89ms: trông chỉ hơi chậm, che mất việc 2% request mất tới 2 giây. p50 là 50ms. p99 theo nearest-rank là phần tử thứ 99 trong 100 phần tử đã sắp xếp; hai request chậm nằm ở vị trí 99 và 100 nên p99 là 2000ms. Thư viện metric như Micrometer ước lượng percentile từ histogram nên con số có thể lệch một chút. Điều tra API chậm luôn nhìn percentile và mở trace của request ở đuôi, không nhìn trung bình."
+    },
+    {
+      "id": "lb-vs-app",
+      "kind": "single",
+      "prompt": "Load balancer báo p99 thời gian chờ target là 2,3 giây, còn `http.server.requests` của ứng dụng báo p99 180ms. `tomcat.threads.busy` luôn 200/200. Thời gian chênh nằm ở đâu?",
+      "options": [
+        "Request chờ thread của Tomcat trước khi vào filter của Spring",
+        "Load balancer đo sai vì cộng cả thời gian mạng phía client",
+        "Ứng dụng đo sai vì Micrometer chỉ lấy mẫu một phần request",
+        "Response lớn nên mất 2 giây để serialize sau khi controller xong"
+      ],
+      "answer": 0,
+      "explanation": "`http.server.requests` bắt đầu khi request tới filter, nên không thấy thời gian request nằm chờ thread rảnh. 200/200 thread bận nghĩa là request mới phải xếp hàng; khoảng chênh 2 giây là hàng đợi đó. Thời gian chờ target của load balancer không gồm mạng phía client. Micrometer đếm mọi request chứ không lấy mẫu. Serialize response nằm trong thời gian `http.server.requests` đo. Bước tiếp theo là thread dump để biết 200 thread đang chờ gì."
+    },
+    {
+      "id": "many-short-spans",
+      "kind": "single",
+      "prompt": "Trace của một request chậm 1,8 giây có 420 span `SELECT ... FROM order_items WHERE order_id = ?`, mỗi span 3–4ms. DBA nói database rảnh. Nguyên nhân?",
+      "options": [
+        "N+1 query: mỗi query nhanh nhưng số query quá lớn",
+        "Database chậm nên cần thêm index cho cột order_id",
+        "Connection pool quá nhỏ nên mỗi query phải chờ lâu",
+        "Mạng tới database chậm nên mỗi query tốn thêm 4ms"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi query chỉ 3–4ms, nên index và database không phải vấn đề; 420 × 4ms là đủ 1,7 giây. Chờ pool sẽ hiện thành khoảng trống giữa các span, không phải span query. 4ms mỗi query là bình thường cho một vòng gọi DB. Đây là N+1: lặp qua danh sách và truy vấn từng phần tử; gộp bằng fetch join, batch fetching hoặc `WHERE order_id IN (...)` (bài N+1 Query)."
+    },
+    {
+      "id": "gc-vs-pool",
+      "kind": "single",
+      "prompt": "Đỉnh latency xuất hiện cùng lúc trên mọi endpoint, nhưng chỉ ở pod-3, cứ vài phút một lần, mỗi lần khoảng 600ms. Pod khác bình thường. Nghi vấn đầu tiên nên kiểm tra là gì?",
+      "options": [
+        "GC pause hoặc safepoint dài trên pod-3: xem GC log và `jvm.gc.pause`",
+        "Database chậm định kỳ: xem slow query log trong cùng khoảng thời gian",
+        "Downstream chậm định kỳ: xem `http.client.requests` theo từng host",
+        "Load balancer dồn tải không đều: xem số request mỗi pod mỗi phút"
+      ],
+      "answer": 0,
+      "explanation": "Mọi endpoint chậm cùng lúc nghĩa là thứ gì đó dừng cả JVM, và chỉ một pod nghĩa là nguyên nhân nằm trong pod đó: GC pause hay safepoint dài là ứng viên đầu tiên. Database hay downstream chậm sẽ ảnh hưởng mọi pod gọi tới chúng, và thường chỉ các endpoint dùng chúng. Dồn tải không đều thì latency tăng theo tải, không dừng đều mọi endpoint 600ms."
+    }
+  ]
+}

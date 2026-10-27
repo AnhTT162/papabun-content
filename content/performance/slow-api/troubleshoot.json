@@ -1,0 +1,194 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "p99 của checkout lên đúng 1 giây sau một lần refactor",
+  "symptom": "Từ khoảng 10:32, p99 của `GET /checkout/summary` tăng từ 140ms lên 1,1 giây, thỉnh thoảng có request mất hơn 3 giây. p50 vẫn khoảng 85ms. CPU, bộ nhớ và lượng request không đổi.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "checkout-api: 9 pod trên 3 node (3 pod mỗi node), Spring Boot 3.5, JDK 21\nMỗi pod khoảng 400 req/s; mỗi request gọi inventory-service một lần.\n\ntime   p50    p99     GC pause p99   CPU\n10:20  84ms   138ms   9ms            41%\n10:40  86ms   1.09s   8ms            42%\n11:00  85ms   1.12s   9ms            41%\n\np99 cao như nhau trên cả 9 pod.\n\nThay đổi gần đây:\n10:30  deploy checkout-api v4.12 (refactor InventoryClient, \"gọn code\")",
+      "evidenceFormat": "monospace",
+      "question": "Chỉ tail chậm, đều trên mọi pod, ngay sau một deploy. Bạn làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Mở trace của vài request chậm xem span nào dài",
+          "quality": "good",
+          "feedback": "Đúng. Trace của request chậm (không phải request trung bình) cho biết thời gian rơi vào tầng nào.",
+          "next": "trace"
+        },
+        {
+          "label": "Bật GC log chi tiết để xem có pause dài không",
+          "quality": "ok",
+          "feedback": "GC là nghi vấn hợp lý cho tail latency, nhưng GC pause p99 chỉ 9ms trên dashboard. Nên nhìn trace trước để biết thời gian nằm ở đâu.",
+          "next": "gc"
+        },
+        {
+          "label": "Thêm 6 pod để giảm tải cho mỗi pod",
+          "quality": "poor",
+          "feedback": "CPU 41% và lượng request không đổi: không có dấu hiệu thiếu tài nguyên. Thêm pod mà chưa biết thời gian đi đâu là đoán.",
+          "next": "scale"
+        }
+      ]
+    },
+    {
+      "id": "scale",
+      "evidence": "11:05  thêm 6 pod (15 pod, mỗi pod khoảng 240 req/s)\n11:08  p99 0.98s\n11:12  p99 1.10s\nCPU mỗi pod 27%",
+      "evidenceFormat": "monospace",
+      "question": "Tải mỗi pod giảm gần một nửa mà p99 gần như không đổi. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Mở trace của vài request chậm",
+          "quality": "good",
+          "feedback": "Đúng. Vấn đề không phụ thuộc tải mỗi pod; cần biết thời gian nằm ở đâu.",
+          "next": "trace"
+        }
+      ]
+    },
+    {
+      "id": "gc",
+      "evidence": "-Xlog:gc trên một pod, 10 phút:\n  [1843.112s][info][gc] GC(611) Pause Young (Normal) (G1 Evacuation Pause) 412M->86M(1024M) 7.902ms\n  [1846.530s][info][gc] GC(612) Pause Young (Normal) (G1 Evacuation Pause) 413M->85M(1024M) 8.114ms\n  ...\n  pause dài nhất: 11.3ms\n\nThời điểm của 50 request chậm nhất: không trùng với pause nào.",
+      "evidenceFormat": "monospace",
+      "question": "GC không giải thích được 1 giây. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Mở trace của vài request chậm",
+          "quality": "good",
+          "feedback": "Đúng. Đã loại được GC bằng bằng chứng; giờ xem thời gian đi đâu.",
+          "next": "trace"
+        }
+      ]
+    },
+    {
+      "id": "trace",
+      "evidence": "Trace 4f1c...e2 GET /checkout/summary   1,094ms\n  ├─ SELECT cart_items ...                             6ms\n  ├─ GET http://inventory-service/stock (client)    1,041ms\n  │    └─ inventory-service GET /stock (server)        18ms   bắt đầu sau span client 1,021ms\n  └─ render response                                   3ms\n\nhttp.client.requests (uri=/stock), phân bố 10:40-11:00:\n  < 100ms        97.1%\n  1.0s - 1.1s     2.6%\n  3.0s - 3.1s     0.3%\n  khác           ~0%",
+      "evidenceFormat": "monospace",
+      "question": "inventory-service chỉ mất 18ms, nhưng request tới nó muộn khoảng 1 giây, và latency gom thành cụm ở 1 giây và 3 giây. Giải thích nào khớp nhất?",
+      "choices": [
+        {
+          "label": "Gói SYN bị mất và gửi lại sau 1 giây, lần hai thêm 2 giây",
+          "quality": "good",
+          "feedback": "Đúng. Thời gian mất trước khi server nhận request, gom đúng 1 giây và 3 giây: đó là lịch gửi lại SYN của Linux (1 giây, rồi thêm 2 giây). Mở kết nối đang bị rớt gói.",
+          "next": "network"
+        },
+        {
+          "label": "Phân giải DNS tên inventory-service chậm ở một số lần gọi",
+          "quality": "ok",
+          "feedback": "DNS cũng nằm trước khi request tới server, nên đáng kiểm tra. Nhưng timeout DNS mặc định là 5 giây và JVM cache tên 30 giây, khó tạo cụm đúng 1 giây và 3 giây.",
+          "next": "dns"
+        },
+        {
+          "label": "inventory-service bị GC pause khoảng 1 giây trước khi xử lý",
+          "quality": "poor",
+          "feedback": "GC pause ở inventory-service có thể làm request chờ trước khi vào ứng dụng, nên đáng loại trừ. Nhưng nó khó gom đúng 1 giây và 3 giây, và sẽ làm chậm cùng lúc mọi lời gọi tới pod đó.",
+          "next": "gc-inventory"
+        }
+      ]
+    },
+    {
+      "id": "gc-inventory",
+      "evidence": "inventory-service, 10:40-11:00:\n  jvm.gc.pause max     9ms\n  http.server.requests p99   24ms\n  50 lời gọi chậm nhất từ checkout: span server của inventory đều 15-25ms,\n  không trùng thời điểm pause nào",
+      "evidenceFormat": "monospace",
+      "question": "inventory-service không có pause dài nào. Thời gian mất trước khi request tới nó. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Kiểm tra mạng trên node: socket, bảng conntrack, log kernel",
+          "quality": "good",
+          "feedback": "Đúng. Còn lại đoạn giữa hai service: mở kết nối và mạng.",
+          "next": "network"
+        }
+      ]
+    },
+    {
+      "id": "dns",
+      "evidence": "tcpdump 60 giây trên một pod checkout-api:\n  port 53 (DNS):          31 truy vấn, mọi câu trả lời < 2ms (JVM cache tên 30 giây)\n  SYN tới inventory-service:8080   24,180   (gần bằng số request: mỗi request một kết nối mới)\n  SYN không có SYN-ACK, phải gửi lại sau 1s:   628 (2.6%)\n  SYN phải gửi lại lần hai (thêm 2s):          71 (0.3%)",
+      "evidenceFormat": "monospace",
+      "question": "DNS nhanh. Nhưng gần như mỗi request mở một kết nối TCP mới, và một phần SYN không được trả lời. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Kiểm tra mạng trên node: socket, bảng conntrack, log kernel",
+          "quality": "good",
+          "feedback": "Đúng. Connect chậm theo cụm 1 và 3 giây là SYN bị rớt; cần biết ai rớt nó.",
+          "next": "network"
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "evidence": "Trên pod checkout-api:\n  $ ss -s\n  TCP:   24113 (estab 21, closed 23940, orphaned 0, timewait 23940)\n\nTrên node:\n  $ dmesg -T | tail -3\n  [Tue Oct 20 10:52:13 2026] nf_conntrack: nf_conntrack: table full, dropping packet\n  [Tue Oct 20 10:52:13 2026] nf_conntrack: nf_conntrack: table full, dropping packet\n  [Tue Oct 20 10:52:14 2026] nf_conntrack: nf_conntrack: table full, dropping packet\n  $ sysctl net.netfilter.nf_conntrack_count net.netfilter.nf_conntrack_max\n  net.netfilter.nf_conntrack_count = 131072\n  net.netfilter.nf_conntrack_max = 131072\n\nDiff v4.12 (InventoryClient):\n-   private final RestClient restClient;   // bean, inject qua constructor\n+   Stock stock(String sku) {\n+       try (var http = HttpClient.newHttpClient()) {   // JDK 21: HttpClient là AutoCloseable, \"đóng cho sạch\"\n+           return RestClient.builder()\n+                   .baseUrl(\"http://inventory-service\")\n+                   .requestFactory(new JdkClientHttpRequestFactory(http))\n+                   .build()\n+                   .get().uri(\"/stock?sku={sku}\", sku)\n+                   .retrieve().body(Stock.class);\n+       }   // close() đóng luôn kết nối vừa dùng\n+   }",
+      "evidenceFormat": "monospace",
+      "question": "Bảng conntrack của node đầy và kernel đang bỏ gói. Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Dùng một HTTP client bean chung có pool kết nối và deploy",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi lần gọi tạo một `HttpClient` mới rồi đóng nó, nên kết nối không bao giờ được dùng lại và bị đóng ngay sau mỗi request. Dùng chung một client thì vài chục kết nối keep-alive phục vụ hết 400 req/s.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Tăng `nf_conntrack_max` của node lên 524288 để có thêm chỗ",
+          "quality": "ok",
+          "feedback": "Cầm máu nhanh và hợp lý trong lúc chờ deploy bản sửa, nhưng nguyên nhân vẫn còn: mỗi request vẫn tốn một bắt tay TCP và một mục trong bảng.",
+          "next": "conntrack-only"
+        },
+        {
+          "label": "Bật `net.ipv4.tcp_tw_reuse` để dùng lại socket TIME_WAIT",
+          "quality": "poor",
+          "feedback": "`tcp_tw_reuse` chỉ cho phép dùng lại cổng nguồn của socket TIME_WAIT ở máy gọi; nó không xoá mục trong bảng conntrack của node, thứ đang đầy.",
+          "next": "tw-reuse"
+        }
+      ]
+    },
+    {
+      "id": "tw-reuse",
+      "evidence": "11:40  sysctl net.ipv4.tcp_tw_reuse=1 trên pod (đã là mặc định 2 cho loopback)\n11:50  nf_conntrack_count = 131072 / 131072\n       dmesg vẫn \"table full, dropping packet\"\n       p99 1.11s",
+      "evidenceFormat": "monospace",
+      "question": "Không có gì thay đổi. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Dùng một HTTP client bean chung có pool kết nối và deploy",
+          "quality": "good",
+          "feedback": "Đúng. Bỏ nguồn sinh kết nối mới thì bảng conntrack tự vơi.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "conntrack-only",
+      "evidence": "11:40  sysctl net.netfilter.nf_conntrack_max=524288 trên 3 node\n11:42  dmesg hết \"table full\"; p99 145ms\n12:30  nf_conntrack_count dao động quanh 144,000 (khoảng 1,200 kết nối mới/giây × 120 giây TIME_WAIT)\n       Node mới do autoscaler thêm vào vẫn dùng giá trị cũ 131072",
+      "evidenceFormat": "monospace",
+      "question": "Đã cầm máu, nhưng bảng vẫn phình theo tải và node mới không có cấu hình này. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Dùng một HTTP client bean chung có pool kết nối và deploy",
+          "quality": "good",
+          "feedback": "Đúng. Tăng giới hạn chỉ mua thời gian; bỏ việc mở kết nối mới mỗi request mới là sửa gốc.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "Deploy v4.13: InventoryClient nhận một RestClient bean dùng chung (Apache HttpClient 5, pool 50 mỗi route, timeout đầy đủ)\n\n15 phút sau:\n  Kết nối TCP mới tới inventory-service   ~0.3/giây mỗi pod\n  ss -s: timewait 37\n  nf_conntrack_count  ~9,800 / 131072\n  p99 GET /checkout/summary  139ms",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn. Phòng ngừa thế nào?",
+      "choices": [
+        {
+          "label": "Alert theo conntrack và tốc độ mở kết nối mới",
+          "quality": "good",
+          "feedback": "Đúng. Hai metric này báo trước khi người dùng thấy chậm. Thêm vào review code: client HTTP phải là bean dùng chung.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tăng `nf_conntrack_max` trên mọi node cho chắc ăn",
+          "quality": "ok",
+          "feedback": "Có thêm khoảng dư cũng tốt, nhưng không thay được việc phát hiện sớm. Lần sau một service khác mở kết nối mỗi request, bảng vẫn đầy.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: bản refactor v4.12 tạo một `HttpClient` mới trong mỗi lần gọi inventory-service và đóng nó bằng try-with-resources. Đóng client là đóng luôn kết nối vừa dùng, nên mỗi request mở và đóng một kết nối TCP: khoảng 400 kết nối TCP mới mỗi giây mỗi pod, 1.200 mỗi node. Phía pod, socket ở TIME_WAIT 60 giây (24.000 socket mỗi pod); trong bảng conntrack của node, mục TIME_WAIT còn giữ lâu hơn, 120 giây (`nf_conntrack_tcp_timeout_time_wait`), nên sau khoảng 110 giây bảng chạm `nf_conntrack_max` 131072. Từ đó kernel bỏ một phần gói SYN; client gửi lại SYN sau 1 giây, lần nữa sau 2 giây, tạo hai cụm latency 1 giây và 3 giây.\n\n**Vì sao khó thấy**: CPU, GC, DB, inventory-service đều bình thường; span phía server chỉ 18ms. Dấu hiệu nằm ở khoảng cách giữa span client và span server, ở con số tròn 1 giây và 3 giây, và trong `dmesg` của node, nơi đội ứng dụng ít khi nhìn.\n\n**Phòng ngừa**:\n- HTTP client là bean dùng chung có pool và timeout (bài Tuning server & HTTP client); thêm quy tắc vào review hoặc ArchUnit.\n- Metric và alert: `nf_conntrack_count / nf_conntrack_max` của node, số kết nối mới mỗi giây của ứng dụng, socket TIME_WAIT.\n- Khi latency gom thành cụm ở con số tròn, nghĩ tới timeout và cơ chế gửi lại trước khi nghĩ tới code chậm.\n- Đặt `nf_conntrack_max` có khoảng dư trong cấu hình node (cả node mới do autoscaler tạo).",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

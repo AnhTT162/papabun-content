@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "slow-api",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Điều tra API chậm",
+  "summary": "Chia thời gian của request ra từng tầng: khoanh hình dạng của chậm (p50 hay p99, endpoint, pod), so latency ở nhiều điểm đo, đọc khoảng trống trong trace, rồi kiểm từng tầng DB, downstream, GC, thread pool, mạng. Dấu vân tay của con số tròn: retransmit, SYN, DNS; conntrack đầy, CPU throttling, warm-up.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 16,
+  "prerequisites": ["perf-methodology", "observability", "troubleshooting-mindset"],
+  "terms": ["tail-latency", "latency", "distributed-tracing", "span", "cpu-throttling", "tcp-retransmission", "conntrack", "time-wait", "stop-the-world", "load-balancer", "connection-pool", "n-plus-one", "thread-pool", "percentile", "timeout", "dns", "jit", "jfr", "coordinated-omission"],
+  "references": [
+    { "title": "Linux kernel: Netfilter conntrack sysfs variables", "url": "https://docs.kernel.org/networking/nf_conntrack-sysctl.html" },
+    { "title": "RFC 6298: Computing TCP's Retransmission Timer", "url": "https://www.rfc-editor.org/rfc/rfc6298" },
+    { "title": "Spring Boot Reference: Observability", "url": "https://docs.spring.io/spring-boot/reference/actuator/observability.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Metric của ứng dụng báo p99 200ms, nhưng khách hàng đo được 2 giây. Ai đúng?\" Cả hai, vì họ đo ở hai điểm khác nhau. `http.server.requests` chỉ bắt đầu đếm khi request đã tới filter của Spring; thời gian chờ trong accept queue, hàng đợi của Tomcat, load balancer, TLS, mạng di động và retry của client đều nằm ngoài. So từng cặp điểm đo (client, load balancer, ứng dụng) để biết thời gian mất ở đoạn nào; synthetic check từ bên ngoài và RUM là cách đo gần với người dùng nhất." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng sửa trước khi có bằng chứng. Thêm index, thêm pod, tăng thread khi chưa biết thời gian đi đâu thường không giúp gì, có khi làm tệ hơn (thêm pod là thêm connection vào DB đang quá tải), và làm nhiễu hiện trường: sau ba thay đổi cùng lúc, không ai biết cái nào có tác dụng." }
+  ]
+}

@@ -10,7 +10,7 @@
   "order": 4,
   "minutes": 15,
   "prerequisites": ["synchronized-volatile"],
-  "terms": ["deadlock", "coffman-conditions", "lock-ordering", "livelock", "starvation", "thread-dump", "monitor", "reentrancy"],
+  "terms": ["deadlock", "coffman-conditions", "lock-ordering", "livelock", "starvation", "thread-dump", "monitor", "reentrancy", "thread-starvation-deadlock"],
   "references": [
     { "title": "Javadoc ThreadMXBean (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.management/java/lang/management/ThreadMXBean.html" },
     { "title": "Javadoc ReentrantLock (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantLock.html" },

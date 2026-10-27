@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "thread-pool-exhaustion",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "performance",
+  "title": "Request treo vì cạn thread",
+  "summary": "Đọc thread dump khi pool bận hết mà CPU gần 0: gom theo stack, phân biệt WAITING, TIMED_WAITING, BLOCKED và RUNNABLE đọc socket. Thread starvation deadlock khi task chờ task trong cùng pool, timeout thiếu ở tầng thấp, executor @Async mặc định, common pool, virtual thread pinning, bulkhead và health check trên cổng riêng.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 15,
+  "prerequisites": ["executor-thread-pool", "troubleshooting-mindset", "server-tuning"],
+  "terms": ["thread-dump", "thread-pool", "timeout", "thread-starvation-deadlock", "bulkhead", "rejection-policy", "pinning", "deadlock", "pool-deadlock", "connection-pool", "common-pool", "virtual-thread", "carrier-thread", "backpressure", "health-check"],
+  "references": [
+    { "title": "JDK 21 Tools: jcmd", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jcmd.html" },
+    { "title": "Spring Boot Reference: Task Execution and Scheduling", "url": "https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html" },
+    { "title": "JEP 491: Synchronize Virtual Threads without Pinning", "url": "https://openjdk.org/jeps/491" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Chuyển sang virtual thread thì còn cạn thread không?\" Không còn giới hạn 200 thread của Tomcat, nhưng vấn đề dời xuống tài nguyên phía sau: hàng nghìn virtual thread cùng chờ 10 connection của HikariCP hay 50 kết nối HTTP, và một dependency treo vẫn giữ chúng mãi nếu thiếu timeout. Trên JDK 21–23 còn thêm pinning: chặn trong `synchronized` giữ luôn carrier thread, mà số carrier chỉ bằng số core. Timeout, bulkhead và giới hạn đồng thời vẫn cần như cũ." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để liveness probe dùng chung pool thread với API và kiểm tra cả dependency. Khi pool cạn hoặc DB chậm, probe fail, Kubernetes restart mọi pod gần như cùng lúc: mất hiện trường, mất hết request đang chạy, và pod mới lại treo vì nguyên nhân vẫn còn. Liveness chỉ báo JVM còn sống, đặt trên `management.server.port` riêng; kiểm tra dependency thuộc về readiness." }
+  ]
+}

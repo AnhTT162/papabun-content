@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "p50-vs-p99", "front": "p50 tăng khác p99 tăng thế nào khi điều tra?", "back": "p50 tăng là mọi request chậm (tải, dependency chính); chỉ p99 tăng là một phần request gặp chuyện riêng: GC, chờ pool, retry, một pod lỗi." },
+    { "id": "compare-points", "front": "Latency ở load balancer lớn hơn hẳn `http.server.requests` nghĩa là gì?", "back": "Request mất thời gian trước khi tới Spring: accept queue, hàng đợi thread của Tomcat, mạng giữa LB và pod." },
+    { "id": "trace-gap", "front": "Trace chậm mà không span nào dài thì thời gian nằm đâu?", "back": "Ở khoảng trống giữa các span: chờ connection pool, chờ khoá, GC pause, CPU throttling. Thread dump hoặc JFR chụp đúng lúc chậm cho thấy chúng." },
+    { "id": "client-server-span", "front": "Span client 1.041ms, span server của downstream 18ms bắt đầu muộn 1.021ms. Thời gian mất ở đâu?", "back": "Trước khi request tới server: chờ pool, DNS, mở TCP/TLS, mạng. Không phải downstream xử lý chậm." },
+    { "id": "round-numbers", "front": "Latency gom thành cụm ở 1 giây và 3 giây gợi ý gì?", "back": "Gói SYN bị mất và được gửi lại: lần đầu sau 1 giây, lần hai thêm 2 giây. Thời gian mất nằm ở bước mở kết nối." },
+    { "id": "conntrack-full", "front": "Dấu hiệu bảng conntrack của node đầy?", "back": "`dmesg` có `nf_conntrack: table full, dropping packet`, `nf_conntrack_count` bằng `nf_conntrack_max`, connect thỉnh thoảng mất 1 hoặc 3 giây." },
+    { "id": "gc-signature", "front": "GC pause để lại dấu hiệu gì trên latency?", "back": "Mọi request của cùng một pod chậm cùng lúc, đỉnh thẳng hàng giữa các endpoint của pod đó, khớp thời điểm pause trong GC log." },
+    { "id": "throttling-signature", "front": "CPU throttling của container trông thế nào trên latency?", "back": "Latency tăng theo bậc khoảng 100ms (chu kỳ CFS) dù CPU trung bình không cao; `container_cpu_cfs_throttled_periods_total` tăng." },
+    { "id": "first-request-slow", "front": "Vì sao các request đầu sau deploy chậm?", "back": "JIT chưa biên dịch code nóng, class chưa load, cache rỗng, pool kết nối tới downstream chưa mở; warm-up trước khi báo readiness." }
+  ]
+}

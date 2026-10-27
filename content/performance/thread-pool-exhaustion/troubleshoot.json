@@ -1,0 +1,166 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "report-api treo hẳn vào ngày cuối tháng",
+  "symptom": "17:40 ngày cuối tháng, report-api ngừng trả lời mọi endpoint, kể cả trang danh sách báo cáo vốn không làm gì nặng. Request treo tới khi gateway cắt sau 60 giây. CPU của pod khoảng 2%. Kubernetes đã restart pod hai lần vì liveness probe không trả lời.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "report-api: 2 pod, Spring Boot 3.5, JDK 21, Tomcat 200 thread\nLiveness probe: GET /actuator/health/liveness trên cổng 8080 (chung với API)\n\ntime   req/s   p99      CPU   tomcat.threads.busy   executor.active{reportExecutor}   executor.queued\n17:20  14      2.1s     18%   9/200                 3/8                               0\n17:35  41      4.8s     22%   64/200                8/8                               70\n17:40  38      60s      2%    200/200               8/8                               216 (đứng yên)\n\nSố lượt bấm \"Xuất báo cáo tháng\" 17:30-17:40: 1,410 (bình thường khoảng 30/giờ)",
+      "evidenceFormat": "monospace",
+      "question": "CPU gần 0, mọi thread Tomcat bận, executor 8/8 và hàng đợi không vơi. Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Chụp 3 thread dump cách nhau 10 giây khi pod còn sống",
+          "quality": "good",
+          "feedback": "Đúng. Thread bận mà không tốn CPU là đang chờ; thread dump cho biết chờ gì. Liveness probe sắp restart pod, nên chụp ngay.",
+          "next": "thread-dump"
+        },
+        {
+          "label": "Restart cả hai pod để khôi phục dịch vụ cho người dùng",
+          "quality": "poor",
+          "feedback": "Restart xoá hiện trường, và nếu nguyên nhân vẫn còn (người dùng vẫn bấm xuất báo cáo) thì pod mới treo lại sau vài phút.",
+          "next": "restart"
+        },
+        {
+          "label": "Tăng `server.tomcat.threads.max` lên 800 và deploy lại",
+          "quality": "poor",
+          "feedback": "Thread đang chờ thứ gì đó, không phải thiếu thread. Thêm thread chỉ thêm người đứng chờ ở cùng chỗ.",
+          "next": "more-tomcat"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "evidence": "17:52  pod mới Ready, danh sách báo cáo trả 120ms\n17:55  tomcat.threads.busy 200/200, executor.active 8/8, executor.queued 205\n       liveness probe fail, Kubernetes restart lần ba\n\nKhông còn thread dump nào của lần trước.",
+      "evidenceFormat": "monospace",
+      "question": "Ba phút sau mọi thứ lại treo. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Chụp thread dump ngay khi pod bắt đầu treo, trước khi bị restart",
+          "quality": "good",
+          "feedback": "Đúng. Nguyên nhân vẫn còn; cần bằng chứng về thứ thread đang chờ.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "more-tomcat",
+      "evidence": "18:02  deploy server.tomcat.threads.max=800\n18:04  danh sách báo cáo trả lời lại\n18:09  tomcat.threads.busy 800/800, executor.active 8/8, executor.queued 816\n       p99 60s, liveness probe fail, Kubernetes restart pod\n\nMỗi lượt bấm xuất báo cáo vẫn giữ một thread Tomcat; chỉ mất thêm vài phút để cạn.",
+      "evidenceFormat": "monospace",
+      "question": "Thêm thread chỉ làm pod treo chậm hơn vài phút. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Chụp thread dump ngay khi pod bắt đầu treo",
+          "quality": "good",
+          "feedback": "Đúng. Số thread không phải vấn đề; cần biết các thread đang chờ gì.",
+          "next": "thread-dump"
+        }
+      ]
+    },
+    {
+      "id": "thread-dump",
+      "evidence": "Gom 3 dump (giống nhau ở cả 3 lần):\n\n199 thread http-nio-8080-exec-*:\n   java.lang.Thread.State: WAITING (parking)\n\tat jdk.internal.misc.Unsafe.park(java.base@21.0.4/Native Method)\n\t- parking to wait for  <0x00000000c3e19a28> (a java.util.concurrent.FutureTask)\n\tat java.util.concurrent.locks.LockSupport.park(java.base@21.0.4/LockSupport.java)\n\tat java.util.concurrent.FutureTask.awaitDone(java.base@21.0.4/FutureTask.java)\n\tat java.util.concurrent.FutureTask.get(java.base@21.0.4/FutureTask.java)\n\tat com.example.report.ReportController.exportMonthly(ReportController.java:41)\n\n8 thread report-worker-1 .. report-worker-8:\n   java.lang.Thread.State: WAITING (parking)\n\tat jdk.internal.misc.Unsafe.park(java.base@21.0.4/Native Method)\n\t- parking to wait for  <0x00000000c3f2b1e0> (a java.util.concurrent.CompletableFuture$Signaller)\n\tat java.util.concurrent.locks.LockSupport.park(java.base@21.0.4/LockSupport.java)\n\tat java.util.concurrent.CompletableFuture$Signaller.block(java.base@21.0.4/CompletableFuture.java)\n\tat java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.4/ForkJoinPool.java)\n\tat java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.4/ForkJoinPool.java)\n\tat java.util.concurrent.CompletableFuture.waitingGet(java.base@21.0.4/CompletableFuture.java)\n\tat java.util.concurrent.CompletableFuture.join(java.base@21.0.4/CompletableFuture.java)\n\t...\n\tat com.example.report.ReportService.buildMonthly(ReportService.java:58)\n\tat java.util.concurrent.FutureTask.run(java.base@21.0.4/FutureTask.java)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.4/ThreadPoolExecutor.java)\n\n1 thread http-nio-8080-exec-*: RUNNABLE, đọc socket tới gateway\nHikariPool report-db: active 0/10, pending 0\nKhông có dòng \"Found one Java-level deadlock\".",
+      "evidenceFormat": "monospace",
+      "question": "Thread Tomcat chờ `FutureTask.get`, cả 8 worker chờ `CompletableFuture.join`, DB rảnh. Giải thích nào khớp?",
+      "choices": [
+        {
+          "label": "Worker đang chờ task con nằm trong hàng đợi của chính pool đó",
+          "quality": "good",
+          "feedback": "Đúng. Task cha chạy trên `report-worker` và chờ task con; task con được gửi vào cùng pool nhưng không còn thread nào rảnh để chạy chúng. Đây là thread starvation deadlock: không có khoá nên JVM không báo deadlock.",
+          "next": "code"
+        },
+        {
+          "label": "Worker chờ connection DB, cần tăng pool HikariCP lên 30",
+          "quality": "poor",
+          "feedback": "HikariCP báo active 0/10, pending 0, và stack của worker dừng ở `CompletableFuture.join`, không ở `HikariPool.getConnection`. Không ai đang dùng DB.",
+          "next": "code"
+        },
+        {
+          "label": "Hai khoá `synchronized` trong ReportService khoá chéo nhau",
+          "quality": "poor",
+          "feedback": "Deadlock khoá thì thread ở trạng thái `BLOCKED` và thread dump in \"Found one Java-level deadlock\". Ở đây mọi thread đều `WAITING (parking)` trên future.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "// ReportController.java\n@GetMapping(\"/reports/monthly/export\")\nbyte[] exportMonthly(@RequestParam YearMonth month) throws Exception {\n    return reportExecutor.submit(() -> reportService.buildMonthly(month)).get();   // dòng 41, không timeout\n}\n\n// ReportService.java\nbyte[] buildMonthly(YearMonth month) {\n    var orders   = CompletableFuture.supplyAsync(() -> ordersSection(month),   reportExecutor);\n    var payments = CompletableFuture.supplyAsync(() -> paymentsSection(month), reportExecutor);\n    var refunds  = CompletableFuture.supplyAsync(() -> refundsSection(month),  reportExecutor);\n    return pdf.render(orders.join(), payments.join(), refunds.join());   // dòng 58\n}\n\n// ExecutorConfig.java\n@Bean ExecutorService reportExecutor() {\n    return Executors.newFixedThreadPool(8, Thread.ofPlatform().name(\"report-worker-\", 1).factory());\n}\n\nBình thường mỗi báo cáo mất khoảng 2 giây, tối đa vài báo cáo cùng lúc.\nTừ 17:35 có hơn 8 báo cáo chạy cùng lúc.",
+      "evidenceFormat": "monospace",
+      "question": "Mỗi báo cáo chiếm 1 worker và cần thêm 3 worker cho phần con. Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Tách pool cho phần con, giới hạn đồng thời, thêm timeout",
+          "quality": "good",
+          "feedback": "Đúng. Task cha và task con không còn tranh cùng một pool nên không thể chờ lẫn nhau; giới hạn đồng thời và timeout biến quá tải thành lỗi nhanh thay vì treo.",
+          "next": "mitigated"
+        },
+        {
+          "label": "Tăng `reportExecutor` từ 8 lên 64 thread",
+          "quality": "ok",
+          "feedback": "Đỡ được lúc này, nhưng chỉ dời ngưỡng: khi đủ 64 báo cáo cùng lúc chiếm hết thread, pool lại treo y hệt.",
+          "next": "bigger-pool"
+        },
+        {
+          "label": "Đổi `.get()` ở controller thành `.get(30, SECONDS)`",
+          "quality": "ok",
+          "feedback": "Thread Tomcat được trả về sau 30 giây nên API khác sống lại, nhưng 8 worker vẫn kẹt mãi và hàng đợi vẫn dài thêm. Tính năng xuất báo cáo vẫn chết.",
+          "next": "timeout-only"
+        }
+      ]
+    },
+    {
+      "id": "bigger-pool",
+      "evidence": "18:10  deploy reportExecutor 64 thread\n18:12  báo cáo xuất được, p99 6.2s\n18:31  sau email nhắc \"hạn chót 19:00\": 70 báo cáo cùng lúc\n       executor.active 64/64, executor.queued 198 (6 báo cáo chờ + 192 phần con)\n       tomcat.threads.busy 200/200, CPU 3%",
+      "evidenceFormat": "monospace",
+      "question": "Treo lại khi số báo cáo đồng thời vượt 64. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Tách pool cho phần con, giới hạn đồng thời, thêm timeout",
+          "quality": "good",
+          "feedback": "Đúng. Pool lớn hơn chỉ cần nhiều người dùng hơn để treo; phải bỏ việc task chờ task trong cùng pool.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "timeout-only",
+      "evidence": "18:10  deploy get(30, SECONDS)\n18:12  danh sách báo cáo trả 120ms, liveness OK\n       POST xuất báo cáo: 100% lỗi 503 sau 30 giây (TimeoutException)\n18:40  executor.active 8/8, executor.queued 3,960 và tăng; heap tăng dần",
+      "evidenceFormat": "monospace",
+      "question": "API khác sống lại nhưng không ai xuất được báo cáo, hàng đợi vẫn phình. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Tách pool cho phần con, giới hạn đồng thời, thêm timeout",
+          "quality": "good",
+          "feedback": "Đúng. Timeout ở ngoài không gỡ được worker đang kẹt; phải sửa chỗ task cha chờ task con trong cùng pool.",
+          "next": "mitigated"
+        }
+      ]
+    },
+    {
+      "id": "mitigated",
+      "evidence": "// ExecutorConfig.java\n@Bean ExecutorService reportExecutor() { /* 8 thread, chỉ chạy task cha */ }\n@Bean ExecutorService sectionExecutor() { /* 24 thread, chỉ chạy phần con */ }\n\n// ReportController.java\n// reportPermits = new Semaphore(8): bằng số thread của reportExecutor\nif (!reportPermits.tryAcquire(200, MILLISECONDS)) throw new TooManyReportsException();  // trả 429\nFuture<byte[]> report = reportExecutor.submit(() -> {\n    try { return reportService.buildMonthly(month); }      // phần con chạy trên sectionExecutor\n    finally { reportPermits.release(); }                    // trả permit khi task thật sự xong\n});\nreturn report.get(20, SECONDS);   // DB và HTTP client bên trong cũng có timeout\n\nmanagement.server.port: 8081 (liveness probe chuyển sang cổng riêng)\n\nSau deploy 18:50:\n  executor.queued{reportExecutor} 0-12, {sectionExecutor} 0-30\n  p99 xuất báo cáo 5.8s, 3% request nhận 429 \"thử lại sau\" lúc đỉnh\n  tomcat.threads.busy tối đa 31/200",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn. Phòng ngừa thế nào?",
+      "choices": [
+        {
+          "label": "Alert theo `executor.queued`, chặn `get()`/`join()` không timeout",
+          "quality": "good",
+          "feedback": "Đúng. Hàng đợi tăng là dấu hiệu sớm nhất; quy tắc review chặn kiểu chờ không thời hạn từ đầu.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Load test riêng tính năng xuất báo cáo trước mỗi kỳ cuối tháng",
+          "quality": "ok",
+          "feedback": "Hữu ích để bắt lại lỗi này, nhưng chỉ cho tính năng đã biết. Alert và quy tắc về timeout bảo vệ cả những chỗ chưa ai nghĩ tới.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `buildMonthly` chạy trên `reportExecutor` (8 thread) và gửi ba phần con vào **cùng** executor rồi `join()`. Khi có từ 8 báo cáo chạy cùng lúc, cả 8 thread đều là task cha đang chờ, còn mọi task con nằm trong hàng đợi không ai chạy: thread starvation deadlock. Không có khoá nào nên JVM không báo deadlock và CPU gần 0. Controller gọi `get()` không timeout nên mỗi lượt bấm giữ một thread Tomcat mãi mãi; sau khoảng 200 lượt bấm, mọi endpoint ngừng trả lời, kể cả liveness probe chung cổng, và Kubernetes restart pod giữa lúc người dùng vẫn đang bấm. Hàng đợi dừng ở khoảng 216 task (192 báo cáo chờ + 24 phần con) chính vì mỗi lượt bấm giữ một thread Tomcat: không còn thread thì không ai gửi thêm task. Khi thêm `get(30, SECONDS)`, thread Tomcat được trả về và hàng đợi phình không giới hạn.\n\n**Vì sao chỉ vào cuối tháng**: bình thường hiếm khi có hơn vài báo cáo cùng lúc, nên pool không bao giờ đầy task cha. Lỗi tồn tại từ lâu, chỉ chờ đủ tải.\n\n**Phòng ngừa**:\n- Không chặn chờ task khác trong cùng pool: dùng pool riêng cho task con, hoặc nối bằng `thenCombine`/`allOf` mà không `join()` bên trong pool.\n- Mọi `get()`, `join()`, `take()` có timeout; timeout của DB và HTTP client ở tầng thấp nhất.\n- Giới hạn số việc nặng đồng thời (semaphore, bulkhead) và trả 429 khi quá ngưỡng.\n- Liveness probe trên `management.server.port` riêng, chỉ báo JVM còn sống.\n- Metric `executor.active`, `executor.queued` (Micrometer `ExecutorServiceMetrics`) cho mọi executor tự tạo, alert khi hàng đợi tăng liên tục.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

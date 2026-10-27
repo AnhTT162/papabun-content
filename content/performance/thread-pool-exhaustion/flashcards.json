@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "busy-low-cpu", "front": "Thread pool bận hết mà CPU gần 0 nghĩa là gì?", "back": "Thread đang chờ thứ gì đó chứ không tính toán. Thread dump cho biết chờ gì." },
+    { "id": "read-dump", "front": "Đọc thread dump khi pool cạn thế nào?", "back": "Chụp 3 lần, gom thread theo stack và đếm; khung đầu tiên dưới `Unsafe.park` thuộc thư viện hoặc code của bạn là thứ chúng chờ." },
+    { "id": "starvation-deadlock", "front": "Thread starvation deadlock là gì?", "back": "Task trong pool chặn chờ task con gửi vào cùng pool; khi mọi thread là task cha đang chờ, task con nằm mãi trong hàng đợi." },
+    { "id": "no-deadlock-report", "front": "Vì sao jcmd không báo deadlock khi pool tự chờ chính nó?", "back": "Thread dump chỉ phát hiện vòng chờ khoá (monitor, `ReentrantLock`); chờ một future không bao giờ hoàn thành không phải khoá." },
+    { "id": "runnable-socket", "front": "Thread `RUNNABLE` trong `NioSocketImpl.read` có đang tốn CPU không?", "back": "Không, nó đang chờ dữ liệu mạng; JVM vẫn báo RUNNABLE khi thread chặn trong hệ điều hành." },
+    { "id": "waiting-states", "front": "WAITING, TIMED_WAITING, BLOCKED khác nhau thế nào?", "back": "WAITING chờ không thời hạn, TIMED_WAITING chờ có hạn, BLOCKED chờ vào khối `synchronized`." },
+    { "id": "boot-async-pool", "front": "Executor mặc định cho `@Async` của Spring Boot có vấn đề gì?", "back": "8 core thread với hàng đợi không giới hạn nên không bao giờ quá 8 thread; task chậm làm hàng đợi và bộ nhớ tăng mãi." },
+    { "id": "outer-timeout", "front": "`future.get(30, SECONDS)` có giải phóng worker đang kẹt không?", "back": "Không, chỉ giải phóng thread đang chờ; worker chỉ thoát khi chính thao tác nó đang chặn có timeout." },
+    { "id": "separate-health", "front": "Vì sao đặt liveness probe trên `management.server.port` riêng?", "back": "Actuator chạy trên server với pool thread riêng, nên pool API cạn không làm liveness fail và Kubernetes không restart pod giữa sự cố." }
+  ]
+}
