@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "log-n-steps", "front": "Tìm trong 1 triệu phần tử đã sắp xếp bằng O(log n) mất khoảng bao nhiêu bước?", "back": "Khoảng 20 bước, vì 2^20 ≈ 1 triệu; mỗi bước bỏ một nửa." },
+    { "id": "amortized", "front": "\"Thêm vào cuối `ArrayList` là O(1) khấu hao\" nghĩa là gì?", "back": "Tổng n lần thêm là O(n), dù riêng lần resize tốn O(n) để chép mảng." },
+    { "id": "hash-worst", "front": "Khi nào hash table thoái hoá thành O(n) mỗi lần tra?", "back": "Khi nhiều key rơi vào cùng bucket: hàm hash kém hoặc kẻ tấn công gửi key cùng hash (hash flooding)." },
+    { "id": "hash-no-range", "front": "Vì sao index mặc định của database là B-tree, không phải hash?", "back": "B-tree giữ key theo thứ tự nên phục vụ được tìm theo khoảng, sắp xếp và tiền tố; hash chỉ phục vụ so sánh bằng." },
+    { "id": "btree-height", "front": "Vì sao B-tree chỉ cao 3–4 tầng với hàng chục triệu key?", "back": "Mỗi node là một page chứa hàng trăm key (fan-out cao): 400^3 = 64 triệu, nên chỉ cần đọc vài page." },
+    { "id": "unbalanced-bst", "front": "Chèn id tăng dần vào cây nhị phân không cân bằng thì sao?", "back": "Cây thành một đường thẳng, mọi thao tác thành O(n). Cây đỏ-đen, AVL tự xoay để giữ O(log n)." },
+    { "id": "top-k", "front": "Lấy top 10 trong n phần tử với ít bộ nhớ nhất?", "back": "Min-heap cỡ 10: phần tử mới lớn hơn đỉnh thì thay đỉnh. O(n log k) thời gian, O(k) bộ nhớ." },
+    { "id": "topo-sort", "front": "Sắp xếp topo dùng để làm gì, và không sắp được nghĩa là gì?", "back": "Tìm thứ tự sao cho mọi phụ thuộc đứng trước (build module, migration, khởi tạo bean). Không sắp được là graph có vòng." },
+    { "id": "contains-loop", "front": "`if (!list.contains(id)) list.add(id)` trong vòng lặp n phần tử tốn bao nhiêu?", "back": "O(n²) vì mỗi `contains` duyệt cả list. Dùng `HashSet` (hoặc `LinkedHashSet` để giữ thứ tự) cho O(n)." }
+  ]
+}

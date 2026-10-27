@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "time-encoding",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Thời gian, múi giờ & encoding",
+  "summary": "Instant, giờ địa phương và múi giờ khác nhau thế nào; DST tạo giờ không tồn tại và giờ lặp lại; `YYYY` và `yyyy`; lưu thời gian ra sao; Unicode, code point, UTF-8 và UTF-16; chuẩn hoá NFC/NFD làm chuỗi tiếng Việt trông giống nhau mà không bằng nhau; charset mặc định từ Java 18 và collation.",
+  "level": "junior",
+  "order": 7,
+  "minutes": 12,
+  "prerequisites": ["computer-architecture"],
+  "terms": ["utc", "time-zone", "dst", "iso-8601", "wall-clock", "monotonic-clock", "ntp", "unicode", "code-point", "utf-8", "unicode-normalization", "mojibake", "collation", "surrogate-pair", "grapheme-cluster", "tzdata", "unix-epoch", "leap-second"],
+  "references": [
+    { "title": "Java SE 21: java.time package summary", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/package-summary.html" },
+    { "title": "JEP 400: UTF-8 by Default", "url": "https://openjdk.org/jeps/400" },
+    { "title": "Unicode Standard Annex #15: Unicode Normalization Forms", "url": "https://unicode.org/reports/tr15/" },
+    { "title": "IANA Time Zone Database", "url": "https://www.iana.org/time-zones" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lịch hẹn khám ngày 15/3 năm sau lúc 9h ở New York, bạn lưu UTC được không?\" Với sự kiện đã xảy ra (log, giao dịch), lưu `Instant` theo UTC là đúng. Với hẹn trong tương lai theo giờ địa phương, lưu giờ địa phương cộng zone ID (`2027-03-15T09:00` + `America/New_York`) rồi tính ra `Instant` lúc cần: quy tắc DST của một nước có thể đổi trước ngày hẹn, và giá trị UTC tính sẵn theo quy tắc cũ sẽ lệch một giờ. Cập nhật tzdata của JDK (bản vá JDK hoặc TZUpdater) và của database khi quy tắc đổi." },
+    { "type": "callout", "style": "warning", "markdown": "Pattern `YYYY` trong `DateTimeFormatter` là năm theo tuần (week-based year), không phải năm lịch. Với `Locale.US`, ngày `2025-12-28` định dạng bằng `YYYY-MM-dd` ra `2026-12-28`; với locale tiếng Việt thì sai từ `2025-12-29`. Lỗi chỉ lộ vào vài ngày cuối năm, đúng lúc ít người trực. Dùng `yyyy` hoặc `uuuu`, và thêm test cho ngày 28–31/12." }
+  ]
+}

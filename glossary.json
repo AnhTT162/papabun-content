@@ -24,7 +24,7 @@
       "meaning": "Va chạm băm: hai giá trị khác nhau nhưng cho ra cùng hash, hoặc cùng rơi vào một bucket.",
       "example": "\"Aa\" và \"BB\" có cùng hashCode là 2112.",
       "related": ["hash-code", "bucket"],
-      "topics": ["equals-hashcode", "hashmap-internals"]
+      "topics": ["equals-hashcode", "hashmap-internals", "data-structures"]
     },
     {
       "id": "immutable",
@@ -334,7 +334,7 @@
       "meaning": "Tỉ lệ đầy tối đa của bảng băm trước khi resize. HashMap mặc định 0.75: resize khi `size > capacity × 0.75`.",
       "example": "Capacity 16, load factor 0.75 thì resize khi thêm entry thứ 13.",
       "related": ["rehash", "bucket"],
-      "topics": ["hashmap-internals", "collections-overview"]
+      "topics": ["hashmap-internals", "collections-overview", "data-structures"]
     },
     {
       "id": "rehash",
@@ -358,7 +358,7 @@
       "meaning": "Cây nhị phân tìm kiếm tự cân bằng: mỗi node tô đỏ hoặc đen theo quy tắc giữ chiều cao cỡ O(log n), nên tìm, thêm, xoá đều O(log n).",
       "example": "`TreeMap` và các bucket đã treeify của `HashMap` dùng cây đỏ-đen.",
       "related": ["treeify"],
-      "topics": ["hashmap-internals", "collections-overview"]
+      "topics": ["hashmap-internals", "collections-overview", "data-structures"]
     },
     {
       "id": "fail-fast",
@@ -589,7 +589,7 @@
       "meaning": "Cách mô tả thời gian (hoặc bộ nhớ) tăng thế nào khi dữ liệu tăng, bỏ qua hằng số.",
       "example": "`ArrayList.get(i)` là O(1); `LinkedList.get(i)` là O(n): list gấp đôi thì chậm gấp đôi.",
       "related": ["amortized-complexity"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "data-structures"]
     },
     {
       "id": "amortized-complexity",
@@ -597,7 +597,7 @@
       "meaning": "Chi phí trung bình mỗi thao tác khi tính trên một chuỗi dài thao tác, dù thỉnh thoảng có một lần rất tốn.",
       "example": "`ArrayList.add` thỉnh thoảng phải copy cả mảng khi đầy, nhưng tính trung bình vẫn là O(1).",
       "related": ["big-o"],
-      "topics": ["collections-overview"]
+      "topics": ["collections-overview", "data-structures"]
     },
     {
       "id": "cache-locality",
@@ -605,7 +605,7 @@
       "meaning": "Dữ liệu nằm liền nhau trong bộ nhớ được CPU nạp vào cache cùng lúc, nên duyệt tuần tự nhanh hơn nhiều so với nhảy lung tung.",
       "example": "Duyệt `ArrayList` nhanh hơn `LinkedList` cùng kích thước vì phần tử nằm liền nhau.",
       "related": ["big-o"],
-      "topics": ["collections-overview", "computer-architecture"]
+      "topics": ["collections-overview", "computer-architecture", "data-structures"]
     },
     {
       "id": "unmodifiable-view",
@@ -717,7 +717,7 @@
       "meaning": "Loại index phổ biến nhất: key được sắp xếp trong các page tạo thành cây thấp, tìm một giá trị chỉ cần đi qua vài page từ gốc xuống lá.",
       "example": "Bảng 12 triệu dòng có B-tree cao khoảng 3–4 tầng, tìm một `customer_id` đọc khoảng 4–5 page.",
       "related": ["composite-index", "execution-plan"],
-      "topics": ["index-execution-plan", "storage-engine"]
+      "topics": ["index-execution-plan", "storage-engine", "data-structures"]
     },
     {
       "id": "clustered-index",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine", "cache-failures"]
+      "topics": ["storage-engine", "cache-failures", "data-structures"]
     },
     {
       "id": "group-commit",
@@ -2349,7 +2349,7 @@
       "meaning": "Quy tắc so sánh và sắp xếp chuỗi của database: có phân biệt hoa thường, có phân biệt dấu hay không, thứ tự chữ cái. Ảnh hưởng tới `=`, `ORDER BY`, `LIKE` và unique index.",
       "example": "MySQL `utf8mb4_0900_ai_ci` coi `Nam`, `nam` và `Năm` là bằng nhau khi so sánh; PostgreSQL mặc định phân biệt.",
       "related": ["expression-index"],
-      "topics": ["postgres-vs-mysql"]
+      "topics": ["postgres-vs-mysql", "time-encoding"]
     },
     {
       "id": "cache",
@@ -5373,7 +5373,7 @@
       "meaning": "Đồng hồ cho biết giờ thực (giây từ 1970), có thể bị chỉnh tới hoặc lùi. Trong Java: `System.currentTimeMillis()`, `Instant.now()`.",
       "example": "NTP step lùi 300 ms làm `currentTimeMillis()` trả giá trị nhỏ hơn lần gọi trước.",
       "related": ["monotonic-clock", "ntp", "clock-skew"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "time-encoding"]
     },
     {
       "id": "monotonic-clock",
@@ -5381,7 +5381,7 @@
       "meaning": "Đồng hồ chỉ tăng, không bị NTP kéo lùi, dùng để đo khoảng thời gian. Giá trị không mang nghĩa giờ thực và chỉ so được trong một process.",
       "example": "`long start = System.nanoTime(); ... long elapsedMs = (System.nanoTime() - start) / 1_000_000;`",
       "related": ["wall-clock"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "time-encoding"]
     },
     {
       "id": "ntp",
@@ -5389,7 +5389,7 @@
       "meaning": "Network Time Protocol: giao thức đồng bộ đồng hồ máy với máy chủ thời gian. Chỉnh bằng slew (chạy nhanh/chậm dần) hoặc step (nhảy thẳng, có thể lùi).",
       "example": "chrony trên mỗi node đồng bộ với máy chủ thời gian của cloud, giữ lệch ở mức mili giây hoặc thấp hơn.",
       "related": ["clock-skew", "wall-clock"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "time-encoding"]
     },
     {
       "id": "lamport-clock",
@@ -5461,7 +5461,7 @@
       "meaning": "Giây nhuận thêm vào UTC để khớp với vòng quay Trái Đất. Hệ thống thường rải giây này ra nhiều giờ (smear) thay vì có phút 61 giây.",
       "example": "Phút có 23:59:60 làm vài hệ thống cũ treo hoặc tính sai thời lượng.",
       "related": ["ntp", "wall-clock"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "time-encoding"]
     },
     {
       "id": "raft",
@@ -6446,6 +6446,150 @@
       "example": "Pod có memory limit 1 GiB nghĩa là `memory.max` của cgroup là 1 GiB; vượt thì OOM killer chỉ chọn process trong cgroup đó.",
       "related": ["oom-killer", "cpu-throttling"],
       "topics": ["os-process-memory"]
+    },
+    {
+      "id": "hash-table",
+      "term": "Hash table",
+      "meaning": "Cấu trúc lưu cặp key–value trong một mảng bucket; hàm hash biến key thành vị trí. Tra, thêm, xoá O(1) trung bình, nhưng không giữ thứ tự và không tìm theo khoảng.",
+      "example": "`HashMap`, `HashSet` của Java; Redis cũng là một hash table khổng lồ từ key sang value.",
+      "related": ["hash-collision", "load-factor"],
+      "topics": ["data-structures"]
+    },
+    {
+      "id": "binary-search-tree",
+      "term": "Binary search tree",
+      "meaning": "Cây nhị phân mà mọi key bên trái nhỏ hơn node, bên phải lớn hơn, nên tìm, thêm, xoá đi theo một nhánh. Không tự cân bằng thì có thể thoái hoá thành O(n).",
+      "example": "Chèn id 1, 2, 3, ... theo thứ tự vào cây không cân bằng tạo ra một đường thẳng; cây đỏ-đen tự xoay để giữ độ cao O(log n).",
+      "related": ["red-black-tree", "b-tree"],
+      "topics": ["data-structures"]
+    },
+    {
+      "id": "binary-heap",
+      "term": "Binary heap",
+      "meaning": "Cây nhị phân đầy đủ lưu trong mảng, node cha luôn nhỏ hơn (min-heap) hoặc lớn hơn (max-heap) node con. Lấy phần tử nhỏ nhất O(1), thêm và lấy ra O(log n).",
+      "example": "`PriorityQueue` của Java; bộ hẹn giờ và top-k dùng min-heap cỡ k.",
+      "related": ["big-o"],
+      "topics": ["data-structures"]
+    },
+    {
+      "id": "graph",
+      "term": "Graph",
+      "meaning": "Tập node nối với nhau bằng cạnh (có hướng hoặc không, có trọng số hoặc không). Thường lưu bằng danh sách kề; duyệt bằng BFS hoặc DFS.",
+      "example": "Service gọi nhau, module phụ thuộc nhau, bạn bè trên mạng xã hội đều là graph.",
+      "related": ["topological-sort"],
+      "topics": ["data-structures"]
+    },
+    {
+      "id": "topological-sort",
+      "term": "Topological sort",
+      "meaning": "Sắp các node của graph có hướng sao cho mọi cạnh đi từ node đứng trước tới node đứng sau. Chỉ làm được khi graph không có vòng.",
+      "example": "Maven tính thứ tự build module theo phụ thuộc; có vòng thì báo lỗi `The projects in the reactor contain a cyclic reference`.",
+      "related": ["graph", "circular-dependency"],
+      "topics": ["data-structures"]
+    },
+    {
+      "id": "utc",
+      "term": "UTC",
+      "meaning": "Coordinated Universal Time: giờ chuẩn quốc tế, không có giờ mùa hè. Dùng làm mốc chung để lưu và so sánh thời điểm.",
+      "example": "`Instant.now()` in ra `2026-10-27T03:15:00Z`, chữ `Z` nghĩa là UTC; giờ Việt Nam là UTC+7.",
+      "related": ["time-zone"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "time-zone",
+      "term": "Time zone",
+      "meaning": "Quy tắc đổi từ UTC sang giờ địa phương của một vùng, gồm cả DST và lịch sử thay đổi. Định danh theo IANA như `Asia/Ho_Chi_Minh`, khác với offset cố định `+07:00`.",
+      "example": "`ZonedDateTime.now(ZoneId.of(\"America/New_York\"))` cho offset `-05:00` mùa đông và `-04:00` mùa hè.",
+      "related": ["utc", "dst"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "dst",
+      "term": "DST",
+      "meaning": "Daylight Saving Time: giờ mùa hè, vặn đồng hồ sớm thêm một giờ. Ngày chuyển giờ có một giờ không tồn tại và một giờ lặp lại; ngày đó dài 23 hoặc 25 giờ.",
+      "example": "Ở New York, `2026-03-08T02:30` không tồn tại; `2026-11-01T01:30` xảy ra hai lần.",
+      "related": ["time-zone"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "iso-8601",
+      "term": "ISO 8601",
+      "meaning": "Chuẩn viết ngày giờ dạng văn bản, sắp xếp được theo chữ: năm-tháng-ngày, `T`, giờ, kèm offset hoặc `Z`. Định dạng nên dùng cho API và log.",
+      "example": "`2026-03-08T14:00:00Z` hoặc `2026-03-08T21:00:00+07:00` cùng chỉ một thời điểm.",
+      "related": ["utc"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "unicode",
+      "term": "Unicode",
+      "meaning": "Bảng mã gán cho mỗi ký tự của mọi ngôn ngữ một số duy nhất (code point). Unicode chỉ định số, còn cách lưu thành byte là việc của encoding như UTF-8, UTF-16.",
+      "example": "Chữ `ễ` là U+1EC5, emoji 👋 là U+1F44B.",
+      "related": ["code-point", "utf-8"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "code-point",
+      "term": "Code point",
+      "meaning": "Số Unicode của một ký tự, từ U+0000 tới U+10FFFF. Một ký tự người dùng thấy có thể gồm nhiều code point, và trong Java một code point có thể chiếm hai `char`.",
+      "example": "`\"Hi 👋\".length()` là 5 nhưng `codePointCount` là 4.",
+      "related": ["unicode", "unicode-normalization"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "utf-8",
+      "term": "UTF-8",
+      "meaning": "Encoding lưu mỗi code point bằng 1–4 byte; ASCII giữ nguyên 1 byte. Là mặc định của web, của Java từ 18 (JEP 400) và nên dùng ở mọi biên.",
+      "example": "`ễ` thành 3 byte `E1 BB 85`, emoji thành 4 byte; MySQL cần `utf8mb4` mới lưu được emoji.",
+      "related": ["unicode", "mojibake"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "unicode-normalization",
+      "term": "Unicode normalization",
+      "meaning": "Đưa chuỗi về một dạng chuẩn vì cùng một chữ có thể viết bằng các chuỗi code point khác nhau. NFC dùng ký tự dựng sẵn, NFD tách chữ và dấu.",
+      "example": "`ễ` NFC là U+1EC5; NFD là `e` + U+0302 + U+0303. `Normalizer.normalize(s, Normalizer.Form.NFC)` đưa về một dạng trước khi so sánh.",
+      "related": ["code-point", "collation"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "mojibake",
+      "term": "Mojibake",
+      "meaning": "Chữ bị hiển thị sai vì byte được giải mã bằng charset khác với lúc mã hoá. Mỗi byte của ký tự nhiều byte biến thành một ký tự lạ.",
+      "example": "`Nguyễn Văn An` ghi bằng UTF-8 nhưng đọc bằng `windows-1252` thành `Nguyá»…n VÄƒn An`.",
+      "related": ["utf-8"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "surrogate-pair",
+      "term": "Surrogate pair",
+      "meaning": "Cặp hai `char` UTF-16 dùng để biểu diễn một code point ngoài BMP (trên U+FFFF), như emoji. Cắt chuỗi giữa cặp tạo ra ký tự hỏng.",
+      "example": "👋 (U+1F44B) là `\\uD83D\\uDC4B` trong `String`, nên `\"👋\".length()` là 2.",
+      "related": ["code-point", "grapheme-cluster"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "grapheme-cluster",
+      "term": "Grapheme cluster",
+      "meaning": "Thứ người dùng thấy là một ký tự, có thể gồm nhiều code point: chữ cộng dấu tổ hợp, emoji ghép bằng ZWJ, cờ quốc gia.",
+      "example": "👨‍👩‍👧 là 5 code point, 8 `char` nhưng một grapheme; `BreakIterator.getCharacterInstance()` đếm đúng từ JDK 20.",
+      "related": ["code-point", "surrogate-pair"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "tzdata",
+      "term": "tzdata",
+      "meaning": "Cơ sở dữ liệu múi giờ của IANA: quy tắc offset và DST của mọi vùng theo thời gian, cập nhật vài lần mỗi năm khi các nước đổi luật.",
+      "example": "JDK 27 kèm tzdata `2026b`; JDK, hệ điều hành và database mỗi bên giữ một bản riêng và phải cập nhật riêng.",
+      "related": ["time-zone", "dst"],
+      "topics": ["time-encoding"]
+    },
+    {
+      "id": "unix-epoch",
+      "term": "Unix epoch",
+      "meaning": "Mốc `1970-01-01T00:00:00Z`; thời điểm thường được lưu bằng số giây hoặc mili giây kể từ mốc này. Nhầm đơn vị giây và mili giây là lỗi phổ biến.",
+      "example": "`1767225600` giây là `2026-01-01T00:00:00Z`, hiểu nhầm thành mili giây ra ngày 21/1/1970.",
+      "related": ["utc"],
+      "topics": ["time-encoding"]
     }
   ]
 }

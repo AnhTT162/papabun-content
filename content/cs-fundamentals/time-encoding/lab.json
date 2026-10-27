@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Tìm \"Nguyễn Văn An\" không ra dù khách hàng có trong danh sách",
+  "context": "CRM nhận file CSV khách hàng từ đại lý mỗi đêm, đọc bằng UTF-8 và lưu vào PostgreSQL 17 (encoding UTF8). Cột `full_name` có unique constraint theo `(agency_id, full_name, phone)`. Nhân viên chăm sóc khách tìm theo họ tên trên web.",
+  "buggyCode": "void importCustomers(Path csv, long agencyId) throws IOException {\n    for (String line : Files.readAllLines(csv, StandardCharsets.UTF_8)) {\n        String[] cols = line.split(\",\");\n        customerRepository.save(new Customer(agencyId, cols[0].strip(), cols[1].strip()));\n    }\n}\n\n@GetMapping(\"/customers\")\nList<CustomerDto> search(@RequestParam String name) {\n    return customerRepository.findByFullName(name.strip()).stream()\n            .map(CustomerDto::from)\n            .toList();\n}",
+  "symptom": {
+    "description": "Từ tháng trước, nhân viên báo gõ đúng họ tên vẫn không tìm thấy một phần khách của đại lý mới, và bảng có các dòng trông trùng nhau mà unique constraint không chặn. Kiểm tra trong psql:",
+    "output": "crm=> SELECT id, full_name, length(full_name) AS chars, octet_length(full_name) AS bytes\ncrm->   FROM customer WHERE phone = '0903123456';\n  id   |   full_name   | chars | bytes\n-------+---------------+-------+-------\n 10422 | Nguyễn Văn An |    13 |    16\n 88107 | Nguyễn Văn An |    16 |    19\n(2 rows)\n\ncrm=> SELECT count(*) FROM customer WHERE full_name = 'Nguyễn Văn An';\n count\n-------\n     1\n(1 row)"
+  },
+  "diagnosis": {
+    "question": "Vì sao hai tên trông giống hệt nhau lại không bằng nhau?",
+    "options": [
+      "File của đại lý mới lưu chữ Việt dạng NFD, dấu là code point riêng",
+      "File CSV dùng `windows-1252` nên chữ Việt bị đọc sai thành ký tự khác",
+      "Collation của cột phân biệt hoa thường nên hai chuỗi không khớp nhau",
+      "Còn ký tự trắng không thấy được ở cuối tên mà `strip()` không xoá"
+    ],
+    "answer": 0,
+    "explanation": "Dòng 88107 dài hơn đúng 3 ký tự và 3 byte: `ễ` NFC là một code point U+1EC5, NFD tách thành `e` + U+0302 (dấu mũ) + U+0303 (dấu ngã); `ă` NFC là U+0103, NFD thành `a` + U+0306. Màn hình vẽ hai dạng giống hệt nhau nhưng `=` và unique constraint so từng code point. Đọc sai charset thì psql sẽ hiện mojibake như `Nguyá»…n`, không phải chữ đúng. Hai chuỗi không khác hoa thường. Ký tự trắng thừa (kể cả NBSP U+00A0 mà `strip()` không xoá) làm lệch 1 ký tự và 1–2 byte, không lệch đúng 3 ký tự, 3 byte bằng số dấu tách rời."
+  },
+  "fix": {
+    "code": "private static String clean(String raw) {\n    return Normalizer.normalize(raw.strip(), Normalizer.Form.NFC);\n}\n\nvoid importCustomers(Path csv, long agencyId) throws IOException {\n    for (String line : Files.readAllLines(csv, StandardCharsets.UTF_8)) {\n        String[] cols = line.split(\",\");\n        customerRepository.save(new Customer(agencyId, clean(cols[0]), clean(cols[1])));\n    }\n}\n\n@GetMapping(\"/customers\")\nList<CustomerDto> search(@RequestParam String name) {\n    return customerRepository.findByFullName(clean(name)).stream()\n            .map(CustomerDto::from)\n            .toList();\n}\n\n-- Migration: chuẩn hoá dữ liệu cũ, gộp dòng trùng trước, rồi chặn NFD từ nay về sau (PostgreSQL 13+)\nUPDATE customer SET full_name = normalize(full_name, NFC) WHERE full_name IS NOT NFC NORMALIZED;\nALTER TABLE customer ADD CONSTRAINT full_name_nfc CHECK (full_name IS NFC NORMALIZED) NOT VALID;\nALTER TABLE customer VALIDATE CONSTRAINT full_name_nfc;",
+    "explanation": "Chuẩn hoá về NFC ở mọi điểm dữ liệu đi vào (import, form, API), kể cả chuỗi tìm kiếm, vì người dùng cũng có thể gõ NFD từ bộ gõ đặt kiểu \"Unicode tổ hợp\" hay dán từ PDF. Dữ liệu cũ được chuẩn hoá một lần; dòng trùng phải được gộp trước khi chạy `UPDATE`, nếu không unique constraint sẽ báo lỗi. Ràng buộc `CHECK ... IS NFC NORMALIZED` biến lỗi im lặng thành lỗi ghi rõ ràng; thêm với `NOT VALID` để không giữ khoá chặn ghi trong lúc quét bảng lớn, rồi `VALIDATE CONSTRAINT` (khoá nhẹ hơn) sau khi đã chuẩn hoá xong. Với MySQL không có hàm này, chuẩn hoá phải nằm hoàn toàn ở ứng dụng."
+  }
+}

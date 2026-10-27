@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "data-structures",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cs-fundamentals",
+  "title": "Cấu trúc dữ liệu cơ bản & Big-O",
+  "summary": "Big-O đọc thế nào (xấu nhất, trung bình, khấu hao, bộ nhớ); mảng, linked list, hash table, cây tìm kiếm cân bằng, B-tree, heap và graph chạy ra sao; chọn cấu trúc theo thao tác chính, và các O(n²) giấu trong code production.",
+  "level": "junior",
+  "order": 6,
+  "minutes": 12,
+  "prerequisites": ["computer-architecture"],
+  "terms": ["big-o", "amortized-complexity", "hash-table", "load-factor", "hash-collision", "binary-search-tree", "red-black-tree", "b-tree", "binary-heap", "graph", "topological-sort", "cache-locality", "bloom-filter"],
+  "references": [
+    { "title": "Java SE 21: Collections Framework Overview", "url": "https://docs.oracle.com/en/java/javase/21/core/java-collections-framework.html" },
+    { "title": "Cormen et al.: Introduction to Algorithms (4th ed., MIT Press)", "url": "https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/" },
+    { "title": "PostgreSQL: B-Tree Indexes, Implementation", "url": "https://www.postgresql.org/docs/current/btree.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lấy 10 sản phẩm bán chạy nhất trong 1 tỉ dòng log, bộ nhớ có hạn?\" Đếm theo sản phẩm bằng hash table (số sản phẩm thường nhỏ hơn nhiều số dòng), rồi giữ một min-heap 10 phần tử: phần tử mới lớn hơn đỉnh heap thì thay đỉnh. Tổng O(n log k) với k = 10 thay vì sắp xếp O(n log n). Số khoá quá lớn để đếm hết trong RAM thì chia theo hash ra nhiều máy rồi gộp top-k của từng phần, hoặc chấp nhận xấp xỉ bằng Count-Min Sketch (bài Cấu trúc dữ liệu trong hệ thống lớn)." },
+    { "type": "callout", "style": "warning", "markdown": "O(n²) hay trốn trong code trông vô hại: `list.contains()` hay `list.remove(0)` trong vòng lặp, `stream().filter()` tìm phần tử trong một vòng `for` khác, cộng chuỗi bằng `+` trong vòng lặp. Với 1.000 phần tử không ai thấy; dữ liệu production tăng lên 100.000 là request mất cả giây. Khử trùng 100.000 id bằng `ArrayList.contains` mất khoảng 1,1 giây trên JDK 27 (Apple M4), bằng `LinkedHashSet` khoảng 2 ms." }
+  ]
+}

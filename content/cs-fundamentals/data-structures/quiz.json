@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "bfs-hops-output",
+      "kind": "output",
+      "prompt": "Đoạn code tính mỗi service cách `gateway` bao nhiêu chặng gọi. Chương trình in ra gì?",
+      "code": "Map<String, List<String>> calls = Map.of(\n    \"gateway\", List.of(\"order\", \"user\"),\n    \"order\", List.of(\"payment\", \"inventory\"),\n    \"user\", List.of(\"payment\"),\n    \"payment\", List.of(\"ledger\"),\n    \"inventory\", List.of(),\n    \"ledger\", List.of());\nMap<String, Integer> hops = new LinkedHashMap<>();\nDeque<String> queue = new ArrayDeque<>();\nhops.put(\"gateway\", 0);\nqueue.add(\"gateway\");\nwhile (!queue.isEmpty()) {\n    String service = queue.poll();\n    for (String next : calls.get(service)) {\n        if (!hops.containsKey(next)) {\n            hops.put(next, hops.get(service) + 1);\n            queue.add(next);\n        }\n    }\n}\nSystem.out.println(hops);",
+      "options": [
+        "{gateway=0, order=1, user=1, payment=2, inventory=2, ledger=3}",
+        "{gateway=0, order=1, payment=2, ledger=3, inventory=2, user=1}",
+        "{gateway=0, order=1, user=1, payment=2, inventory=2, ledger=4}",
+        "{gateway=0, order=1, user=1, payment=3, inventory=2, ledger=4}"
+      ],
+      "answer": 0,
+      "explanation": "Đây là BFS: queue lấy theo thứ tự đến, nên xử lý hết các service cách 1 chặng (`order`, `user`) trước khi tới các service cách 2 chặng. `payment` được gặp lần đầu qua `order` với 2 chặng; lúc `user` tới nó thì đã có trong `hops` nên không ghi lại. `LinkedHashMap` giữ thứ tự thêm vào. Thứ tự `order, payment, ledger...` là của DFS (dùng stack). BFS cho số chặng ít nhất trên graph không có trọng số."
+    },
+    {
+      "id": "dedupe-slow",
+      "kind": "single",
+      "prompt": "Job đồng bộ khử trùng danh sách id bằng `if (!result.contains(id)) result.add(id)` với `result` là `ArrayList`. Dữ liệu tăng từ 1.000 lên 100.000 id (gấp 100 lần). Thời gian chạy tăng khoảng bao nhiêu lần?",
+      "options": ["Khoảng 10.000 lần", "Khoảng 100 lần", "Khoảng 170 lần", "Khoảng 17 lần"],
+      "answer": 0,
+      "explanation": "Mỗi `contains` duyệt cả list nên tổng là O(n²): n gấp 100 thì thời gian gấp khoảng 100² = 10.000. 100 lần là của thuật toán O(n), khoảng 170 lần là của O(n log n) (100 × log 100.000 / log 1.000 ≈ 100 × 17/10), còn 17 lần là nhầm với số bước của một lần tìm nhị phân. Đổi sang `LinkedHashSet` (giữ thứ tự, `add` O(1)) thì 100.000 id chỉ mất vài mili giây."
+    },
+    {
+      "id": "range-structure",
+      "kind": "single",
+      "prompt": "Service cần giữ trong RAM giá chào mua theo từng mức giá, và liên tục hỏi \"mức giá cao nhất không vượt quá X\" cùng \"mọi mức giá từ A tới B\". Cấu trúc nào hợp nhất?",
+      "options": [
+        "`TreeMap` với `floorKey` và `subMap`",
+        "`HashMap` với `get` theo từng mức giá",
+        "`PriorityQueue` với `peek` theo mức giá",
+        "`ArrayList` với `stream().filter()`"
+      ],
+      "answer": 0,
+      "explanation": "Cả hai câu hỏi đều cần thứ tự: tìm phần tử lớn nhất không vượt X và lấy một khoảng. Cây cân bằng làm cả hai trong O(log n) (cộng số phần tử trả về). Hash table không giữ thứ tự nên phải duyệt hết. Heap chỉ biết phần tử nhỏ nhất (hoặc lớn nhất), không tìm được theo khoảng. Duyệt list là O(n) mỗi lần hỏi."
+    },
+    {
+      "id": "top-k-memory",
+      "kind": "single",
+      "prompt": "Cần 100 giao dịch có số tiền lớn nhất trong 500 triệu giao dịch đọc tuần tự từ file, heap của JVM chỉ 512 MB. Cách nào đúng?",
+      "options": [
+        "Giữ min-heap 100 phần tử, thay đỉnh khi gặp số lớn hơn",
+        "Đọc hết vào `ArrayList` rồi sắp xếp giảm dần lấy 100 cái",
+        "Đưa hết vào `TreeSet` rồi lấy 100 phần tử cuối",
+        "Đưa hết vào max-heap rồi `poll` 100 lần liên tiếp"
+      ],
+      "answer": 0,
+      "explanation": "Chỉ cần giữ 100 ứng viên tốt nhất: đỉnh min-heap là ứng viên nhỏ nhất, giao dịch mới lớn hơn thì thay vào. Thời gian O(n log k), bộ nhớ O(k). Ba cách còn lại đều giữ 500 triệu phần tử trong RAM, vượt xa 512 MB; `TreeSet` còn gộp các giao dịch cùng số tiền làm một."
+    },
+    {
+      "id": "hash-vs-tree-small",
+      "kind": "single",
+      "prompt": "Một đồng nghiệp nói: \"Hash table O(1) nên luôn nhanh hơn tìm tuyến tính trong mảng O(n)\". Trường hợp nào câu này sai?",
+      "options": [
+        "Mảng chỉ có vài phần tử nên tính hash tốn hơn duyệt",
+        "Key là `String` nên hash table không dùng được",
+        "Mảng đã sắp xếp nên duyệt tuyến tính thành O(1)",
+        "Load factor chạm 0,75 nên mọi lần tra thành O(n)"
+      ],
+      "answer": 0,
+      "explanation": "Big-O bỏ hằng số. Với vài phần tử nằm liền nhau trong cache, so sánh trực tiếp rẻ hơn tính hash, tìm bucket và gọi `equals`. Vì thế nhiều thư viện dùng mảng cho map rất nhỏ. `String` là key hash rất phổ biến. Chạm load factor thì bảng resize để giữ O(1) trung bình, không thoái hoá thành O(n). Mảng đã sắp xếp giúp tìm nhị phân O(log n), không biến duyệt tuyến tính thành O(1)."
+    }
+  ]
+}

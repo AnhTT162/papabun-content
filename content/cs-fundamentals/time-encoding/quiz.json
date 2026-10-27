@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "dst-plus-output",
+      "kind": "output",
+      "prompt": "Nhắc lịch lúc 9h sáng thứ Bảy 7/3/2026 cho khách ở New York; đêm 7 sang 8/3 nước Mỹ chuyển sang giờ mùa hè. Chương trình in ra gì?",
+      "code": "ZoneId newYork = ZoneId.of(\"America/New_York\");\nZonedDateTime reminder = ZonedDateTime.of(2026, 3, 7, 9, 0, 0, 0, newYork);\nSystem.out.println(reminder.plusDays(1).toLocalTime());\nSystem.out.println(reminder.plus(Duration.ofDays(1)).toLocalTime());\nSystem.out.println(Duration.between(reminder, reminder.plusDays(1)).toHours());",
+      "options": ["09:00 / 10:00 / 23", "09:00 / 09:00 / 24", "10:00 / 10:00 / 23", "09:00 / 08:00 / 25"],
+      "answer": 0,
+      "explanation": "`plusDays` cộng theo lịch và giữ giờ trên đồng hồ: 9h ngày 8/3. `Duration.ofDays(1)` là đúng 24 giờ trôi qua; đêm đó đồng hồ nhảy từ 2h lên 3h nên 24 giờ sau là 10h. Khoảng thật giữa 9h ngày 7 và 9h ngày 8 chỉ là 23 giờ. Nhắc lịch theo giờ khách mong đợi thì dùng `plusDays`; đếm thời hạn đúng 24 giờ thì dùng `Duration` trên `Instant`. (Đã chạy trên JDK 27, tzdata 2026b.)"
+    },
+    {
+      "id": "string-length-output",
+      "kind": "output",
+      "prompt": "Chuỗi dưới đây được lưu ở dạng NFC. Chương trình in ra gì?",
+      "code": "String greeting = \"Chào 👋\";\nSystem.out.println(greeting.length() + \" \"\n        + greeting.codePointCount(0, greeting.length()) + \" \"\n        + greeting.getBytes(StandardCharsets.UTF_8).length);",
+      "options": ["7 6 10", "6 6 6", "6 6 10", "7 7 9"],
+      "answer": 0,
+      "explanation": "`length()` đếm `char` UTF-16: 4 chữ, 1 khoảng trắng, và emoji 👋 nằm ngoài BMP nên chiếm 2 `char`, tổng 7. Số code point là 6. UTF-8: `C`, `h`, `o`, khoảng trắng mỗi cái 1 byte, `à` 2 byte, emoji 4 byte, tổng 10. Nếu chuỗi ở dạng NFD thì `à` tách thành `a` + dấu huyền và mọi con số đều tăng thêm."
+    },
+    {
+      "id": "yyyy-year-end",
+      "kind": "single",
+      "prompt": "Ngày 29/12/2025, hệ thống xuất hoá đơn ghi ngày `29-12-2026` dù hôm trước vẫn đúng. Code dùng `DateTimeFormatter.ofPattern(\"dd-MM-YYYY\")`. Nguyên nhân là gì?",
+      "options": [
+        "`YYYY` là năm theo tuần, tuần chứa 29/12 thuộc năm 2026",
+        "Server đặt múi giờ UTC nên ngày bị cộng sang năm sau",
+        "`DateTimeFormatter` không thread-safe nên định dạng sai",
+        "tzdata của JDK cũ đã tính sai lịch của năm 2026"
+      ],
+      "answer": 0,
+      "explanation": "`Y` là week-based year: tuần chứa 1/1/2026 bắt đầu từ thứ Hai 29/12/2025 (locale tiếng Việt coi thứ Hai là đầu tuần), nên ba ngày cuối năm mang năm 2026. Với `Locale.US` tuần bắt đầu Chủ Nhật nên lỗi bắt đầu từ 28/12. Lệch múi giờ chỉ làm lệch vài giờ, không đổi cả năm của ngày 29. `DateTimeFormatter` bất biến và thread-safe (`SimpleDateFormat` mới không). Dùng `yyyy` hoặc `uuuu`."
+    },
+    {
+      "id": "store-appointment",
+      "kind": "single",
+      "prompt": "App đặt lịch tư vấn cho khách ở nhiều nước, hẹn có thể xa tới 18 tháng. Lưu thời điểm hẹn thế nào để luôn đúng giờ địa phương của khách?",
+      "options": [
+        "Lưu giờ địa phương và zone ID, tính `Instant` khi cần",
+        "Đổi sang UTC lúc đặt lịch và chỉ lưu `Instant` đó",
+        "Lưu giờ địa phương kèm offset như `+07:00` của lúc đặt",
+        "Lưu `LocalDateTime` theo múi giờ của server đặt lịch"
+      ],
+      "answer": 0,
+      "explanation": "Khách nhớ \"9h sáng giờ tôi\". Quy tắc DST của một nước có thể thay đổi trong 18 tháng; `Instant` tính sẵn theo quy tắc cũ sẽ lệch một giờ sau khi tzdata cập nhật. Offset của lúc đặt không đúng nếu ngày hẹn rơi vào mùa khác. Giờ của server không liên quan tới khách. Sự kiện đã xảy ra thì ngược lại: lưu `Instant`."
+    },
+    {
+      "id": "mojibake-source",
+      "kind": "single",
+      "prompt": "Báo cáo xuất trên máy chủ Windows (locale en-US) chạy Java 17 hiện tên khách thành `Nguyá»…n VÄƒn An`, trên máy Linux thì đúng. Code đọc file bằng `new FileReader(fileName)`. Sửa thế nào?",
+      "options": [
+        "Truyền `StandardCharsets.UTF_8` khi đọc file",
+        "Chuẩn hoá tên về NFC trước khi xuất báo cáo",
+        "Đổi collation của database sang tiếng Việt",
+        "Đặt `-Duser.timezone=UTC` cho JVM trên Windows"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi byte UTF-8 của `ễ` bị đọc thành một ký tự riêng (`á»…`): dấu hiệu file UTF-8 được đọc bằng `windows-1252`, charset mặc định của Windows trước Java 18. Truyền charset tường minh (`new FileReader(fileName, UTF_8)` từ Java 11, hoặc `Files.newBufferedReader(Path.of(fileName), UTF_8)`) hoặc nâng lên Java 18+ nơi mặc định là UTF-8 (JEP 400). NFC chỉ đổi cách tổ hợp dấu, không sửa byte đọc sai. Collation và múi giờ không liên quan tới encoding."
+    }
+  ]
+}

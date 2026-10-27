@@ -109,8 +109,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 3 | `computer-architecture` | ✚ CPU, bộ nhớ & các con số latency | foundation | Cache L1/L2/L3, cache line, RAM và SSD và mạng, latency numbers; nền cho false sharing và hiệu năng | A L D | ✅ |
 | 4 | `proxy-nginx` | ✚ Forward proxy, reverse proxy & Nginx | junior | Reverse proxy, TLS termination, load balancing cơ bản, timeout và buffer, header `X-Forwarded-*` | A L D | ✅ |
 | 5 | `os-process-memory` | Process, thread & bộ nhớ của hệ điều hành | junior | Context switch, virtual memory, page cache, file descriptor, `ulimit`, OOM killer | A L D | ✅ |
-| 6 | `data-structures` | Cấu trúc dữ liệu cơ bản & Big-O | junior | Mảng, linked list, hash table, cây, heap, graph; Big-O; chọn cấu trúc theo thao tác | L D | ⬜ |
-| 7 | `time-encoding` | Thời gian, múi giờ & encoding | junior | UTC, DST, lệch đồng hồ, NTP, Unicode/UTF-8, collation | L B | ⬜ |
+| 6 | `data-structures` | Cấu trúc dữ liệu cơ bản & Big-O | junior | Mảng, linked list, hash table, cây, heap, graph; Big-O; chọn cấu trúc theo thao tác | L D | ✅ |
+| 7 | `time-encoding` | Thời gian, múi giờ & encoding | junior | UTC, DST, lệch đồng hồ, NTP, Unicode/UTF-8, collation | L B | ✅ |
 | 8 | `dns-cdn` | DNS & CDN | mid | Phân giải, TTL, cache DNS của JVM, anycast, CDN cache key/invalidation | A L D | ⬜ |
 | 9 | `tcp-deep` | TCP chuyên sâu | mid | Handshake, flow/congestion control, `TIME_WAIT`, backlog, Nagle, RST; cạn port vì `TIME_WAIT` | L D T | ⬜ |
 | 10 | `tls-https` | TLS & HTTPS | mid | TLS 1.2 và 1.3, chuỗi chứng chỉ, SNI, mTLS, sự cố chứng chỉ hết hạn | L D T | ⬜ |
@@ -119,7 +119,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 13 | `rest-api-design` | Thiết kế REST API | mid | Method idempotent, status code, phân trang, versioning và tương thích ngược, ETag, lỗi theo RFC 9457 | L B Sc | ⬜ |
 | 14 | `algorithms-interview` | Thuật toán hay gặp khi phỏng vấn | mid | Hai con trỏ, sliding window, BFS/DFS, binary search, DP cơ bản | L B | ⬜ |
 | 15 | `linux-troubleshooting` | Lệnh Linux để điều tra sự cố | mid | `top`, `vmstat`, `iostat`, `ss`, `lsof`, `strace`, `tcpdump` | L T | ⬜ |
-| 16 | `advanced-data-structures` | ✚ Cấu trúc dữ liệu trong hệ thống lớn | senior | Skip list, Bloom filter, LSM tree, HyperLogLog, trie; Redis, Cassandra, Kafka dùng chúng ở đâu | L D | ⬜ |
+| 16 | `advanced-data-structures` | ✚ Cấu trúc dữ liệu trong hệ thống lớn | senior | Skip list, Bloom filter, LSM tree, HyperLogLog, Count-Min Sketch, trie; Redis, Cassandra, Kafka dùng chúng ở đâu | L D | ⬜ |
 | 17 | `io-models` | Mô hình I/O | senior | Blocking/non-blocking, epoll, reactor, Netty, zero-copy | L D | ⬜ |
 
 ### 2. Core Java (`core-java`)

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Chọn cấu trúc theo thao tác chạy nhiều nhất",
+  "nodes": [
+    { "id": "op", "label": "Thao tác nóng", "kind": "generic", "x": 0.1, "y": 0.05 },
+    { "id": "array", "label": "Mảng", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "hash", "label": "Hash table", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "tree", "label": "Cây cân bằng / B-tree", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "heap", "label": "Heap", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "graph", "label": "Graph", "kind": "generic", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "op-array", "from": "op", "to": "array", "label": "đọc theo vị trí" },
+    { "id": "op-hash", "from": "op", "to": "hash", "label": "tra theo key" },
+    { "id": "op-tree", "from": "op", "to": "tree", "label": "thứ tự, khoảng" },
+    { "id": "op-heap", "from": "op", "to": "heap", "label": "luôn lấy nhỏ nhất" },
+    { "id": "op-graph", "from": "op", "to": "graph", "label": "đi theo quan hệ" }
+  ],
+  "steps": [
+    { "caption": "Bắt đầu từ thao tác chạy nhiều nhất trên dữ liệu, không bắt đầu từ cấu trúc quen tay.", "show": ["op"] },
+    { "caption": "Đọc theo chỉ số hay duyệt tuần tự: mảng, O(1) mỗi lần đọc và tận dụng cache tốt nhất.", "show": ["array", "op-array"], "highlight": ["op-array"] },
+    { "caption": "Tra theo key (đơn hàng theo id, session theo token): hash table, O(1) trung bình, không giữ thứ tự.", "show": ["hash", "op-hash"], "highlight": ["op-hash"] },
+    { "caption": "Cần thứ tự hoặc tìm theo khoảng (giao dịch từ 10h tới 11h): cây cân bằng trong RAM, B-tree trên đĩa, O(log n).", "show": ["tree", "op-tree"], "highlight": ["op-tree"] },
+    { "caption": "Liên tục lấy việc có hạn sớm nhất hay top-k: heap, thêm và lấy ra O(log n).", "show": ["heap", "op-heap"], "highlight": ["op-heap"] },
+    { "caption": "Dữ liệu là quan hệ (service gọi nhau, module phụ thuộc): graph với BFS, DFS và sắp xếp topo.", "show": ["graph", "op-graph"], "highlight": ["op-graph"] }
+  ]
+}

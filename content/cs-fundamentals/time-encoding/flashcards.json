@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "instant-vs-local", "front": "`Instant` và `LocalDateTime` khác nhau thế nào?", "back": "`Instant` là một điểm tuyệt đối trên trục thời gian (UTC); `LocalDateTime` là giờ trên đồng hồ chưa gắn với nơi nào, nên không xác định được thời điểm." },
+    { "id": "offset-vs-zone", "front": "Vì sao lưu `+07:00` không thay được zone ID `Asia/Ho_Chi_Minh`?", "back": "Offset chỉ là độ lệch ở một thời điểm; zone ID mang quy tắc DST và lịch sử thay đổi, cần để tính giờ ở ngày khác." },
+    { "id": "dst-gap", "front": "Ở New York, `2026-03-08T02:30` không tồn tại. Java làm gì?", "back": "`ZonedDateTime.of` đẩy tới sau khoảng trống: `03:30-04:00`." },
+    { "id": "plusdays-vs-duration", "front": "Qua đêm chuyển sang giờ mùa hè, `plusDays(1)` và `plus(Duration.ofDays(1))` khác gì?", "back": "`plusDays(1)` giữ giờ trên đồng hồ (9h ra 9h); `Duration` cộng đúng 24 giờ nên ra 10h vì ngày đó chỉ có 23 giờ." },
+    { "id": "future-event", "front": "Lưu lịch hẹn trong tương lai theo giờ địa phương thế nào?", "back": "Lưu giờ địa phương cộng zone ID, tính ra `Instant` khi cần, vì quy tắc DST có thể đổi trước ngày hẹn." },
+    { "id": "yyyy-pattern", "front": "`YYYY` và `yyyy` trong `DateTimeFormatter` khác gì?", "back": "`YYYY` là năm theo tuần, sai vào vài ngày cuối tháng 12; `yyyy` (hoặc `uuuu`) là năm lịch." },
+    { "id": "nfc-nfd", "front": "Vì sao hai chuỗi \"Nguyễn\" trông giống hệt mà `equals` trả `false`?", "back": "Một chuỗi là NFC (`ễ` dựng sẵn, 1 code point), chuỗi kia là NFD (`e` + 2 dấu). Chuẩn hoá về NFC trước khi so sánh hay lưu." },
+    { "id": "length-emoji", "front": "`\"Hi 👋\".length()` bằng mấy và vì sao?", "back": "5: `String` dùng UTF-16, emoji ngoài BMP chiếm hai `char` (surrogate pair) dù chỉ là một code point." },
+    { "id": "jep400", "front": "Từ Java 18, `getBytes()` không truyền charset dùng encoding nào?", "back": "UTF-8 trên mọi hệ điều hành (JEP 400). Java 17 trở về trước lấy theo locale của hệ điều hành, như `windows-1252` trên Windows locale en-US." }
+  ]
+}
