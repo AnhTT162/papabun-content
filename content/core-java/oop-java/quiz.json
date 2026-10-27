@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "field-vs-method",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "class Animal { String name = \"animal\"; String speak() { return \"...\"; } }\nclass Dog extends Animal { String name = \"dog\"; @Override String speak() { return \"gau\"; } }\n\nAnimal a = new Dog();\nSystem.out.println(a.name + \" \" + a.speak());",
+      "options": ["animal gau", "dog gau", "animal ...", "dog ..."],
+      "answer": 0,
+      "explanation": "Method được override nên `speak()` chạy bản của `Dog`. Field chỉ bị che, được chọn theo kiểu khai báo `Animal`, nên `a.name` là `animal`."
+    },
+    {
+      "id": "overload-static-type",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "class Printer {\n    void print(Object o) { System.out.println(\"Object\"); }\n    void print(String s) { System.out.println(\"String\"); }\n}\n\nObject value = \"hello\";\nnew Printer().print(value);",
+      "options": ["Object", "String", "Lỗi biên dịch vì mơ hồ", "Lỗi lúc chạy"],
+      "answer": 0,
+      "explanation": "Chọn overload xảy ra lúc biên dịch theo kiểu khai báo của `value` là `Object`. Kiểu thật `String` không được xét vì không có dispatch động theo tham số."
+    },
+    {
+      "id": "equals-overload-set",
+      "kind": "output",
+      "prompt": "`Money` override `hashCode` đúng nhưng khai báo `public boolean equals(Money other)`. Đoạn code in ra gì?",
+      "code": "Set<Money> set = new HashSet<>();\nset.add(new Money(100));\nSystem.out.println(set.contains(new Money(100)));\nSystem.out.println(new Money(100).equals(new Money(100)));",
+      "options": ["false / true", "true / true", "false / false", "true / false"],
+      "answer": 0,
+      "explanation": "`HashSet` gọi `equals(Object)`, vẫn là bản so tham chiếu của `Object`, nên `contains` ra `false`. Lời gọi trực tiếp có tham số kiểu `Money` thì compiler chọn overload `equals(Money)` nên ra `true`."
+    },
+    {
+      "id": "abstract-vs-interface",
+      "kind": "single",
+      "prompt": "Điều nào abstract class làm được mà interface (Java 21) không làm được?",
+      "options": ["Giữ field instance và có constructor", "Có method cài đặt sẵn cho lớp con", "Có method `static` và method `private`", "Được dùng làm kiểu cho biến và tham số"],
+      "answer": 0,
+      "explanation": "Interface có default, `static` và `private` method từ Java 8/9 nhưng không có trạng thái instance hay constructor. Đó là một trong các khác biệt chính, cùng với method `protected` và việc chỉ kế thừa được một class."
+    },
+    {
+      "id": "enum-ordinal",
+      "kind": "single",
+      "prompt": "Cột `status` lưu bằng `EnumType.ORDINAL`. Chèn `PENDING_PAYMENT` giữa `NEW` và `PAID` thì đơn đã lưu là `PAID` sẽ đọc ra gì?",
+      "options": ["`PENDING_PAYMENT`", "`PAID`", "Ném lỗi khi đọc enum", "`SHIPPED`"],
+      "answer": 0,
+      "explanation": "Trước đó `PAID` có ordinal 1. Sau khi chèn, ordinal 1 là `PENDING_PAYMENT`, nên dữ liệu cũ lặng lẽ đổi nghĩa mà không có lỗi nào."
+    }
+  ]
+}

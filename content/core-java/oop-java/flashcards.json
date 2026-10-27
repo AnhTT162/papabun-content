@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "overload-vs-override", "front": "Overload và override được chọn vào lúc nào?", "back": "Overload chọn lúc biên dịch theo kiểu khai báo của tham số; override chọn lúc chạy theo kiểu thật của object." },
+    { "id": "equals-overload", "front": "Viết `public boolean equals(Money other)` có vấn đề gì?", "back": "Đó là overload, không override `equals(Object)`, nên collection không gọi tới. Gắn `@Override` để compiler báo lỗi." },
+    { "id": "field-hiding", "front": "`Animal a = new Dog(); a.name` đọc field của lớp nào khi cả hai khai báo `name`?", "back": "Của `Animal`. Field không đa hình; lớp con chỉ che field của lớp cha." },
+    { "id": "ctor-overridable", "front": "Vì sao không nên gọi method có thể bị override trong constructor?", "back": "Method của lớp con chạy khi field của lớp con chưa được gán, nên thấy `null` hoặc 0." },
+    { "id": "default-conflict", "front": "Class implement hai interface cùng có `default hi()` thì phải làm gì?", "back": "Override `hi()` và chọn bản muốn dùng bằng `A.super.hi()`, nếu không sẽ lỗi biên dịch." },
+    { "id": "inner-leak", "front": "Vì sao inner class (không `static`) dễ gây rò rỉ bộ nhớ?", "back": "Khi dùng tới outer (hoặc biên dịch cho Java 17 trở xuống), nó giữ tham chiếu tới object outer; đưa nó vào nơi sống lâu thì outer không được GC." },
+    { "id": "enum-ordinal", "front": "Vì sao không lưu `ordinal()` của enum xuống DB?", "back": "Thêm hoặc đổi thứ tự hằng làm số đã lưu trỏ sang trạng thái khác. Lưu tên hoặc mã ổn định." },
+    { "id": "sealed", "front": "`sealed` (Java 17) giải quyết vấn đề gì?", "back": "Giới hạn đúng những lớp con được phép, để `switch` biết đủ mọi biến thể và báo lỗi khi thêm biến thể mới." }
+  ]
+}

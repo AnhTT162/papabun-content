@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Kiểm tra quyền sở hữu đơn hàng sai với user mới",
+  "context": "API huỷ đơn kiểm tra đơn có thuộc user đang đăng nhập không. Test tích hợp dùng user id 7 và 42, đều qua. Sau khi lên production, user đăng ký gần đây báo không huỷ được đơn của chính mình, user cũ thì bình thường.",
+  "buggyCode": "public record Order(Long id, Long ownerId) {}\npublic record CurrentUser(Long id) {}\n\nboolean canCancel(Order order, CurrentUser user) {\n    return order.ownerId() == user.id();\n}\n\n// Mô phỏng: id đọc từ DB qua JPA, mỗi lần là một object Long riêng\nSystem.out.println(canCancel(new Order(1L, Long.valueOf(42)), new CurrentUser(Long.valueOf(42))));\nSystem.out.println(canCancel(new Order(2L, Long.valueOf(1000)), new CurrentUser(Long.valueOf(1000))));",
+  "symptom": {
+    "description": "Cùng một logic, user id 42 huỷ được đơn, user id 1000 bị từ chối với lỗi 403 dù đúng là chủ đơn.",
+    "output": "true\nfalse"
+  },
+  "diagnosis": {
+    "question": "Nguyên nhân là gì?",
+    "options": [
+      "`==` so tham chiếu hai `Long`; chỉ id -128..127 dùng chung object cache",
+      "JPA trả `ownerId` dạng proxy lười nên chưa nạp giá trị khi so sánh",
+      "`Long` 1000 bị tràn khi unboxing sang `int` trong phép so sánh",
+      "Record sinh `equals` sai nên hai `Long` bằng nhau vẫn bị coi là khác"
+    ],
+    "answer": 0,
+    "explanation": "Cả hai vế đều là `Long` nên `==` so tham chiếu, không unboxing. `Long.valueOf` trả object có sẵn trong [[integer-cache|cache]] cho -128..127, nên id 42 ở hai phía là cùng một object. Id 1000 tạo hai object khác nhau, `==` ra `false`. Test chỉ dùng id nhỏ nên không bắt được."
+  },
+  "fix": {
+    "code": "boolean canCancel(Order order, CurrentUser user) {\n    return Objects.equals(order.ownerId(), user.id());\n}\n\n// Hoặc dùng primitive khi id không thể null:\npublic record CurrentUser(long id) {}\n// order.ownerId() == user.id() lúc này unboxing vế Long rồi so hai long",
+    "explanation": "`Objects.equals` so giá trị và an toàn khi một vế `null`. Nếu một vế là primitive, `==` sẽ unboxing vế kia và so giá trị (nhưng ném NPE nếu vế wrapper là `null`). Thêm test với id lớn hơn 127, và bật cảnh báo của công cụ phân tích tĩnh (IntelliJ \"Number objects compared using ==\", Error Prone `ReferenceEquality`)."
+  }
+}

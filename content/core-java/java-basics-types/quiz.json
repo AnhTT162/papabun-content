@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "integer-cache-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "Integer a = 127, b = 127;\nInteger c = 128, d = 128;\nSystem.out.println(a == b);\nSystem.out.println(c == d);\nSystem.out.println(c.equals(d));",
+      "options": ["true / false / true", "true / true / true", "false / false / true", "true / false / false"],
+      "answer": 0,
+      "explanation": "Autoboxing gọi `Integer.valueOf`, trả cùng object cho -128..127 nên `a == b` là `true`. 128 nằm ngoài cache nên `c` và `d` là hai object khác nhau, `==` ra `false`. `equals` so giá trị nên ra `true`."
+    },
+    {
+      "id": "pass-by-value-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "static void reassign(StringBuilder sb) { sb = new StringBuilder(\"moi\"); }\nstatic void mutate(StringBuilder sb) { sb.append(\" + them\"); }\n\nStringBuilder s = new StringBuilder(\"goc\");\nreassign(s);\nmutate(s);\nSystem.out.println(s);",
+      "options": ["goc + them", "moi + them", "goc", "moi"],
+      "answer": 0,
+      "explanation": "`reassign` chỉ gán lại bản sao tham chiếu bên trong method, biến `s` vẫn trỏ object cũ. `mutate` sửa chính object mà `s` trỏ tới nên thay đổi hiện ra ở bên gọi."
+    },
+    {
+      "id": "overflow-output",
+      "kind": "output",
+      "prompt": "Đoạn code sau in ra gì?",
+      "code": "long microsPerDay = 24 * 60 * 60 * 1000 * 1000;\nSystem.out.println(microsPerDay);",
+      "options": ["500654080", "86400000000", "Lỗi biên dịch", "ArithmeticException"],
+      "answer": 0,
+      "explanation": "Mọi toán hạng là `int` nên phép nhân chạy trên `int` và tràn im lặng, rồi kết quả đã sai mới được nới sang `long`. Viết `24L * 60 * ...` để tính trên `long`."
+    },
+    {
+      "id": "ternary-unboxing",
+      "kind": "single",
+      "prompt": "`map` không có key `k`. `Integer r = flag ? 1 : map.get(k);` với `flag = false` cho kết quả gì?",
+      "options": ["Ném `NullPointerException`", "`r` là `null`", "`r` là 0", "Lỗi biên dịch vì khác kiểu"],
+      "answer": 0,
+      "explanation": "Nhánh `1` là `int` nên biểu thức điều kiện có kiểu `int` (JLS §15.25); `map.get(k)` bị unboxing và ném NPE. Viết `flag ? Integer.valueOf(1) : map.get(k)` thì kết quả là `null`."
+    },
+    {
+      "id": "final-list",
+      "kind": "single",
+      "prompt": "Với `private final List<String> tags = new ArrayList<>();`, câu nào đúng?",
+      "options": ["Gọi `add` được, nhưng không gán `tags` sang list khác", "Không gọi được `tags.add` vì list là `final`", "`tags` tự trở thành list bất biến như `List.of`", "Gán lại `tags` được nếu làm trong method `static`"],
+      "answer": 0,
+      "explanation": "`final` chỉ cố định tham chiếu trong biến. Object `ArrayList` vẫn mutable; muốn bất biến thì dùng `List.copyOf` hoặc `List.of`."
+    }
+  ]
+}

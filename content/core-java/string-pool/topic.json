@@ -7,7 +7,7 @@
   "title": "String & String Pool",
   "summary": "Vì sao String immutable, String Pool và intern hoạt động thế nào, khi nào == ra true, Compact Strings và bẫy ghép chuỗi trong vòng lặp.",
   "level": "junior",
-  "order": 1,
+  "order": 3,
   "minutes": 12,
   "prerequisites": [],
   "terms": ["immutable", "string-pool", "string-interning", "compact-strings", "constant-folding", "string-deduplication", "hash-code"],

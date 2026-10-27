@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "oop-java",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "OOP trong Java",
+  "summary": "Dynamic dispatch chạy thế nào, overload và override khác nhau ra sao, vì sao field và method `static` không đa hình, interface và abstract class, inner class giữ tham chiếu tới outer, enum và `EnumMap`, `sealed`.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["java-basics-types"],
+  "terms": ["polymorphism", "dynamic-dispatch", "method-overloading", "method-overriding", "field-hiding", "abstract-class", "default-method", "inner-class", "enum-type", "enummap", "sealed-class", "composition-over-inheritance", "fragile-base-class", "this-escape", "jit", "template-method"],
+  "references": [
+    { "title": "JLS §15.12 Method Invocation Expressions (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.12" },
+    { "title": "JLS §8.9 Enum Classes (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.9" },
+    { "title": "JEP 409: Sealed Classes", "url": "https://openjdk.org/jeps/409" },
+    { "title": "JEP 513: Flexible Constructor Bodies", "url": "https://openjdk.org/jeps/513" },
+    { "title": "JEP 181: Nest-Based Access Control", "url": "https://openjdk.org/jeps/181" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Java 8 có default method rồi thì abstract class còn để làm gì?\" Interface không có **trạng thái instance** và constructor: không giữ field, không bắt lớp con khởi tạo theo một thứ tự, không có method `protected`. Abstract class hợp khi các lớp con chia sẻ trạng thái và khung xử lý chung ([[template-method|template method]]). Interface hợp để mô tả một khả năng mà nhiều cây kế thừa khác nhau cùng có, vì một class implement được nhiều interface nhưng chỉ kế thừa một class." },
+    { "type": "callout", "style": "warning", "markdown": "Không lưu `ordinal()` của enum xuống DB hay gửi ra API. Chèn một hằng vào giữa (thêm `PENDING_PAYMENT` trước `PAID`) làm các số đã lưu từ vị trí chèn trở đi trỏ sang trạng thái khác mà không có lỗi nào. JPA mặc định `EnumType.ORDINAL` khi thiếu `@Enumerated`, nên khai báo `@Enumerated(EnumType.STRING)` hoặc tự ánh xạ sang một mã ổn định." }
+  ]
+}

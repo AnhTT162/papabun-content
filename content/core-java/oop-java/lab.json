@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Lớp con NPE ngay trong constructor",
+  "context": "Module báo cáo có lớp cha `Report` ghi log tiêu đề khi tạo báo cáo. Một dev thêm `SalesReport` theo vùng, gán `region` ngay trong constructor và chắc chắn không truyền `null`.",
+  "buggyCode": "abstract class Report {\n    protected Report() {\n        System.out.println(\"Tạo báo cáo: \" + title());\n    }\n    protected abstract String title();\n}\n\nclass SalesReport extends Report {\n    private final String region;\n\n    SalesReport(String region) {\n        super();\n        this.region = region;\n    }\n\n    @Override\n    protected String title() {\n        return \"Doanh số \" + region.toUpperCase();\n    }\n}\n\nnew SalesReport(\"hn\");",
+  "symptom": {
+    "description": "Tạo `SalesReport` với `\"hn\"` vẫn ném NPE, dù `region` là `final` và được gán ngay trong constructor.",
+    "output": "Exception in thread \"main\" java.lang.NullPointerException: Cannot invoke \"String.toUpperCase()\" because \"this.region\" is null\n\tat SalesReport.title(...)\n\tat Report.<init>(...)\n\tat SalesReport.<init>(...)"
+  },
+  "diagnosis": {
+    "question": "Vì sao `region` là `null`?",
+    "options": [
+      "Constructor cha gọi `title()` của lớp con trước khi `region` được gán",
+      "Field `final` chỉ được gán sau khi constructor kết thúc hoàn toàn",
+      "Method `abstract` không được dispatch động khi gọi trong constructor",
+      "JIT sắp xếp lại lệnh gán `region` ra sau lời gọi `title()`"
+    ],
+    "answer": 0,
+    "explanation": "`super()` chạy trước phần còn lại của constructor `SalesReport`, kể cả lệnh gán `region`. Trong constructor `Report`, `title()` vẫn được [[dynamic-dispatch|dispatch động]] tới bản của `SalesReport`, nhưng lúc đó `region` còn giá trị mặc định `null`. Stack trace cho thấy rõ: `title` được gọi từ `Report.<init>`. Đây không phải vấn đề JIT hay đa luồng; chạy một thread cũng lỗi."
+  },
+  "fix": {
+    "code": "abstract class Report {\n    private final String title;\n\n    protected Report(String title) {\n        this.title = title;\n        System.out.println(\"Tạo báo cáo: \" + title);\n    }\n}\n\nfinal class SalesReport extends Report {\n    private final String region;\n\n    SalesReport(String region) {\n        super(\"Doanh số \" + region.toUpperCase());\n        this.region = region;\n    }\n}",
+    "explanation": "Constructor không gọi method có thể bị override. Lớp con tính dữ liệu cần thiết rồi truyền lên qua `super(...)`. Nếu phải có bước khởi tạo đa hình, tách ra static factory gọi sau khi `new` xong. Từ Java 25 (JEP 513) có thể viết `this.region = region;` trước `super()`, nhưng đó là vá triệu chứng; lớp con khác vẫn có thể mắc lại. Bật `javac -Xlint:this-escape` (JDK 21+) để được cảnh báo, và khai báo `final` cho class không thiết kế để kế thừa."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "java-basics-types",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "core-java",
+  "title": "Kiểu dữ liệu, autoboxing & pass-by-value",
+  "summary": "Primitive và reference, autoboxing biên dịch thành gì, vì sao `Long` so bằng `==` đúng lúc test và sai lúc chạy thật, unboxing ném NPE, Java luôn pass-by-value, ý nghĩa thật của `static` và `final`.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 10,
+  "prerequisites": [],
+  "terms": ["primitive-type", "reference-type", "wrapper-class", "autoboxing", "integer-cache", "pass-by-value", "integer-overflow", "compile-time-constant", "immutable", "race-condition", "data-race", "jit"],
+  "references": [
+    { "title": "JLS §5.1.7 Boxing Conversion (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-5.html#jls-5.1.7" },
+    { "title": "JLS §15.25 Conditional Operator ? : (Java 21)", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.25" },
+    { "title": "JEP 358: Helpful NullPointerExceptions", "url": "https://openjdk.org/jeps/358" },
+    { "title": "JEP 390: Warnings for Value-Based Classes", "url": "https://openjdk.org/jeps/390" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Truyền object vào method rồi sửa field thì bên gọi thấy thay đổi, vậy Java pass-by-reference với object?\" Không. Thứ được copy là **giá trị của tham chiếu**. Vì có chung tham chiếu nên sửa object thì bên gọi thấy; nhưng gán tham số sang object khác thì biến của bên gọi không đổi. Ngôn ngữ pass-by-reference thật (như `ref` của C#) cho phép method đổi chính biến của bên gọi, Java không làm được." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng so hai wrapper (`Long`, `Integer`) bằng `==`. Test với id nhỏ luôn qua vì nằm trong [[integer-cache|cache -128..127]], production với id lớn thì sai. Dùng `equals`, `Objects.equals` (an toàn với `null`) hoặc so hai giá trị primitive." }
+  ]
+}

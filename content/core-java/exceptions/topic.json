@@ -7,7 +7,7 @@
   "title": "Exceptions",
   "summary": "Checked và unchecked, giữ cause khi bọc lỗi, try-with-resources và suppressed exception, bẫy finally, InterruptedException, rollback của @Transactional và vì sao log mất stack trace.",
   "level": "mid",
-  "order": 5,
+  "order": 13,
   "minutes": 12,
   "prerequisites": [],
   "terms": ["checked-exception", "unchecked-exception", "exception-chaining", "try-with-resources", "suppressed-exception", "thread-interrupt", "fast-throw", "jit"],

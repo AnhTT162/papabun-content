@@ -31,7 +31,7 @@
       "term": "Immutable",
       "meaning": "Bất biến: trạng thái của object không thể thay đổi sau khi tạo.",
       "example": "String, Integer, record với các field immutable.",
-      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas"]
+      "topics": ["equals-hashcode", "hashmap-internals", "synchronized-volatile", "string-pool", "local-cache", "concurrency-basics", "java-memory-model", "atomic-cas", "java-basics-types"]
     },
     {
       "id": "dns",
@@ -437,7 +437,7 @@
       "meaning": "Hai thread truy cập cùng một biến, ít nhất một bên ghi, mà không có happens-before giữa hai lần truy cập. Kết quả khi đó không được JMM đảm bảo.",
       "example": "Hai thread cùng `count++` trên một `int` thường không khoá.",
       "related": ["race-condition", "happens-before"],
-      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model"]
+      "topics": ["synchronized-volatile", "concurrency-basics", "java-memory-model", "java-basics-types"]
     },
     {
       "id": "lost-update",
@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency", "lld-ood-interview"]
+      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency", "lld-ood-interview", "java-basics-types"]
     },
     {
       "id": "cas",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing", "java-basics-types", "oop-java"]
     },
     {
       "id": "memory-barrier",
@@ -565,7 +565,7 @@
       "meaning": "Compiler tính sẵn biểu thức chỉ gồm hằng số lúc compile, thay bằng kết quả.",
       "example": "`\"Ja\" + \"va\"` được compile thành literal `\"Java\"`.",
       "related": ["string-pool", "jit"],
-      "topics": ["string-pool"]
+      "topics": ["string-pool", "java-basics-types"]
     },
     {
       "id": "string-deduplication",
@@ -3725,7 +3725,7 @@
       "meaning": "Tham chiếu `this` lọt ra cho code khác (đăng ký listener, start thread, gọi method có thể override) khi constructor chưa chạy xong. Thread khác có thể thấy object dở dang, và đảm bảo của field final mất hiệu lực.",
       "example": "Gọi `bus.register(this)` ở dòng đầu constructor: event tới trên thread khác thấy field `final` vẫn `null`.",
       "related": ["safe-publication", "immutable"],
-      "topics": ["java-memory-model"]
+      "topics": ["java-memory-model", "oop-java"]
     },
     {
       "id": "var-handle",
@@ -3933,7 +3933,7 @@
       "meaning": "Ưu tiên giữ object khác làm field và gọi nó, thay vì kế thừa, để không phụ thuộc vào chi tiết cài đặt của lớp cha.",
       "example": "`AuditedTagSet` giữ một `Set<String>` bên trong thay vì `extends HashSet`.",
       "related": ["fragile-base-class", "coupling"],
-      "topics": ["design-principles"]
+      "topics": ["design-principles", "oop-java"]
     },
     {
       "id": "fragile-base-class",
@@ -3941,7 +3941,7 @@
       "meaning": "Lớp con hỏng khi lớp cha đổi chi tiết cài đặt, vì lớp con dựa vào cách lớp cha gọi các method của chính nó.",
       "example": "Lớp con của `HashSet` đếm ở cả `add` và `addAll` đếm gấp đôi, vì `addAll` kế thừa từ `AbstractCollection` gọi `add`.",
       "related": ["composition-over-inheritance", "liskov-substitution"],
-      "topics": ["design-principles"]
+      "topics": ["design-principles", "oop-java"]
     },
     {
       "id": "dry",
@@ -4061,7 +4061,7 @@
       "meaning": "Pattern trong đó lớp cha abstract định nghĩa khung của thuật toán, còn lớp con cài đặt một vài bước được chỉ định sẵn.",
       "example": "`AbstractReportExporter.export()` gọi `header()`, `rows()`, `footer()`; lớp con chỉ cài `rows()`.",
       "related": ["composition-over-inheritance"],
-      "topics": ["design-principles", "behavioral-patterns"]
+      "topics": ["design-principles", "behavioral-patterns", "oop-java"]
     },
     {
       "id": "polymorphism",
@@ -4069,7 +4069,7 @@
       "meaning": "Cùng một lời gọi method chạy cài đặt khác nhau tuỳ kiểu thật của object lúc chạy (dynamic dispatch).",
       "example": "`gateway.pay(order)` chạy `MomoGateway.pay` hay `VnpayGateway.pay` tuỳ object được inject.",
       "related": ["open-closed", "liskov-substitution"],
-      "topics": ["solid"]
+      "topics": ["solid", "oop-java"]
     },
     {
       "id": "optional-operation",
@@ -7174,6 +7174,150 @@
       "example": "Nginx giữ hàng chục nghìn kết nối với vài worker process thay vì hàng chục nghìn thread.",
       "related": ["io-multiplexing", "reactor-pattern"],
       "topics": ["io-models"]
+    },
+    {
+      "id": "primitive-type",
+      "term": "Primitive type",
+      "meaning": "Kiểu nguyên thuỷ của Java (`int`, `long`, `boolean`...): biến giữ chính giá trị, không thể `null`, không phải object.",
+      "example": "`int count = 0;` lưu số 0 ngay trong biến, không có object nào trên heap.",
+      "related": ["reference-type", "wrapper-class"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "reference-type",
+      "term": "Reference type",
+      "meaning": "Mọi kiểu không phải primitive (class, interface, mảng, enum, record): biến chỉ giữ tham chiếu tới object nằm trên heap, có thể là `null`.",
+      "example": "`List<String> a = b;` làm `a` và `b` cùng trỏ một list, không sao chép list.",
+      "related": ["primitive-type", "pass-by-value"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "wrapper-class",
+      "term": "Wrapper class",
+      "meaning": "Class bọc một giá trị primitive thành object bất biến (`Integer`, `Long`, `Boolean`...), để dùng được trong generics và collection.",
+      "example": "`List<Integer>` thay vì `List<int>`, vì generics chỉ nhận reference type.",
+      "related": ["autoboxing", "primitive-type"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "autoboxing",
+      "term": "Autoboxing",
+      "meaning": "Compiler tự chuyển giữa primitive và wrapper: boxing gọi `valueOf`, unboxing gọi `xxxValue()`. Unboxing một `null` ném `NullPointerException`.",
+      "example": "`int n = map.get(key);` biên dịch thành `map.get(key).intValue()`.",
+      "related": ["wrapper-class", "integer-cache"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "integer-cache",
+      "term": "Integer cache",
+      "meaning": "Các object wrapper cho giá trị -128..127 được tạo sẵn (JLS bắt buộc với `Integer`, `Short`, `Byte`, `Character` 0..127; `Long` cache theo cài đặt JDK); `valueOf` trả lại cùng object, nên `==` chỉ \"đúng\" trong khoảng này.",
+      "example": "`Long a = 100L, b = 100L;` thì `a == b` là `true`; với 1000L là `false`.",
+      "related": ["autoboxing", "wrapper-class"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "pass-by-value",
+      "term": "Pass-by-value",
+      "meaning": "Cách truyền tham số của Java: method nhận bản sao giá trị trong biến. Với object, bản sao là tham chiếu, nên sửa object thì bên gọi thấy nhưng gán lại tham số thì không.",
+      "example": "Hàm `swap(Integer a, Integer b)` không đổi được hai biến của bên gọi.",
+      "related": ["reference-type"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "integer-overflow",
+      "term": "Integer overflow",
+      "meaning": "Tràn số: kết quả vượt phạm vi của `int`/`long` thì quay vòng sang giá trị khác mà không báo lỗi. `Math.addExact`, `multiplyExact` ném `ArithmeticException` thay vì tràn im lặng.",
+      "example": "`Integer.MAX_VALUE + 1` ra `-2147483648`.",
+      "related": ["primitive-type"],
+      "topics": ["java-basics-types"]
+    },
+    {
+      "id": "compile-time-constant",
+      "term": "Compile-time constant",
+      "meaning": "Biến `final` kiểu primitive hoặc `String` gán bằng biểu thức hằng. Compiler chép thẳng giá trị vào nơi dùng, kể cả ở class khác.",
+      "example": "`static final int MAX_ITEMS = 50;` đổi thành 100 trong thư viện mà không biên dịch lại code gọi thì code gọi vẫn dùng 50.",
+      "related": ["constant-folding"],
+      "topics": ["java-basics-types", "oop-java"]
+    },
+    {
+      "id": "dynamic-dispatch",
+      "term": "Dynamic dispatch",
+      "meaning": "Cơ chế JVM chọn cài đặt của method instance theo kiểu thật của object lúc chạy (lệnh `invokevirtual`/`invokeinterface`), là nền của đa hình.",
+      "example": "`Animal a = new Dog(); a.speak()` chạy `Dog.speak()`.",
+      "related": ["polymorphism", "method-overriding"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "method-overloading",
+      "term": "Overloading",
+      "meaning": "Nhiều method cùng tên khác danh sách tham số trong một class. Compiler chọn bản nào lúc biên dịch theo kiểu khai báo của đối số.",
+      "example": "`print(Object)` và `print(String)`: gọi với biến kiểu `Object` luôn chọn `print(Object)`.",
+      "related": ["method-overriding"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "method-overriding",
+      "term": "Overriding",
+      "meaning": "Lớp con cài đặt lại method instance cùng chữ ký với lớp cha; bản được chạy chọn lúc chạy theo kiểu thật. Gắn `@Override` để compiler kiểm chữ ký.",
+      "example": "`Dog` override `speak()` của `Animal`.",
+      "related": ["dynamic-dispatch", "method-overloading"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "field-hiding",
+      "term": "Field hiding",
+      "meaning": "Lớp con khai báo field trùng tên với lớp cha thì chỉ che field đó; truy cập field chọn theo kiểu khai báo, không đa hình. Method `static` cũng bị che theo cách này.",
+      "example": "`Animal a = new Dog(); a.name` đọc `Animal.name`.",
+      "related": ["dynamic-dispatch"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "abstract-class",
+      "term": "Abstract class",
+      "meaning": "Class không tạo instance trực tiếp được, có thể chứa method abstract lẫn field, constructor và method cài đặt sẵn. Một class chỉ kế thừa được một class.",
+      "example": "`abstract class Report` giữ `createdAt` và khung `render()`, lớp con chỉ cài `title()`.",
+      "related": ["default-method"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "default-method",
+      "term": "Default method",
+      "meaning": "Method có thân trong interface (Java 8), để thêm method vào interface mà không làm hỏng các class đã implement. Không có trạng thái instance.",
+      "example": "`Collection.stream()` là default method được thêm ở Java 8.",
+      "related": ["abstract-class"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "inner-class",
+      "term": "Inner class",
+      "meaning": "Class lồng không `static`: mỗi instance gắn với một object của class bao ngoài và giữ tham chiếu tới nó khi dùng tới outer. Nested class `static` thì không.",
+      "example": "Anonymous listener tạo trong một service giữ luôn service đó khi được đăng ký vào event bus sống lâu.",
+      "related": ["memory-leak"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "enum-type",
+      "term": "Enum",
+      "meaning": "Class có tập instance cố định, mỗi hằng là một object `static final` kế thừa `java.lang.Enum`. Có field, method, và hằng có thể override method.",
+      "example": "`enum OrderStatus { NEW, PAID, SHIPPED }`.",
+      "related": ["enummap"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "enummap",
+      "term": "EnumMap",
+      "meaning": "Map có key là enum, lưu trong mảng đánh chỉ số theo `ordinal()`; nhỏ, nhanh và duyệt theo thứ tự khai báo. `EnumSet` là bản set dạng bit vector.",
+      "example": "`new EnumMap<OrderStatus, Long>(OrderStatus.class)` để đếm đơn theo trạng thái.",
+      "related": ["enum-type"],
+      "topics": ["oop-java"]
+    },
+    {
+      "id": "sealed-class",
+      "term": "Sealed class",
+      "meaning": "Class hoặc interface chỉ cho phép đúng các lớp con được liệt kê trong `permits` (Java 17), để compiler biết đủ mọi biến thể khi `switch`.",
+      "example": "`sealed interface Shape permits Circle, Square {}`.",
+      "related": ["enum-type"],
+      "topics": ["oop-java"]
     }
   ]
 }

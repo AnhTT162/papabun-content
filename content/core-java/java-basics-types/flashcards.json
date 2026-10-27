@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "autoboxing-compiles", "front": "`Integer x = 5;` và `int y = x;` được compiler dịch thành gì?", "back": "`Integer.valueOf(5)` và `x.intValue()`. Autoboxing chỉ là cú pháp, không phải phép toán đặc biệt của JVM." },
+    { "id": "integer-cache-range", "front": "`Integer.valueOf` dùng lại object có sẵn cho khoảng giá trị nào?", "back": "-128 tới 127 (JLS bắt buộc cho `int`, `short`, `byte`; `char` 0..127). `Long` cũng cache -128..127 theo cài đặt JDK; `Float`, `Double` không cache." },
+    { "id": "unboxing-npe", "front": "Vì sao `int n = map.get(key);` có thể ném NPE?", "back": "Key không có thì `get` trả `null`, rồi unboxing gọi `null.intValue()`." },
+    { "id": "ternary-npe", "front": "Vì sao `Integer r = flag ? 1 : map.get(k);` ném NPE khi `get` trả `null`?", "back": "Một nhánh là `int` nên cả biểu thức có kiểu `int`; nhánh `Integer` bị unboxing trước khi boxing lại để gán." },
+    { "id": "pass-by-value", "front": "Java truyền object vào method theo kiểu gì?", "back": "Pass-by-value: copy giá trị tham chiếu. Sửa object thì bên gọi thấy; gán tham số sang object khác thì bên gọi không thấy." },
+    { "id": "final-meaning", "front": "`final List<String> names` có ngăn `names.add(...)` không?", "back": "Không. `final` chỉ cấm gán lại biến; object vẫn sửa được nếu bản thân nó mutable." },
+    { "id": "list-remove", "front": "`List<Integer>` chứa `[10, 20, 30]`, `list.remove(1)` xoá gì?", "back": "Xoá phần tử ở index 1 (là 20), vì overload `remove(int)` không cần boxing nên được chọn trước." },
+    { "id": "constant-inline", "front": "Đổi giá trị `public static final int` trong thư viện mà không biên dịch lại code gọi thì sao?", "back": "Code gọi vẫn dùng giá trị cũ, vì hằng số lúc biên dịch được chép thẳng vào class gọi." }
+  ]
+}

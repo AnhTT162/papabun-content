@@ -7,7 +7,7 @@
   "title": "Collections Overview",
   "summary": "List, Set, Queue/Deque và Map: chọn cài đặt nào theo Big-O và tính chất cần có, collection bất biến và view, lựa chọn cho đa luồng, các bẫy hay gặp.",
   "level": "junior",
-  "order": 3,
+  "order": 7,
   "minutes": 15,
   "prerequisites": [],
   "terms": ["collection-framework", "big-o", "amortized-complexity", "cache-locality", "unmodifiable-view", "copy-on-write", "fail-fast", "sequenced-collection", "red-black-tree", "load-factor"],

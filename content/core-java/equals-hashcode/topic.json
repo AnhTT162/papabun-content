@@ -7,7 +7,7 @@
   "title": "equals & hashCode",
   "summary": "Vì sao override equals thì bắt buộc override hashCode, và điều gì xảy ra với HashMap/HashSet nếu quên.",
   "level": "junior",
-  "order": 2,
+  "order": 4,
   "minutes": 12,
   "prerequisites": [],
   "terms": ["hash-code", "bucket", "hash-collision", "immutable"],
