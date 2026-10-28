@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "startup-parts", "front": "Thời gian khởi động của service Spring gồm những phần nào?", "back": "JVM nạp và liên kết class, Spring dựng context, kết nối và việc khởi tạo bên ngoài (migration, pool). Sau đó còn warmup của JIT trước khi đạt tốc độ đỉnh." },
+    { "id": "cds", "front": "CDS làm gì?", "back": "Lưu class đã nạp và kiểm tra vào một archive; JVM map file đó thay vì đọc và kiểm tra lại từng class. JDK 12+ bật sẵn archive cho class của JDK." },
+    { "id": "aot-cache", "front": "AOT cache (JDK 24+) khác CDS ở đâu?", "back": "Lưu thêm class đã liên kết (JDK 24) và profile method (JDK 25), nên JIT biên dịch sớm hơn. Tạo một bước bằng `-XX:AOTCacheOutput` từ JDK 25." },
+    { "id": "extract", "front": "Vì sao phải giải nén fat jar trước khi dùng CDS hay AOT cache?", "back": "Class trong jar lồng nhau được launcher nạp bằng classloader riêng nên không vào cache. Dùng `java -Djarmode=tools -jar app.jar extract`." },
+    { "id": "cache-mismatch", "front": "Cache bị bỏ khi nào, và khi đó JVM làm gì?", "back": "Jar đổi kích thước hay timestamp, khác bản JDK, khác chế độ compressed oops (ví dụ đổi sang ZGC). JVM in lỗi rồi chạy như không có cache; `-XX:AOTMode=required` (trước JDK 27 là `on`) thì từ chối khởi động." },
+    { "id": "training", "front": "Training run của Spring Boot dừng ở đâu và cần lưu ý gì?", "back": "`-Dspring.context.exit=onRefresh` dừng sau khi tạo bean. Bean kết nối ngay khi khởi tạo (Flyway, Hibernate đọc metadata) sẽ cần database lúc build, nên dùng profile training." },
+    { "id": "spring-aot", "front": "Spring AOT trên JVM đổi lại gì?", "back": "Bean definition được sinh lúc build nên khởi động nhanh hơn, nhưng `@Profile` và `@Conditional` bị chốt lúc build; đổi thuộc tính lúc chạy không thêm hay bớt bean." },
+    { "id": "crac", "front": "CRaC là gì và giá của nó?", "back": "Chụp tiến trình JVM (cả mã JIT) bằng CRIU rồi restore trong vài chục mili giây. Chỉ Linux, cần JDK có CRaC và quyền cho CRIU; file chụp chứa secret." },
+    { "id": "native-cost", "front": "Native image đánh đổi gì so với JVM?", "back": "Khởi động nhanh, RSS nhỏ; đổi lại build lâu, reflection cần metadata, không có JIT theo profile, không gắn `-javaagent`, mặc định Serial GC." }
+  ]
+}

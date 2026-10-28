@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Service tính giá khởi động 38 giây trước giờ flash sale",
+  "prompt": "Service `pricing` (Spring Boot 3.5, JDK 21, Hibernate, Flyway với 420 migration, OpenTelemetry Java agent) chạy trên Kubernetes, mỗi pod limit 2 CPU. Lúc 20:00 có flash sale, traffic tăng 8 lần trong khoảng một phút. HPA có tạo pod mới, nhưng pod mất 38 giây mới ready, rồi 2 phút đầu p99 khoảng 900 ms trong khi SLO là 150 ms. Một nhóm đề xuất chuyển sang GraalVM native image vì \"khởi động trong 0,1 giây\". Ràng buộc: nhóm 4 người; CI build khoảng 40 lần mỗi ngày, mỗi lần 3 phút; service dùng một thư viện xuất PDF dựa nhiều vào reflection; cluster không cấp quyền đặc biệt cho pod. Mục tiêu: pod mới ready dưới 10 giây và đạt SLO ngay khi nhận tải. Bạn đề xuất gì, theo thứ tự nào?",
+  "hints": [
+    "38 giây đó gồm những gì? Công cụ nào cho biết thời gian từng bước của Spring, và phần nào không phải việc của JVM?",
+    "Khởi động nhanh và đạt SLO ngay khi nhận tải là hai bài toán khác nhau. Cái nào giải quyết p99 900 ms trong 2 phút đầu?",
+    "Trên JDK 21 dùng được gì, và nâng JDK 25 thì thêm được gì? Training run chạy ở đâu, cần database không?",
+    "Native image đòi hỏi gì với Java agent, thư viện dùng reflection, thời gian build, và tốc độ đỉnh? Mục tiêu 10 giây có cần tới nó không?"
+  ],
+  "solution": "**1. Đo phần 38 giây.** Bật `BufferingApplicationStartup` và xem `/actuator/startup`, cộng log thời gian từng bước. Giả sử kết quả: JVM và nạp class trước Spring khoảng 2 giây, Flyway kiểm và chạy migration 14 giây, Hibernate `ddl-auto=validate` 9 giây, OpenTelemetry agent biến đổi bytecode thêm 3 giây, tạo bean và Tomcat 10 giây. Hai phần lớn nhất không phải việc của JVM.\n\n**2. Bỏ việc không cần làm ở mỗi pod.** Chạy Flyway bằng Job (hoặc bước trong pipeline) một lần mỗi release, tắt `spring.flyway.enabled` trong pod. Đặt `ddl-auto=none` ở production và kiểm schema trong test tích hợp. Bước này không đổi kiến trúc nhưng thường lấy lại nhiều giây nhất: còn khoảng 15 giây. Đo lại.\n\n**3. Cache class.** Giải nén jar (`java -Djarmode=tools -jar app.jar extract`). Trên JDK 21 dùng CDS động; nếu nâng JDK 25 (kiểm bản Boot hỗ trợ) thì dùng AOT cache, vì cache lưu cả profile. Chạy training ngay trong stage cuối của Dockerfile, cùng image JDK và cùng đường dẫn với lúc chạy (cache gắn với classpath và timestamp của từng jar), bằng `-Dspring.context.exit=onRefresh` với một profile `training` không cần database: tắt Flyway và không để Hibernate đọc metadata của database lúc khởi động (`hibernate.boot.allow_jdbc_metadata_access=false`, Hibernate 6.5+, kèm dialect khai báo sẵn). Thêm bài test khởi động trong CI chạy với `-XX:AOTMode=required` (JDK 25–26: `on`; với CDS: `-Xshare:on`) để cache hỏng thì build đỏ, thay vì production âm thầm chậm lại. Training và lúc chạy phải có cùng cấu hình `-javaagent`, vì có agent lúc chạy mà không có lúc training thì JVM bỏ cả cache (đã thử). Class bị agent OpenTelemetry biến đổi không vào được cache, nên đo lại với đúng agent; kỳ vọng còn khoảng 10 giây (phần JVM và bean giảm khoảng một nửa như số đo ở phần Deep). Nếu chưa đạt, bỏ agent và dùng instrumentation của Micrometer.\n\n**4. Warmup trước khi ready.** Khởi động nhanh không làm JIT nóng sẵn. Endpoint readiness chỉ báo ready sau khi một bean warmup gọi các đường xử lý chính vài nghìn lần với dữ liệu giả (không ghi database thật). `startupProbe` cho phép đủ thời gian. Load balancer dùng slow start. Nếu training có chạy request mẫu thì profile trong AOT cache giúp phần này ngắn hơn (đã đo request đầu 5 ms, so với 14 ms khi training chỉ tới `onRefresh`), nhưng không thay được nó.\n\n**5. Không đợi HPA.** Traffic 20:00 biết trước, nên scale theo lịch từ 19:50 (bài Capacity planning & autoscaling). Khởi động nhanh là lớp phòng thủ khi tải bất ngờ, không phải cách duy nhất.\n\n**6. Native image: chưa.** Mục tiêu 10 giây có thể đạt mà không cần nó (xác nhận bằng số đo sau bước 3). Chuyển sang native thì phải bỏ Java agent, viết và kiểm metadata reflection cho thư viện PDF (lỗi thiếu metadata chỉ lộ ra lúc chạy, ở nhánh ít dùng), chạy test trên bản native, build lâu hơn nhiều và cần runner nhiều RAM cho 40 lần mỗi ngày, và với Community Edition tốc độ đỉnh thường thấp hơn C2. CRaC bị loại vì cluster không cấp quyền cho CRIU, và file chụp chứa secret. Xem lại khi có nhu cầu scale to zero hoặc khởi động dưới một giây.",
+  "tradeoffs": [
+    {
+      "option": "Bỏ việc nặng khỏi lúc khởi động (migration, validate schema), cộng CDS hoặc AOT cache và warmup",
+      "pros": [
+        "Giữ nguyên JVM, JIT, agent và công cụ chẩn đoán",
+        "Thay đổi nhỏ trong Dockerfile và cấu hình, đo được từng bước",
+        "AOT cache trên JDK 25 rút ngắn khởi động, và cả warmup nếu training chạy request mẫu"
+      ],
+      "cons": [
+        "Cache phải tạo lại mỗi lần build và bị bỏ lặng lẽ khi lệch JDK, jar hay GC",
+        "Training run cần profile riêng không chạm database",
+        "Vẫn còn vài giây, không đạt mức dưới một giây"
+      ]
+    },
+    {
+      "option": "CRaC (checkpoint sau warmup, restore khi tạo pod)",
+      "pros": [
+        "Restore trong khoảng vài chục mili giây và đã nóng sẵn nếu chụp sau warmup",
+        "Vẫn là HotSpot với JIT đầy đủ"
+      ],
+      "cons": [
+        "Chỉ Linux, cần bản JDK có CRaC và quyền cho CRIU mà cluster này không cấp",
+        "File chụp chứa secret, mọi pod khởi đầu từ cùng một trạng thái",
+        "Phải đóng và mở lại kết nối đúng lúc chụp và restore"
+      ]
+    },
+    {
+      "option": "GraalVM native image",
+      "pros": [
+        "Khởi động vài chục mili giây, RSS nhỏ",
+        "Hợp với function, CLI, scale to zero"
+      ],
+      "cons": [
+        "Không gắn được Java agent, reflection và proxy phải có metadata",
+        "Build lâu và tốn RAM, phải test trên bản native",
+        "Không có JIT theo profile, tốc độ đỉnh thường thấp hơn trên Community Edition"
+      ]
+    }
+  ]
+}

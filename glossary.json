@@ -190,7 +190,7 @@
       "meaning": "Công cụ ghi sự kiện tích hợp sẵn trong JDK (CPU sample, GC, lock, IO) với overhead thấp, xem bằng JDK Mission Control hoặc lệnh `jfr`.",
       "example": "`jcmd <pid> JFR.start duration=60s settings=profile filename=cpu.jfr`.",
       "related": ["sampling-profiler"],
-      "topics": ["java-high-cpu", "slow-api", "profiling", "jvm-diagnostic-tools", "gc-logs-tuning"]
+      "topics": ["java-high-cpu", "slow-api", "profiling", "jvm-diagnostic-tools", "gc-logs-tuning", "startup-native"]
     },
     {
       "id": "catastrophic-backtracking",
@@ -3053,7 +3053,7 @@
       "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
       "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
       "related": ["embedded-server", "spring-boot"],
-      "topics": ["spring-overview", "maven-gradle", "classpath-modules", "classloading"]
+      "topics": ["spring-overview", "maven-gradle", "classpath-modules", "classloading", "startup-native"]
     },
     {
       "id": "bom",
@@ -3093,7 +3093,7 @@
       "meaning": "Module của Spring Boot cung cấp endpoint vận hành: health, metric, info, thread dump, cấu hình. Chỉ `health` được expose qua HTTP mặc định.",
       "example": "`GET /actuator/health` trả `{\"status\":\"UP\"}` cho load balancer kiểm tra.",
       "related": ["spring-boot"],
-      "topics": ["spring-overview"]
+      "topics": ["spring-overview", "startup-native"]
     },
     {
       "id": "native-image",
@@ -3101,7 +3101,7 @@
       "meaning": "GraalVM biên dịch ứng dụng Java trước thành file chạy native: khởi động trong vài chục mili giây và tốn ít RAM, nhưng reflection và proxy phải biết trước lúc build.",
       "example": "Spring Boot 3+ build native image bằng `mvn -Pnative native:compile`.",
       "related": ["jit", "spring-boot"],
-      "topics": ["spring-overview", "jvm-architecture"]
+      "topics": ["spring-overview", "jvm-architecture", "startup-native"]
     },
     {
       "id": "ioc",
@@ -4205,7 +4205,7 @@
       "meaning": "Thành phần của JVM nạp bytecode thành class. Cùng một tên class được nạp bởi hai classloader khác nhau là hai class khác nhau, mỗi bên có field `static` riêng.",
       "example": "App server nạp hai ứng dụng bằng hai classloader, nên mỗi ứng dụng có một `ExchangeRates.INSTANCE` riêng.",
       "related": ["singleton-pattern"],
-      "topics": ["creational-patterns", "memory-growth-oom", "classpath-modules", "memory-leak", "classloading"]
+      "topics": ["creational-patterns", "memory-growth-oom", "classpath-modules", "memory-leak", "classloading", "startup-native"]
     },
     {
       "id": "prototype-pattern",
@@ -5917,7 +5917,7 @@
       "meaning": "Resident Set Size: lượng bộ nhớ vật lý process đang thực sự chiếm. Với JVM gồm heap đã dùng tới, metaspace, stack của thread, buffer native và malloc của thư viện.",
       "example": "Heap 1 GiB nhưng `ps -o rss` báo 1,9 GiB: 900 MiB còn lại là bộ nhớ native.",
       "related": ["oomkilled", "native-memory-tracking"],
-      "topics": ["memory-growth-oom", "os-process-memory", "jvm-containers"]
+      "topics": ["memory-growth-oom", "os-process-memory", "jvm-containers", "startup-native"]
     },
     {
       "id": "memory-leak",
@@ -6093,7 +6093,7 @@
       "meaning": "Horizontal Pod Autoscaler của Kubernetes: định kỳ (mặc định 15 giây) tính số replica = ceil(số pod × metric hiện tại / mục tiêu) rồi chỉnh Deployment.",
       "example": "4 pod ở CPU 90%, mục tiêu 60%: ceil(4 × 90 / 60) = 6 pod.",
       "related": ["autoscaling", "keda"],
-      "topics": ["capacity-planning"]
+      "topics": ["capacity-planning", "startup-native"]
     },
     {
       "id": "keda",
@@ -8077,7 +8077,7 @@
       "meaning": "Tham chiếu object 4 byte thay vì 8 trên JVM 64 bit, dùng được khi heap dưới khoảng 32 GB.",
       "example": "Heap 31 GB có thể chứa nhiều object hơn heap 34 GB vì vượt ngưỡng thì mọi tham chiếu thành 8 byte.",
       "related": ["java-heap"],
-      "topics": ["jvm-memory-areas", "gc-algorithms"]
+      "topics": ["jvm-memory-areas", "gc-algorithms", "startup-native"]
     },
     {
       "id": "compressed-class-space",
@@ -8269,7 +8269,7 @@
       "meaning": "GC mặc định của HotSpot từ Java 9: chia heap thành region, dọn young bằng cách chép, đánh dấu old đồng thời rồi dọn dần bằng mixed GC, giữ pause quanh `MaxGCPauseMillis`.",
       "example": "Heap 4 GB chia thành 2.048 region 2 MB; young GC chép object sống sang region trống trong khoảng 15 ms.",
       "related": ["mixed-gc", "humongous-object", "remembered-set"],
-      "topics": ["gc-algorithms", "gc-logs-tuning"]
+      "topics": ["gc-algorithms", "gc-logs-tuning", "startup-native"]
     },
     {
       "id": "zgc",
@@ -8277,7 +8277,7 @@
       "meaning": "GC có pause dưới mili giây: đánh dấu và di chuyển object đồng thời với ứng dụng nhờ load barrier và colored pointer. Chia thế hệ là mặc định từ JDK 23 và là chế độ duy nhất từ JDK 24.",
       "example": "`-XX:+UseZGC` với heap 16 GB: log ghi `Minor Collection ... 0.049s` là thời gian cả chu kỳ đồng thời, pause thật dưới 1 ms.",
       "related": ["load-barrier", "colored-pointer", "allocation-stall"],
-      "topics": ["gc-algorithms", "gc-logs-tuning"]
+      "topics": ["gc-algorithms", "gc-logs-tuning", "startup-native"]
     },
     {
       "id": "shenandoah",
@@ -8493,7 +8493,7 @@
       "meaning": "Giai đoạn đầu sau khi JVM khởi động, code còn chạy bằng interpreter và C1 vì JIT chưa có đủ profile để C2 biên dịch, nên chậm hơn trạng thái ổn định nhiều lần.",
       "example": "Request 11–100 của một handler mất khoảng 8,6 µs, sau 100.000 request còn khoảng 270 ns.",
       "related": ["jit", "tiered-compilation"],
-      "topics": ["jit"]
+      "topics": ["jit", "startup-native"]
     },
     {
       "id": "dead-code-elimination",
@@ -8542,6 +8542,78 @@
       "example": "Pod JVM đặt memory `requests` bằng `limits` và CPU cũng vậy thì là Guaranteed, `oom_score_adj` −997.",
       "related": ["oom-killer", "cgroup"],
       "topics": ["jvm-containers"]
+    },
+    {
+      "id": "class-data-sharing",
+      "term": "CDS",
+      "meaning": "Class Data Sharing: JVM lưu class đã nạp và kiểm tra vào một file archive rồi map file đó ở lần chạy sau, thay vì đọc và kiểm tra lại từng class. JDK 12+ bật sẵn archive cho class của JDK; class ứng dụng cần AppCDS hoặc archive động.",
+      "example": "`java -XX:ArchiveClassesAtExit=app.jsa -jar app.jar` tạo archive; lần sau chạy `-XX:SharedArchiveFile=app.jsa`.",
+      "related": ["aot-cache", "classloader", "training-run"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "aot-cache",
+      "term": "AOT cache",
+      "meaning": "File do JDK 24+ (Project Leyden) tạo từ một lần chạy thử: chứa class đã nạp và liên kết, từ JDK 25 thêm profile method để JIT biên dịch sớm hơn. Bị bỏ qua nếu jar, bản JDK hay chế độ compressed oops khác lúc tạo.",
+      "example": "`java -XX:AOTCacheOutput=app.aot -Dspring.context.exit=onRefresh -jar app.jar`, rồi chạy với `-XX:AOTCache=app.aot`.",
+      "related": ["class-data-sharing", "training-run", "jit-warmup"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "training-run",
+      "term": "Training run",
+      "meaning": "Lần chạy ứng dụng chỉ để ghi lại class đã dùng (và profile) vào CDS archive hoặc AOT cache. Chạy càng giống tải thật thì cache càng có ích cho warmup.",
+      "example": "Trong Dockerfile: `RUN java -XX:AOTCacheOutput=app.aot -Dspring.profiles.active=training -Dspring.context.exit=onRefresh -jar app.jar`.",
+      "related": ["aot-cache", "class-data-sharing"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "spring-aot",
+      "term": "Spring AOT",
+      "meaning": "Bước xử lý lúc build của Spring Framework 6+: đánh giá cấu hình và sinh sẵn code đăng ký bean, cùng metadata cho native image. Bean definition và kết quả của `@Profile`, `@Conditional` bị chốt lúc build.",
+      "example": "Build với goal `process-aot` của plugin Spring Boot, chạy trên JVM với `-Dspring.aot.enabled=true`.",
+      "related": ["native-image", "auto-configuration", "reachability-metadata"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "crac",
+      "term": "CRaC",
+      "meaning": "Coordinated Restore at Checkpoint: chụp tiến trình JVM đang chạy (heap, mã JIT) xuống file bằng CRIU rồi restore trong vài chục mili giây. Chỉ có trên Linux, ở các bản JDK có kèm CRaC; ứng dụng phải đóng và mở lại kết nối quanh lúc chụp.",
+      "example": "`jcmd <pid> JDK.checkpoint` với JVM chạy `-XX:CRaCCheckpointTo=/snap`; sau đó `java -XX:CRaCRestoreFrom=/snap`.",
+      "related": ["cold-start", "jit-warmup"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "closed-world-assumption",
+      "term": "Closed-world assumption",
+      "meaning": "Giả định của GraalVM native image: mọi class và method có thể chạy đều biết lúc build. Không nạp được class mới lúc chạy; reflection, proxy, resource phải khai báo trước.",
+      "example": "Code gọi `Class.forName(name)` với tên đọc từ cấu hình chỉ chạy được trong native image nếu class đó có trong metadata.",
+      "related": ["native-image", "reachability-metadata"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "reachability-metadata",
+      "term": "Reachability metadata",
+      "meaning": "Khai báo cho GraalVM native image những class, method, resource được dùng qua reflection, proxy, JNI hay serialization, mà phân tích tĩnh không tìm ra. Đặt trong `META-INF/native-image/` (`reachability-metadata.json`).",
+      "example": "Chạy test trên JVM với `-agentlib:native-image-agent=config-output-dir=...` để ghi lại metadata cho một thư viện dùng reflection.",
+      "related": ["native-image", "closed-world-assumption", "reflection"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "cold-start",
+      "term": "Cold start",
+      "meaning": "Thời gian từ lúc nền tảng tạo instance mới (pod, function) tới khi nó trả lời request đầu tiên, gồm cả khởi động runtime và ứng dụng. Quan trọng nhất khi scale to zero.",
+      "example": "Function Java trên JVM có cold start vài giây; bản native image hay có snapshot thì dưới một giây.",
+      "related": ["native-image", "crac"],
+      "topics": ["startup-native"]
+    },
+    {
+      "id": "startup-probe",
+      "term": "Startup probe",
+      "meaning": "Probe của Kubernetes chỉ chạy lúc container khởi động; trong lúc nó chưa thành công, liveness và readiness probe chưa được kiểm. Cho app khởi động chậm đủ thời gian mà không phải nới liveness.",
+      "example": "`failureThreshold: 30`, `periodSeconds: 2` cho container tối đa 60 giây để khởi động.",
+      "related": ["liveness-probe"],
+      "topics": ["startup-native"]
     }
   ]
 }

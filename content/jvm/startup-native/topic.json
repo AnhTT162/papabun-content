@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "startup-native",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "Khởi động nhanh: CDS, CRaC, GraalVM native",
+  "summary": "Thời gian khởi động gồm những gì và đo bằng gì; CDS, AppCDS, archive động và AOT cache của JDK 24–26 (số đo trên Spring Boot 4.1: 0,70 giây xuống 0,34 giây, cộng Spring AOT còn 0,23 giây); vì sao cache phải dùng với jar đã giải nén và bị bỏ lặng lẽ khi lệch jar, JDK hay GC; Spring AOT chốt điều kiện lúc build; CRaC và Lambda SnapStart; GraalVM native image, closed world, reachability metadata và cái giá phải trả; chọn cách nào cho service chạy lâu và cho function.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 18,
+  "prerequisites": ["classloading", "jit", "jvm-containers"],
+  "terms": ["class-data-sharing", "aot-cache", "training-run", "spring-aot", "crac", "native-image", "closed-world-assumption", "reachability-metadata", "cold-start", "jit-warmup", "fat-jar", "compressed-oops", "classloader", "startup-probe", "actuator", "rss", "g1-gc", "zgc", "jfr", "hpa"],
+  "references": [
+    { "title": "JEP 483: Ahead-of-Time Class Loading & Linking", "url": "https://openjdk.org/jeps/483" },
+    { "title": "JEP 515: Ahead-of-Time Method Profiling", "url": "https://openjdk.org/jeps/515" },
+    { "title": "Spring Boot Reference: AOT Cache", "url": "https://docs.spring.io/spring-boot/reference/packaging/aot-cache.html" },
+    { "title": "Spring Framework Reference: JVM Checkpoint Restore", "url": "https://docs.spring.io/spring-framework/reference/integration/checkpoint-restore.html" },
+    { "title": "GraalVM Native Image: Reachability Metadata", "url": "https://www.graalvm.org/latest/reference-manual/native-image/metadata/" },
+    { "title": "JEP 514: Ahead-of-Time Command-Line Ergonomics", "url": "https://openjdk.org/jeps/514" },
+    { "title": "JEP 516: Ahead-of-Time Object Caching with Any GC", "url": "https://openjdk.org/jeps/516" },
+    { "title": "AWS Lambda: Improving startup performance with Lambda SnapStart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Microservice mới có nên build native image không?\" Hỏi lại cần gì: service chạy lâu trên Kubernetes cần ready trong vài giây và đạt SLO ngay khi nhận tải, việc đó AOT cache (hoặc CDS) cộng warmup đã làm được mà vẫn giữ JIT, Java agent và công cụ chẩn đoán. Native image đáng giá khi cold start quyết định chi phí hay trải nghiệm: function scale to zero, CLI, sidecar nhỏ, hoặc chạy hàng trăm instance cần RSS nhỏ. Giá phải trả: build lâu, metadata cho reflection, test trên bản native, tốc độ đỉnh thường thấp hơn C2." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "AOT cache và CDS hỏng thì JVM chỉ in một dòng `[error][aot] ... Unable to map shared spaces` rồi khởi động chậm như cũ: jar đổi timestamp khi copy, image JDK khác bản tạo cache, chuyển từ G1 sang ZGC, hay thêm `-javaagent` chỉ lúc chạy (đã thử trên JDK 27). Kiểm trong CI bằng một lần khởi động với `-XX:AOTMode=required` (JDK 27; bản trước là `on`), JVM từ chối chạy nếu cache không dùng được, và theo dõi thời gian khởi động như một metric." }
+  ]
+}

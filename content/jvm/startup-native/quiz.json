@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "stale-cache",
+      "kind": "output",
+      "prompt": "Pipeline build lại image với jar mới nhưng vẫn copy file `app.aot` cũ vào. Pod chạy JDK 27 với lệnh dưới. Chuyện gì xảy ra?",
+      "code": "java -XX:AOTCache=app.aot -jar app/orders.jar\n\n[0.008s][warning][aot] This file is not the one used while building the AOT cache: 'app/orders.jar', timestamp has changed\n[0.008s][error  ][aot] shared class paths mismatch (hint: enable -Xlog:class+path=info to diagnose the failure)\n[0.008s][error  ][aot] Unable to map shared spaces",
+      "options": [
+        "App vẫn khởi động bình thường nhưng không dùng cache, chậm như chưa có",
+        "JVM dừng với `Error occurred during initialization of VM`",
+        "App khởi động nhanh nhưng chạy class cũ lấy từ cache",
+        "App khởi động, rồi ném `NoClassDefFoundError` ở request đầu"
+      ],
+      "answer": 0,
+      "explanation": "Với `AOTMode` mặc định (`auto`), cache không khớp thì JVM in lỗi và chạy tiếp như không có cache: đã thử, app khởi động bình thường với thời gian như chưa có cache. Chỉ khi đặt `-XX:AOTMode=required` (JDK 24–26: `on`) thì JVM mới từ chối khởi động. JVM kiểm kích thước và thời gian sửa của từng jar nên không bao giờ dùng class cũ từ cache."
+    },
+    {
+      "id": "fat-jar-cache",
+      "kind": "single",
+      "prompt": "Nhóm thêm `-XX:AOTCacheOutput` vào lần chạy training và `-XX:AOTCache` lúc chạy, nhưng vẫn chạy `java -jar app.jar` (fat jar của Spring Boot). Khởi động chỉ nhanh hơn khoảng 10%. Vì sao?",
+      "options": [
+        "Class trong jar lồng nhau được nạp bởi classloader riêng nên không vào cache",
+        "AOT cache chỉ lưu class của JDK, class ứng dụng phải dùng CDS động",
+        "Training run quá ngắn nên profile chưa đủ để JIT dùng",
+        "Fat jar nén nên JVM phải giải nén cache mỗi lần khởi động"
+      ],
+      "answer": 0,
+      "explanation": "Launcher của Spring Boot nạp class từ `BOOT-INF/lib/*.jar` bằng classloader của nó; cache chỉ chứa được class nạp từ classpath thường. Đã đo: 2.648 class từ cache và 5.169 nạp thường, 0,73 giây so với 0,80 giây. Giải nén bằng `-Djarmode=tools extract` thì 7.640 class từ cache, 0,34 giây. AOT cache có chứa class ứng dụng; profile ảnh hưởng warmup chứ không phải số class nạp."
+    },
+    {
+      "id": "aot-condition",
+      "kind": "single",
+      "prompt": "App build có `process-aot` và chạy với `-Dspring.aot.enabled=true`. Bean `auditWriter` có `@ConditionalOnProperty(name = \"audit.enabled\", havingValue = \"true\")`. Lúc build không đặt thuộc tính này; lúc chạy đặt `-Daudit.enabled=true`. Kết quả?",
+      "options": [
+        "Bean không được tạo: điều kiện đã được đánh giá lúc build",
+        "Bean được tạo: thuộc tính lúc chạy luôn thắng cấu hình lúc build",
+        "App không khởi động vì cấu hình lệch với lúc build",
+        "Bean được tạo nhưng chậm hơn vì Spring phải dùng reflection"
+      ],
+      "answer": 0,
+      "explanation": "Spring AOT chốt tập bean definition lúc build, gồm cả kết quả của `@Profile` và `@Conditional`. Đã thử với Spring Boot 4.1.2: không có AOT thì bean được tạo, có AOT thì không, và không có lỗi hay cảnh báo nào. Muốn bật tắt lúc chạy thì để bean luôn tồn tại và kiểm cờ bên trong, hoặc build riêng cho từng cấu hình."
+    },
+    {
+      "id": "crac-risk",
+      "kind": "single",
+      "prompt": "Nhóm dùng CRaC: chụp JVM sau warmup trong pipeline, đưa file chụp vào image, mọi pod restore từ đó. Rủi ro nào là riêng của cách này?",
+      "options": [
+        "File chụp chứa secret, và mọi pod bắt đầu từ cùng trạng thái bộ nhớ",
+        "Pod restore phải warmup lại vì mã JIT không được lưu",
+        "Restore xong vẫn phải nạp lại mọi class từ jar",
+        "Pod restore vẫn chạy lại toàn bộ khởi động của Spring"
+      ],
+      "answer": 0,
+      "explanation": "Checkpoint lưu toàn bộ bộ nhớ tiến trình: mật khẩu database, token, cấu hình đọc từ biến môi trường đều nằm trong file, và mọi bản restore có cùng ID instance, seed ngẫu nhiên, cache. Chụp sau warmup thì mã JIT có sẵn, đó là ưu điểm. Class đã nạp và context Spring đã dựng đều nằm trong file chụp, nên restore không nạp lại class hay dựng lại bean; Spring chỉ gọi `Lifecycle.start` để mở lại kết nối."
+    },
+    {
+      "id": "native-fit",
+      "kind": "single",
+      "prompt": "Trường hợp nào native image là lựa chọn hợp lý nhất?",
+      "options": [
+        "Function xử lý webhook scale về 0, mỗi lần gọi phải trả lời trong 2 giây",
+        "API chạy liên tục 20 pod, cần throughput đỉnh cao nhất",
+        "Service dùng OpenTelemetry Java agent và nhiều thư viện reflection",
+        "Batch chạy 3 giờ mỗi đêm tính toán nặng trên CPU"
+      ],
+      "answer": 0,
+      "explanation": "Cold start quyết định ở function scale to zero, nên khởi động vài chục mili giây đáng giá. API chạy lâu và batch nặng CPU cần tốc độ đỉnh của JIT theo profile, khởi động chỉ là phần nhỏ. Java agent không gắn được vào native image và reflection cần metadata, nên service đó là ứng viên tệ nhất."
+    }
+  ]
+}
