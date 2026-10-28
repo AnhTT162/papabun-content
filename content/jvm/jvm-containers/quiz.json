@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "default-heap",
+      "kind": "output",
+      "prompt": "Pod có memory limit 2Gi, CPU limit 1.5, chạy JDK 21 trên node cgroup v2, không đặt cờ heap nào. Chương trình in gì?",
+      "code": "Runtime rt = Runtime.getRuntime();\nSystem.out.println(rt.availableProcessors() + \" CPU, max heap ~\"\n        + rt.maxMemory() / (1024 * 1024) + \" MB\");",
+      "options": [
+        "2 CPU, max heap ~512 MB",
+        "1 CPU, max heap ~512 MB",
+        "2 CPU, max heap ~1536 MB",
+        "1 CPU, max heap ~1024 MB"
+      ],
+      "answer": 0,
+      "explanation": "Số CPU là quota chia chu kỳ làm tròn lên: 1,5 thành 2. Heap mặc định là `MaxRAMPercentage` 25% của memory limit: 512 MB (con số `maxMemory()` in ra có thể thấp hơn một chút tuỳ GC). 1.536 MB là khi đặt 75%; 1.024 MB nhầm `MinRAMPercentage` 50% áp cho mọi container, trong khi nó chỉ dùng cho container rất nhỏ."
+    },
+    {
+      "id": "requests-ignored",
+      "kind": "single",
+      "prompt": "Pod chỉ đặt `requests: cpu: 1`, không đặt CPU limit, chạy JDK 21 trên node 32 CPU. `availableProcessors()` trả gì?",
+      "options": [
+        "32: không có quota, JDK 19+ bỏ qua CPU shares",
+        "1: JVM đọc CPU shares tương ứng với `requests`",
+        "2: JVM làm tròn lên theo `requests` cộng thêm một",
+        "1: không đặt limit thì JVM mặc định coi là 1 CPU"
+      ],
+      "answer": 0,
+      "explanation": "Từ JDK 19 (backport 17.0.5, 11.0.17), JVM không dùng CPU shares để đếm CPU, nên không có quota thì nó thấy mọi CPU của node: 23 thread GC song song, common pool 31. Trước các bản đó, shares 1024 ra 1 CPU. Pod không đặt limit nên đặt `-XX:ActiveProcessorCount` khớp với `requests`."
+    },
+    {
+      "id": "throttle-average",
+      "kind": "single",
+      "prompt": "Dashboard cho thấy CPU trung bình của pod chỉ 45% limit, nhưng p99 có những đỉnh 600 ms. Bước kiểm tra nào đúng?",
+      "options": [
+        "Xem tỉ lệ chu kỳ bị throttle trong `cpu.stat` hoặc Prometheus",
+        "Giảm ngưỡng HPA từ 70% xuống 40% để scale sớm hơn",
+        "Tăng `-Xmx` vì GC đang chạy nhiều khi CPU còn rảnh",
+        "Xem `load average` của node để biết pod có thiếu CPU không"
+      ],
+      "answer": 0,
+      "explanation": "Quota tính theo chu kỳ 100 ms: một đợt dồn của nhiều thread (GC song song, pool tính theo số CPU của node) dùng hết quota trong vài chục mili giây rồi đứng chờ, trong khi trung bình theo phút vẫn thấp. `nr_throttled / nr_periods` hoặc `container_cpu_cfs_throttled_periods_total` cho thấy điều đó. Load average của node không phản ánh quota của một pod; HPA và `-Xmx` là đoán trước khi có bằng chứng."
+    },
+    {
+      "id": "oom-vs-killed",
+      "kind": "single",
+      "prompt": "Pod limit 2Gi, `-Xmx1900m`. Pod bị restart với `Exit Code: 137`, log không có dòng `OutOfMemoryError`, thư mục heap dump trống. Giải thích nào khớp nhất?",
+      "options": [
+        "Heap cộng phần native vượt 2Gi, kernel giết process",
+        "Heap đầy, JVM ném OOME nhưng log chưa kịp ghi ra",
+        "Liveness probe thất bại vì GC pause dài, kubelet giết",
+        "`HeapDumpOnOutOfMemoryError` lỗi vì đĩa của pod đầy"
+      ],
+      "answer": 0,
+      "explanation": "137 là SIGKILL; `kubectl describe` sẽ ghi `Reason: OOMKilled`. Heap 1.900 MB cộng metaspace, code cache, stack, GC và direct buffer chắc chắn vượt 2.048 MiB khi heap được dùng gần hết. JVM ném OOME thì có stack trace và dump. Liveness thất bại cũng ra 137 nhưng `Reason` là `Error` và có event `Liveness probe failed`."
+    }
+  ]
+}

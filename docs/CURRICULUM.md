@@ -185,8 +185,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 6 | `gc-logs-tuning` | Đọc GC log & tuning | senior | `-Xlog:gc`, sizing heap, các dấu hiệu bất thường | L T | ✅ |
 | 7 | `memory-leak` | Memory leak & heap dump | senior | Phân tích heap dump bằng MAT, dominator tree, leak hay gặp trong Spring và ThreadLocal | L T | ✅ |
 | 8 | `classloading` | ClassLoader | senior | Delegation, fat jar của Spring Boot, metaspace leak | L D B | ✅ |
-| 9 | `jit` | JIT compiler | senior | Tiered C1/C2, inlining, escape analysis, deopt, warmup, JMH | L D B | ⬜ |
-| 10 | `jvm-containers` | JVM trong container | senior | cgroup, `MaxRAMPercentage`, CPU limit, OOMKilled và OutOfMemoryError, NMT | L T | ⬜ |
+| 9 | `jit` | JIT compiler | senior | Tiered C1/C2, inlining, escape analysis, deopt, warmup, JMH | L D B | ✅ |
+| 10 | `jvm-containers` | JVM trong container | senior | cgroup, `MaxRAMPercentage`, CPU limit, OOMKilled và OutOfMemoryError, NMT | L T | ✅ |
 | 11 | `startup-native` | Khởi động nhanh: CDS, CRaC, GraalVM native | senior | Trade-off giữa startup, peak và độ phức tạp build | L Sc | ⬜ |
 
 ### 5. Spring (`spring`)

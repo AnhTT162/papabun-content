@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning", "jvm-containers"]
     },
     {
       "id": "full-gc",
@@ -525,7 +525,7 @@
       "meaning": "Trình biên dịch trong JVM dịch bytecode của đoạn code chạy nhiều thành mã máy lúc chạy, kèm tối ưu như đưa phép đọc biến ra ngoài vòng lặp nếu JMM cho phép.",
       "example": "HotSpot C2 biên dịch `while (running) { }` thành vòng lặp chỉ đọc `running` một lần khi biến không volatile.",
       "related": ["jmm", "instruction-reordering"],
-      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing", "java-basics-types", "oop-java", "jvm-architecture"]
+      "topics": ["synchronized-volatile", "exceptions", "java-memory-model", "slow-api", "profiling", "tail-latency", "capacity-planning", "load-testing", "java-basics-types", "oop-java", "jvm-architecture", "jit"]
     },
     {
       "id": "memory-barrier",
@@ -693,7 +693,7 @@
       "meaning": "`ForkJoinPool.commonPool()`: pool dùng chung cho cả JVM, khoảng số core − 1 thread, chạy parallel stream và `CompletableFuture.*Async` khi không truyền executor.",
       "example": "Máy 8 core: common pool có 7 thread dùng chung cho mọi parallel stream.",
       "related": ["thread-pool"],
-      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion", "stream-api", "classloading"]
+      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion", "stream-api", "classloading", "jvm-containers"]
     },
     {
       "id": "completion-exception",
@@ -5901,7 +5901,7 @@
       "meaning": "Lỗi JVM ném khi một vùng nhớ của nó hết chỗ (heap, metaspace, direct buffer, thread). Thông điệp đi kèm cho biết vùng nào hết.",
       "example": "`java.lang.OutOfMemoryError: Java heap space` khi object còn sống vượt `-Xmx`.",
       "related": ["oomkilled", "heap-dump", "memory-leak"],
-      "topics": ["memory-growth-oom", "jvm-memory-areas", "memory-leak"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas", "memory-leak", "jvm-containers"]
     },
     {
       "id": "oomkilled",
@@ -5909,7 +5909,7 @@
       "meaning": "Trạng thái Kubernetes báo khi kernel giết container vì tổng bộ nhớ vượt memory limit. Process bị SIGKILL ngay (exit code 137), không kịp ghi log hay heap dump.",
       "example": "`kubectl describe pod` hiện `Reason: OOMKilled`, `Exit Code: 137` dù log không có `OutOfMemoryError`.",
       "related": ["out-of-memory-error", "rss"],
-      "topics": ["memory-growth-oom", "os-process-memory", "jvm-memory-areas"]
+      "topics": ["memory-growth-oom", "os-process-memory", "jvm-memory-areas", "jvm-containers"]
     },
     {
       "id": "rss",
@@ -5917,7 +5917,7 @@
       "meaning": "Resident Set Size: lượng bộ nhớ vật lý process đang thực sự chiếm. Với JVM gồm heap đã dùng tới, metaspace, stack của thread, buffer native và malloc của thư viện.",
       "example": "Heap 1 GiB nhưng `ps -o rss` báo 1,9 GiB: 900 MiB còn lại là bộ nhớ native.",
       "related": ["oomkilled", "native-memory-tracking"],
-      "topics": ["memory-growth-oom", "os-process-memory"]
+      "topics": ["memory-growth-oom", "os-process-memory", "jvm-containers"]
     },
     {
       "id": "memory-leak",
@@ -5933,7 +5933,7 @@
       "meaning": "Native Memory Tracking: tính năng của HotSpot chia bộ nhớ JVM cấp ngoài heap theo hạng mục (Class, Thread, Code, GC, Other...). Bật lúc khởi động bằng `-XX:NativeMemoryTracking=summary`.",
       "example": "`jcmd <pid> VM.native_memory baseline`, vài giờ sau `summary.diff` cho thấy `Other` tăng 300 MB.",
       "related": ["rss", "direct-buffer", "metaspace"],
-      "topics": ["memory-growth-oom", "jvm-memory-areas"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas", "jvm-containers"]
     },
     {
       "id": "metaspace",
@@ -6445,7 +6445,7 @@
       "meaning": "Control group: cơ chế của Linux gom process thành nhóm và giới hạn CPU, bộ nhớ, số process cho cả nhóm. Container và pod Kubernetes dựa vào nó để áp `limits`.",
       "example": "Pod có memory limit 1 GiB nghĩa là `memory.max` của cgroup là 1 GiB; vượt thì OOM killer chỉ chọn process trong cgroup đó.",
       "related": ["oom-killer", "cpu-throttling"],
-      "topics": ["os-process-memory"]
+      "topics": ["os-process-memory", "jvm-containers"]
     },
     {
       "id": "hash-table",
@@ -7245,7 +7245,7 @@
       "meaning": "Cơ chế JVM chọn cài đặt của method instance theo kiểu thật của object lúc chạy (lệnh `invokevirtual`/`invokeinterface`), là nền của đa hình.",
       "example": "`Animal a = new Dog(); a.speak()` chạy `Dog.speak()`.",
       "related": ["polymorphism", "method-overriding"],
-      "topics": ["oop-java"]
+      "topics": ["oop-java", "jit"]
     },
     {
       "id": "method-overloading",
@@ -7973,7 +7973,7 @@
       "meaning": "Phần của JVM chạy bytecode từng lệnh một mà không biên dịch, đồng thời đếm số lần gọi để JIT biết method nào nóng. Khởi động ngay nhưng chậm hơn mã máy cả chục lần.",
       "example": "Vòng lặp chạy với `-Xint` (chỉ interpreter) mất 250 ms, mặc định có JIT chỉ 18 ms.",
       "related": ["jit", "tiered-compilation"],
-      "topics": ["jvm-architecture"]
+      "topics": ["jvm-architecture", "jit"]
     },
     {
       "id": "tiered-compilation",
@@ -7981,7 +7981,7 @@
       "meaning": "Cách HotSpot biên dịch theo tầng: interpreter, rồi C1 biên dịch nhanh kèm thu profile, rồi C2 tối ưu mạnh dựa trên profile. Bật mặc định từ Java 8.",
       "example": "`-XX:+PrintCompilation` cho thấy method qua tầng 3 (C1) rồi tầng 4 (C2).",
       "related": ["jit", "interpreter"],
-      "topics": ["jvm-architecture"]
+      "topics": ["jvm-architecture", "jit"]
     },
     {
       "id": "hotspot-jvm",
@@ -8021,7 +8021,7 @@
       "meaning": "Vùng nhớ dùng chung của JVM chứa mọi object và mảng, do GC dọn. Kích thước tối đa đặt bằng `-Xmx`, mặc định 25% RAM.",
       "example": "`new Order()` cấp object trên heap; hết chỗ thì `OutOfMemoryError: Java heap space`.",
       "related": ["young-generation", "out-of-memory-error", "tlab"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "jvm-containers"]
     },
     {
       "id": "stack-frame",
@@ -8037,7 +8037,7 @@
       "meaning": "Vùng nhớ native chứa mã máy do JIT sinh ra, mặc định 240 MB. Đầy hẳn thì JIT ngừng biên dịch và ứng dụng chậm dần.",
       "example": "`jcmd <pid> Compiler.codecache` cho biết đã dùng bao nhiêu.",
       "related": ["jit", "metaspace"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "jit"]
     },
     {
       "id": "young-generation",
@@ -8069,7 +8069,7 @@
       "meaning": "Phân tích của JIT xem object có thoát khỏi method hay thread không. Không thoát thì có thể bỏ cấp phát (tách thành biến cục bộ) hoặc bỏ khoá.",
       "example": "Object `Point` tạo rồi chỉ đọc trong một vòng lặp có thể không bao giờ được cấp trên heap.",
       "related": ["jit", "java-heap"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "jit"]
     },
     {
       "id": "compressed-oops",
@@ -8253,7 +8253,7 @@
       "meaning": "Kiểm tra định kỳ của Kubernetes xem container còn sống; thất bại liên tiếp `failureThreshold` lần thì kubelet restart container.",
       "example": "`periodSeconds: 10`, `failureThreshold: 3`: JVM dừng khoảng 30 giây (ví dụ khi heap dump) là bị restart.",
       "related": ["health-check"],
-      "topics": ["jvm-diagnostic-tools"]
+      "topics": ["jvm-diagnostic-tools", "jvm-containers"]
     },
     {
       "id": "parallel-gc",
@@ -8446,6 +8446,102 @@
       "example": "Mỗi biểu thức lambda khác nhau sinh một hidden class gắn với class chứa nó, tên có dạng `Main$$Lambda/0x...`.",
       "related": ["classloader", "metaspace"],
       "topics": ["classloading"]
+    },
+    {
+      "id": "inlining",
+      "term": "Inlining",
+      "meaning": "JIT chép thân method được gọi vào chỗ gọi, bỏ chi phí lời gọi và mở đường cho các tối ưu khác như escape analysis. C2 inline method tới 35 byte bytecode, method nóng tới 325 byte.",
+      "example": "`-XX:+PrintInlining` in `Shapes$Flat::apply (6 bytes) inline (hot)` khi profile chỉ thấy kiểu `Flat`.",
+      "related": ["jit", "megamorphic-call", "escape-analysis"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "megamorphic-call",
+      "term": "Megamorphic call",
+      "meaning": "Lời gọi ảo (qua interface hay method override) mà profile thấy từ ba kiểu receiver trở lên. C2 không inline được, phải gọi gián tiếp; một hoặc hai kiểu thì gọi là monomorphic, bimorphic và được inline kèm kiểm tra kiểu.",
+      "example": "Vòng gọi `Fee.apply` với 3 kiểu trộn ngẫu nhiên chậm khoảng 12 lần so với 2 kiểu (đo trên JDK 27).",
+      "related": ["inlining", "dynamic-dispatch"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "scalar-replacement",
+      "term": "Scalar replacement",
+      "meaning": "Tối ưu dựa trên escape analysis: object không thoát được thay bằng các biến cục bộ cho từng field, nên không có cấp phát trên heap.",
+      "example": "`new Point(x, y)` chỉ dùng để cộng toạ độ trong vòng lặp thành hai biến `long`, cấp phát đo được 0 byte.",
+      "related": ["escape-analysis", "inlining"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "deoptimization",
+      "term": "Deoptimization",
+      "meaning": "JVM bỏ mã đã biên dịch khi giả định của JIT sai (kiểu mới, nhánh chưa từng chạy, class mới nạp), đưa thread về interpreter rồi biên dịch lại. Điểm kích hoạt gọi là uncommon trap.",
+      "example": "`PrintCompilation` in `Deopt::total (46 bytes) made not entrant: uncommon trap` khi mảng có thêm kiểu `Percent`.",
+      "related": ["jit", "tiered-compilation"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "on-stack-replacement",
+      "term": "OSR (On-stack replacement)",
+      "meaning": "Thay mã của một vòng lặp đang chạy dở bằng bản đã biên dịch ngay giữa chừng, dùng cho method chỉ gọi một lần nhưng có vòng lặp dài như `main`.",
+      "example": "Dòng `FeeBench::main @ 40 (123 bytes)` có dấu `%` là bản OSR cho vòng lặp ở bytecode 40.",
+      "related": ["jit", "tiered-compilation"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "jit-warmup",
+      "term": "Warmup",
+      "meaning": "Giai đoạn đầu sau khi JVM khởi động, code còn chạy bằng interpreter và C1 vì JIT chưa có đủ profile để C2 biên dịch, nên chậm hơn trạng thái ổn định nhiều lần.",
+      "example": "Request 11–100 của một handler mất khoảng 8,6 µs, sau 100.000 request còn khoảng 270 ns.",
+      "related": ["jit", "tiered-compilation"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "dead-code-elimination",
+      "term": "Dead code elimination",
+      "meaning": "JIT xoá phép tính có kết quả không được dùng và không có tác dụng phụ. Lý do hay gặp nhất khiến benchmark tự viết ra 0 ms.",
+      "example": "Vòng gọi `feeLong` 10 triệu lần mà bỏ kết quả đo được 0 ms; cộng kết quả lại thì 4 ms.",
+      "related": ["jmh", "jit"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "jmh",
+      "term": "JMH (Java Microbenchmark Harness)",
+      "meaning": "Công cụ của OpenJDK để đo hiệu năng đoạn code nhỏ: tự warmup, chạy mỗi benchmark trong JVM riêng, chặn dead code elimination bằng `Blackhole`, đo cấp phát với `-prof gc`.",
+      "example": "`@Benchmark public long longMath() { return feeLong(amount); }` cho 0,35 ns/op, còn bản bỏ kết quả bằng baseline 0,26 ns.",
+      "related": ["dead-code-elimination", "jit-warmup"],
+      "topics": ["jit"]
+    },
+    {
+      "id": "max-ram-percentage",
+      "term": "MaxRAMPercentage",
+      "meaning": "Cờ JVM đặt heap tối đa bằng phần trăm RAM, hoặc của memory limit khi chạy trong container. Mặc định 25%; container chỉ chạy JVM thường đặt 60–75%.",
+      "example": "Pod limit 2Gi với `-XX:MaxRAMPercentage=75` cho `MaxHeapSize` 1,5 GiB.",
+      "related": ["java-heap", "cgroup", "oomkilled"],
+      "topics": ["jvm-containers"]
+    },
+    {
+      "id": "cfs-quota",
+      "term": "CFS quota",
+      "meaning": "Giới hạn CPU của cgroup: số micro giây CPU được dùng trong mỗi chu kỳ (mặc định 100 ms). CPU limit của Kubernetes được chuyển thành quota này; JVM lấy quota chia chu kỳ, làm tròn lên, làm số CPU.",
+      "example": "`cpu.max` là `200000 100000` nghĩa là 200 ms CPU mỗi 100 ms, tức limit 2 CPU.",
+      "related": ["cpu-throttling", "cgroup", "active-processor-count"],
+      "topics": ["jvm-containers"]
+    },
+    {
+      "id": "active-processor-count",
+      "term": "ActiveProcessorCount",
+      "meaning": "Cờ `-XX:ActiveProcessorCount=N` ghi đè số CPU JVM tự tính. Ảnh hưởng `availableProcessors()`, số thread GC, thread JIT và common pool.",
+      "example": "Pod chỉ đặt `requests: cpu: 2` trên node 32 CPU dùng `-XX:ActiveProcessorCount=2` để JVM không sinh 23 thread GC.",
+      "related": ["cfs-quota", "common-pool"],
+      "topics": ["jvm-containers"]
+    },
+    {
+      "id": "pod-qos-class",
+      "term": "QoS class (Kubernetes)",
+      "meaning": "Hạng của pod theo `requests` và `limits`: Guaranteed (requests bằng limits cho mọi container), Burstable, BestEffort. Quyết định thứ tự bị trục xuất và `oom_score_adj` khi node thiếu RAM.",
+      "example": "Pod JVM đặt memory `requests` bằng `limits` và CPU cũng vậy thì là Guaranteed, `oom_score_adj` −997.",
+      "related": ["oom-killer", "cgroup"],
+      "topics": ["jvm-containers"]
     }
   ]
 }

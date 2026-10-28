@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jit",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "JIT compiler",
+  "summary": "Tiered compilation C1/C2 và ngưỡng của JDK 27, đọc `PrintCompilation` và `PrintInlining`; inlining và lời gọi monomorphic, bimorphic, megamorphic (đã đo: 48 ms so với 1.590 ms); escape analysis và vì sao object thoát ở nhánh hiếm vẫn luôn bị cấp phát; deoptimization khi giả định của C2 sai; warmup của pod mới; method quá 8.000 byte không bao giờ được biên dịch; vì sao vòng lặp benchmark tự viết nói dối và JMH làm gì khác.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 18,
+  "prerequisites": ["jvm-architecture", "jvm-memory-areas"],
+  "terms": ["jit", "tiered-compilation", "inlining", "megamorphic-call", "escape-analysis", "scalar-replacement", "deoptimization", "on-stack-replacement", "jit-warmup", "dead-code-elimination", "jmh", "code-cache", "interpreter", "dynamic-dispatch"],
+  "references": [
+    { "title": "Java SE 21 HotSpot VM Guide: Performance Enhancements", "url": "https://docs.oracle.com/en/java/javase/21/vm/java-hotspot-virtual-machine-performance-enhancements.html" },
+    { "title": "OpenJDK: JMH (Java Microbenchmark Harness)", "url": "https://github.com/openjdk/jmh" },
+    { "title": "JEP 515: Ahead-of-Time Method Profiling", "url": "https://openjdk.org/jeps/515" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Thêm một implementation mới cho interface mà vòng xử lý chậm hẳn đi, vì sao?\" C2 inline lời gọi interface theo profile: một hoặc hai kiểu thì inline kèm kiểm tra kiểu, từ ba kiểu thì thành lời gọi ảo thật và mất cả các tối ưu đi theo inline (escape analysis, gộp phép tính). Kiểu mới xuất hiện sau khi mã đã biên dịch còn gây deopt (`made not entrant: uncommon trap`) rồi biên dịch lại. Hỏi tiếp \"có nên sửa không?\": chỉ khi profiler cho thấy chỗ đó nóng; khi đó gom phần tử theo kiểu, hoặc dùng `switch` trên sealed interface thay vì lời gọi ảo." },
+    { "type": "callout", "style": "warning", "markdown": "Mẹo \"khởi động nhanh hơn\" `-XX:TieredStopAtLevel=1` tắt C2. Trên service chạy lâu, mã đỉnh chậm hơn nhiều lần (đã đo một vòng xử lý: 1.450 ms so với 135 ms) và không còn escape analysis. Dùng cho tool dòng lệnh, không chép vào `JAVA_OPTS` của production." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cgroup-v2-versions", "front": "JDK nào đọc được cgroup v2?", "back": "JDK 15 trở lên, 11.0.16+, 8u372+. Bản cũ hơn trên node cgroup v2 tính heap và số CPU theo cả node." },
+    { "id": "default-heap", "front": "Không đặt `-Xmx`, heap tối đa trong container là bao nhiêu?", "back": "25% memory limit (`MaxRAMPercentage`). Container rất nhỏ (dưới khoảng 250 MB) dùng `MinRAMPercentage` 50%." },
+    { "id": "heap-percent", "front": "Vì sao không đặt heap bằng memory limit?", "back": "Limit tính cả phần native: metaspace, code cache, stack, cấu trúc GC, direct buffer, malloc. Heap sát limit thì container bị OOMKilled." },
+    { "id": "cpu-count", "front": "JVM tính số CPU trong container thế nào?", "back": "Làm tròn lên quota chia chu kỳ, lấy nhỏ hơn với cpuset. Từ JDK 19 (17.0.5, 11.0.17) bỏ qua CPU shares, tức `requests`." },
+    { "id": "no-limit", "front": "Pod không đặt CPU limit thì JVM thấy bao nhiêu CPU?", "back": "Mọi CPU của node, và sinh thread GC, JIT, common pool theo đó. Đặt `-XX:ActiveProcessorCount` khớp `requests`." },
+    { "id": "derived", "front": "Những gì JVM tính theo số CPU?", "back": "`ParallelGCThreads`, `ConcGCThreads`, `CICompilerCount`, parallelism của common pool (CPU − 1), cùng mọi pool code tự tính theo `availableProcessors()`." },
+    { "id": "throttle", "front": "Vì sao CPU trung bình thấp mà pod vẫn bị throttle?", "back": "Quota tính theo chu kỳ 100 ms. Nhiều thread chạy cùng lúc dùng hết quota sớm rồi đứng chờ phần còn lại; trung bình theo phút che mất các đợt dồn." },
+    { "id": "check-view", "front": "Kiểm JVM trong container thấy gì bằng lệnh nào?", "back": "`java -XshowSettings:system -version` (provider, số CPU, memory limit), `jcmd <pid> VM.flags` cho con số cuối cùng, `-Xlog:os+container=trace` để xem từng file cgroup." },
+    { "id": "maxram-27", "front": "`-XX:MaxRAM` trên JDK 27 thì sao?", "back": "Bị bỏ: JVM in cảnh báo `Ignoring option MaxRAM; support was removed in 27.0` và bỏ qua cờ." }
+  ]
+}

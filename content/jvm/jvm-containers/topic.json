@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jvm-containers",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "JVM trong container",
+  "summary": "JVM đọc cgroup v1/v2 thế nào và từ phiên bản nào (11.0.16, 8u372 cho v2); heap mặc định theo `MaxRAMPercentage` và bẫy `MinRAMPercentage`; ngân sách bộ nhớ đo bằng NMT; số CPU từ quota (bỏ qua `requests` từ JDK 19) và mọi thứ tính theo nó (thread GC, JIT, common pool, đã đo trên JDK 27); CPU throttling và cách đọc; CPU limit hay không; troubleshoot JDK 11 cũ sau khi node chuyển sang cgroup v2.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 17,
+  "prerequisites": ["jvm-memory-areas", "os-process-memory", "gc-fundamentals"],
+  "terms": ["cgroup", "max-ram-percentage", "cfs-quota", "cpu-throttling", "active-processor-count", "oomkilled", "out-of-memory-error", "native-memory-tracking", "rss", "java-heap", "common-pool", "pod-qos-class", "liveness-probe"],
+  "references": [
+    { "title": "JDK-8230305: Cgroups v2: Container awareness", "url": "https://bugs.openjdk.org/browse/JDK-8230305" },
+    { "title": "JDK-8281181: Do not use CPU Shares to compute active processor count", "url": "https://bugs.openjdk.org/browse/JDK-8281181" },
+    { "title": "Kubernetes: Resource Management for Pods and Containers", "url": "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pod 2 GiB thì đặt heap bao nhiêu?\" Không có con số chung: heap cộng phần native (metaspace, code cache, stack, GC, direct buffer, malloc của thư viện) phải nằm dưới limit kèm khoảng dự phòng. Bắt đầu ở 70–75% cho service chỉ chạy JVM, bật NMT `summary` trên một pod để đo phần native thật, rồi chỉnh. Hỏi tiếp \"sao không để mặc định?\": mặc định 25% là để an toàn khi JVM chạy chung máy với thứ khác; trong container riêng nó lãng phí ba phần tư limit." },
+    { "type": "callout", "style": "warning", "markdown": "Nâng node pool lên OS image mới (thường đổi sang cgroup v2) là một thay đổi với mọi service JVM dù không ai deploy gì. Image còn JDK trước 11.0.16 hoặc 8u372 sẽ tính heap và số CPU theo cả node. Kiểm `java -XshowSettings:system -version` trên node mới trước khi chuyển tải." }
+  ]
+}

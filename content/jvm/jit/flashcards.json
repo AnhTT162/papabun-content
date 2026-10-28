@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "tiers", "front": "Các tầng chính của tiered compilation?", "back": "Tầng 0 interpreter, tầng 3 C1 kèm profile (khoảng 200 lần gọi), tầng 4 C2 tối ưu theo profile (khoảng 5.000 lần gọi). Method tầm thường đi tầng 1 (C1 không profile)." },
+    { "id": "osr", "front": "Dấu `%` trong `PrintCompilation` nghĩa là gì?", "back": "On-stack replacement: vòng lặp đang chạy dở được thay bằng mã đã biên dịch ngay giữa chừng, không cần đợi lần gọi method sau." },
+    { "id": "inline-limits", "front": "C2 inline method tới bao nhiêu byte?", "back": "Mọi method tới 35 byte bytecode (`MaxInlineSize`), method nóng tới 325 byte (`FreqInlineSize`). Quá thì `PrintInlining` ghi `callee is too large` hoặc `hot method too big`." },
+    { "id": "megamorphic", "front": "Lời gọi megamorphic là gì và tốn gì?", "back": "Lời gọi ảo mà profile thấy từ ba kiểu trở lên. C2 không inline được, mất cả các tối ưu đi theo inline (escape analysis, gộp phép tính)." },
+    { "id": "deopt", "front": "Khi nào mã C2 bị deopt?", "back": "Khi giả định theo profile sai: kiểu mới ở lời gọi, nhánh chưa từng chạy, `null` lần đầu, class mới nạp phá giả định chỉ có một implementation. Log in `made not entrant: uncommon trap`." },
+    { "id": "partial-escape", "front": "Object chỉ thoát ở một nhánh hiếm có được C2 bỏ cấp phát không?", "back": "Không. C2 coi nó là thoát và luôn cấp phát (đã đo 240 MB cho 10 triệu object). Partial escape analysis chỉ có ở Graal." },
+    { "id": "huge-method", "front": "Method trên 8.000 byte bytecode thì JIT làm gì?", "back": "Không biên dịch (`DontCompileHugeMethods`), chạy interpreter mãi; đã đo chậm khoảng 17 lần. Tách method thay vì tắt cờ." },
+    { "id": "dce-benchmark", "front": "Vì sao vòng lặp đo tự viết hay ra 0 ms?", "back": "Kết quả không được dùng và phép tính không có tác dụng phụ, nên C2 xoá cả vòng (dead code elimination). JMH đưa kết quả vào `Blackhole`." },
+    { "id": "c1-only", "front": "`-XX:TieredStopAtLevel=1` hợp với gì?", "back": "Tool dòng lệnh chạy vài giây: khởi động nhanh nhờ chỉ có C1. Service chạy lâu thì mã đỉnh chậm hơn nhiều lần và không có escape analysis." }
+  ]
+}

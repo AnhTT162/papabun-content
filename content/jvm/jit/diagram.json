@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường đi của một method qua các tầng JIT",
+  "nodes": [
+    { "id": "interp", "label": "Interpreter (tầng 0)", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "c1", "label": "C1 + profile (tầng 3)", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "c2", "label": "C2 (tầng 4)", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "profile", "label": "Profile: kiểu, nhánh", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "cache", "label": "Code cache", "kind": "cache", "x": 0.85, "y": 0.95 },
+    { "id": "trap", "label": "Uncommon trap", "kind": "generic", "x": 0.85, "y": 0.05 }
+  ],
+  "edges": [
+    { "id": "to-c1", "from": "interp", "to": "c1", "label": "~200 lần gọi" },
+    { "id": "record", "from": "c1", "to": "profile", "label": "ghi profile" },
+    { "id": "to-c2", "from": "c1", "to": "c2", "label": "~5.000 lần gọi" },
+    { "id": "use-profile", "from": "profile", "to": "c2", "label": "tối ưu theo profile" },
+    { "id": "install", "from": "c2", "to": "cache", "label": "mã máy" },
+    { "id": "wrong", "from": "cache", "to": "trap", "label": "giả định sai" },
+    { "id": "deopt", "from": "trap", "to": "interp", "label": "deopt" }
+  ],
+  "steps": [
+    {
+      "caption": "Method mới chạy bằng interpreter. Mỗi lần gọi và mỗi vòng lặp quay lại đều được đếm.",
+      "show": ["interp"]
+    },
+    {
+      "caption": "Đủ khoảng 200 lần gọi (hoặc vòng lặp đủ dài), C1 biên dịch nhanh ra mã tầng 3, chạy nhanh hơn interpreter nhiều lần.",
+      "show": ["c1", "to-c1"],
+      "highlight": ["to-c1"]
+    },
+    {
+      "caption": "Mã tầng 3 ghi profile: kiểu thực tế ở mỗi lời gọi interface, nhánh `if` nào chạy, có gặp `null` không.",
+      "show": ["profile", "record"],
+      "highlight": ["record"]
+    },
+    {
+      "caption": "Khoảng 5.000 lần gọi, C2 biên dịch lại theo profile: inline kiểu đã thấy, bỏ nhánh chưa chạy, escape analysis.",
+      "show": ["c2", "to-c2", "use-profile"],
+      "highlight": ["to-c2", "use-profile"]
+    },
+    {
+      "caption": "Mã máy vào code cache, lời gọi sau đi thẳng vào đó. Vòng lặp đang chạy dở được thay giữa chừng bằng OSR.",
+      "show": ["cache", "install"],
+      "highlight": ["install"]
+    },
+    {
+      "caption": "Gặp kiểu mới hay nhánh chưa từng chạy: mã C2 bị bỏ (`made not entrant`), thread quay về interpreter, method được profile và biên dịch lại.",
+      "show": ["trap", "wrong", "deopt"],
+      "highlight": ["wrong", "deopt"]
+    }
+  ]
+}

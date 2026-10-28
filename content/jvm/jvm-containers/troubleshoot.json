@@ -1,0 +1,184 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "inventory-api bị OOMKilled sau khi nâng cấp node pool",
+  "symptom": "Từ ngày 14/10, các pod của inventory-api (Spring Boot 2.7, JDK 11) bị restart 3–4 lần mỗi ngày, luôn vào giờ cao điểm, và p99 tăng từ 180 ms lên khoảng 700 ms. Lần deploy gần nhất là 2/10. Ngày 14/10 team platform đã nâng node pool lên OS image mới. Bạn được giao tìm nguyên nhân.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "$ kubectl describe pod inventory-api-7d9f4-x2k\n    Last State:   Terminated\n      Reason:     OOMKilled\n      Exit Code:  137\n    Restart Count: 11\n    Limits:   cpu: 2, memory: 2Gi\n    Requests: cpu: 1, memory: 2Gi\n    Environment:\n      JAVA_OPTS: -XX:MaxRAMPercentage=75 -XX:+HeapDumpOnOutOfMemoryError\n\nImage: eclipse-temurin:11.0.14_9-jre (build từ tháng 2/2022)\nNode: 8 vCPU, 32 GiB RAM\n\nGrafana, pod vừa bị giết, 30 phút cuối:\n  container_memory_working_set_bytes   1,52 GiB -> 2,00 GiB\n  jvm_memory_committed_bytes{area=heap} 1,10 GB -> 1,71 GB\n  jvm_memory_used_bytes{area=heap} sau GC   khoảng 600 MB, không tăng\n  CPU trung bình                        48% của limit",
+      "evidenceFormat": "monospace",
+      "question": "Heap committed lên 1,71 GB, trong khi 75% của 2 GiB chỉ khoảng 1,5 GB. Bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Xem JVM trong pod tự tính heap tối đa và số CPU là bao nhiêu",
+          "quality": "good",
+          "feedback": "Đúng. Heap committed vượt mức 75% limit nghĩa là giới hạn heap JVM đang dùng không phải con số bạn nghĩ. Hỏi thẳng JVM trước khi đoán.",
+          "next": "jvm-view"
+        },
+        {
+          "label": "Bật NMT trên một pod để xem phần native chiếm bao nhiêu",
+          "quality": "ok",
+          "feedback": "NMT cho bức tranh đầy đủ nhưng cần restart pod với cờ mới. Heap sau GC phẳng ở 600 MB, nên chỗ bất thường là heap committed, không phải native.",
+          "next": "nmt"
+        },
+        {
+          "label": "Tăng memory limit lên 4Gi để pod có thêm chỗ",
+          "quality": "poor",
+          "feedback": "Chưa biết vì sao heap vượt mức cấu hình thì tăng limit chỉ dời thời điểm pod chết, và tốn thêm RAM trên mọi node.",
+          "next": "raise-limit"
+        }
+      ]
+    },
+    {
+      "id": "raise-limit",
+      "evidence": "Sau 2 ngày với limit 4Gi:\n  Restart Count: 2 (OOMKilled)\n  jvm_memory_committed_bytes{area=heap} lúc bị giết: 3,75 GB\n  jvm_memory_used_bytes{area=heap} sau GC: vẫn khoảng 600 MB\n  Số pod mỗi node: từ 12 xuống 6, cluster autoscaler thêm 4 node",
+      "evidenceFormat": "monospace",
+      "question": "Heap committed cứ nở theo limit mới, dù dữ liệu sống không đổi. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem JVM tự tính heap tối đa là bao nhiêu",
+          "quality": "good",
+          "feedback": "Đúng. Heap committed lớn dần mà dữ liệu sống phẳng nghĩa là G1 còn được phép nở: giới hạn heap của JVM lớn hơn limit của pod.",
+          "next": "jvm-view"
+        }
+      ]
+    },
+    {
+      "id": "nmt",
+      "evidence": "Pod chạy thêm -XX:NativeMemoryTracking=summary, 3 giờ sau:\n$ kubectl exec inventory-api-7d9f4-q8m -- jcmd 1 VM.native_memory summary scale=MB\nTotal: reserved=28941MB, committed=1937MB\n-                 Java Heap (reserved=24576MB, committed=1536MB)\n-                     Class (reserved=1150MB, committed=118MB)\n-                    Thread (reserved=213MB, committed=31MB)\n-                      Code (reserved=247MB, committed=52MB)\n-                        GC (reserved=1102MB, committed=96MB)\n-                     Other (reserved=64MB, committed=64MB)\n-                    Symbol (reserved=18MB, committed=18MB)\n  ... các hạng mục còn lại dưới 10 MB",
+      "evidenceFormat": "monospace",
+      "question": "Native khoảng 400 MB, heap committed 1.536 MB và vẫn đang nở. Con số nào lạ?",
+      "choices": [
+        {
+          "label": "Java Heap reserved 24.576 MB, gấp 12 lần memory limit",
+          "quality": "good",
+          "feedback": "Đúng. Reserved của heap chính là heap tối đa: 24 GiB, tức 75% của 32 GiB RAM của node, không phải của 2 GiB limit. Phần native bình thường.",
+          "next": "jvm-view"
+        },
+        {
+          "label": "GC committed 96 MB, có vẻ G1 đang rò bộ nhớ",
+          "quality": "poor",
+          "feedback": "Cấu trúc của G1 (card table, remembered set) tỉ lệ với heap, vài phần trăm là bình thường. Nhìn lại dòng Java Heap: reserved là giới hạn JVM tự đặt.",
+          "next": "jvm-view"
+        }
+      ]
+    },
+    {
+      "id": "jvm-view",
+      "evidence": "$ kubectl exec inventory-api-7d9f4-x2k -- java -version\nopenjdk version \"11.0.14\" 2022-01-18\n\n$ kubectl exec inventory-api-7d9f4-x2k -- java -XX:MaxRAMPercentage=75 -XX:+PrintFlagsFinal -version \\\n    | grep -E ' (MaxHeapSize|InitialHeapSize|ParallelGCThreads|ConcGCThreads|CICompilerCount) '\n     intx CICompilerCount        = 4             {product} {ergonomic}\n     uint ConcGCThreads          = 2             {product} {ergonomic}\n   size_t InitialHeapSize        = 536870912     {product} {ergonomic}\n   size_t MaxHeapSize            = 25769803776   {product} {ergonomic}\n     uint ParallelGCThreads      = 8             {product} {default}\n\n$ kubectl exec inventory-api-7d9f4-x2k -- cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.max\n2147483648\n200000 100000\n\n$ kubectl exec inventory-api-7d9f4-x2k -- stat -fc %T /sys/fs/cgroup/\ncgroup2fs",
+      "evidenceFormat": "monospace",
+      "question": "Limit là 2 GiB và 2 CPU, nhưng JVM tính heap tối đa 24 GiB và 8 thread GC. Vì sao?",
+      "choices": [
+        {
+          "label": "JDK 11.0.14 không đọc được cgroup v2 mà node mới đang dùng",
+          "quality": "good",
+          "feedback": "Đúng. `cgroup2fs` cho thấy node mới dùng cgroup v2; JDK 11 chỉ đọc được v2 từ 11.0.16. Không đọc được cgroup, JVM dùng RAM và CPU của cả node: 75% của 32 GiB là 24 GiB, 8 CPU là 8 thread GC.",
+          "next": "fix"
+        },
+        {
+          "label": "`MaxRAMPercentage=75` quá cao, hạ xuống 60 sẽ đủ",
+          "quality": "ok",
+          "feedback": "Phần trăm không sai; con số gốc mà phần trăm nhân vào mới sai. Thử thì sẽ thấy.",
+          "next": "percent"
+        },
+        {
+          "label": "`UseContainerSupport` bị tắt ở đâu đó trong cấu hình",
+          "quality": "poor",
+          "feedback": "Giả thuyết kiểm được trong một lệnh, nhưng `JAVA_OPTS` không có cờ đó và nó bật mặc định từ JDK 10.",
+          "next": "flag-check"
+        }
+      ]
+    },
+    {
+      "id": "percent",
+      "evidence": "$ kubectl exec inventory-api-7d9f4-x2k -- java -XX:MaxRAMPercentage=60 -XX:+PrintFlagsFinal -version | grep ' MaxHeapSize '\n   size_t MaxHeapSize            = 20615843840   {product} {ergonomic}",
+      "evidenceFormat": "monospace",
+      "question": "60% ra 19,2 GiB, vẫn là phần trăm của 32 GiB. Giải thích nào khớp?",
+      "choices": [
+        {
+          "label": "JVM không nhận ra limit của container, tính theo RAM của node",
+          "quality": "good",
+          "feedback": "Đúng. 20.615.843.840 byte là 60% của 32 GiB. Cần tìm vì sao JVM không đọc được limit: so phiên bản JDK với loại cgroup của node.",
+          "next": "fix"
+        },
+        {
+          "label": "Phần trăm chỉ có hiệu lực sau khi restart cả node",
+          "quality": "poor",
+          "feedback": "`MaxRAMPercentage` được đọc mỗi lần JVM khởi động; lệnh `java` vừa chạy là một JVM mới. Con số 19,2 GiB cho thấy cái sai là RAM gốc, không phải phần trăm.",
+          "next": "jvm-view"
+        }
+      ]
+    },
+    {
+      "id": "flag-check",
+      "evidence": "$ kubectl exec inventory-api-7d9f4-x2k -- java -XX:+PrintFlagsFinal -version | grep UseContainerSupport\n     bool UseContainerSupport    = true          {product} {default}",
+      "evidenceFormat": "monospace",
+      "question": "Cờ đang bật mà JVM vẫn không thấy limit. Giải thích nào khớp?",
+      "choices": [
+        {
+          "label": "Bản JDK này chỉ đọc cgroup v1, còn node mới dùng cgroup v2",
+          "quality": "good",
+          "feedback": "Đúng. `UseContainerSupport` chỉ nói JVM sẽ thử đọc cgroup; với JDK 11.0.14 trên cgroup v2 nó không tìm thấy gì và quay về số liệu của máy.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "Ghi chú phát hành OpenJDK: hỗ trợ cgroup v2 (JDK-8230305) có trong JDK 15, được backport vào 11.0.16 và 8u372.\nTeam platform: OS image mới của node pool chuyển từ cgroup v1 sang cgroup v2.\n\n$ kubectl exec inventory-api-7d9f4-x2k -- cat /sys/fs/cgroup/cpu.stat\nusage_usec 27648000000\nnr_periods 288000\nnr_throttled 89280\nthrottled_usec 2140000000\n(container đã chạy khoảng 8 giờ từ lần restart trước)\n\nCode xuất báo cáo tồn kho:\n  ExecutorService exportPool =\n      Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2); // 16 thread",
+      "evidenceFormat": "monospace",
+      "question": "31% chu kỳ bị throttle, heap tính theo node. Làm gì?",
+      "choices": [
+        {
+          "label": "Nâng base image lên JDK 11.0.16 trở lên, kiểm lại rồi deploy",
+          "quality": "good",
+          "feedback": "Đúng gốc: JVM đọc được cgroup v2 thì heap, thread GC, thread JIT và cả pool tính theo `availableProcessors()` đều về đúng. Chọn bản vá mới nhất của dòng 11 (hoặc lên 17/21 nếu đã có kế hoạch).",
+          "next": "verify"
+        },
+        {
+          "label": "Đặt ngay `-Xmx1400m -XX:ActiveProcessorCount=2`, rồi nâng JDK sau",
+          "quality": "ok",
+          "feedback": "Chặn được sự cố trong vài phút và hợp lý làm trước. Nhưng các cờ cứng sẽ sai khi limit đổi, và JDK 11.0.14 còn thiếu nhiều bản vá bảo mật; vẫn phải nâng image.",
+          "next": "verify"
+        },
+        {
+          "label": "Yêu cầu team platform quay node pool về image cgroup v1",
+          "quality": "poor",
+          "feedback": "Chỉ dời vấn đề: Kubernetes đã đưa hỗ trợ cgroup v1 vào chế độ bảo trì từ 1.31, các OS image mới đều mặc định v2. Và mọi service JVM cũ khác trong cluster vẫn mang cùng rủi ro.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "evidence": "Image eclipse-temurin:11.0.25_9-jre, cùng JAVA_OPTS:\n$ kubectl exec inventory-api-5c8b1-m4t -- java -XshowSettings:system -version   (trích)\nOperating System Metrics:\n    Provider: cgroupv2\n    Effective CPU Count: 2\n    CPU Period: 100000us\n    CPU Quota: 200000us\n    Memory Limit: 2.00G\n\nVM.flags: MaxHeapSize=1610612736  ParallelGCThreads=2  ConcGCThreads=1  CICompilerCount=2\n\n7 ngày sau:\n  Restart Count: 0\n  container_memory_working_set_bytes  ổn định khoảng 1,8 GiB\n  Tỉ lệ chu kỳ bị throttle            3%\n  p99                                 185 ms",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn. Làm gì để lần sau phát hiện sớm hơn?",
+      "choices": [
+        {
+          "label": "Log heap tối đa và số CPU lúc khởi động, cảnh báo khi lệch limit",
+          "quality": "good",
+          "feedback": "Đúng. Một dòng log `maxMemory()` và `availableProcessors()` lúc khởi động cùng một cảnh báo khi chúng vượt limit của pod sẽ bắt được lỗi này trong vài phút, ở mọi service. Thêm bước CI chạy `-XshowSettings:system` trong image.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Ghim phiên bản OS image của node pool, chỉ nâng khi cần",
+          "quality": "ok",
+          "feedback": "Giảm thay đổi bất ngờ nhưng không bắt được lỗi: lần nâng sau vẫn có thể lộ ra vấn đề tương tự, và ghim lâu thì node thiếu bản vá.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Thêm `-XX:ActiveProcessorCount=8` để GC song song chạy nhanh hơn",
+          "quality": "poor",
+          "feedback": "Ngược lại: 8 thread GC trong quota 2 CPU dùng hết quota sau 25 ms mỗi chu kỳ rồi đứng chờ, làm cả thread ứng dụng bị throttle. Pause không ngắn hơn vì tổng CPU vẫn chỉ có 2.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "Nguyên nhân gốc: node pool chuyển sang cgroup v2, image của inventory-api còn JDK 11.0.14 (chưa hỗ trợ v2). JVM dùng RAM và CPU của node: heap tối đa 24 GiB thay vì 1,5 GiB, nên G1 cứ nở heap lúc cao điểm thay vì dọn, tới khi container vượt 2 GiB và bị OOMKilled; 8 thread GC, 4 thread JIT và pool xuất báo cáo 16 thread trong quota 2 CPU làm 31% chu kỳ bị throttle, p99 tăng.\n\nPhòng ngừa:\n- Giữ base image JDK ở bản vá mới; kiểm cgroup v2 trước khi nâng node pool.\n- Log maxMemory() và availableProcessors() lúc khởi động, cảnh báo khi vượt limit của pod.\n- 75% chỉ dư khoảng 5% limit khi native đo được khoảng 400 MB (bước NMT): hạ MaxRAMPercentage xuống 70 (heap 1,4 GiB) để có chỗ cho đợt tăng native.\n- Theo dõi tỉ lệ chu kỳ bị throttle, không chỉ CPU trung bình.\n- Pool tự tạo nên lấy kích thước từ cấu hình, không nhân availableProcessors() mù quáng.",
+      "evidenceFormat": "monospace"
+    }
+  ]
+}

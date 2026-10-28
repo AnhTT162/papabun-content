@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "partial-escape",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27 mặc định, sau warmup. `getThreadAllocatedBytes` đo một lần gọi `escaping(10_000_000)` được bao nhiêu? (`Point` gồm hai `long` là 24 byte với compact object headers, mặc định trên JDK 27.)",
+      "code": "record Point(long x, long y) {}\nstatic Point last;\n\nstatic long escaping(int n) {\n    long sum = 0;\n    for (int i = 0; i < n; i++) {\n        Point p = new Point(i, i * 2L);\n        if ((i & 0xFFFFF) == 0) last = p; // khoảng một triệu vòng mới thoát một lần\n        sum += p.x();\n    }\n    return sum;\n}",
+      "options": [
+        "Khoảng 240 MB: object nào cũng được cấp phát",
+        "Khoảng 240 byte: chỉ 10 object thoát bị cấp phát",
+        "0 byte: escape analysis bỏ hết vì gần như không thoát",
+        "Khoảng 720 MB: escape analysis bị tắt cả method"
+      ],
+      "answer": 0,
+      "explanation": "Đã đo: 240.000.000 byte, tức 10 triệu object 24 byte. Escape analysis của C2 xét cả phạm vi biên dịch: object có thể thoát ở bất kỳ nhánh nào thì bị coi là thoát và luôn được cấp phát. C2 không có partial escape analysis (chỉ cấp phát ở nhánh thoát); Graal có. Cùng vòng lặp nhưng bỏ dòng gán vào `last` thì đo được 0 byte. 720 MB là con số của một vòng khác tạo 3 object mỗi lần khi chạy với `-XX:-DoEscapeAnalysis`."
+    },
+    {
+      "id": "third-implementation",
+      "kind": "single",
+      "prompt": "Vòng tính phí gọi `fee.apply(amount)` qua interface `Fee`, trước có 2 implementation. Thêm `CappedFee`, dữ liệu trộn đều 3 kiểu, vòng lặp chậm đi khoảng 12 lần (đã đo trên JDK 27). Nguyên nhân chính?",
+      "options": [
+        "Lời gọi thành megamorphic: không còn inline, gọi gián tiếp mỗi lần",
+        "Thêm class làm metaspace lớn hơn, nạp method chậm hơn mỗi lần gọi",
+        "Interface có 3 implementation thì JVM phải tra itable bằng tên method",
+        "`CappedFee` dùng `Math.min` không được JIT biên dịch nên chạy interpreter"
+      ],
+      "answer": 0,
+      "explanation": "C2 dùng profile kiểu ở chỗ gọi: một hoặc hai kiểu thì inline kèm kiểm tra kiểu, ba kiểu trở lên thì `failed to inline: virtual call` (thấy trong `PrintInlining`). Mất inline kéo theo mất các tối ưu khác, cộng chi phí gọi gián tiếp khi kiểu đổi ngẫu nhiên. Tra itable dùng chỉ số đã phân giải, không theo tên. `Math.min` là intrinsic, được biên dịch bình thường. Kích thước metaspace không ảnh hưởng tốc độ gọi."
+    },
+    {
+      "id": "huge-method",
+      "kind": "single",
+      "prompt": "Một mapper sinh tự động có method `map` dài 13.700 byte bytecode và được gọi hàng triệu lần. Sau nhiều giờ chạy, profiler vẫn thấy method này tốn CPU bất thường. `PrintCompilation` không có dòng nào cho `map`. Vì sao?",
+      "options": [
+        "Method quá 8.000 byte bytecode nên HotSpot không bao giờ biên dịch",
+        "Code cache đầy nên JIT đã ngừng biên dịch mọi method mới",
+        "Method bị deopt quá 400 lần nên bị đánh dấu không biên dịch",
+        "Method quá 325 byte nên chỉ được C1 biên dịch, không qua C2"
+      ],
+      "answer": 0,
+      "explanation": "`DontCompileHugeMethods` bật mặc định: method trên 8.000 byte bytecode chạy interpreter mãi. Đã đo: 2.620 ms mỗi vòng so với 157 ms khi tắt cờ để thử. Cách sửa là tách method. Code cache đầy hay deopt quá nhiều đều để lại dấu vết (cảnh báo `CodeCache is full`, các dòng `made not entrant`). 325 byte là giới hạn inline method nóng vào nơi gọi, không phải giới hạn biên dịch."
+    },
+    {
+      "id": "new-pod-p99",
+      "kind": "single",
+      "prompt": "Mỗi lần deploy, p99 của các pod mới cao gấp nhiều lần trong 2–3 phút đầu rồi trở lại bình thường. Cách xử lý nào đúng gốc?",
+      "options": [
+        "Gọi các endpoint chính vài nghìn lần trước khi readiness báo ready",
+        "Thêm `-XX:TieredStopAtLevel=1` để JIT biên dịch xong sớm hơn",
+        "Thêm `-Xcomp` để JVM biên dịch mọi method ngay lần gọi đầu",
+        "Tăng `ReservedCodeCacheSize` để JIT có chỗ chứa mã sớm hơn"
+      ],
+      "answer": 0,
+      "explanation": "Pod mới chạy interpreter và C1 trong khi profile chưa đủ; warm-up trước khi nhận tải (hoặc slow start ở load balancer) để vài nghìn request đầu không phải của người dùng. C1-only khởi động nhanh nhưng mã đỉnh chậm hơn nhiều lần. `-Xcomp` biên dịch không có profile, khởi động rất chậm và mã kém hơn. Code cache không phải nút thắt khi mới khởi động."
+    },
+    {
+      "id": "jmh-fork",
+      "kind": "single",
+      "prompt": "Vì sao JMH chạy mỗi benchmark trong một JVM mới (`@Fork`) thay vì chạy lần lượt trong cùng JVM?",
+      "options": [
+        "Profile kiểu của benchmark trước làm C2 tối ưu khác cho benchmark sau",
+        "Mỗi JVM chỉ đo được một benchmark vì `nanoTime` gắn với process",
+        "Heap của benchmark trước chưa được GC dọn nên làm chậm benchmark sau",
+        "JIT chỉ biên dịch method một lần, benchmark sau sẽ chạy interpreter"
+      ],
+      "answer": 0,
+      "explanation": "Profile gắn với bytecode: một method dùng chung đã thấy kiểu A trong benchmark trước sẽ thành bimorphic hay megamorphic khi benchmark sau dùng kiểu B, nên kết quả phụ thuộc thứ tự chạy. Fork cho mỗi benchmark một JVM sạch. GC giữa các lần đo JMH vẫn tự xử lý; JIT biên dịch lại được khi cần; `nanoTime` không giới hạn gì."
+    }
+  ]
+}
