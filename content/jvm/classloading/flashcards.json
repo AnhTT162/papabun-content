@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "class-identity", "front": "Điều gì xác định một class trong JVM?", "back": "Tên đầy đủ cộng với classloader đã định nghĩa nó. Cùng tên, hai loader là hai kiểu khác nhau, mỗi bên có field `static` riêng." },
+    { "id": "builtin-loaders", "front": "Ba classloader dựng sẵn từ Java 9 là gì?", "back": "Bootstrap (`java.base` và module lõi như `java.logging`, `getClassLoader()` trả `null`), platform (phần còn lại của JDK như `java.sql`, thay extension loader) và app (classpath)." },
+    { "id": "parent-delegation", "front": "Parent delegation hoạt động thế nào?", "back": "`loadClass` xem đã nạp chưa, hỏi loader cha, cha không có mới tự `findClass`. Nhờ vậy class của JDK không bị thay." },
+    { "id": "custom-loader", "front": "Viết classloader riêng thì ghi đè method nào?", "back": "`findClass`, không ghi đè `loadClass`, để giữ delegation; gọi `registerAsParallelCapable()` để khoá theo tên class." },
+    { "id": "forname-vs-loadclass", "front": "`Class.forName(name)` khác `loader.loadClass(name)` thế nào?", "back": "`forName` dùng loader của class gọi và chạy khối `static`; `loadClass` chỉ nạp, chưa initialize." },
+    { "id": "boot-launcher", "front": "`java -jar` một fat jar Spring Boot 3.2+ nạp class của bạn bằng loader nào?", "back": "`JarLauncher` tạo `LaunchedClassLoader` (cha là app loader) đọc `BOOT-INF/classes` và jar trong `BOOT-INF/lib`; app loader chỉ thấy class của launcher." },
+    { "id": "tccl", "front": "Thread context classloader là gì và ai dùng nó?", "back": "Loader gắn với thread, thư viện dùng để nạp class theo tên (`ServiceLoader`, JAXB, JNDI). Thread mới nhận TCCL của thread tạo ra nó; worker common pool luôn là app loader." },
+    { "id": "class-unload", "front": "Khi nào class được gỡ khỏi metaspace?", "back": "Khi classloader của nó không còn với tới được: không instance, không tham chiếu tới `Class` nào của loader, không ai giữ loader. Class của loader dựng sẵn không bao giờ được gỡ, trừ hidden class tạo không có cờ `STRONG`." },
+    { "id": "loader-leak-signs", "front": "Dấu hiệu rò classloader?", "back": "Số loader và số class nạp tăng sau mỗi lần reload, `-Xlog:class+unload` im lặng, histogram có cùng tên class lặp nhiều lần, cuối cùng `OutOfMemoryError: Metaspace`." }
+  ]
+}

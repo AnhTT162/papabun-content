@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "same-name-cast",
+      "kind": "output",
+      "prompt": "`rules.jar` nằm trên classpath của ứng dụng. Chạy trên JDK 27, dòng cuối ném gì?",
+      "code": "ClassLoader isolated = new URLClassLoader(\"restartedMain\",\n        new URL[]{Path.of(\"rules.jar\").toUri().toURL()},\n        ClassLoader.getPlatformClassLoader());\nObject cached = isolated.loadClass(\"com.example.rules.Rule0\")\n        .getDeclaredConstructor().newInstance();\nRule0 rule = (Rule0) cached;",
+      "options": [
+        "`ClassCastException`: `Rule0` cannot be cast to `Rule0`",
+        "Không ném gì: hai class cùng tên, cùng byte nên là một class",
+        "`NoClassDefFoundError` vì platform loader không thấy `Rule0`",
+        "`LinkageError: duplicate class definition` khi nạp lần hai"
+      ],
+      "answer": 0,
+      "explanation": "Loader `restartedMain` có cha là platform loader, không hỏi app loader, nên tự định nghĩa một `Rule0` riêng từ `rules.jar`. `Rule0` trong code của bạn là bản của app loader. Cùng tên, cùng byte nhưng khác loader là hai kiểu khác nhau; thông điệp ghi rõ `loader 'restartedMain'` và `loader 'app'` (đã chạy). `duplicate class definition` chỉ xảy ra khi cùng một loader định nghĩa một tên hai lần."
+    },
+    {
+      "id": "reload-parent-first",
+      "kind": "single",
+      "prompt": "Engine tạo `new URLClassLoader(new URL[]{rulesJar}, appLoader)` mỗi lần reload, nhưng rule mới không bao giờ có hiệu lực. `rules.jar` cũng được đóng gói trong classpath của ứng dụng. Vì sao?",
+      "options": [
+        "Loader mới hỏi app loader trước, app loader trả lại class đã nạp",
+        "JVM cache class theo tên, chỉ nạp lại được sau khi restart JVM",
+        "`URLClassLoader` cũ chưa `close()` nên jar vẫn bị khoá đọc",
+        "Class mới đã nạp nhưng instance cũ vẫn được dùng do JIT cache"
+      ],
+      "answer": 0,
+      "explanation": "Delegation là parent-first: `URLClassLoader` hỏi cha (app loader) trước, app loader thấy `rules.jar` trên classpath nên trả lại đúng class đã nạp từ đầu (đã chạy: hai loader cho cùng một `Class`). Bỏ jar plugin khỏi classpath, hoặc dùng loader child-first cho package của plugin. JVM không cache theo tên chung cho mọi loader; mỗi loader có bảng riêng."
+    },
+    {
+      "id": "metaspace-leak-holder",
+      "kind": "single",
+      "prompt": "Sau mỗi lần reload plugin, `VM.classloader_stats` có thêm một `URLClassLoader` với 303 class, không cái nào biến mất; `-Xlog:class+unload` im lặng. Plugin có `static ThreadLocal<Scratch>` (`Scratch` là class của plugin) được dùng trên pool 8 thread của ứng dụng. Điều gì giữ loader cũ?",
+      "options": [
+        "Value `Scratch` trên thread pool giữ class, class giữ loader",
+        "Loader cũ chưa được `close()` nên JVM không cho gỡ class của nó",
+        "`MaxMetaspaceSize` quá nhỏ nên GC không kịp chạy unload class",
+        "Class của plugin nạp bằng app loader nên không bao giờ được gỡ"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi thread của pool giữ `ThreadLocalMap` có value `Scratch`; object trỏ tới class của nó, class trỏ tới loader, loader giữ mọi class, kể cả class chứa field `ThreadLocal` làm key, nên entry không bao giờ thành stale. Đã tái hiện: OOM Metaspace ở lần reload 76 với 128 MB. `close()` chỉ đóng file jar; bỏ nó đi vẫn gỡ được class khi loader hết tham chiếu. Metaspace đầy thì JVM đã chạy Full GC (`Metadata GC Threshold`) mà không gỡ được gì."
+    },
+    {
+      "id": "common-pool-tccl",
+      "kind": "single",
+      "prompt": "Trong fat jar Spring Boot, `ServiceLoader.load(PriceFormatter.class)` tìm thấy provider khi gọi trên `main`, nhưng trả rỗng trong `CompletableFuture.runAsync(...)` không truyền executor. Trong IDE cả hai đều thấy. Vì sao?",
+      "options": [
+        "Worker của common pool có TCCL là app loader, không thấy `BOOT-INF`",
+        "`META-INF/services` bị launcher bỏ qua với thread không phải `main`",
+        "`ServiceLoader` không thread-safe nên lần gọi song song trả về rỗng",
+        "Common pool chạy bằng virtual thread, không có context classloader"
+      ],
+      "answer": 0,
+      "explanation": "`ServiceLoader.load(Class)` dùng thread context classloader. Thread `main` (và thread do nó tạo) có TCCL là `LaunchedClassLoader`; worker của common pool luôn có TCCL là app loader, mà trong fat jar app loader chỉ thấy class của launcher (đã chạy với Boot 4.1.2). Trong IDE app loader thấy cả classpath nên không lỗi. Sửa bằng executor riêng hoặc `ServiceLoader.load(PriceFormatter.class, PriceFormatter.class.getClassLoader())`. Mỗi lần `load` tạo một `ServiceLoader` mới, không dùng chung."
+    }
+  ]
+}

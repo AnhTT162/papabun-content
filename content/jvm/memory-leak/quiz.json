@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "retained-vs-shallow",
+      "kind": "single",
+      "prompt": "Trong MAT, một `ConcurrentHashMap` có shallow size 64 byte, retained size 1,8 GB. Histogram thì xếp `byte[]` đứng đầu với 1,1 GB. Nên điều tra gì trước?",
+      "options": [
+        "Cái map: các `byte[]` nhiều khả năng nằm trong entry của nó",
+        "`byte[]`: chiếm nhiều byte nhất nên là nơi rò bộ nhớ chính",
+        "Không gì cả: shallow 64 byte nghĩa là map gần như rỗng",
+        "Tổng shallow của mọi class, vì retained size chỉ là ước lượng"
+      ],
+      "answer": 0,
+      "explanation": "Retained size là phần heap được giải phóng nếu map mất đi: mọi entry, key, value chỉ với tới được qua nó. `byte[]` đứng đầu histogram ở hầu hết ứng dụng vì nằm trong mọi `String`; dùng Immediate Dominators trên `byte[]` sẽ dẫn ngược lên chính cái map đó. Shallow size chỉ là object map, không tính entry. Cột retained của histogram phải bấm tính mới có, còn dominator tree luôn dùng số thật."
+    },
+    {
+      "id": "threads-dominate",
+      "kind": "single",
+      "prompt": "Dominator tree không có object nào giữ quá 50 MB, nhưng 200 thread `http-nio-*` mỗi cái giữ khoảng 13 MB, thread đang rảnh. Bộ nhớ đó nhiều khả năng ở đâu?",
+      "options": [
+        "Trong `ThreadLocal` của từng thread, chưa bao giờ được dọn",
+        "Trong stack của thread, mỗi stack tăng dần lên khoảng 13 MB",
+        "Trong biến cục bộ của request đang chạy trên từng thread đó",
+        "Trong buffer native của Tomcat được tính vào retained size"
+      ],
+      "answer": 0,
+      "explanation": "Thread là GC root; `threadLocals` → `ThreadLocalMap` → `value` thuộc retained set của thread. Thread đang rảnh (chờ ở `TaskQueue.take`) thì không có biến cục bộ đáng kể. Stack và buffer native nằm ngoài heap nên không bao giờ hiện trong retained size của heap dump."
+    },
+    {
+      "id": "heapdump-file-exists",
+      "kind": "output",
+      "prompt": "Container chạy JVM với cấu hình dưới. Lần OOM đầu đã ghi dump vào volume `/dumps`. Container restart, vài ngày sau OOM lần nữa. Log in gì sau dòng `Dumping heap to ...`?",
+      "code": "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps\n\n# lần OOM thứ hai\njava.lang.OutOfMemoryError: Java heap space\nDumping heap to /dumps/java_pid1.hprof ...\n???",
+      "options": [
+        "`Unable to create /dumps/java_pid1.hprof: File exists`",
+        "`Heap dump file created [...]`, ghi đè lên file của lần trước",
+        "`Heap dump file created [...]` vào `java_pid1.1.hprof` mới",
+        "Không in gì: JVM chỉ dump ở lần OOM đầu tiên của volume"
+      ],
+      "answer": 0,
+      "explanation": "Khi `HeapDumpPath` là thư mục, tên file là `java_pid<pid>.hprof`, và trong container JVM luôn là PID 1. JVM không ghi đè file đã có, nên in `Unable to create ...: File exists` và bỏ qua (đã chạy trên JDK 27). `%p` trong đường dẫn cũng chỉ ra 1. Dọn hoặc đổi tên dump cũ lúc khởi động."
+    },
+    {
+      "id": "simple-cache-manager",
+      "kind": "single",
+      "prompt": "Ứng dụng Spring Boot có `@EnableCaching` và `@Cacheable(\"quotes\")`, nhưng không khai báo Caffeine, Redis hay provider nào. Cache đó giới hạn bao nhiêu entry?",
+      "options": [
+        "Không giới hạn, không hết hạn: dùng `ConcurrentMapCacheManager`",
+        "10.000 entry, entry cũ nhất bị loại khi vượt ngưỡng mặc định",
+        "Không cache gì cả: thiếu provider thì `@Cacheable` bị bỏ qua",
+        "Theo `spring.cache.ttl` mặc định 30 phút, sau đó entry hết hạn"
+      ],
+      "answer": 0,
+      "explanation": "Không thấy provider nào, Spring Boot cấu hình `simple`: `ConcurrentMapCacheManager` với `ConcurrentHashMap` bên dưới, không giới hạn kích thước, không hết hạn. Key chứa giá trị luôn đổi biến nó thành leak. Khai báo Caffeine với `maximumSize` và `expireAfterWrite`."
+    }
+  ]
+}

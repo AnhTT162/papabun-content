@@ -1,0 +1,137 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "pricing-api OOM mỗi tuần, dominator tree toàn là thread",
+  "symptom": "pricing-api (Spring Boot 3.5, JDK 21, -Xmx4g) chết vì `OutOfMemoryError: Java heap space` khoảng 6 ngày một lần. Heap sau GC tăng đều khoảng 0,45 GB mỗi ngày sau mỗi lần khởi động. Lần OOM ngày 21/10 để lại một heap dump; lần ngày 27/10 thì không. Bạn được giao tìm nguyên nhân từ file dump.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Log pod, 21/10 03:12:\njava.lang.OutOfMemoryError: Java heap space\nDumping heap to /dumps/java_pid1.hprof ...\nHeap dump file created [4093318271 bytes in 21.874 secs]\n\nLog pod, 27/10 22:47:\njava.lang.OutOfMemoryError: Java heap space\nDumping heap to /dumps/java_pid1.hprof ...\nUnable to create /dumps/java_pid1.hprof: File exists\n\nCấu hình:\n-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps -XX:+ExitOnOutOfMemoryError\nserver.tomcat.threads.max=200\nserver.tomcat.threads.min-spare=200   (tránh tạo thread lúc tăng tải)\n\nMáy của bạn: laptop 16 GB RAM, Eclipse MAT với MemoryAnalyzer.ini mặc định",
+      "evidenceFormat": "monospace",
+      "question": "Có file dump 4,1 GB. Bạn bắt đầu thế nào?",
+      "choices": [
+        {
+          "label": "Parse dump trên VM nhiều RAM, rồi mở dominator tree",
+          "quality": "good",
+          "feedback": "Đúng. MAT cần heap riêng cỡ vài GB cho dump này; chạy `ParseHeapDump.sh` trên một VM đủ RAM trong mạng nội bộ, rồi mở dump đã có index. Dominator tree xếp theo retained size cho thấy ai giữ bộ nhớ.",
+          "next": "dominator"
+        },
+        {
+          "label": "Mở dump bằng histogram, xem class nào chiếm nhiều byte nhất",
+          "quality": "ok",
+          "feedback": "Histogram cho biết heap chứa gì, nhưng xếp theo shallow size: nó không nói ai đang giữ những object đó.",
+          "next": "histogram"
+        },
+        {
+          "label": "Mở dump ngay trên laptop với cấu hình MAT đang có sẵn",
+          "quality": "poor",
+          "feedback": "Parse dump vài GB cần MAT có heap lớn hơn nhiều so với mặc định. Chưa kể dump chứa dữ liệu khách hàng, không nên chép về laptop.",
+          "next": "mat-oom"
+        }
+      ]
+    },
+    {
+      "id": "mat-oom",
+      "evidence": "MAT: hộp thoại lỗi khi đang parse\nAn internal error occurred during: \"Parsing heap dump from '.../java_pid1.hprof'\".\nJava heap space\n\nThư mục dump còn lại các file index dở dang (*.index), phải xoá trước khi parse lại.",
+      "evidenceFormat": "monospace",
+      "question": "MAT tự hết bộ nhớ. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Chạy ParseHeapDump.sh trên VM nhiều RAM rồi mở kết quả",
+          "quality": "good",
+          "feedback": "Đúng. Đặt `-Xmx` của MAT đủ lớn (trong `MemoryAnalyzer.ini` hoặc `-vmargs`), parse không giao diện một lần, các lần mở sau dùng lại index nên nhanh.",
+          "next": "dominator"
+        }
+      ]
+    },
+    {
+      "id": "histogram",
+      "evidence": "MAT Histogram (sắp theo Shallow Heap):\nClass Name                                   Objects      Shallow Heap\njava.lang.String                          14.102.551       338.461.224\nbyte[]                                    14.250.903       721.004.336\njava.util.HashMap$Node                    13.811.402       441.964.864\ncom.example.pricing.PriceSnapshot         13.642.880       436.572.160\njava.math.BigDecimal                      13.701.115       438.435.680\njava.util.HashMap$Node[]                       1.384       137.496.448\n...\nTổng: 3,71 GB, 75,4 triệu object",
+      "evidenceFormat": "monospace",
+      "question": "Hàng chục triệu `PriceSnapshot` và `HashMap$Node`. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Mở dominator tree để xem cái chứa nào giữ các object này",
+          "quality": "good",
+          "feedback": "Đúng. Biết là `PriceSnapshot` nằm trong `HashMap` là chưa đủ; cần biết map nào và ai giữ map đó.",
+          "next": "dominator"
+        },
+        {
+          "label": "Tìm trong code mọi `HashMap<String, PriceSnapshot>` để rà",
+          "quality": "ok",
+          "feedback": "Có thể ra, nhưng là đoán: có thể có nhiều map như vậy, và histogram chỉ có 1.384 mảng `HashMap$Node[]`, tức chỉ khoảng một nghìn map, trung bình hàng chục nghìn entry mỗi map. Dump trả lời nhanh hơn.",
+          "next": "dominator"
+        }
+      ]
+    },
+    {
+      "id": "dominator",
+      "evidence": "Leak Suspects:\n  200 instances of \"org.apache.tomcat.util.threads.TaskThread\", loaded by\n  \"org.springframework.boot.loader.launch.LaunchedClassLoader @ 0x6c0a1e2d8\"\n  occupy 2.721.904.112 (73,30%) bytes.\n\nDominator Tree (sắp theo Retained Heap):\nClass Name                                          Shallow Heap   Retained Heap\norg.apache.tomcat.util.threads.TaskThread @ ...     120            14.121.880   http-nio-8080-exec-17\norg.apache.tomcat.util.threads.TaskThread @ ...     120            14.004.512   http-nio-8080-exec-3\norg.apache.tomcat.util.threads.TaskThread @ ...     120            13.987.296   http-nio-8080-exec-152\n... (200 thread http-nio, mỗi cái 12,9–14,1 MB)\ncom.zaxxer.hikari.pool.HikariPool @ ...              136            41.220.104\norg.springframework.beans.factory.support...        56             38.901.552\n\nKhông có object nào khác giữ quá 50 MB.",
+      "evidenceFormat": "monospace",
+      "question": "Không có một cái map khổng lồ nào; 200 thread mỗi cái giữ chừng 13,6 MB. Điều đó nói gì?",
+      "choices": [
+        {
+          "label": "Bộ nhớ nằm trong ThreadLocal hay biến cục bộ của từng thread",
+          "quality": "good",
+          "feedback": "Đúng. Thread là GC root, nên object trong `ThreadLocalMap` của nó hoặc trong frame đang chạy thuộc retained set của thread. Mở một thread để xem cụ thể.",
+          "next": "thread-detail"
+        },
+        {
+          "label": "Tomcat có quá nhiều thread, giảm max-threads xuống 50",
+          "quality": "poor",
+          "feedback": "Đổi kích thước pool là chữa triệu chứng: mỗi thread vẫn giữ một khối dữ liệu lớn dần, ít thread hơn chỉ làm nó lớn chậm hơn.",
+          "next": "reduce-threads"
+        },
+        {
+          "label": "Stack của 200 thread chiếm heap, mỗi stack khoảng 13 MB",
+          "quality": "poor",
+          "feedback": "Stack của thread nằm ngoài heap (bộ nhớ native, `-Xss`), không bao giờ xuất hiện trong retained size. Cái MAT đếm ở đây là object Java mà thread giữ.",
+          "next": "thread-detail"
+        }
+      ]
+    },
+    {
+      "id": "reduce-threads",
+      "evidence": "Thử deploy với max-threads=50, min-spare=50:\n\nngày   heap sau GC   p99      request chờ trong hàng đợi Tomcat (giờ cao điểm)\n1      1,2 GB        210 ms   0\n3      1,9 GB        260 ms   ~30\n6      2,6 GB        340 ms   ~45\n\nHeap sau GC vẫn tăng, khoảng 0,25 GB/ngày. Dominator tree của dump mới (lấy trên pod đã rút khỏi traffic): 50 TaskThread, mỗi cái ~32 MB.",
+      "evidenceFormat": "monospace",
+      "question": "Leak chậm lại nhưng không hết, còn p99 xấu đi. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Mở một thread trong dominator tree để xem nó giữ gì",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi thread giờ giữ nhiều hơn vì phục vụ nhiều request hơn. Phải biết dữ liệu gì nằm trong thread.",
+          "next": "thread-detail"
+        }
+      ]
+    },
+    {
+      "id": "thread-detail",
+      "evidence": "Dominator Tree, mở http-nio-8080-exec-17:\nTaskThread @ 0x7a1b02e40                          120     14.121.880\n'- threadLocals  ThreadLocal$ThreadLocalMap         24     14.121.760\n   '- table  ThreadLocal$ThreadLocalMap$Entry[64]  272     14.121.736\n      '- [9]  ThreadLocal$ThreadLocalMap$Entry      32     14.118.640\n         |- referent  java.lang.ThreadLocal @ 0x6c3f...       16\n         '- value  java.util.HashMap  (size 70.583)  48     14.118.608\n\nPath to GC Roots (exclude weak/soft references), trên ThreadLocal @ 0x6c3f...:\n  java.lang.ThreadLocal @ 0x6c3f...\n  '- CACHE  class com.example.pricing.PriceLookupCache @ 0x6c3e...  (static field)\n\nThread Overview and Stacks, http-nio-8080-exec-17:\n  jdk.internal.misc.Unsafe.park(...)\n  ...\n  org.apache.tomcat.util.threads.TaskQueue.take(TaskQueue.java:...)\n  (thread đang rảnh, không có object cục bộ đáng kể)\n\nVài key trong HashMap:\n  \"SKU-118204|2026-10-21|GOLD\", \"SKU-118204|2026-10-22|GOLD\", \"SKU-031877|2026-10-24|STD\" ...\n\nPriceLookupCache.java:\n12  private static final ThreadLocal<Map<String, PriceSnapshot>> CACHE =\n13          ThreadLocal.withInitial(HashMap::new);\n20  PriceSnapshot lookup(String sku, LocalDate day, Tier tier) {\n21      return CACHE.get().computeIfAbsent(sku + \"|\" + day + \"|\" + tier,\n22              k -> repository.load(sku, day, tier));\n23  }",
+      "evidenceFormat": "monospace",
+      "question": "Nguyên nhân là gì?",
+      "choices": [
+        {
+          "label": "ThreadLocal dùng làm cache theo thread, không giới hạn, không dọn",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi thread có một `HashMap` riêng, thêm entry mỗi lần gặp key mới, không bao giờ xoá; key chứa ngày nên tập key không bao giờ dừng tăng.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Entry cũ của ThreadLocalMap mất key mà value vẫn còn ở đó",
+          "quality": "poor",
+          "feedback": "Đó là entry stale, xảy ra khi object `ThreadLocal` bị GC. Ở đây `referent` vẫn còn và được field `static CACHE` giữ, nên entry hoàn toàn hợp lệ: chính code đang dùng map này.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Tomcat không bao giờ thu hồi thread nên ThreadLocal không được xoá",
+          "quality": "ok",
+          "feedback": "Đúng một phần: Tomcat chỉ thu hồi thread vượt `min-spare` sau 60 giây rảnh, mà ở đây `min-spare=200` nên thread sống mãi. Nhưng thu hồi thread chỉ che lỗi; cache không giới hạn mới là nguyên nhân.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `PriceLookupCache` dùng `ThreadLocal<Map>` làm cache để khỏi tranh khoá. Mỗi thread Tomcat có một `HashMap` riêng không giới hạn, key gồm SKU, ngày và hạng khách. Với `min-spare=200`, cả 200 thread sống suốt vòng đời pod, nên mỗi map lớn dần: sau 6 ngày khoảng 68.000 entry mỗi thread, mỗi entry chừng 200 byte (node, key `String`, `PriceSnapshot`, `BigDecimal`), tức 13,6 MB × 200 = 2,7 GB, cộng khoảng 1 GB dữ liệu bình thường là chạm `-Xmx4g`. Cùng một key còn bị lưu lặp lại ở nhiều thread. Giảm số thread chỉ làm từng map lớn nhanh hơn.\n\n**Sửa**: một cache dùng chung, có giới hạn và thời hạn (Caffeine `maximumSize` + `expireAfterWrite`, đã thread-safe và ít tranh khoá); hoặc nếu chỉ cần cache trong một request thì gắn vào request và dọn trong `finally` (bài ThreadLocal & ScopedValue).\n\n**Bài học khi đọc heap dump**:\n- Histogram nói heap chứa gì, dominator tree nói ai giữ. Bắt đầu từ retained size.\n- Không có node khổng lồ mà có hàng trăm node cùng loại thì nhìn theo nhóm: 200 thread giữ 73% heap là dấu hiệu `ThreadLocal`; 60 classloader cùng tên là dấu hiệu rò classloader.\n- Thread rảnh mà vẫn giữ nhiều bộ nhớ thì đó không phải biến cục bộ; xem `threadLocals`, rồi tìm ai giữ object `ThreadLocal` (thường là một field `static`).\n\n**Bài học về dump khi OOM**: lần OOM thứ hai không có dump vì `HeapDumpPath=/dumps` sinh tên `java_pid1.hprof` và JVM không ghi đè file đã có, mà trong container PID luôn là 1. Cho script khởi động đổi tên dump cũ (thêm tên pod và thời gian) hoặc đẩy dump đi rồi xoá. Cảnh báo theo heap sau GC tăng đều để bắt leak từ ngày thứ hai, trước khi OOM."
+    }
+  ]
+}

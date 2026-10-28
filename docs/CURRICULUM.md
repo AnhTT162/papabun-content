@@ -183,8 +183,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `jvm-diagnostic-tools` | Bộ công cụ chẩn đoán JVM | mid | `jcmd`, `jstack`, `jmap`, `jstat`, JFR cơ bản: lấy bằng chứng từ JVM đang chạy | L T | ✅ |
 | 5 | `gc-algorithms` | G1, ZGC, Shenandoah, Parallel | senior | Pause và throughput, chọn GC, generational ZGC | L D Sc | ✅ |
 | 6 | `gc-logs-tuning` | Đọc GC log & tuning | senior | `-Xlog:gc`, sizing heap, các dấu hiệu bất thường | L T | ✅ |
-| 7 | `memory-leak` | Memory leak & heap dump | senior | Phân tích heap dump bằng MAT, dominator tree, leak hay gặp trong Spring và ThreadLocal | L T | ⬜ |
-| 8 | `classloading` | ClassLoader | senior | Delegation, fat jar của Spring Boot, metaspace leak | L D B | ⬜ |
+| 7 | `memory-leak` | Memory leak & heap dump | senior | Phân tích heap dump bằng MAT, dominator tree, leak hay gặp trong Spring và ThreadLocal | L T | ✅ |
+| 8 | `classloading` | ClassLoader | senior | Delegation, fat jar của Spring Boot, metaspace leak | L D B | ✅ |
 | 9 | `jit` | JIT compiler | senior | Tiered C1/C2, inlining, escape analysis, deopt, warmup, JMH | L D B | ⬜ |
 | 10 | `jvm-containers` | JVM trong container | senior | cgroup, `MaxRAMPercentage`, CPU limit, OOMKilled và OutOfMemoryError, NMT | L T | ⬜ |
 | 11 | `startup-native` | Khởi động nhanh: CDS, CRaC, GraalVM native | senior | Trade-off giữa startup, peak và độ phức tạp build | L Sc | ⬜ |

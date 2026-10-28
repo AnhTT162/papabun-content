@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Nạp class trong fat jar Spring Boot",
+  "nodes": [
+    { "id": "bootstrap", "label": "Bootstrap (JDK lõi)", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "platform", "label": "Platform loader", "kind": "service", "x": 0.1, "y": 0.35 },
+    { "id": "app", "label": "App loader (app.jar)", "kind": "service", "x": 0.1, "y": 0.65 },
+    { "id": "launched", "label": "Launched ClassLoader", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "bootinf", "label": "BOOT-INF/ classes + lib", "kind": "database", "x": 0.85, "y": 0.95 },
+    { "id": "pool", "label": "Worker common pool", "kind": "client", "x": 0.85, "y": 0.5 }
+  ],
+  "edges": [
+    { "id": "ask-app", "from": "launched", "to": "app", "label": "hỏi cha trước" },
+    { "id": "ask-platform", "from": "app", "to": "platform", "label": "hỏi cha" },
+    { "id": "ask-bootstrap", "from": "platform", "to": "bootstrap", "label": "hỏi cha" },
+    { "id": "find", "from": "launched", "to": "bootinf", "label": "findClass" },
+    { "id": "tccl", "from": "pool", "to": "app", "label": "TCCL" }
+  ],
+  "steps": [
+    {
+      "caption": "`java -jar app.jar` chạy `JarLauncher`. Classpath của JVM chỉ có `app.jar`, nên app loader chỉ thấy class của launcher.",
+      "show": ["bootstrap", "platform", "app", "ask-platform", "ask-bootstrap"]
+    },
+    {
+      "caption": "Launcher tạo `LaunchedClassLoader`, cha là app loader, đọc class của bạn và jar lồng trong `BOOT-INF/lib`.",
+      "show": ["launched", "bootinf"]
+    },
+    {
+      "caption": "Cần `com.shop.OrderService`: loader hỏi cha trước, cha lại hỏi cha của nó, lên tới bootstrap. Không ai có, nên câu trả lời quay xuống.",
+      "show": ["ask-app"],
+      "highlight": ["ask-app", "ask-platform", "ask-bootstrap"]
+    },
+    {
+      "caption": "Chỉ khi mọi cha đều không có, `LaunchedClassLoader` mới tự tìm trong `BOOT-INF` và định nghĩa class. Class đó gắn với loader này mãi mãi.",
+      "show": ["find"],
+      "highlight": ["find"]
+    },
+    {
+      "caption": "Cần `java.lang.String` thì bootstrap trả lời ngay ở lần hỏi đầu. Delegation là lý do không ai thay được class của JDK.",
+      "show": [],
+      "highlight": ["ask-bootstrap"]
+    },
+    {
+      "caption": "Worker của common pool có context classloader là app loader. `ServiceLoader` hay JAXB chạy ở đó tìm theo TCCL nên không thấy `BOOT-INF/lib`: lỗi chỉ xảy ra khi chạy jar.",
+      "show": ["pool", "tccl"],
+      "highlight": ["tccl"]
+    }
+  ]
+}

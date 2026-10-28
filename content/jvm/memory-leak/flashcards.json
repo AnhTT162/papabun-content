@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "leak-definition", "front": "Memory leak trong Java là gì, khi đã có GC?", "back": "Object không còn dùng nhưng vẫn với tới được từ GC root (static field, thread, classloader), nên GC không được phép dọn. Dấu hiệu: heap sau GC tăng đều." },
+    { "id": "shallow-retained", "front": "Shallow size khác retained size thế nào?", "back": "Shallow là kích thước riêng object. Retained là phần heap được giải phóng nếu object đó mất, gồm mọi object chỉ với tới được qua nó." },
+    { "id": "dominator-def", "front": "Object X dominate object Y nghĩa là gì?", "back": "Mọi đường từ GC root tới Y đều đi qua X. Dominator tree xếp theo retained size nên cái chứa giữ nhiều bộ nhớ nhất hiện ở đầu." },
+    { "id": "histogram-top", "front": "Vì sao `byte[]` đứng đầu histogram không nói lên thủ phạm?", "back": "`byte[]` nằm trong mọi `String` nên đứng đầu ở hầu hết heap. Dùng Immediate Dominators hoặc dominator tree để tìm cái chứa giữ chúng." },
+    { "id": "path-gc-roots", "front": "Vì sao chọn Path to GC Roots loại weak/soft reference?", "back": "Đường đi qua weak hay soft reference không giữ được object khi GC cần chỗ; chỉ đường toàn tham chiếu mạnh mới là lý do object còn sống." },
+    { "id": "spread-leak", "front": "Dominator tree không có node to, nhưng 200 thread mỗi cái giữ 13 MB. Nghĩ tới gì?", "back": "`ThreadLocal` không dọn trên thread của pool. Mở `threadLocals` của một thread, rồi tìm field `static` giữ object `ThreadLocal` đó." },
+    { "id": "simple-cache", "front": "`@Cacheable` không có provider nào thì Spring Boot dùng cache gì?", "back": "`ConcurrentMapCacheManager` (cấu hình `simple`): không giới hạn, không hết hạn. Key luôn đổi biến nó thành leak." },
+    { "id": "dump-pid1", "front": "Vì sao container hay mất heap dump từ lần OOM thứ hai?", "back": "Tên file là `java_pid1.hprof` ở mọi lần chạy và JVM không ghi đè file đã có, chỉ in `File exists`." },
+    { "id": "mat-unreachable", "front": "Vì sao tổng heap trong MAT nhỏ hơn kích thước file dump?", "back": "MAT bỏ object không với tới được khi parse (trừ khi bật keep unreachable objects)." }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "memory-leak",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "Memory leak & heap dump",
+  "summary": "Đọc heap dump bằng Eclipse MAT: shallow và retained size, dominator tree, Path to GC Roots, Merge Shortest Paths, Immediate Dominators, Thread Overview, OQL, so hai dump; bộ nhớ chia đều cho hàng trăm thread hay classloader; leak hay gặp trong Spring (cache `simple`, session HTTP, listener, TestContext) và `ThreadLocal` (value trỏ ngược về key, đã đo trên JDK 27); bẫy `HeapDumpOnOutOfMemoryError` trong container khi file `java_pid1.hprof` đã có.",
+  "level": "senior",
+  "order": 7,
+  "minutes": 18,
+  "prerequisites": ["jvm-diagnostic-tools", "gc-fundamentals"],
+  "terms": ["memory-leak", "gc-root", "heap-dump", "eclipse-mat", "retained-size", "shallow-size", "dominator-tree", "old-object-sample", "thread-local", "oql", "out-of-memory-error", "string-deduplication", "soft-reference", "classloader"],
+  "references": [
+    { "title": "Eclipse Memory Analyzer: Dominator Tree", "url": "https://help.eclipse.org/latest/topic/org.eclipse.mat.ui.help/concepts/dominatortree.html" },
+    { "title": "Troubleshooting Guide: Troubleshoot Memory Leaks (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshooting-memory-leaks.html" },
+    { "title": "Spring Boot: Caching, Simple provider", "url": "https://docs.spring.io/spring-boot/reference/io/caching.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Shallow size và retained size khác nhau thế nào, và vì sao object to nhất trong histogram thường không phải thủ phạm?\" Shallow là kích thước riêng object; retained là phần heap được giải phóng nếu nó mất, tức mọi object chỉ với tới được qua nó. `byte[]` và `String` luôn đứng đầu histogram vì nằm trong mọi thứ; cái chứa giữ chúng (một map 48 byte retained 2 GB) mới là manh mối, và dominator tree đưa nó lên đầu. Hỏi tiếp \"nếu không có node nào to?\" thì trả lời: nhóm theo class hoặc classloader, vì leak có thể chia đều cho hàng trăm thread." },
+    { "type": "callout", "style": "warning", "markdown": "Trong container, `-XX:HeapDumpPath=/dumps` cho tên `java_pid1.hprof` ở mọi lần chạy, và JVM không ghi đè file đã có: từ lần OOM thứ hai trở đi bạn không có dump. Dọn hoặc đổi tên dump cũ lúc khởi động, và nhớ dump chứa dữ liệu khách hàng." }
+  ]
+}

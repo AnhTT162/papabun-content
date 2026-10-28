@@ -573,7 +573,7 @@
       "meaning": "Tính năng của GC (`-XX:+UseStringDeduplication`) tìm các String có nội dung trùng và cho chúng dùng chung một mảng dữ liệu để tiết kiệm heap.",
       "example": "Một triệu String `\"VN\"` đọc từ DB chỉ còn một mảng `byte[]` dùng chung, dù vẫn là một triệu object.",
       "related": ["string-pool", "compact-strings"],
-      "topics": ["string-pool"]
+      "topics": ["string-pool", "memory-leak"]
     },
     {
       "id": "collection-framework",
@@ -693,7 +693,7 @@
       "meaning": "`ForkJoinPool.commonPool()`: pool dùng chung cho cả JVM, khoảng số core − 1 thread, chạy parallel stream và `CompletableFuture.*Async` khi không truyền executor.",
       "example": "Máy 8 core: common pool có 7 thread dùng chung cho mọi parallel stream.",
       "related": ["thread-pool"],
-      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion", "stream-api"]
+      "topics": ["completable-future", "forkjoin", "thread-pool-exhaustion", "stream-api", "classloading"]
     },
     {
       "id": "completion-exception",
@@ -3053,7 +3053,7 @@
       "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
       "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
       "related": ["embedded-server", "spring-boot"],
-      "topics": ["spring-overview", "maven-gradle", "classpath-modules"]
+      "topics": ["spring-overview", "maven-gradle", "classpath-modules", "classloading"]
     },
     {
       "id": "bom",
@@ -3285,7 +3285,7 @@
       "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
       "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
       "related": ["transaction"],
-      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom"]
+      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom", "memory-leak", "classloading"]
     },
     {
       "id": "aop-proxy",
@@ -4205,7 +4205,7 @@
       "meaning": "Thành phần của JVM nạp bytecode thành class. Cùng một tên class được nạp bởi hai classloader khác nhau là hai class khác nhau, mỗi bên có field `static` riêng.",
       "example": "App server nạp hai ứng dụng bằng hai classloader, nên mỗi ứng dụng có một `ExchangeRates.INSTANCE` riêng.",
       "related": ["singleton-pattern"],
-      "topics": ["creational-patterns", "memory-growth-oom", "classpath-modules"]
+      "topics": ["creational-patterns", "memory-growth-oom", "classpath-modules", "memory-leak", "classloading"]
     },
     {
       "id": "prototype-pattern",
@@ -4229,7 +4229,7 @@
       "meaning": "Cơ chế của JDK nạp các cài đặt của một interface được khai báo trong `META-INF/services` (hoặc `provides` của module) trên classpath.",
       "example": "JDBC 4 dùng `ServiceLoader` để tự tìm driver PostgreSQL có trên classpath.",
       "related": ["factory-method"],
-      "topics": ["creational-patterns", "java-logging"]
+      "topics": ["creational-patterns", "java-logging", "classloading"]
     },
     {
       "id": "spring-modulith",
@@ -4597,7 +4597,7 @@
       "meaning": "Java Platform Module System (Java 9+): khai báo module bằng `module-info.java` với `requires` và `exports`, chặn truy cập package không được export ở cả lúc biên dịch lẫn lúc chạy.",
       "example": "`module shop.payment { exports shop.payment.api; }` thì `shop.payment.internal` không dùng được từ module khác.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith", "java-17-21-features", "classpath-modules"]
+      "topics": ["modular-monolith", "java-17-21-features", "classpath-modules", "classloading"]
     },
     {
       "id": "big-ball-of-mud",
@@ -5677,7 +5677,7 @@
       "meaning": "Ảnh chụp toàn bộ object trong heap của JVM tại một thời điểm, dùng để tìm memory leak. Ghi file làm dừng ứng dụng và file chứa dữ liệu nhạy cảm.",
       "example": "`jcmd <pid> GC.heap_dump /tmp/heap.hprof`, mở bằng Eclipse MAT.",
       "related": ["thread-dump"],
-      "topics": ["troubleshooting-mindset", "memory-growth-oom", "jvm-diagnostic-tools"]
+      "topics": ["troubleshooting-mindset", "memory-growth-oom", "jvm-diagnostic-tools", "memory-leak"]
     },
     {
       "id": "runbook",
@@ -5901,7 +5901,7 @@
       "meaning": "Lỗi JVM ném khi một vùng nhớ của nó hết chỗ (heap, metaspace, direct buffer, thread). Thông điệp đi kèm cho biết vùng nào hết.",
       "example": "`java.lang.OutOfMemoryError: Java heap space` khi object còn sống vượt `-Xmx`.",
       "related": ["oomkilled", "heap-dump", "memory-leak"],
-      "topics": ["memory-growth-oom", "jvm-memory-areas"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas", "memory-leak"]
     },
     {
       "id": "oomkilled",
@@ -5925,7 +5925,7 @@
       "meaning": "Object không còn cần nhưng vẫn bị tham chiếu nên GC không thu hồi được, làm lượng bộ nhớ còn sống tăng dần theo thời gian.",
       "example": "Một `static Map` dùng làm cache mà không bao giờ xoá entry: heap sau GC tăng mỗi giờ.",
       "related": ["heap-dump", "dominator-tree", "retained-size"],
-      "topics": ["memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools", "gc-logs-tuning"]
+      "topics": ["memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools", "gc-logs-tuning", "memory-leak"]
     },
     {
       "id": "native-memory-tracking",
@@ -5941,7 +5941,7 @@
       "meaning": "Vùng nhớ native chứa metadata của class đã load (thay PermGen từ Java 8). Mặc định không giới hạn kích thước.",
       "example": "Rò classloader sau mỗi lần redeploy làm metaspace tăng tới `OutOfMemoryError: Metaspace` hoặc OOMKilled.",
       "related": ["classloader", "native-memory-tracking"],
-      "topics": ["memory-growth-oom", "jvm-memory-areas"]
+      "topics": ["memory-growth-oom", "jvm-memory-areas", "classloading"]
     },
     {
       "id": "direct-buffer",
@@ -5957,7 +5957,7 @@
       "meaning": "Cây trong công cụ phân tích heap dump (như Eclipse MAT) xếp object theo lượng bộ nhớ mà chúng giữ độc quyền, để thấy ngay ai giữ phần lớn heap.",
       "example": "Gốc dominator tree là một `ConcurrentHashMap` retained 900 MB: cache không giới hạn.",
       "related": ["retained-size", "heap-dump"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "memory-leak"]
     },
     {
       "id": "retained-size",
@@ -5965,7 +5965,7 @@
       "meaning": "Lượng bộ nhớ được giải phóng nếu một object mất đi, gồm chính nó và mọi object chỉ có thể tới được qua nó. Khác shallow size là kích thước của riêng object.",
       "example": "Map shallow 64 byte nhưng retained 900 MB vì giữ toàn bộ entry.",
       "related": ["dominator-tree", "memory-leak"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "memory-leak"]
     },
     {
       "id": "pg-stat-activity",
@@ -7909,7 +7909,7 @@
       "meaning": "Danh sách jar và thư mục JVM tìm class theo thứ tự; class trùng tên thì bản đứng trước thắng, không có khái niệm phiên bản.",
       "example": "`java -cp app.jar:libs/*` ; hai jar cùng chứa `com.x.Foo` thì jar đứng trước được nạp.",
       "related": ["classloader", "shading"],
-      "topics": ["classpath-modules"]
+      "topics": ["classpath-modules", "classloading"]
     },
     {
       "id": "shading",
@@ -8101,7 +8101,7 @@
       "meaning": "Điểm xuất phát khi GC đánh dấu object sống: biến cục bộ trong frame của thread còn sống, field `static` của class đã nạp, tham chiếu JNI global, object đang bị khoá.",
       "example": "Một `static Map` cache là GC root gián tiếp: mọi entry trong đó không bao giờ bị dọn.",
       "related": ["reachability", "garbage-collection"],
-      "topics": ["gc-fundamentals"]
+      "topics": ["gc-fundamentals", "memory-leak"]
     },
     {
       "id": "reachability",
@@ -8117,7 +8117,7 @@
       "meaning": "Tham chiếu chỉ giữ object khi heap còn rộng: GC dọn object chỉ còn soft reference theo chính sách LRU hoặc khi heap chật, chắc chắn trước khi ném `OutOfMemoryError`.",
       "example": "`new SoftReference<>(image)` giữ ảnh tới khi heap chật; dùng làm cache dễ làm heap luôn gần đầy.",
       "related": ["weak-reference", "phantom-reference"],
-      "topics": ["gc-fundamentals"]
+      "topics": ["gc-fundamentals", "memory-leak"]
     },
     {
       "id": "phantom-reference",
@@ -8237,7 +8237,7 @@
       "meaning": "Sự kiện JFR lấy mẫu object sống lâu kèm stack nơi cấp phát; dump với `path-to-gc-roots=true` thì có cả đường tới GC root.",
       "example": "`jcmd <pid> JFR.dump name=continuous path-to-gc-roots=true filename=leak.jfr` rồi `jfr print --events OldObjectSample leak.jfr`.",
       "related": ["jfr", "memory-leak", "gc-root"],
-      "topics": ["jvm-diagnostic-tools"]
+      "topics": ["jvm-diagnostic-tools", "memory-leak"]
     },
     {
       "id": "jhsdb",
@@ -8390,6 +8390,62 @@
       "example": "Micrometer `jvm.gc.memory.allocated` cho thấy 1,1 GB/s: eden 4,5 GB đầy sau khoảng 4 giây.",
       "related": ["live-set", "allocation-stall"],
       "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "eclipse-mat",
+      "term": "Eclipse MAT",
+      "meaning": "Eclipse Memory Analyzer: công cụ mở file heap dump (HPROF), tính retained size, dựng dominator tree và tìm đường tới GC root để điều tra memory leak.",
+      "example": "Mở dump 4 GB bằng MAT, báo cáo Leak Suspects chỉ ra 200 thread Tomcat giữ 73% heap.",
+      "related": ["heap-dump", "dominator-tree", "retained-size"],
+      "topics": ["memory-leak"]
+    },
+    {
+      "id": "shallow-size",
+      "term": "Shallow size",
+      "meaning": "Kích thước của riêng một object trong heap (header và field), không tính các object nó trỏ tới.",
+      "example": "Một `HashMap` có shallow size 48 byte dù giữ 2 GB entry; con số 2 GB là retained size.",
+      "related": ["retained-size", "dominator-tree"],
+      "topics": ["memory-leak"]
+    },
+    {
+      "id": "oql",
+      "term": "OQL",
+      "meaning": "Object Query Language: ngôn ngữ truy vấn kiểu SQL trên heap dump trong MAT, chọn object theo class và điều kiện trên field.",
+      "example": "`SELECT * FROM java.util.HashMap m WHERE m.size > 100000` tìm các map lớn bất thường.",
+      "related": ["eclipse-mat", "heap-dump"],
+      "topics": ["memory-leak"]
+    },
+    {
+      "id": "parent-delegation",
+      "term": "Parent delegation",
+      "meaning": "Quy tắc mặc định của classloader: hỏi loader cha nạp class trước, cha không có mới tự tìm. Giữ cho class của JDK không bị thay và mỗi class chỉ nạp một lần ở loader cao nhất có nó.",
+      "example": "`LaunchedClassLoader` cần `java.lang.String`: hỏi lên tới bootstrap và nhận class của JDK, không đọc từ `BOOT-INF`.",
+      "related": ["classloader", "context-classloader"],
+      "topics": ["classloading"]
+    },
+    {
+      "id": "context-classloader",
+      "term": "Thread context classloader",
+      "meaning": "Classloader gắn với mỗi thread (`Thread.getContextClassLoader()`), thư viện dùng để nạp class của ứng dụng theo tên. Thread mới nhận loader này từ thread tạo ra nó.",
+      "example": "Worker của common pool có context classloader là app loader, nên JAXB chạy trên đó trong fat jar Spring Boot không tìm thấy implementation.",
+      "related": ["classloader", "service-loader", "common-pool"],
+      "topics": ["classloading"]
+    },
+    {
+      "id": "class-unloading",
+      "term": "Class unloading",
+      "meaning": "GC gỡ class khỏi metaspace khi classloader định nghĩa nó không còn với tới được. Class của bootstrap, platform và app loader không bao giờ được gỡ, trừ hidden class tạo không có cờ `STRONG`.",
+      "example": "Plugin reload bằng `URLClassLoader` mới: loader cũ hết tham chiếu thì 300 class của nó được gỡ ở lần GC sau.",
+      "related": ["classloader", "metaspace"],
+      "topics": ["classloading"]
+    },
+    {
+      "id": "hidden-class",
+      "term": "Hidden class",
+      "meaning": "Class được tạo lúc chạy bằng `Lookup.defineHiddenClass` (Java 15), không tìm được theo tên qua classloader; lambda dùng loại class này.",
+      "example": "Mỗi biểu thức lambda khác nhau sinh một hidden class gắn với class chứa nó, tên có dạng `Main$$Lambda/0x...`.",
+      "related": ["classloader", "metaspace"],
+      "topics": ["classloading"]
     }
   ]
 }

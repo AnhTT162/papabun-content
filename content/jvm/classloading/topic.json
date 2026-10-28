@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "classloading",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "ClassLoader",
+  "summary": "Cây loader bootstrap, platform, app và parent delegation; danh tính class là tên cộng loader (`ClassCastException` X sang X, DevTools); `Class.forName` khác `loadClass`; fat jar Spring Boot 3.2+ (`JarLauncher`, `LaunchedClassLoader`, URL `jar:nested:`, đã chạy với 4.1.2); thread context classloader và lỗi JAXB/`ServiceLoader` trên common pool chỉ khi chạy jar; rò classloader qua `ThreadLocal` làm `OutOfMemoryError: Metaspace` (đã tái hiện trên JDK 27) và cách chẩn đoán.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 18,
+  "prerequisites": ["jvm-architecture", "classpath-modules"],
+  "terms": ["classloader", "parent-delegation", "context-classloader", "metaspace", "class-unloading", "fat-jar", "service-loader", "common-pool", "thread-local", "classpath", "jpms", "hidden-class"],
+  "references": [
+    { "title": "Java SE 21 API: ClassLoader", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ClassLoader.html" },
+    { "title": "Spring Boot: The Executable Jar Format", "url": "https://docs.spring.io/spring-boot/specification/executable-jar/index.html" },
+    { "title": "JLS 12.7: Unloading of Classes and Interfaces", "url": "https://docs.oracle.com/javase/specs/jls/se21/html/jls-12.html#jls-12.7" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào một class được gỡ khỏi metaspace?\" Chỉ khi classloader định nghĩa nó không còn với tới được, nghĩa là không còn instance, không còn tham chiếu tới bất kỳ `Class` nào của loader đó, và chính loader cũng không còn ai giữ; class của bootstrap, platform và app loader không bao giờ được gỡ (trừ hidden class không gắn chặt với loader). Vì vậy một `ThreadLocal` hay một registry `static` giữ một object của plugin là đủ giữ hàng trăm class của nó. Hỏi tiếp \"tìm ai giữ thế nào?\": `VM.classloader_stats` để thấy số loader tăng, heap dump rồi Path to GC Roots của một loader cũ." },
+    { "type": "callout", "style": "warning", "markdown": "Test trong IDE và `mvn test` chạy trên classpath thường, không bao giờ đi qua `LaunchedClassLoader`. Lỗi đọc resource bằng `File`, lỗi TCCL trên common pool chỉ lộ khi chạy `java -jar`; thêm một smoke test khởi động jar thật trên CI." }
+  ]
+}
