@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "weakhashmap-value-output",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27 với heap rộng. Dòng in ra là gì?",
+      "code": "Map<Object, Object> handlers = new WeakHashMap<>();\nfor (int i = 0; i < 1000; i++) {\n    Object session = new Object();\n    handlers.put(session, List.of(session));\n}\nSystem.gc();\nThread.sleep(100);\nSystem.out.println(handlers.size());",
+      "options": [
+        "`1000`",
+        "`0`",
+        "Một số bất kỳ từ 0 tới 1000, tuỳ GC",
+        "`999`, chỉ còn entry của `session` cuối cùng"
+      ],
+      "answer": 0,
+      "explanation": "`WeakHashMap` giữ key bằng weak reference nhưng value bằng tham chiếu mạnh. Ở đây value là list chứa chính key, nên đường map → entry → value → key luôn còn: không key nào thành weakly reachable, size giữ nguyên 1000 (đã chạy). Nếu value không trỏ lại key, cùng đoạn code in `0`. Biến `session` ra khỏi scope sau mỗi vòng lặp nên không có entry nào được giữ riêng nhờ nó."
+    },
+    {
+      "id": "cycle-collected",
+      "kind": "single",
+      "prompt": "`Order` giữ list `OrderLine`, mỗi `OrderLine` giữ tham chiếu ngược về `Order`. Sau khi request xong, không còn biến hay field nào bên ngoài trỏ tới chúng. GC làm gì?",
+      "options": [
+        "Dọn cả `Order` lẫn các `OrderLine` vì không đi được tới chúng từ GC root",
+        "Không dọn, vì mỗi object vẫn còn ít nhất một tham chiếu trỏ tới",
+        "Chỉ dọn được khi đánh dấu tham chiếu ngược là `WeakReference`",
+        "Dọn được sau vài chu kỳ khi bộ đếm tham chiếu giảm dần về 0"
+      ],
+      "answer": 0,
+      "explanation": "HotSpot không đếm tham chiếu: nó đi từ GC root và đánh dấu object với tới được. Vòng tham chiếu không có đường từ root là rác như mọi rác khác. Không cần weak reference cho quan hệ hai chiều thông thường; đếm tham chiếu là cơ chế của ngôn ngữ khác (Swift, CPython), nơi vòng tham chiếu mới thành vấn đề."
+    },
+    {
+      "id": "soft-cache",
+      "kind": "single",
+      "prompt": "Một service dùng `Map<String, SoftReference<Product>>` làm cache với ý \"JVM tự dọn khi thiếu bộ nhớ\". Hệ quả thường thấy trên production là gì?",
+      "options": [
+        "Heap luôn gần đầy, GC chạy dày và dài hơn, cache bị xoá hàng loạt khi chật",
+        "Không ảnh hưởng gì vì soft reference không được tính vào heap đang dùng",
+        "Cache bị xoá sau mỗi lần young GC nên tỉ lệ trúng cache gần bằng 0",
+        "JVM ném `OutOfMemoryError` sớm hơn vì soft reference không bao giờ bị dọn"
+      ],
+      "answer": 0,
+      "explanation": "Object chỉ còn soft reference vẫn chiếm heap và chỉ bị dọn theo chính sách LRU của HotSpot hoặc khi heap chật (chắc chắn trước khi ném OOM), nên heap thường gần đầy và GC phải xử lý nhiều reference. Bị xoá sau mỗi GC là hành vi của weak reference. Ngoài ra map vẫn giữ các entry có `SoftReference` rỗng nếu không tự dọn. Cache nên có giới hạn kích thước và thời hạn rõ ràng (Caffeine)."
+    },
+    {
+      "id": "time-to-safepoint",
+      "kind": "single",
+      "prompt": "GC log ghi `Pause Young ... 6.2ms`, nhưng request bị treo khoảng 800 ms đúng lúc đó. `-Xlog:safepoint` ghi `Reaching safepoint: 791204000 ns, At safepoint: 6301000 ns`. Điều gì xảy ra?",
+      "options": [
+        "Có thread mất gần 800 ms mới tới safepoint, mọi thread khác đứng chờ",
+        "GC log đã ghi sai thời gian pause, pause young thật kéo dài 800 ms",
+        "Request bị chậm vì lý do khác, không liên quan tới lần GC này",
+        "Pha đánh dấu đồng thời của G1 chạy 800 ms và dừng ứng dụng suốt pha đó"
+      ],
+      "answer": 0,
+      "explanation": "Để bắt đầu pause, JVM yêu cầu mọi thread dừng ở safepoint; thread đã dừng phải chờ thread chậm nhất. `Reaching safepoint` gần 800 ms là thời gian chờ đó, còn GC chỉ làm việc 6 ms (`At safepoint`), và GC log chỉ ghi phần này. Đánh dấu đồng thời chạy song song với ứng dụng. Thủ phạm thường là đoạn code chạy lâu mà không qua điểm kiểm tra safepoint; tìm bằng `-Xlog:safepoint` kết hợp profiler."
+    },
+    {
+      "id": "young-gc-cost",
+      "kind": "single",
+      "prompt": "Mỗi request tạo khoảng 2 MB object tạm rồi bỏ ngay. Một đồng nghiệp đề xuất dùng object pool để \"giảm áp lực GC\". Nhận xét nào đúng?",
+      "options": [
+        "Young GC tốn theo số object sống; object pool làm chúng sống lâu, lên old",
+        "Đúng, mỗi object chết đều phải được GC giải phóng riêng nên pool tiết kiệm",
+        "Đúng, vì object pool được đặt ngoài heap nên GC không phải quét tới nó",
+        "Không khác gì, vì young GC và old GC tốn chi phí như nhau cho mỗi object"
+      ],
+      "answer": 0,
+      "explanation": "Young GC chép object còn sống ra khỏi eden rồi coi cả eden là trống; object đã chết không tốn gì. Pool giữ object sống mãi: chúng bị chép qua survivor, lên old, và mỗi lần gán object trẻ vào chúng phải qua write barrier. Pool chỉ đáng khi object thật sự đắt để khởi tạo (connection, buffer direct lớn), không phải để tránh GC. Object pool thông thường vẫn nằm trên heap."
+    },
+    {
+      "id": "cleaner-field-capture",
+      "kind": "single",
+      "prompt": "Trong constructor: `CLEANER.register(this, () -> Files.deleteIfExists(tempPath));` với `tempPath` là field `private final Path`. Action có chạy khi object bị bỏ không?",
+      "options": [
+        "Không: đọc field trong lambda là bắt `this`, object luôn với tới được",
+        "Có: lambda chỉ dùng `Path`, không gọi method nào của object",
+        "Có, nhưng chỉ khi gọi `System.gc()` hoặc lúc JVM chuẩn bị tắt",
+        "Không, vì `Cleaner` chỉ chạy action cho object có `finalize()`"
+      ],
+      "answer": 0,
+      "explanation": "Lambda đọc field `tempPath` thực chất là đọc `this.tempPath`, nên nó bắt `this`. Action được `Cleaner` giữ bằng tham chiếu mạnh, nên object không bao giờ thành phantom reachable và action không bao giờ chạy (giống lab). Chép field ra biến cục bộ trước (`Path p = tempPath; () -> delete(p)`) hoặc dùng một record tĩnh. `Cleaner` chạy khi GC phát hiện object đã chết, không cần `System.gc()` và không liên quan tới `finalize()`."
+    }
+  ]
+}

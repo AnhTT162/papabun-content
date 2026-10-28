@@ -1,0 +1,157 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Một pod checkout chậm dần, heap dump làm mất luôn bằng chứng",
+  "symptom": "14:05, cảnh báo p99 của checkout-service. Chỉ một trong 6 pod bị: p99 từ 180 ms lên 4,2 giây, CPU sát limit, khoảng 3% request timeout ở gateway. Pod này chạy liên tục 7 ngày; 5 pod còn lại được deploy lại 2 ngày trước. Bạn đang on-call và có quyền `kubectl exec` vào pod.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "checkout-service: 6 pod, Spring Boot 3.5, JDK 21, -Xmx6g, memory limit 8Gi, CPU limit 2\nImage: eclipse-temurin:21-jdk (có jcmd, jstat)\nVolume: emptyDir 20Gi mount tại /dumps (đĩa node: EBS gp3, 125 MiB/s)\nLiveness: GET :8081/actuator/health/liveness  periodSeconds=10 timeoutSeconds=1 failureThreshold=3\nJFR chạy liên tục: -XX:StartFlightRecording=name=continuous,settings=default,maxage=6h\n\npod                 uptime   p99     CPU    heap sau GC\ncheckout-...m7r2c   7d       4.2s    1.97   5.7 GB (tăng đều ~0,65 GB/ngày)\n5 pod còn lại       2d       180ms   0.6    2.4–2.7 GB (tăng chậm)",
+      "evidenceFormat": "monospace",
+      "question": "Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Chụp thread dump ba lần và chạy `jstat -gcutil` vài lần",
+          "quality": "good",
+          "feedback": "Đúng thứ tự: hai thứ này lấy trong vài giây, gần như không ảnh hưởng pod, và cho biết vấn đề nằm ở code hay ở bộ nhớ.",
+          "next": "cheap-evidence"
+        },
+        {
+          "label": "Chụp heap dump ngay vào `/dumps` khi pod còn đang lỗi",
+          "quality": "poor",
+          "feedback": "Heap dump là thao tác nặng nhất: dừng cả JVM nhiều giây với heap gần 6 GB, trong khi pod vẫn đang nhận traffic và còn bị liveness probe theo dõi.",
+          "next": "heap-dump-crash"
+        },
+        {
+          "label": "Restart pod để khôi phục dịch vụ rồi theo dõi tiếp",
+          "quality": "poor",
+          "feedback": "Restart xoá trạng thái đang có vấn đề. Heap sau GC tăng đều nghĩa là triệu chứng sẽ quay lại, và lần sau bạn vẫn không có bằng chứng.",
+          "next": "restart"
+        }
+      ]
+    },
+    {
+      "id": "cheap-evidence",
+      "evidence": "$ kubectl exec $POD -- jstat -gcutil 1 5000 4\n  S0     S1     E      O      M     CCS    YGC     YGCT     FGC    FGCT     CGC    CGCT       GCT\n     -      -   0.00  98.91  95.80  91.17  21544  402.117    37  105.322   1890   21.040   528.479\n     -      -   4.17  99.20  95.80  91.17  21545  402.140    37  105.322   1890   21.040   528.502\n     -      -   0.00  98.87  95.80  91.17  21545  402.140    38  108.211   1890   21.040   531.391\n     -      -   0.00  99.05  95.80  91.17  21547  402.188    38  108.211   1891   21.052   531.451\n\n$ kubectl exec $POD -- jcmd 1 Thread.print > dump-1.txt   (lặp 3 lần, cách 10 giây)\nThread nhiều cpu= nhất: \"GC Thread#0\", \"GC Thread#1\", \"G1 Conc#0\"\n200 thread http-nio: stack khác nhau giữa các lần chụp, không thread nào kẹt cùng chỗ\nKhông có \"Found one Java-level deadlock\"",
+      "evidenceFormat": "monospace",
+      "question": "Old gen 99%, Full GC mới (FGC 37 → 38) mất 2,9 giây. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Rút pod khỏi traffic, rồi chụp histogram hai lần cách 5 phút",
+          "quality": "good",
+          "feedback": "Đúng. Code không kẹt, CPU đi vào GC: heap gần hết thật. Histogram dừng bằng đúng một Full GC (khoảng 3 giây ở pod này), đủ để biết class nào đang tăng. Bỏ label mà Service chọn để pod ra khỏi traffic, ReplicaSet tự tạo pod thay thế.",
+          "next": "histogram"
+        },
+        {
+          "label": "Chụp heap dump vào `/dumps` để biết chính xác object nào đang rò",
+          "quality": "poor",
+          "feedback": "Hướng đúng (cần biết object nào) nhưng chọn công cụ đắt nhất: pod vẫn nhận traffic, và heap dump gần 6 GB dừng JVM lâu hơn thời gian liveness probe chịu được.",
+          "next": "heap-dump-crash"
+        },
+        {
+          "label": "Tăng `-Xmx` lên 7g cho mọi pod và deploy lại ngay bây giờ",
+          "quality": "poor",
+          "feedback": "Heap sau GC tăng đều khoảng 0,65 GB/ngày: thêm 1 GB chỉ mua thêm chừng một ngày rưỡi, đổi lại sát memory limit 8Gi hơn và mất hiện trường.",
+          "next": "restart"
+        }
+      ]
+    },
+    {
+      "id": "heap-dump-crash",
+      "evidence": "14:14:02 $ kubectl exec $POD -- jcmd 1 GC.heap_dump /dumps/checkout.hprof\n1:\nDumping heap to /dumps/checkout.hprof ...\ncommand terminated with exit code 137\n\n$ kubectl get events --field-selector involvedObject.name=$POD\n14:14:11  Warning  Unhealthy  Liveness probe failed: Get \"http://10.0.3.17:8081/actuator/health/liveness\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\n14:14:21  Warning  Unhealthy  Liveness probe failed: ... context deadline exceeded\n14:14:31  Warning  Unhealthy  Liveness probe failed: ... context deadline exceeded\n14:14:31  Normal   Killing    Container app failed liveness probe, will be restarted\n\n$ kubectl exec $POD -- ls -l /dumps\n-rw------- 1 app app 3318611968 Oct 28 14:14 checkout.hprof     (file dở dang)\n\nGateway: 1.120 request timeout trong khoảng 30 giây JVM đứng yên\n(dump ghi phần lớn dữ liệu trong pause; đĩa 125 MiB/s chỉ ghi được 3,1 GB)",
+      "evidenceFormat": "monospace",
+      "question": "Container đã restart, heap mới 1,1 GB, file dump hỏng. Bài học và bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Lần sau dùng bằng chứng nhẹ: histogram và JFR, không heap dump",
+          "quality": "good",
+          "feedback": "Đúng. Heap dump của heap gần 6 GB dừng JVM lâu hơn mức probe chịu được (ba lần thất bại cách nhau 10 giây, ở đây khoảng 30 giây); mọi thread Java đứng yên nên probe ở cổng 8081 riêng cũng không trả lời được. Dump ghi vào `emptyDir` nên file còn sau restart, nhưng dở dang. Lỗi tăng đều nên sẽ lặp lại; lần sau, rút pod khỏi traffic và lấy bằng chứng không cần dừng lâu.",
+          "next": "later"
+        },
+        {
+          "label": "Tăng `failureThreshold` của liveness lên 30 cho mọi service",
+          "quality": "ok",
+          "feedback": "Có thể đáng làm cho service hay cần heap dump, nhưng đổi probe phải qua deploy (probe của pod không sửa tại chỗ được), và probe quá dễ dãi làm pod treo thật lâu hơn mới được restart. Vẫn cần bằng chứng cho sự cố này.",
+          "next": "later"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "evidence": "14:09  pod mới Ready, p99 175ms, heap sau GC 1.0 GB\n\nVài ngày sau, 03:40:\npod checkout-...q8mzn  p99 3.9s  heap sau GC sát -Xmx  Full GC mỗi vài chục giây\nKhông có thread dump, histogram hay JFR nào của lần trước.",
+      "evidenceFormat": "monospace",
+      "question": "Triệu chứng quay lại ở pod khác. Lần này?",
+      "choices": [
+        {
+          "label": "Chụp thread dump và `jstat -gcutil` trước khi làm gì khác",
+          "quality": "good",
+          "feedback": "Đúng. Lỗi phụ thuộc thời gian chạy, restart chỉ đặt lại đồng hồ. Lấy bằng chứng rẻ ngay khi còn hiện trường.",
+          "next": "cheap-evidence"
+        }
+      ]
+    },
+    {
+      "id": "later",
+      "evidence": "Năm ngày sau, 10:20:\npod checkout-...m7r2c (uptime 5d)  p99 2.8s  heap sau GC 5.4 GB  old gen 97%\n\nLần này: bỏ label để rút pod khỏi traffic trước, không chụp heap dump.",
+      "evidenceFormat": "monospace",
+      "question": "Pod đã ra khỏi traffic. Bằng chứng nhẹ nào trước?",
+      "choices": [
+        {
+          "label": "Chụp `GC.class_histogram` hai lần cách 5 phút",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi lần dừng bằng một Full GC, chấp nhận được khi pod không còn phục vụ request.",
+          "next": "histogram"
+        }
+      ]
+    },
+    {
+      "id": "histogram",
+      "evidence": "$ kubectl label pod $POD app-     # Service bỏ pod, ReplicaSet tạo pod thay thế\n$ kubectl exec $POD -- jcmd 1 GC.class_histogram | head -8     (JVM dừng ~3 s cho Full GC)\n num     #instances         #bytes  class name (module)\n-------------------------------------------------------\n   1:      31204117     1580322904  [B (java.base@21.0.8)\n   2:      27950113      894403616  java.math.BigDecimal (java.base@21.0.8)\n   3:      30118532      722844768  java.lang.String (java.base@21.0.8)\n   4:      27914880      669957120  java.util.concurrent.ConcurrentHashMap$Node (java.base@21.0.8)\n   5:      27912406      669897744  com.example.checkout.pricing.PriceQuote\n\nLần chụp thứ hai, 5 phút sau:\n   PriceQuote                       27912406 -> 27931006   (+18600)\n   ConcurrentHashMap$Node           27914880 -> 27933478   (+18598)\n   BigDecimal, String, [B           tăng tương ứng",
+      "evidenceFormat": "monospace",
+      "question": "`PriceQuote` và `ConcurrentHashMap$Node` cùng tăng khoảng 62 mỗi giây (giờ cao điểm) và không bao giờ giảm. Làm sao biết ai đang giữ chúng?",
+      "choices": [
+        {
+          "label": "Dump JFR với `path-to-gc-roots=true`, xem `OldObjectSample`",
+          "quality": "good",
+          "feedback": "Đúng. JFR đã lấy mẫu object sống lâu suốt mấy giờ; dump kèm đường tới GC root phải duyệt heap nên cũng dừng JVM (tỉ lệ theo heap, làm trên pod đã rút khỏi traffic), nhưng nhẹ hơn heap dump nhiều và cho cả đường giữ object lẫn stack nơi cấp phát.",
+          "next": "jfr-path"
+        },
+        {
+          "label": "Tìm trong code mọi `ConcurrentHashMap` có value là `PriceQuote`",
+          "quality": "ok",
+          "feedback": "Có thể ra, nhưng là đoán: có thể có nhiều map, và histogram không cho biết key được tạo ra sao. Bằng chứng từ JVM nhanh và chắc hơn.",
+          "next": "jfr-path"
+        },
+        {
+          "label": "Kết luận `byte[]` là thủ phạm vì chiếm nhiều byte nhất",
+          "quality": "poor",
+          "feedback": "`byte[]` đứng đầu ở hầu hết heap vì nằm trong mọi `String`. Class của bạn tăng cùng nhịp với node của map mới là manh mối; xem tiếp ai giữ chúng.",
+          "next": "jfr-path"
+        }
+      ]
+    },
+    {
+      "id": "jfr-path",
+      "evidence": "$ kubectl exec $POD -- jcmd 1 JFR.dump name=continuous path-to-gc-roots=true filename=/dumps/leak.jfr\n1:\nDumped recording \"continuous\", 41.3 MB written to:\n\n/dumps/leak.jfr\n\n$ jfr print --events OldObjectSample --stack-depth 5 leak.jfr\njdk.OldObjectSample {\n  objectSize = 24 bytes\n  object = [\n    com.example.checkout.pricing.PriceQuote\n    value : java.util.concurrent.ConcurrentHashMap$Node\n    [18340771] : java.util.concurrent.ConcurrentHashMap$Node[33554432]\n    table : java.util.concurrent.ConcurrentHashMap\n    quotes : com.example.checkout.pricing.QuoteCache\n    quoteCache : com.example.checkout.pricing.PricingService\n  ]\n  stackTrace = [\n    com.example.checkout.pricing.QuoteCache.lambda$quote$0(Cart, String) line: 39\n    java.util.concurrent.ConcurrentHashMap.computeIfAbsent(Object, Function) line: 1724\n    com.example.checkout.pricing.QuoteCache.quote(Cart) line: 39\n    com.example.checkout.pricing.PricingService.price(Cart) line: 77\n  ]\n}\n(hầu hết mẫu có cùng đường giữ và cùng stack)\n\nQuoteCache.java:\n37    String key = cart.id() + \":\" + cart.updatedAt().toEpochMilli();\n39    return quotes.computeIfAbsent(key, k -> calculate(cart));",
+      "evidenceFormat": "monospace",
+      "question": "Nguyên nhân là gì?",
+      "choices": [
+        {
+          "label": "Key chứa thời điểm sửa giỏ hàng, map thêm entry mãi không xoá",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi lần giỏ hàng đổi, `updatedAt` đổi và tạo key mới; entry cũ không bao giờ được đọc lại cũng không bao giờ bị xoá.",
+          "next": "root-cause"
+        },
+        {
+          "label": "`ConcurrentHashMap` giữ entry đã xoá cho tới lần resize kế tiếp",
+          "quality": "poor",
+          "feedback": "`remove` của `ConcurrentHashMap` gỡ node ngay. Ở đây không có lệnh xoá nào: đường giữ đi từ `PricingService` (singleton) qua map tới từng `PriceQuote`.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: `QuoteCache` dùng `ConcurrentHashMap` không giới hạn, key gồm `cart.id()` và `updatedAt`. Mỗi lần khách sửa giỏ hàng tạo một entry mới, entry cũ không bao giờ bị đọc hay xoá. Mỗi pod thêm khoảng 60 entry mỗi giây giờ cao điểm, trung bình 46 (27,9 triệu entry sau 7 ngày); mỗi entry chừng 150 byte (node, key, `PriceQuote`, `BigDecimal`), cộng lại khoảng 0,6 GB mỗi ngày. Sau 7 ngày old gen đầy, G1 chạy Full GC liên tục mà gần như không thu hồi được gì, mỗi lần dừng gần 3 giây: p99 4,2 giây. Pod deploy lại 2 ngày trước chưa tới ngưỡng nên trông bình thường.\n\n**Sửa**: cache có giới hạn và thời hạn (Caffeine `maximumSize` + `expireAfterWrite`), key không chứa giá trị luôn đổi; hoặc bỏ cache nếu tỉ lệ trúng thấp.\n\n**Bài học về lấy bằng chứng**:\n- Thứ tự theo chi phí: thread dump và `jstat` (vài giây, không dừng đáng kể) → `JFR.dump` → `GC.class_histogram` (một Full GC, vài giây với heap lớn) → `JFR.dump` với `path-to-gc-roots=true` → heap dump (dừng nhiều giây tới hàng chục giây, file lớn hơn heap).\n- Rút pod khỏi traffic bằng cách bỏ label trước khi làm thao tác nặng; nhớ rằng liveness probe vẫn giết JVM dừng quá khoảng 20–30 giây (cấu hình mặc định), dù probe ở cổng riêng.\n- Chuẩn bị trước: image có `jcmd` (hoặc image debug cho `kubectl debug`), JFR chạy liên tục, volume `/dumps` đủ dung lượng, `-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps`.\n- Cảnh báo theo **heap sau GC** tăng đều, không theo heap dùng tức thời: sự cố này lẽ ra được bắt từ ngày thứ ba.\n- Heap dump khi thật sự cần (phân tích dominator tree ở bài Memory leak & heap dump): lấy trên pod đã rút khỏi traffic, với probe đủ khoan dung, ghi vào volume, và xoá sau khi phân tích vì chứa dữ liệu khách hàng."
+    }
+  ]
+}

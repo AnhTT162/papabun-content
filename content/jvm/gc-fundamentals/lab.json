@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "File export tạm không bao giờ bị xoá dù đã có Cleaner",
+  "context": "Service xuất báo cáo tạo file CSV tạm cho mỗi lần export. Để phòng khi code gọi quên `close()`, class `ExportFile` đăng ký một `Cleaner` xoá file khi object bị GC dọn. Sau một tuần, thư mục tạm có hàng chục nghìn file và heap sau GC tăng đều.",
+  "buggyCode": "public final class ExportFile implements AutoCloseable {\n    private static final Cleaner CLEANER = Cleaner.create();\n\n    private final Path path;\n    private final byte[] buffer = new byte[64 * 1024];\n    private final Cleaner.Cleanable cleanable;\n\n    public ExportFile(Path dir) throws IOException {\n        this.path = Files.createTempFile(dir, \"export-\", \".csv\");\n        this.cleanable = CLEANER.register(this, () -> deleteQuietly());\n    }\n\n    private void deleteQuietly() {\n        try { Files.deleteIfExists(path); } catch (IOException ignored) { }\n    }\n\n    @Override\n    public void close() { cleanable.clean(); }\n}\n\n// Ở đâu đó: new ExportFile(dir) rồi quên close()",
+  "symptom": {
+    "description": "Chạy thử: tạo `ExportFile` liên tục mà không `close()`, cứ 5.000 object thì gọi `System.gc()`, chờ 300 ms rồi đếm file còn lại và heap đang dùng (JDK 27, `-Xmx1g`).",
+    "output": "created=5000 tempFilesLeft=5000 heapAfterGC=320 MB\ncreated=10000 tempFilesLeft=10000 heapAfterGC=636 MB\ncreated=15000 tempFilesLeft=15000 heapAfterGC=952 MB\n\nException: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread \"main\""
+  },
+  "diagnosis": {
+    "question": "Vì sao `Cleaner` không bao giờ xoá file, và heap cũng không giảm?",
+    "options": [
+      "Lambda gọi `deleteQuietly()` giữ `this`, nên object luôn với tới được",
+      "`Cleaner` chỉ chạy khi JVM tắt, giống `deleteOnExit()` của `File`",
+      "Object có `Cleaner` cần Full GC mới dọn; `System.gc()` chỉ chạy young GC",
+      "Mỗi object cần một `Cleaner` riêng; dùng chung một `Cleaner` tĩnh thì bị nghẽn"
+    ],
+    "answer": 0,
+    "explanation": "`Cleaner` giữ action bằng tham chiếu mạnh (từ `CLEANER` tĩnh, một GC root, qua danh sách cleanable) và chỉ chạy action khi object đăng ký trở thành phantom reachable. Lambda `() -> deleteQuietly()` gọi method instance nên bắt `this`: đường root → Cleaner → action → `ExportFile` không bao giờ đứt, object không bao giờ chết, action không bao giờ chạy, và mỗi object còn giữ buffer 64 KB (5.000 × 64 KB ≈ 320 MB). `Cleaner` chạy trong lúc ứng dụng còn sống, không đợi JVM tắt. Với G1, `System.gc()` là Full GC. Dùng chung một `Cleaner` tĩnh là cách được khuyến nghị, vì mỗi `Cleaner.create()` tạo một thread."
+  },
+  "fix": {
+    "code": "public final class ExportFile implements AutoCloseable {\n    private static final Cleaner CLEANER = Cleaner.create();\n\n    // Trạng thái cần dọn tách riêng, không trỏ ngược ExportFile\n    private record Deleter(Path path) implements Runnable {\n        public void run() {\n            try { Files.deleteIfExists(path); } catch (IOException ignored) { }\n        }\n    }\n\n    private final Path path;\n    private final byte[] buffer = new byte[64 * 1024];\n    private final Cleaner.Cleanable cleanable;\n\n    public ExportFile(Path dir) throws IOException {\n        this.path = Files.createTempFile(dir, \"export-\", \".csv\");\n        this.cleanable = CLEANER.register(this, new Deleter(path));\n    }\n\n    @Override\n    public void close() { cleanable.clean(); }\n}\n\n// Cách dùng chính: try (var file = new ExportFile(dir)) { ... }\n// Chạy lại không close(): created=20000 tempFilesLeft=1 heapAfterGC=4 MB",
+    "explanation": "Action là một `record` tĩnh chỉ giữ `Path`, nên khi code gọi bỏ `ExportFile`, object trở thành phantom reachable, GC dọn nó cùng buffer, rồi thread của `Cleaner` chạy `Deleter` (file còn lại duy nhất là object đang được giữ trong vòng lặp). Lambda cũng được nếu chỉ bắt biến cục bộ (`Path p = path; () -> delete(p)`), không gọi method hay field của object. Nhưng `Cleaner` chỉ là lưới an toàn: không biết khi nào GC chạy, nên với heap rộng file có thể nằm đó hàng giờ. Đường chính vẫn là try-with-resources và gọi `close()`; `clean()` chỉ chạy action một lần nên gọi từ `close()` rồi GC dọn sau vẫn an toàn."
+  }
+}

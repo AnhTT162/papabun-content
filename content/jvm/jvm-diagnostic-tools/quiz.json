@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "histogram-full-gc",
+      "kind": "single",
+      "prompt": "Bạn chạy `jmap -histo:live <pid>` trên service có 3,5 GB object sống. GC log ngay lúc đó có thêm dòng nào?",
+      "options": [
+        "`Pause Full (Heap Inspection Initiated GC) ...` vì JVM dọn heap trước",
+        "Không có gì, vì histogram chỉ đọc heap mà không cần dừng ứng dụng",
+        "`Pause Young (Normal) ...` vì histogram chỉ đếm object ở young gen",
+        "`Concurrent Mark Cycle` vì histogram chạy song song với ứng dụng"
+      ],
+      "answer": 0,
+      "explanation": "`:live` (và mặc định của `jcmd GC.class_histogram`) chỉ đếm object còn sống, nên JVM chạy một Full GC trước khi đếm, trong một safepoint: đo trên JDK 27 với 3,5 GB object sống, pause khoảng 0,5–0,8 giây. Muốn tránh GC thì dùng `-all` (đếm cả rác). Histogram đếm cả heap, không riêng young."
+    },
+    {
+      "id": "kill-3-output",
+      "kind": "single",
+      "prompt": "Trong pod, bạn chạy `kubectl exec $POD -- kill -3 1`. Lệnh kết thúc ngay mà terminal không in gì. Thread dump ở đâu?",
+      "options": [
+        "Trong stdout của JVM, tức là `kubectl logs $POD`",
+        "Không có: `kill -3` chỉ chạy được khi image có JDK",
+        "Trong file `/tmp/.java_pid1` mà JVM vừa tạo ra",
+        "Không có: process PID 1 trong container bỏ qua `SIGQUIT`"
+      ],
+      "answer": 0,
+      "explanation": "Nhận `SIGQUIT`, JVM tự in thread dump ra stdout của chính nó; trong Kubernetes đó là log của container. Cách này không cần JDK tools và không cần attach. `/tmp/.java_pid1` là UNIX socket của attach API, không phải file dump. JVM tự cài handler cho `SIGQUIT`, nên chạy làm PID 1 vẫn nhận tín hiệu này."
+    },
+    {
+      "id": "heap-dump-liveness",
+      "kind": "single",
+      "prompt": "Liveness probe chạy ở cổng management riêng 8081, `periodSeconds: 10`, `failureThreshold: 3`. Bạn chụp heap dump một heap 6 GB vào volume trên đĩa mạng chậm và container bị restart giữa chừng. Vì sao probe ở cổng riêng vẫn thất bại?",
+      "options": [
+        "Heap dump dừng mọi thread Java, kể cả thread trả lời probe",
+        "Heap dump chiếm hết CPU limit nên kubelet không gọi được probe",
+        "Cổng 8081 bị đóng tạm thời trong lúc JVM đang ghi file dump",
+        "Kubelet tự restart container mỗi khi thấy file dump lớn hơn 5 GB"
+      ],
+      "answer": 0,
+      "explanation": "Heap dump chạy trong một safepoint: mọi thread Java dừng, nên endpoint ở cổng nào cũng không trả lời. Ba lần thất bại cách nhau 10 giây là đủ để kubelet giết container. Cổng riêng chỉ giúp khi pool thread của API cạn, không giúp khi cả JVM dừng. Cổng vẫn mở ở mức socket, nhưng không có thread nào xử lý request."
+    },
+    {
+      "id": "set-flag-manageable",
+      "kind": "single",
+      "prompt": "Service đang chạy chưa bật heap dump khi OOM. Lệnh nào bật được mà không restart?",
+      "options": [
+        "`jcmd <pid> VM.set_flag HeapDumpOnOutOfMemoryError true`",
+        "`jcmd <pid> VM.set_flag MaxHeapSize 8g` rồi chờ OOM tiếp theo",
+        "Không lệnh nào, mọi cờ `-XX` chỉ đọc lúc JVM khởi động",
+        "`jcmd <pid> VM.system_properties -XX:+HeapDumpOnOutOfMemoryError`"
+      ],
+      "answer": 0,
+      "explanation": "Một số cờ là `manageable`, sửa được lúc chạy: `HeapDumpOnOutOfMemoryError`, `HeapDumpPath`... (đã chạy trên JDK 27, `jinfo -flag` sau đó in `-XX:+HeapDumpOnOutOfMemoryError`). Cờ khác như `MaxHeapSize` bị từ chối với `only 'writeable' flags can be set`. `VM.system_properties` chỉ in system property, không đổi cờ JVM. Liệt kê cờ sửa được bằng `java -XX:+PrintFlagsFinal -version | grep manageable`."
+    }
+  ]
+}

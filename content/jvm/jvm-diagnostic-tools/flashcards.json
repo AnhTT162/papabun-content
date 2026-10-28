@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "jcmd-role", "front": "Vì sao nên dùng `jcmd` thay vì `jstack`, `jmap`, `jinfo`?", "back": "`jcmd` gom gần hết việc của chúng (thread dump, heap dump, histogram, cờ, JFR) vào một lệnh, và `help <lệnh>` ghi rõ mức ảnh hưởng của từng lệnh." },
+    { "id": "attach-how", "front": "`jcmd` gắn vào JVM đang chạy bằng cách nào?", "back": "Tạo file `.attach_pid<pid>` và gửi `SIGQUIT`; JVM mở UNIX socket `/tmp/.java_pid<pid>` để nhận lệnh. Cần cùng user và thấy được PID." },
+    { "id": "cost-order", "front": "Xếp các thao tác chẩn đoán theo chi phí tăng dần.", "back": "`jstat` → thread dump → `JFR.dump` → `GC.class_histogram` (Full GC) → heap dump (dừng nhiều giây, file lớn hơn heap)." },
+    { "id": "kill-3", "front": "`kill -3 <pid>` in thread dump ra đâu?", "back": "Ra stdout của JVM (log container), không cần JDK tools và không cần attach." },
+    { "id": "jstat-old-fgc", "front": "`jstat -gcutil` cho thấy dấu hiệu gì khi heap hết thật?", "back": "Cột `O` gần 100% và `FGC` tăng đều, `FGCT` tăng vài giây mỗi lần: Full GC liên tục mà không thu hồi được." },
+    { "id": "histogram-diff", "front": "Cách rẻ nhất để tìm class đang rò?", "back": "Chụp `GC.class_histogram` hai lần cách vài phút và so số instance: class của bạn tăng đều cùng node của một collection là manh mối." },
+    { "id": "old-object-sample", "front": "Tìm ai giữ object rò mà không cần heap dump?", "back": "Dump JFR đang chạy với `path-to-gc-roots=true` rồi xem `jdk.OldObjectSample`: có đường tới GC root và stack nơi cấp phát." },
+    { "id": "heap-dump-k8s", "front": "Ba điều kiện trước khi heap dump trên Kubernetes?", "back": "Pod đã rút khỏi traffic, liveness probe chịu được pause đó, và file ghi vào volume đủ dung lượng (không phải lớp ghi của container)." },
+    { "id": "hung-jvm", "front": "JVM treo, `jcmd` không trả lời. Dùng gì?", "back": "`kill -3` để thử thread dump; nếu không được thì `jhsdb jstack --pid` (cần quyền ptrace) hoặc `gcore` rồi đọc core bằng `jhsdb`. `jstack -F` đã bị gỡ từ JDK 9." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "gc-roots", "front": "GC root gồm những gì?", "back": "Biến cục bộ và tham số trong frame của thread còn sống, field `static` của class đã nạp, tham chiếu JNI global, object đang bị khoá, và cấu trúc nội bộ của JVM." },
+    { "id": "cycle", "front": "Hai object trỏ vào nhau, không ai khác trỏ tới. GC có dọn không?", "back": "Có. GC đi từ root, không đếm tham chiếu, nên vòng không với tới được là rác." },
+    { "id": "four-references", "front": "Strong, soft, weak, phantom khác nhau thế nào?", "back": "Strong giữ object sống; soft bị dọn khi heap chật (chắc chắn trước OOM); weak bị dọn ở lần GC tiếp theo; phantom không trả object, chỉ báo khi object đã chết." },
+    { "id": "young-cheap", "front": "Vì sao young GC rẻ khi phần lớn object chết trẻ?", "back": "Nó chỉ chép object còn sống ra khỏi eden rồi coi cả eden là trống. Chi phí tỉ lệ với object sống, không phải rác." },
+    { "id": "card-table", "front": "Young GC tìm tham chiếu từ old sang young bằng cách nào?", "back": "Write barrier đánh dấu card mỗi khi gán tham chiếu vào field; young GC quét root cộng các card bị đánh dấu (remembered set ở G1), không quét cả old." },
+    { "id": "safepoint", "front": "Safepoint là gì, và pause thật gồm những phần nào?", "back": "Điểm mọi thread Java dừng để JVM làm việc stop-the-world. Pause thật = thời gian chờ thread tới safepoint + thời gian làm việc tại safepoint." },
+    { "id": "cleaner-capture", "front": "Bẫy lớn nhất khi dùng `Cleaner`?", "back": "Action trỏ ngược object (lambda gọi method hay field của nó): object không bao giờ chết nên action không bao giờ chạy. Tách trạng thái ra một class tĩnh." },
+    { "id": "finalize-status", "front": "Trạng thái của `finalize()` từ Java 18?", "back": "Deprecated để gỡ bỏ (JEP 421), vẫn chạy trên JDK 27; kiểm tra phụ thuộc bằng `--finalization=disabled`. Thay bằng try-with-resources và `Cleaner`." },
+    { "id": "default-gc", "front": "GC mặc định của HotSpot là gì, có ngoại lệ không?", "back": "G1. Trước JDK 27, máy dưới 2 CPU hoặc dưới 1792 MB RAM tự dùng Serial; từ JDK 27 (JEP 523) luôn là G1 nếu không chỉ định." }
+  ]
+}

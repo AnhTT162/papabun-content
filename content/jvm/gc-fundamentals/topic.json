@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "gc-fundamentals",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "GC hoạt động thế nào",
+  "summary": "GC đi từ GC root chứ không đếm tham chiếu; strong, soft, weak, phantom reference và `Cleaner` thay `finalize`; heap theo thế hệ, tuổi và premature promotion, card table; mark-sweep-compact và copying; safepoint và time-to-safepoint; `System.gc()` và G1 mặc định ở mọi môi trường từ JDK 27.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 15,
+  "prerequisites": ["jvm-memory-areas"],
+  "terms": ["garbage-collection", "gc-root", "reachability", "soft-reference", "weak-reference", "phantom-reference", "cleaner", "finalization", "young-generation", "old-generation", "premature-promotion", "card-table", "write-barrier", "mark-sweep-compact", "safepoint", "time-to-safepoint", "stop-the-world", "full-gc", "tlab", "memory-leak"],
+  "references": [
+    { "title": "HotSpot Virtual Machine Garbage Collection Tuning Guide (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/gctuning/" },
+    { "title": "java.lang.ref.Cleaner (Java 21 API)", "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ref/Cleaner.html" },
+    { "title": "JEP 421: Deprecate Finalization for Removal", "url": "https://openjdk.org/jeps/421" },
+    { "title": "JEP 523: Make G1 the Default Garbage Collector in All Environments", "url": "https://openjdk.org/jeps/523" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Java có GC rồi thì sao vẫn bị memory leak?\" GC chỉ dọn object không với tới được. Leak trong Java là object vẫn với tới được từ một root nhưng không còn cần: cache `static` không giới hạn, listener đăng ký mà không huỷ, `ThreadLocal` trong thread pool, value của `WeakHashMap` trỏ lại key, action của `Cleaner` giữ chính object. Triệu chứng là heap **sau** GC tăng dần; cách tìm là heap dump và đường tới GC root (bài Memory leak & heap dump)." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng gọi `System.gc()` trong code ứng dụng: với G1 đó là một Full GC dừng toàn bộ ứng dụng. Cũng đừng dùng `SoftReference` làm cache: heap luôn gần đầy và cache bị xoá hàng loạt đúng lúc tải cao. Dùng cache có giới hạn kích thước và thời hạn." }
+  ]
+}

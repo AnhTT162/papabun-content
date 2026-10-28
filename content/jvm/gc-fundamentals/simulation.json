@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Đời của một object trong heap có thế hệ",
+  "instructions": "Theo một object `Order` từ lúc `new`: bấm \"Young GC\" vài lần để nó lên old, rồi bỏ tham chiếu và xem young GC có dọn được nó không. Thử lại với một object chết khi còn ở young, và với trường hợp survivor đầy. Bản mô phỏng đặt ngưỡng lên old là 3 cho nhanh; G1 tự chỉnh ngưỡng, tối đa 15.",
+  "config": {
+    "states": [
+      { "id": "eden", "label": "Eden", "x": 0.1, "y": 0.1, "note": "Object vừa được `new`, cấp trong TLAB của thread: chỉ tăng một con trỏ. Phần lớn object chết ở đây trước lần young GC đầu tiên." },
+      { "id": "survivor", "label": "Survivor", "x": 0.5, "y": 0.1, "note": "Object sống sót qua young GC, được chép sang survivor và tăng tuổi. Mỗi lần young GC, object còn sống lại bị chép tiếp: chi phí tỉ lệ với số object sống, không phải số rác." },
+      { "id": "old", "label": "Old", "x": 0.9, "y": 0.1, "note": "Object đủ tuổi được chuyển lên old. Young GC không quét old; chỉ chu kỳ đánh dấu cả heap (mixed GC của G1, hoặc Full GC) mới biết object ở đây còn sống hay không." },
+      { "id": "dead-young", "label": "Rác ở young", "x": 0.1, "y": 0.6, "note": "Không còn đường nào từ GC root tới object. Nó vẫn chiếm chỗ cho tới lần young GC kế tiếp, nhưng việc dọn gần như miễn phí: GC chỉ chép object sống ra ngoài rồi coi cả vùng là trống." },
+      { "id": "dead-old", "label": "Rác ở old", "x": 0.9, "y": 0.6, "note": "Object ở old đã chết nhưng young GC không thấy. Nó chiếm chỗ cho tới khi chu kỳ đánh dấu old chạy xong và region của nó được dọn." },
+      { "id": "reclaimed", "label": "Đã thu hồi", "x": 0.5, "y": 0.95, "note": "Bộ nhớ đã được trả lại cho heap. Không có thao tác \"giải phóng\" riêng cho từng object: vùng trống chỉ là chỗ để cấp object mới." }
+    ],
+    "initial": "eden",
+    "events": [
+      { "id": "young-gc", "label": "Young GC" },
+      { "id": "drop", "label": "Bỏ tham chiếu" },
+      { "id": "survivor-full", "label": "Young GC, survivor đầy" },
+      { "id": "old-gc", "label": "Mixed/Full GC" },
+      { "id": "new", "label": "new Order()" }
+    ],
+    "counters": [
+      { "id": "age", "label": "Tuổi (số lần young GC đã sống qua)", "initial": 0 }
+    ],
+    "transitions": [
+      { "id": "eden-survive", "from": "eden", "event": "young-gc", "to": "survivor", "label": "chép sang", "effects": [ { "counter": "age", "set": 1 } ], "note": "Object còn được tham chiếu, nên được chép sang survivor, tuổi 1. Eden sau đó được coi là trống hoàn toàn." },
+      { "id": "eden-overflow", "from": "eden", "event": "survivor-full", "to": "old", "label": "đẩy sớm", "effects": [ { "counter": "age", "set": 0 } ], "note": "Survivor không đủ chỗ nên object còn non bị đẩy thẳng lên old (premature promotion). Nếu nó chết ngay sau đó, old phải gánh rác của young." },
+      { "id": "survivor-age", "from": "survivor", "event": "young-gc", "to": "survivor", "guard": { "counter": "age", "lt": 3 }, "effects": [ { "counter": "age", "add": 1 } ], "note": "Sống thêm một lần young GC: chép sang survivor còn lại, tuổi tăng 1. Đây là chi phí của object sống lâu vừa phải." },
+      { "id": "promote", "from": "survivor", "event": "young-gc", "to": "old", "label": "đủ tuổi", "guard": { "counter": "age", "gte": 3 }, "note": "Đạt ngưỡng tuổi: chuyển lên old. Từ giờ young GC không chép nó nữa, nhưng nếu nó trỏ tới object trẻ, write barrier phải đánh dấu card để young GC tìm thấy tham chiếu đó." },
+      { "id": "survivor-overflow", "from": "survivor", "event": "survivor-full", "to": "old", "label": "đẩy sớm", "note": "Survivor đầy: object bị đẩy lên old dù chưa đủ tuổi." },
+      { "id": "eden-drop", "from": "eden", "event": "drop", "to": "dead-young", "label": "hết tham chiếu", "note": "Biến cục bộ cuối cùng trỏ tới object đã ra khỏi scope (method trả về). Không ai \"xoá\" object, nó chỉ không còn với tới được." },
+      { "id": "survivor-drop", "from": "survivor", "event": "drop", "to": "dead-young", "label": "hết tham chiếu" },
+      { "id": "old-drop", "from": "old", "event": "drop", "to": "dead-old", "label": "hết tham chiếu", "note": "Ví dụ entry bị xoá khỏi cache sau vài phút. Object đã ở old nên phải chờ GC old." },
+      { "id": "young-reclaim", "from": "dead-young", "event": "young-gc", "to": "reclaimed", "label": "dọn rẻ", "note": "Young GC không chép object chết, nên không tốn gì cho nó. Đây là lý do tạo nhiều object ngắn hạn rẻ hơn người ta nghĩ." },
+      { "id": "young-reclaim-full", "from": "dead-young", "event": "survivor-full", "to": "reclaimed", "label": "dọn rẻ" },
+      { "id": "old-survive-young", "from": "dead-old", "event": "young-gc", "to": "dead-old", "label": "không thấy", "note": "Young GC không quét old: object chết ở old vẫn chiếm chỗ. Old chỉ đầy dần lên, tới khi đủ ngưỡng (IHOP của G1) thì chu kỳ đánh dấu mới bắt đầu." },
+      { "id": "old-reclaim", "from": "dead-old", "event": "old-gc", "to": "reclaimed", "label": "đánh dấu, dọn", "note": "Chu kỳ đánh dấu cả heap xác nhận object không còn với tới được; region của nó được dọn trong mixed GC (hoặc Full GC). Việc này đắt hơn young GC nhiều." },
+      { "id": "old-live", "from": "old", "event": "old-gc", "to": "old", "label": "vẫn sống", "note": "Object còn được tham chiếu: đánh dấu là sống, có thể bị chép sang region khác để dồn heap." },
+      { "id": "old-young", "from": "old", "event": "young-gc", "to": "old", "label": "bỏ qua", "note": "Young GC không đụng tới object ở old." },
+      { "id": "renew", "from": "reclaimed", "event": "new", "to": "eden", "effects": [ { "counter": "age", "set": 0 } ], "note": "Một object mới được cấp vào eden, bắt đầu lại từ tuổi 0." }
+    ],
+    "invalidNote": "Sự kiện này không đổi trạng thái của object ở đây."
+  }
+}

@@ -135,7 +135,7 @@
       "meaning": "Ảnh chụp tất cả thread của JVM tại một thời điểm: tên, trạng thái, stack trace, lock đang giữ hoặc đang chờ.",
       "example": "`jcmd <pid> Thread.print > dump.txt` rồi tìm thread `RUNNABLE` có stack lặp lại qua nhiều lần chụp.",
       "related": ["native-thread-id"],
-      "topics": ["java-high-cpu", "thread-lifecycle", "deadlock", "troubleshooting-mindset", "thread-pool-exhaustion"]
+      "topics": ["java-high-cpu", "thread-lifecycle", "deadlock", "troubleshooting-mindset", "thread-pool-exhaustion", "jvm-diagnostic-tools"]
     },
     {
       "id": "native-thread-id",
@@ -143,7 +143,7 @@
       "meaning": "ID của thread ở tầng hệ điều hành, in trong thread dump dưới dạng `nid`. Đến JDK 17 in dạng hex, từ JDK 18 in dạng thập phân.",
       "example": "TID 4123 trong `top -H` tương ứng `nid=0x101b` (JDK 17) hoặc `nid=4123` (JDK 18+).",
       "related": ["thread-dump"],
-      "topics": ["java-high-cpu"]
+      "topics": ["java-high-cpu", "jvm-diagnostic-tools"]
     },
     {
       "id": "cpu-throttling",
@@ -158,7 +158,7 @@
       "meaning": "Lần thu gom rác dọn toàn bộ heap (cả young và old), thường dừng mọi thread ứng dụng và tốn nhiều thời gian nhất.",
       "example": "GC log `Pause Full (G1 Compaction Pause) 2980M->2950M(3072M) 2345.678ms` cho thấy Full GC gần như không thu hồi được gì.",
       "related": ["stop-the-world"],
-      "topics": ["java-high-cpu", "memory-growth-oom"]
+      "topics": ["java-high-cpu", "memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools"]
     },
     {
       "id": "stop-the-world",
@@ -166,7 +166,7 @@
       "meaning": "Giai đoạn JVM dừng tất cả thread ứng dụng để làm việc nội bộ như GC, ứng dụng không xử lý được request nào.",
       "example": "Young GC của G1 dừng ứng dụng khoảng 10ms mỗi lần.",
       "related": ["full-gc"],
-      "topics": ["java-high-cpu", "distributed-locks", "slow-api"]
+      "topics": ["java-high-cpu", "distributed-locks", "slow-api", "gc-fundamentals"]
     },
     {
       "id": "sampling-profiler",
@@ -190,7 +190,7 @@
       "meaning": "Công cụ ghi sự kiện tích hợp sẵn trong JDK (CPU sample, GC, lock, IO) với overhead thấp, xem bằng JDK Mission Control hoặc lệnh `jfr`.",
       "example": "`jcmd <pid> JFR.start duration=60s settings=profile filename=cpu.jfr`.",
       "related": ["sampling-profiler"],
-      "topics": ["java-high-cpu", "slow-api", "profiling"]
+      "topics": ["java-high-cpu", "slow-api", "profiling", "jvm-diagnostic-tools"]
     },
     {
       "id": "catastrophic-backtracking",
@@ -3693,7 +3693,7 @@
       "meaning": "Tham chiếu không giữ object khỏi bị GC: khi chỉ còn weak reference trỏ tới, object có thể bị thu hồi ở lần GC tiếp theo.",
       "example": "`ThreadLocalMap` giữ key `ThreadLocal` bằng weak reference, nhưng value bằng tham chiếu mạnh.",
       "related": ["thread-local"],
-      "topics": ["threadlocal"]
+      "topics": ["threadlocal", "gc-fundamentals"]
     },
     {
       "id": "sequential-consistency",
@@ -5677,7 +5677,7 @@
       "meaning": "Ảnh chụp toàn bộ object trong heap của JVM tại một thời điểm, dùng để tìm memory leak. Ghi file làm dừng ứng dụng và file chứa dữ liệu nhạy cảm.",
       "example": "`jcmd <pid> GC.heap_dump /tmp/heap.hprof`, mở bằng Eclipse MAT.",
       "related": ["thread-dump"],
-      "topics": ["troubleshooting-mindset", "memory-growth-oom"]
+      "topics": ["troubleshooting-mindset", "memory-growth-oom", "jvm-diagnostic-tools"]
     },
     {
       "id": "runbook",
@@ -5925,7 +5925,7 @@
       "meaning": "Object không còn cần nhưng vẫn bị tham chiếu nên GC không thu hồi được, làm lượng bộ nhớ còn sống tăng dần theo thời gian.",
       "example": "Một `static Map` dùng làm cache mà không bao giờ xoá entry: heap sau GC tăng mỗi giờ.",
       "related": ["heap-dump", "dominator-tree", "retained-size"],
-      "topics": ["memory-growth-oom"]
+      "topics": ["memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools"]
     },
     {
       "id": "native-memory-tracking",
@@ -7061,7 +7061,7 @@
       "meaning": "Container tạm được thêm vào một pod đang chạy để debug (`kubectl debug`), dùng image có đủ công cụ và có thể chia sẻ namespace process của container đích; không restart pod, biến mất khi pod bị xoá.",
       "example": "`kubectl debug -it booking-7d9f --image=nicolaka/netshoot --target=app` rồi chạy `ss -tanp` thấy socket của app.",
       "related": ["cgroup"],
-      "topics": ["linux-troubleshooting"]
+      "topics": ["linux-troubleshooting", "jvm-diagnostic-tools"]
     },
     {
       "id": "skip-list",
@@ -8045,7 +8045,7 @@
       "meaning": "Phần heap chứa object mới tạo (eden và survivor). Phần lớn object chết ở đây và được dọn rẻ; object sống lâu được chuyển sang old generation.",
       "example": "Object `OrderDto` của một request chết ngay sau khi trả response, không bao giờ tới old.",
       "related": ["java-heap", "tlab", "full-gc"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "gc-fundamentals"]
     },
     {
       "id": "tlab",
@@ -8053,7 +8053,7 @@
       "meaning": "Thread-Local Allocation Buffer: mảnh nhỏ của eden dành riêng cho một thread, để cấp object chỉ bằng cách tăng con trỏ mà không cần khoá.",
       "example": "Hàng triệu `new` mỗi giây vẫn rẻ vì mỗi thread cấp trong TLAB của mình.",
       "related": ["young-generation", "java-heap"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "gc-fundamentals"]
     },
     {
       "id": "stack-overflow-error",
@@ -8086,6 +8086,174 @@
       "example": "`-XX:CompressedClassSpaceSize=8m` cộng nạp class liên tục tái hiện lỗi này.",
       "related": ["metaspace"],
       "topics": ["jvm-memory-areas"]
+    },
+    {
+      "id": "garbage-collection",
+      "term": "GC (Garbage Collection)",
+      "meaning": "Cơ chế JVM tự tìm object không còn với tới được và thu hồi bộ nhớ của chúng, thay cho việc lập trình viên tự giải phóng.",
+      "example": "G1 dọn young generation hàng chục lần mỗi phút, mỗi lần vài mili giây.",
+      "related": ["gc-root", "young-generation", "old-generation"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "gc-root",
+      "term": "GC root",
+      "meaning": "Điểm xuất phát khi GC đánh dấu object sống: biến cục bộ trong frame của thread còn sống, field `static` của class đã nạp, tham chiếu JNI global, object đang bị khoá.",
+      "example": "Một `static Map` cache là GC root gián tiếp: mọi entry trong đó không bao giờ bị dọn.",
+      "related": ["reachability", "garbage-collection"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "reachability",
+      "term": "Reachability",
+      "meaning": "Object còn sống nếu có đường tham chiếu từ một GC root tới nó. Mức độ với tới (strong, soft, weak, phantom) quyết định khi nào GC được dọn nó.",
+      "example": "Hai object trỏ vào nhau mà không có đường từ root là không với tới được, nên bị dọn.",
+      "related": ["gc-root", "weak-reference", "soft-reference"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "soft-reference",
+      "term": "Soft reference",
+      "meaning": "Tham chiếu chỉ giữ object khi heap còn rộng: GC dọn object chỉ còn soft reference theo chính sách LRU hoặc khi heap chật, chắc chắn trước khi ném `OutOfMemoryError`.",
+      "example": "`new SoftReference<>(image)` giữ ảnh tới khi heap chật; dùng làm cache dễ làm heap luôn gần đầy.",
+      "related": ["weak-reference", "phantom-reference"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "phantom-reference",
+      "term": "Phantom reference",
+      "meaning": "Tham chiếu yếu nhất: `get()` luôn trả `null`, chỉ dùng để biết object đã chết (qua `ReferenceQueue`) và dọn tài nguyên đi kèm.",
+      "example": "`Cleaner` dựa trên phantom reference để chạy action xoá file tạm sau khi object bị GC.",
+      "related": ["cleaner", "weak-reference"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "cleaner",
+      "term": "Cleaner",
+      "meaning": "`java.lang.ref.Cleaner` (Java 9): chạy một action dọn dẹp trên thread riêng sau khi object đăng ký trở thành phantom reachable. Lưới an toàn khi quên `close()`, thay cho `finalize()`.",
+      "example": "`CLEANER.register(this, new Deleter(path))`, với `Deleter` là record tĩnh không trỏ ngược object.",
+      "related": ["phantom-reference", "finalization", "try-with-resources"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "finalization",
+      "term": "Finalization",
+      "meaning": "Cơ chế gọi `finalize()` trước khi object bị dọn. Chạy muộn, không đảm bảo, có thể làm object sống lại; deprecated để gỡ bỏ từ Java 18 (JEP 421).",
+      "example": "Chạy với `--finalization=disabled` để kiểm tra thư viện còn dựa vào `finalize()` không.",
+      "related": ["cleaner"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "old-generation",
+      "term": "Old generation",
+      "meaning": "Phần heap chứa object đã sống qua nhiều lần young GC. Được dọn bằng chu kỳ đánh dấu cả heap (mixed GC của G1, Full GC), đắt hơn young GC nhiều.",
+      "example": "Entry cache sống vài giờ nằm ở old; khi bị xoá, phải chờ chu kỳ đánh dấu mới được dọn.",
+      "related": ["young-generation", "premature-promotion", "full-gc"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "premature-promotion",
+      "term": "Premature promotion",
+      "meaning": "Object còn trẻ bị đẩy lên old generation vì survivor không đủ chỗ. Old đầy bằng object sắp chết, làm GC old chạy thường xuyên hơn.",
+      "example": "Burst request tạo nhiều object sống vài giây, survivor tràn, old tăng nhanh rồi tụt mạnh sau mixed GC.",
+      "related": ["young-generation", "old-generation"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "card-table",
+      "term": "Card table",
+      "meaning": "Bảng đánh dấu các vùng nhỏ (512 byte) của old generation vừa có tham chiếu được ghi vào, để young GC chỉ quét những vùng đó thay vì cả old.",
+      "example": "Gán `cachedOrder.lastItem = new Item()` đánh dấu card chứa `cachedOrder`; young GC quét card đó để giữ `Item` sống.",
+      "related": ["write-barrier", "old-generation"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "write-barrier",
+      "term": "Write barrier",
+      "meaning": "Đoạn mã nhỏ JIT chèn vào mỗi lệnh gán tham chiếu vào field, để GC ghi nhận thay đổi (đánh dấu card, hỗ trợ đánh dấu đồng thời).",
+      "example": "Mỗi `order.customer = c` chạy thêm vài lệnh của write barrier; đó là chi phí ẩn khác nhau giữa các GC.",
+      "related": ["card-table"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "mark-sweep-compact",
+      "term": "Mark-sweep-compact",
+      "meaning": "Cách dọn: đánh dấu object sống từ root (mark), giải phóng phần còn lại (sweep), rồi dồn object sống lại để hết phân mảnh (compact).",
+      "example": "Full GC của G1 đánh dấu cả heap rồi dồn object vào đầu các region.",
+      "related": ["garbage-collection", "full-gc"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "safepoint",
+      "term": "Safepoint",
+      "meaning": "Điểm trong code mà tại đó JVM biết rõ trạng thái của thread. Pha stop-the-world chỉ bắt đầu khi mọi thread Java đã dừng ở safepoint.",
+      "example": "`-Xlog:safepoint` in `Safepoint \"G1CollectFull\", ... Reaching safepoint: 333 ns, At safepoint: 2162167 ns`.",
+      "related": ["time-to-safepoint", "stop-the-world"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "time-to-safepoint",
+      "term": "Time to safepoint",
+      "meaning": "Thời gian từ lúc JVM yêu cầu dừng tới khi thread cuối cùng tới safepoint. Các thread đã dừng phải chờ, nên pause thật dài hơn con số trong GC log.",
+      "example": "`Reaching safepoint: 791204000 ns` trong khi GC chỉ làm việc 6 ms: request treo 800 ms.",
+      "related": ["safepoint"],
+      "topics": ["gc-fundamentals"]
+    },
+    {
+      "id": "jcmd",
+      "term": "jcmd",
+      "meaning": "Công cụ dòng lệnh của JDK gửi lệnh chẩn đoán tới JVM đang chạy: thread dump, heap dump, histogram, cờ, JFR, GC log.",
+      "example": "`jcmd <pid> help GC.heap_dump` in cú pháp và mức ảnh hưởng (Impact: High).",
+      "related": ["attach-api", "thread-dump", "heap-dump"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "attach-api",
+      "term": "Attach API",
+      "meaning": "Cơ chế cho công cụ gắn vào JVM đang chạy: tạo file `.attach_pid<pid>`, gửi `SIGQUIT`, rồi nói chuyện qua UNIX socket `/tmp/.java_pid<pid>`. Cần cùng user và thấy được PID.",
+      "example": "`-XX:+DisableAttachMechanism` làm `jcmd` báo `The VM does not support the attach mechanism`.",
+      "related": ["jcmd"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "jstat",
+      "term": "jstat",
+      "meaning": "Công cụ đọc bộ đếm hiệu năng JVM ghi sẵn vào file chia sẻ (hsperfdata), in thống kê GC và class theo chu kỳ mà không attach.",
+      "example": "`jstat -gcutil <pid> 1000`: cột `O` gần 100% và `FGC` tăng đều là heap hết thật.",
+      "related": ["full-gc", "jcmd"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "class-histogram",
+      "term": "Class histogram",
+      "meaning": "Bảng số instance và tổng byte theo class trong heap. Mặc định chỉ đếm object sống nên JVM chạy Full GC trước.",
+      "example": "Chụp `jcmd <pid> GC.class_histogram` hai lần cách 5 phút, class tăng đều là manh mối leak.",
+      "related": ["heap-dump", "memory-leak"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "old-object-sample",
+      "term": "OldObjectSample",
+      "meaning": "Sự kiện JFR lấy mẫu object sống lâu kèm stack nơi cấp phát; dump với `path-to-gc-roots=true` thì có cả đường tới GC root.",
+      "example": "`jcmd <pid> JFR.dump name=continuous path-to-gc-roots=true filename=leak.jfr` rồi `jfr print --events OldObjectSample leak.jfr`.",
+      "related": ["jfr", "memory-leak", "gc-root"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "jhsdb",
+      "term": "jhsdb",
+      "meaning": "Công cụ đọc trực tiếp bộ nhớ process JVM hoặc core dump (Serviceability Agent), dùng khi JVM treo không trả lời attach. Thay `jstack -F` đã bị gỡ ở JDK 9.",
+      "example": "`jhsdb jstack --exe $JAVA_HOME/bin/java --core core.1234`.",
+      "related": ["jcmd", "thread-dump"],
+      "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "liveness-probe",
+      "term": "Liveness probe",
+      "meaning": "Kiểm tra định kỳ của Kubernetes xem container còn sống; thất bại liên tiếp `failureThreshold` lần thì kubelet restart container.",
+      "example": "`periodSeconds: 10`, `failureThreshold: 3`: JVM dừng khoảng 30 giây (ví dụ khi heap dump) là bị restart.",
+      "related": ["health-check"],
+      "topics": ["jvm-diagnostic-tools"]
     }
   ]
 }

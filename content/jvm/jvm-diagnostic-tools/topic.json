@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jvm-diagnostic-tools",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "Bộ công cụ chẩn đoán JVM",
+  "summary": "Lấy bằng chứng từ JVM đang chạy: `jcmd` và attach API, thread dump, `kill -3`, `jstat -gcutil`, class histogram (Full GC), heap dump (pause, kích thước file, liveness probe giết container), JFR với `OldObjectSample` và đường tới GC root, `jhsdb` khi JVM treo, `VM.log` và `VM.set_flag` lúc chạy; xếp thao tác theo chi phí và chuẩn bị trước trên Kubernetes.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 15,
+  "prerequisites": ["gc-fundamentals", "troubleshooting-mindset"],
+  "terms": ["jcmd", "attach-api", "jstat", "thread-dump", "heap-dump", "class-histogram", "jfr", "old-object-sample", "jhsdb", "native-thread-id", "full-gc", "liveness-probe", "ephemeral-container", "memory-leak"],
+  "references": [
+    { "title": "JDK 21 Tools: jcmd", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jcmd.html" },
+    { "title": "JDK 21 Tools: jstat", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/jstat.html" },
+    { "title": "Troubleshooting Guide: Diagnostic Tools (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/troubleshoot/diagnostic-tools.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Service production đang chậm, bạn lấy bằng chứng gì và theo thứ tự nào?\" Trả lời theo chi phí: metric và log có sẵn; thread dump ba lần cách 10 giây cùng `jstat -gcutil` để tách vấn đề code với vấn đề bộ nhớ; dump JFR đang chạy liên tục; chỉ khi cần mới tới histogram và heap dump, sau khi rút instance khỏi traffic. Nói thêm bạn chuẩn bị gì trước sự cố (image có `jcmd`, JFR liên tục, `HeapDumpPath` trỏ tới volume), vì lúc sự cố xảy ra thường đã quá muộn để bật." },
+    { "type": "callout", "style": "warning", "markdown": "Heap dump và output của `VM.system_properties`, `VM.command_line` có thể chứa mật khẩu, token và dữ liệu khách hàng. Không dán chúng vào ticket hay chat công khai, không tải lên dịch vụ phân tích bên ngoài; mã hoá khi chuyển và xoá sau khi phân tích xong." }
+  ]
+}
