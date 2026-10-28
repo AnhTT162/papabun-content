@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "xlog-prod", "front": "Cờ GC log cho production trên JDK 9+?", "back": "`-Xlog:gc*:file=/logs/gc-%p-%t.log:time,uptime,level,tags:filecount=5,filesize=20m`, ghi vào volume sống qua restart." },
+    { "id": "line-format", "front": "Đọc `3641M->2260M(4096M) 22.333ms` thế nào?", "back": "Heap dùng trước GC, sau GC, dung lượng đã commit, thời gian dừng." },
+    { "id": "live-set", "front": "Lấy con số dữ liệu sống ở đâu trong log?", "back": "Heap sau Full GC, hoặc thấp nhất sau mixed GC ở cao điểm. Tăng dần qua nhiều giờ là leak." },
+    { "id": "evac-failure", "front": "`Evacuation Failure: Allocation` của G1 nghĩa là gì?", "back": "Không còn region trống để chép object sống; region chép dở bị giữ làm old, thường dẫn tới Full GC. Heap chật so với dữ liệu sống." },
+    { "id": "humongous-log", "front": "Nhiều dòng `G1 Humongous Allocation` báo hiệu gì?", "back": "Code cấp mảng từ nửa region trở lên liên tục. Sửa ở code (stream, chia lô) trước khi tăng `G1HeapRegionSize`." },
+    { "id": "gc-cpu", "front": "Dòng `gc,cpu` có `Real` lớn mà `User` nhỏ nói gì?", "back": "Thread GC phải chờ CPU: container bị throttle hoặc node quá tải. `Sys` cao thì nghi page fault hay swap." },
+    { "id": "tuning-order", "front": "Thứ tự tuning GC?", "back": "Sửa nguyên nhân (leak, cache không giới hạn), rồi kích thước heap, cuối cùng vài cờ có lý do; mỗi lần đổi một thứ và so log." },
+    { "id": "initial-heap-26", "front": "Từ JDK 26, không đặt `-Xms` thì heap khởi đầu bao nhiêu?", "back": "Bằng `MinHeapSize` (vài MB), vì `InitialRAMPercentage` mặc định thành 0. Service nên đặt `-Xms`." },
+    { "id": "legacy-flags", "front": "`-XX:+PrintGCDateStamps` trên JDK 27?", "back": "`Unrecognized VM option`, JVM không chạy. `PrintGCDetails` và `-Xloggc` chỉ cảnh báo." }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "p99.9 vọt lên 2,6 giây vài phút một lần sau khi tăng cache",
+  "symptom": "10:20, cảnh báo p99.9 của promo-api: từ khoảng 45 ms lên 2,6 giây, lặp lại mỗi 6–10 phút trên cả 6 pod, khoảng 0,4% request timeout ở gateway. CPU trung bình 55%, không có lỗi trong log ứng dụng. Bản phát hành 3 ngày trước tăng cache luật khuyến mãi từ 1 triệu lên 2,2 triệu entry. Bạn on-call, có Grafana, GC log và quyền `kubectl exec`.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "promo-api: 6 pod, JDK 25, G1, -Xms12g -Xmx12g, memory limit 16Gi, CPU limit 4\nGC log: -Xlog:gc*:file=/logs/gc-%p-%t.log:time,uptime,level,tags:filecount=10,filesize=50m (volume riêng)\n\nGrafana, 1 giờ qua, cả 6 pod:\njvm.gc.pause max theo cause:\n  G1 Evacuation Pause     89 ms\n  G1 Compaction Pause   2.43 s   (7 lần mỗi pod)\njvm.memory.usage.after.gc (G1 Old Gen):  trước phát hành ~22%, hiện ~42%\njvm.gc.memory.allocated:  ~1.1 GB/s mỗi pod",
+      "evidenceFormat": "monospace",
+      "question": "Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Đọc GC log quanh một lần pause 2,43 giây trên một pod",
+          "quality": "good",
+          "feedback": "Đúng. Metric đã chỉ ra thủ phạm là `G1 Compaction Pause`, tức Full GC. Log cho biết điều gì xảy ra ngay trước nó và vì sao G1 phải lùi về Full GC.",
+          "next": "gc-log"
+        },
+        {
+          "label": "Đổi sang ZGC trên một pod canary để hết pause dài",
+          "quality": "poor",
+          "feedback": "Chưa biết vì sao G1 rơi vào Full GC thì đổi GC chỉ là đoán. Nếu nguyên nhân là heap chật, ZGC cũng cần khoảng trống, thậm chí nhiều hơn.",
+          "next": "zgc"
+        },
+        {
+          "label": "Restart cả 6 pod để xoá trạng thái đang có vấn đề",
+          "quality": "poor",
+          "feedback": "Full GC lặp lại đều trên mọi pod, không phải một pod hỏng. Restart chỉ làm cache nạp lại và mất log hiện tại khỏi tầm mắt.",
+          "next": "restart"
+        }
+      ]
+    },
+    {
+      "id": "gc-log",
+      "evidence": "$ grep -E '\\]\\[gc +\\]|ergo|gc,cpu' /logs/gc-1-...log   (trích, pod promo-api-...7xk2p)\n[10:14:03.205][info][gc   ] GC(4112) Pause Young (Mixed) (G1 Evacuation Pause) 10950M->6890M(12288M) 44.207ms\n[10:14:07.318][info][gc   ] GC(4113) Pause Young (Mixed) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 11380M->11351M(12288M) 88.514ms\n[10:14:07.744][info][gc   ] GC(4114) Pause Young (Mixed) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 11800M->11762M(12288M) 61.330ms\n[10:14:08.231][info][gc   ] GC(4115) Pause Young (Normal) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 12282M->12276M(12288M) 30.118ms\n[10:14:08.262][info][gc,ergo] Attempting full compaction\n[10:14:10.694][info][gc   ] GC(4116) Pause Full (G1 Compaction Pause) 12286M->5140M(12288M) 2431.877ms\n[10:14:10.694][info][gc,cpu] GC(4116) User=9.31s Sys=0.05s Real=2.43s\n\ngc,heap của GC(4113):  Eden regions: 560->0(48)  Old regions: 815->1415  Humongous regions: 2->2",
+      "evidenceFormat": "monospace",
+      "question": "Chuỗi dòng này nói lên điều gì?",
+      "choices": [
+        {
+          "label": "G1 hết region trống để chép object sống nên phải Full GC",
+          "quality": "good",
+          "feedback": "Đúng. `Evacuation Failure: Allocation` nghĩa là lúc chép object sống, G1 không xin được region trống; region chép dở bị giữ nguyên và coi như old (old nhảy 815 → 1415 region trong một lần), heap đầy dần rồi `Attempting full compaction`. Sau Full GC còn 5.140 MB: đó là dữ liệu sống, chiếm 42% heap. Cần biết con số đó có đang tăng không.",
+          "next": "live-trend"
+        },
+        {
+          "label": "Đây là memory leak, vì heap đã đầy tới 12.286 MB",
+          "quality": "poor",
+          "feedback": "Heap đầy ngay trước Full GC chưa nói được gì: Full GC thu về còn 5.140 MB. Leak là khi con số sau Full GC tăng dần qua nhiều giờ. Phải xem xu hướng trước khi kết luận.",
+          "next": "live-trend"
+        },
+        {
+          "label": "Chu kỳ đánh dấu bắt đầu muộn, cần hạ IHOP để đánh dấu sớm",
+          "quality": "ok",
+          "feedback": "Một nguyên nhân hợp lý của Full GC với G1, nhưng log cho thấy mixed GC đang chạy, tức đánh dấu đã xong. Thử được trên canary, nhưng nên kiểm tra giả thuyết trước khi đổi cả fleet.",
+          "next": "ihop"
+        }
+      ]
+    },
+    {
+      "id": "live-trend",
+      "evidence": "Heap sau Full GC (G1 Compaction Pause), promo-api, theo ngày:\nngày        trước phát hành   sau phát hành\n25/10       2.5–2.7 GB        -\n26/10       -                 5.0–5.1 GB\n27/10       -                 5.0–5.2 GB\n28/10       -                 5.1–5.2 GB   (không tăng trong ngày)\n\ncache.size (Caffeine): 2.2 triệu entry, đã đạt maximumSize từ 26/10\nFull GC 26–27/10 (trước đợt khuyến mãi, tải ~40%): 1–2 lần/giờ, max 2.3 s, chưa vượt ngưỡng cảnh báo p99.9\njvm.gc.memory.allocated: 1.1 GB/s (không đổi so với trước phát hành)\nheap / dữ liệu sống: trước 12 / 2.6 ≈ 4,6 lần, nay 12 / 5.1 ≈ 2,4 lần",
+      "evidenceFormat": "monospace",
+      "question": "Dữ liệu sống ổn định khoảng 5,1 GB, cache đã chạm giới hạn. Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Thử heap 16 GB trên canary, đồng thời xem lại cỡ cache cần",
+          "quality": "good",
+          "feedback": "Đúng hướng. Không có leak: dữ liệu sống tăng gấp đôi theo đúng thay đổi cache và đứng yên. Heap chỉ còn rộng gấp 2,4 lần dữ liệu sống trong khi cấp phát 1,1 GB/s, G1 không đủ chỗ để chép. Tăng heap cần tăng memory limit tương ứng (16 GB heap cộng phần ngoài heap không vừa 16Gi).",
+          "next": "fix"
+        },
+        {
+          "label": "Giữ 12 GB, đặt `-XX:G1ReservePercent=20` để G1 chừa thêm chỗ",
+          "quality": "ok",
+          "feedback": "Có thể hết evacuation failure: G1 chừa thêm 10% heap làm chỗ chép, nên eden nhỏ đi và GC dày hơn. Đây là vá triệu chứng: heap vẫn chật, cache lớn thêm chút nữa là quay lại. Chấp nhận được tạm thời nếu chưa tăng được memory limit.",
+          "next": "reserve"
+        },
+        {
+          "label": "Đặt `-Xmn3g` để young nhỏ lại, chừa chỗ cho old",
+          "quality": "poor",
+          "feedback": "Không tạo thêm chỗ: tổng heap vẫn 12 GB với 5,1 GB sống. Young nhỏ thì GC dày hơn, và khoá kích thước young làm G1 mất công cụ chính để giữ pause.",
+          "next": "xmn"
+        },
+        {
+          "label": "Đổi sang ZGC, giữ 12 GB để không phải đổi memory limit",
+          "quality": "poor",
+          "feedback": "ZGC dọn đồng thời nên cần khoảng trống còn nhiều hơn, và không dùng compressed oops nên 5,1 GB dữ liệu này còn phình thêm.",
+          "next": "zgc"
+        }
+      ]
+    },
+    {
+      "id": "ihop",
+      "evidence": "Canary 1 pod: -XX:-G1UseAdaptiveIHOP -XX:InitiatingHeapOccupancyPercent=30, chạy 2 giờ\n\nConcurrent Mark Cycle: mỗi ~20 s (trước: mỗi ~45 s), CPU +4%\n[11:52:31.604][info][gc] GC(1388) Pause Young (Mixed) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 11402M->11377M(12288M) 79.020ms\n[11:52:34.512][info][gc] GC(1391) Pause Full (G1 Compaction Pause) 12280M->5131M(12288M) 2352.441ms\nFull GC trong 2 giờ: 13 (pod thường: 14)",
+      "evidenceFormat": "monospace",
+      "question": "Đánh dấu sớm hơn mà Full GC gần như không giảm. Kết luận?",
+      "choices": [
+        {
+          "label": "Thiếu chỗ để chép, không phải đánh dấu muộn: xem dữ liệu sống",
+          "quality": "good",
+          "feedback": "Đúng. Đánh dấu sớm chỉ giúp khi mixed GC bắt đầu quá muộn. Ở đây chúng đã chạy đủ, chỉ là không còn region trống để chép. Gỡ cờ IHOP trên canary và tìm vì sao heap chật.",
+          "next": "live-trend"
+        },
+        {
+          "label": "Hạ IHOP tiếp xuống 15 để đánh dấu gần như liên tục",
+          "quality": "poor",
+          "feedback": "Thêm CPU cho đánh dấu mà không giải quyết chỗ trống. Kết quả canary đã cho thấy hướng này không đúng.",
+          "next": "live-trend"
+        }
+      ]
+    },
+    {
+      "id": "zgc",
+      "evidence": "Canary 1 pod: -XX:+UseZGC -Xms12g -Xmx12g, JDK 25 (ZGC thế hệ), chạy 1 giờ\n\n[12:31:08.441][info][gc] GC(822) Major Collection (Allocation Rate) 11873M(97%)->11402M(93%) 3.912s\n[12:31:08.502][info][gc] Allocation Stall (http-nio-8080-exec-41) 412.551ms\n[12:31:08.503][info][gc] Allocation Stall (http-nio-8080-exec-17) 398.206ms\n...  (1.284 dòng Allocation Stall trong 1 giờ)\n\ngc,heap của GC(822): O: Live ~5.9 GB (G1: 5.1 GB; ZGC không dùng compressed oops)\n(11402M là mức dùng lúc kết thúc chu kỳ, gồm cả object cấp trong 3,9 s, không phải dữ liệu sống)\nCPU: 3.4/4 core (G1: 2.2)   p99.9: 1.1 s   jvm.gc.pause max: 0.4 ms",
+      "evidenceFormat": "monospace",
+      "question": "Pause trong metric chỉ 0,4 ms nhưng p99.9 vẫn 1,1 giây. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Gỡ canary ZGC, quay lại tìm vì sao heap chật",
+          "quality": "good",
+          "feedback": "Đúng. Allocation stall là thread ứng dụng chờ bộ nhớ, không tính vào pause của GC nên metric pause trông đẹp. Dữ liệu sống phình lên 5,9 GB vì tham chiếu 8 byte, CPU còn lại bị thread GC chiếm. Vấn đề gốc là heap không đủ rộng, đổi GC không sửa được.",
+          "next": "live-trend"
+        },
+        {
+          "label": "Giữ ZGC vì `jvm.gc.pause` đã xuống dưới 1 ms",
+          "quality": "poor",
+          "feedback": "Người dùng chờ theo p99.9 ở gateway, không theo metric pause. Stall 400 ms trên hàng trăm thread còn tệ hơn trước ở đuôi tần suất cao.",
+          "next": "live-trend"
+        }
+      ]
+    },
+    {
+      "id": "xmn",
+      "evidence": "Canary 1 pod: -Xms12g -Xmx12g -Xmn3g, chạy 1 giờ\n\n[13:06:59.512][info][gc] GC(639) Pause Young (Normal) (G1 Evacuation Pause) 10406M->7495M(12288M) 36.402ms\n[13:07:02.871][info][gc] GC(640) Pause Young (Mixed) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 10567M->10549M(12288M) 96.775ms\n[13:07:02.902][info][gc,ergo] Attempting full compaction\n[13:07:05.304][info][gc] GC(641) Pause Full (G1 Compaction Pause) 12280M->5142M(12288M) 2402.118ms\n\nYoung GC: mỗi ~2,8 s (trước: ~4,1 s)   tuổi lên old: 2–3 (trước: 6–7)\nFull GC: 6 lần/giờ (trước: 7)",
+      "evidenceFormat": "monospace",
+      "question": "Young GC dày hơn, object lên old sớm hơn, Full GC vẫn còn. Làm gì?",
+      "choices": [
+        {
+          "label": "Gỡ `-Xmn`, giải quyết khoảng trống của heap thay vì young",
+          "quality": "good",
+          "feedback": "Đúng. Young nhỏ hơn không tạo thêm chỗ, chỉ làm young GC dày hơn: object còn trẻ chưa kịp chết đã bị đẩy lên old, old càng chật. G1 cũng không còn co giãn young theo `MaxGCPauseMillis`. Tổng chỗ trống không đổi nên evacuation failure vẫn xảy ra.",
+          "next": "live-trend"
+        },
+        {
+          "label": "Giảm tiếp xuống `-Xmn1g` để chừa thêm chỗ cho old",
+          "quality": "poor",
+          "feedback": "Cùng hướng đã thất bại: young càng nhỏ thì GC càng dày, object trẻ lên old càng sớm (premature promotion). Vẫn không giải quyết thiếu chỗ.",
+          "next": "live-trend"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "evidence": "10:24  kubectl rollout restart deployment/promo-api\n10:31  6 pod Ready, p99.9 46 ms, heap sau GC 2.9 GB (cache đang nạp)\n10:52  cache 2.2 triệu entry, heap sau Full GC 5.1 GB\n10:58  p99.9 2.5 s, jvm.gc.pause G1 Compaction Pause 2.38 s trên 4/6 pod",
+      "evidenceFormat": "monospace",
+      "question": "Triệu chứng quay lại sau khoảng nửa giờ. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Đọc GC log quanh lần pause mới trên một pod",
+          "quality": "good",
+          "feedback": "Đúng. Restart chỉ cho nửa giờ yên trong lúc cache nạp lại; nguyên nhân vẫn còn. GC log nằm ở volume riêng nên vẫn đọc được.",
+          "next": "gc-log"
+        },
+        {
+          "label": "Lên lịch restart mỗi 20 phút cho tới khi tìm ra nguyên nhân",
+          "quality": "poor",
+          "feedback": "Restart theo lịch làm mất cache liên tục (tải dồn về database) và che triệu chứng mà không cho bằng chứng mới.",
+          "next": "gc-log"
+        }
+      ]
+    },
+    {
+      "id": "reserve",
+      "evidence": "Canary 1 pod, 24 giờ: -Xms12g -Xmx12g -XX:G1ReservePercent=20\n\nFull GC: 0   Evacuation Failure: 0   pause dài nhất: 71 ms (Mixed)\nEden regions (mục tiêu): 300–420 (trước: 520–580)   young GC: mỗi ~2,6 s (trước: ~4,1 s)\nCPU: 2.4/4 core (trước: 2.2)   p99.9: 52 ms\nheap sau mixed GC: 6.9–7.6 GB / 12 GB",
+      "evidenceFormat": "monospace",
+      "question": "Hết Full GC nhưng GC dày hơn và p99.9 sát mức cũ. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Giữ cờ này làm vá tạm, rồi thử heap 16 GB trên canary",
+          "quality": "good",
+          "feedback": "Hợp lý. Chừa 20% heap cho việc chép đã đủ để hết evacuation failure, nhưng eden nhỏ đi nên GC dày hơn, và chỉ còn ít khoảng trống cho lần tăng dữ liệu tiếp theo. Sửa bền vững là heap rộng hơn hoặc dữ liệu sống nhỏ hơn.",
+          "next": "fix"
+        },
+        {
+          "label": "Đưa `G1ReservePercent=30` lên cả fleet cho dư dả hơn",
+          "quality": "poor",
+          "feedback": "Mỗi phần trăm reserve là bớt chỗ cho eden: GC càng dày, CPU càng tăng, trong khi heap vẫn chỉ rộng gấp 2,4 lần dữ liệu sống.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "Canary 1 pod, 24 giờ có cao điểm: -Xms16g -Xmx16g, memory limit 20Gi (G1, không cờ nào khác)\n\nFull GC: 0   Evacuation Failure: 0   pause dài nhất: 48 ms (Mixed)\nheap sau mixed GC: 6.8–7.4 GB   dữ liệu sống ~5.1 GB   heap / dữ liệu sống ≈ 3,1 lần\np99.9: 41 ms   CPU: 2.1/4 core   RSS: 17.6 GiB / 20Gi\n\nTeam sản phẩm: chỉ ~35% entry được đọc trong 24 giờ; đề xuất maximumSize 1.2 triệu + expireAfterAccess 6h",
+      "evidenceFormat": "monospace",
+      "question": "Canary ổn. Triển khai thế nào?",
+      "choices": [
+        {
+          "label": "Đưa 16 GB lên cả fleet, rồi giảm cache và đo lại heap cần",
+          "quality": "good",
+          "feedback": "Đúng. Sửa ngay sự cố bằng cấu hình đã kiểm, rồi sửa tận gốc ở cỡ cache. Sau khi giảm cache, đo lại dữ liệu sống và có thể đưa heap về 12 GB.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Đưa 16 GB lên fleet và thêm `MaxGCPauseMillis=50` cho chắc",
+          "quality": "ok",
+          "feedback": "16 GB là đủ; thêm cờ mà không có lý do làm GC dày hơn và khó biết thay đổi nào có tác dụng. Mỗi lần chỉ đổi một thứ.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: bản phát hành tăng cache từ 1 triệu lên 2,2 triệu entry, dữ liệu sống tăng từ 2,6 lên 5,1 GB, nhưng heap vẫn 12 GB. Với tốc độ cấp phát 1,1 GB/s, heap chỉ rộng gấp 2,4 lần dữ liệu sống không đủ chỗ cho G1 chép object: mixed GC gặp `Evacuation Failure: Allocation`, region chép dở bị giữ lại làm old, heap đầy và G1 lùi về Full GC 2,4 giây (4 core dồn 5 GB). Không phải leak (dữ liệu sống đứng yên), không phải đánh dấu muộn (hạ IHOP không đỡ), và đổi sang ZGC làm tệ hơn (allocation stall, dữ liệu phình vì không có compressed oops).\n\n**Phòng ngừa**:\n- Thay đổi cỡ cache hay dữ liệu nạp vào bộ nhớ thì ước lượng lại dữ liệu sống và heap trong cùng PR; load test với dữ liệu thật đủ cỡ.\n- Cảnh báo theo `jvm.gc.pause` max với cause `G1 Compaction Pause` và theo tỉ lệ heap sau GC (`jvm.memory.usage.after.gc` > 40% kéo dài), không chỉ theo pause trung bình.\n- GC log `gc*` xoay vòng trên volume riêng, để đọc được chuỗi sự kiện trước Full GC.\n- Đổi một cờ mỗi lần, trên canary, so log và p99.9 ở gateway trước khi đưa lên fleet."
+    }
+  ]
+}

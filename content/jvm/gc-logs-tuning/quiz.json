@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "read-g1-line",
+      "kind": "single",
+      "prompt": "Dòng log `GC(36) Pause Young (Mixed) (G1 Evacuation Pause) 3641M->2260M(4096M) 22.333ms`. Con số `2260M` là gì?",
+      "options": [
+        "Heap đang dùng ngay sau lần GC này, gồm cả old và survivor",
+        "Lượng bộ nhớ mà lần GC này vừa thu hồi được từ heap",
+        "Dung lượng heap đã commit với hệ điều hành ở thời điểm đó",
+        "Kích thước vùng old sau GC, không tính eden và survivor"
+      ],
+      "answer": 0,
+      "explanation": "Định dạng là trước->sau(commit) thời gian. `3641M` là heap đang dùng trước GC, `2260M` là sau GC (old, survivor và humongous còn lại), `4096M` là dung lượng heap đã commit. Lượng thu hồi phải tự trừ: khoảng 1,4 GB. Theo dõi con số sau GC qua nhiều lần (nhất là sau Full GC) để biết dữ liệu sống."
+    },
+    {
+      "id": "legacy-flags",
+      "kind": "output",
+      "prompt": "Nâng service từ Java 8 lên JDK 27, giữ nguyên `JAVA_OPTS`. Điều gì xảy ra khi khởi động?",
+      "code": "java -Xmx4g -XX:+PrintGCDetails -XX:+PrintGCDateStamps \\\n     -Xloggc:/logs/gc.log -jar app.jar",
+      "options": [
+        "Báo `Unrecognized VM option 'PrintGCDateStamps'`, JVM không chạy",
+        "Chạy bình thường, cả ba cờ được tự đổi sang `-Xlog` tương ứng",
+        "Chạy bình thường nhưng bỏ qua cả ba cờ, không có GC log nào",
+        "Chỉ in cảnh báo deprecated cho cả ba cờ rồi tiếp tục chạy"
+      ],
+      "answer": 0,
+      "explanation": "Đã chạy trên JDK 27: `-XX:+PrintGCDetails` và `-Xloggc` chỉ cảnh báo deprecated và được đổi sang `-Xlog:gc*` và `-Xlog:gc:<file>`, nhưng `PrintGCDateStamps` (cũng như `PrintGCTimeStamps`) đã bị gỡ hẳn nên JVM dừng ngay với `Could not create the Java Virtual Machine`. Thay cả nhóm bằng một cờ `-Xlog:gc*:file=...:time,uptime,level,tags:filecount=...,filesize=...`."
+    },
+    {
+      "id": "evac-failure-fix",
+      "kind": "single",
+      "prompt": "G1, heap 12 GB, sau Full GC luôn còn khoảng 5 GB và ổn định nhiều ngày. Log có `Evacuation Failure: Allocation` rồi `Pause Full (G1 Compaction Pause)`. Hướng sửa hợp lý nhất?",
+      "options": [
+        "Thêm heap (hoặc giảm dữ liệu sống) để G1 có chỗ chép object",
+        "Lấy heap dump vì dữ liệu sống đứng yên là dấu hiệu của leak",
+        "Hạ `InitiatingHeapOccupancyPercent` để G1 đánh dấu sớm hơn",
+        "Đặt `-Xmn` nhỏ hơn để young chiếm ít chỗ hơn trong heap"
+      ],
+      "answer": 0,
+      "explanation": "Evacuation failure là G1 không còn region trống để chép object sống. Heap chỉ rộng hơn 2 lần dữ liệu sống là chật với tốc độ cấp phát cao. Dữ liệu sống đứng yên nghĩa là không leak. Hạ IHOP chỉ giúp khi đánh dấu bắt đầu muộn; `-Xmn` khoá young và không tạo thêm chỗ. `G1ReservePercent` cao hơn là cách vá tạm khi chưa tăng được heap."
+    },
+    {
+      "id": "zgc-stall-metric",
+      "kind": "single",
+      "prompt": "Sau khi chuyển sang ZGC, `jvm.gc.pause` max chỉ 0,4 ms nhưng p99.9 ở gateway lên 1,1 giây. GC log nên tìm dòng nào?",
+      "options": [
+        "`Allocation Stall (<thread>) <ms>`: thread chờ bộ nhớ",
+        "`Pause Full (Allocation Failure)`: ZGC lùi về Full GC",
+        "`Pause Remark`: pha đánh dấu lại của ZGC bị kéo dài",
+        "`Evacuation Failure`: ZGC hết chỗ khi chép object sống"
+      ],
+      "answer": 0,
+      "explanation": "Khi ZGC dọn không kịp tốc độ cấp phát, thread ứng dụng bị chặn và log ghi `Allocation Stall (tên thread) thời gian`. Thời gian đó không tính vào pause của GC, nên metric pause vẫn đẹp. `Pause Full (Allocation Failure)` là dòng của Parallel, `Pause Remark` và `Evacuation Failure` là của G1."
+    }
+  ]
+}

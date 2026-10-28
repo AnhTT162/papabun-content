@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning"]
     },
     {
       "id": "full-gc",
@@ -158,7 +158,7 @@
       "meaning": "Lần thu gom rác dọn toàn bộ heap (cả young và old), thường dừng mọi thread ứng dụng và tốn nhiều thời gian nhất.",
       "example": "GC log `Pause Full (G1 Compaction Pause) 2980M->2950M(3072M) 2345.678ms` cho thấy Full GC gần như không thu hồi được gì.",
       "related": ["stop-the-world"],
-      "topics": ["java-high-cpu", "memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools"]
+      "topics": ["java-high-cpu", "memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools", "gc-algorithms", "gc-logs-tuning"]
     },
     {
       "id": "stop-the-world",
@@ -166,7 +166,7 @@
       "meaning": "Giai đoạn JVM dừng tất cả thread ứng dụng để làm việc nội bộ như GC, ứng dụng không xử lý được request nào.",
       "example": "Young GC của G1 dừng ứng dụng khoảng 10ms mỗi lần.",
       "related": ["full-gc"],
-      "topics": ["java-high-cpu", "distributed-locks", "slow-api", "gc-fundamentals"]
+      "topics": ["java-high-cpu", "distributed-locks", "slow-api", "gc-fundamentals", "gc-algorithms"]
     },
     {
       "id": "sampling-profiler",
@@ -190,7 +190,7 @@
       "meaning": "Công cụ ghi sự kiện tích hợp sẵn trong JDK (CPU sample, GC, lock, IO) với overhead thấp, xem bằng JDK Mission Control hoặc lệnh `jfr`.",
       "example": "`jcmd <pid> JFR.start duration=60s settings=profile filename=cpu.jfr`.",
       "related": ["sampling-profiler"],
-      "topics": ["java-high-cpu", "slow-api", "profiling", "jvm-diagnostic-tools"]
+      "topics": ["java-high-cpu", "slow-api", "profiling", "jvm-diagnostic-tools", "gc-logs-tuning"]
     },
     {
       "id": "catastrophic-backtracking",
@@ -3325,7 +3325,7 @@
       "meaning": "Thư viện đo lường cho ứng dụng JVM mà Spring Boot dùng: code ghi metric qua `MeterRegistry`, còn nơi xuất (Prometheus, Datadog, OTLP) là cấu hình.",
       "example": "`registry.counter(\"orders.placed\", \"channel\", \"web\").increment()`.",
       "related": ["observation-api", "metric-cardinality"],
-      "topics": ["spring-observability"]
+      "topics": ["spring-observability", "gc-logs-tuning"]
     },
     {
       "id": "observation-api",
@@ -5589,7 +5589,7 @@
       "meaning": "Lượng việc hệ thống xử lý xong trong một đơn vị thời gian, như request/giây hay message/giây.",
       "example": "Service xử lý 1.500 request/giây ở p99 200ms.",
       "related": ["latency", "littles-law"],
-      "topics": ["perf-methodology", "computer-architecture"]
+      "topics": ["perf-methodology", "computer-architecture", "gc-algorithms"]
     },
     {
       "id": "percentile",
@@ -5925,7 +5925,7 @@
       "meaning": "Object không còn cần nhưng vẫn bị tham chiếu nên GC không thu hồi được, làm lượng bộ nhớ còn sống tăng dần theo thời gian.",
       "example": "Một `static Map` dùng làm cache mà không bao giờ xoá entry: heap sau GC tăng mỗi giờ.",
       "related": ["heap-dump", "dominator-tree", "retained-size"],
-      "topics": ["memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools"]
+      "topics": ["memory-growth-oom", "gc-fundamentals", "jvm-diagnostic-tools", "gc-logs-tuning"]
     },
     {
       "id": "native-memory-tracking",
@@ -8077,7 +8077,7 @@
       "meaning": "Tham chiếu object 4 byte thay vì 8 trên JVM 64 bit, dùng được khi heap dưới khoảng 32 GB.",
       "example": "Heap 31 GB có thể chứa nhiều object hơn heap 34 GB vì vượt ngưỡng thì mọi tham chiếu thành 8 byte.",
       "related": ["java-heap"],
-      "topics": ["jvm-memory-areas"]
+      "topics": ["jvm-memory-areas", "gc-algorithms"]
     },
     {
       "id": "compressed-class-space",
@@ -8173,7 +8173,7 @@
       "meaning": "Đoạn mã nhỏ JIT chèn vào mỗi lệnh gán tham chiếu vào field, để GC ghi nhận thay đổi (đánh dấu card, hỗ trợ đánh dấu đồng thời).",
       "example": "Mỗi `order.customer = c` chạy thêm vài lệnh của write barrier; đó là chi phí ẩn khác nhau giữa các GC.",
       "related": ["card-table"],
-      "topics": ["gc-fundamentals"]
+      "topics": ["gc-fundamentals", "gc-algorithms"]
     },
     {
       "id": "mark-sweep-compact",
@@ -8197,7 +8197,7 @@
       "meaning": "Thời gian từ lúc JVM yêu cầu dừng tới khi thread cuối cùng tới safepoint. Các thread đã dừng phải chờ, nên pause thật dài hơn con số trong GC log.",
       "example": "`Reaching safepoint: 791204000 ns` trong khi GC chỉ làm việc 6 ms: request treo 800 ms.",
       "related": ["safepoint"],
-      "topics": ["gc-fundamentals"]
+      "topics": ["gc-fundamentals", "gc-algorithms"]
     },
     {
       "id": "jcmd",
@@ -8254,6 +8254,142 @@
       "example": "`periodSeconds: 10`, `failureThreshold: 3`: JVM dừng khoảng 30 giây (ví dụ khi heap dump) là bị restart.",
       "related": ["health-check"],
       "topics": ["jvm-diagnostic-tools"]
+    },
+    {
+      "id": "parallel-gc",
+      "term": "Parallel GC",
+      "meaning": "GC dừng ứng dụng rồi dọn bằng nhiều thread, cả young lẫn old. Throughput cao nhất nhưng Full GC dừng lâu theo lượng dữ liệu sống.",
+      "example": "Job batch đêm chạy `-XX:+UseParallelGC`: Full GC 300 ms vài lần không hại ai, tổng thời gian chạy ngắn hơn G1.",
+      "related": ["g1-gc", "throughput", "full-gc"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "g1-gc",
+      "term": "G1 (Garbage-First)",
+      "meaning": "GC mặc định của HotSpot từ Java 9: chia heap thành region, dọn young bằng cách chép, đánh dấu old đồng thời rồi dọn dần bằng mixed GC, giữ pause quanh `MaxGCPauseMillis`.",
+      "example": "Heap 4 GB chia thành 2.048 region 2 MB; young GC chép object sống sang region trống trong khoảng 15 ms.",
+      "related": ["mixed-gc", "humongous-object", "remembered-set"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "zgc",
+      "term": "ZGC",
+      "meaning": "GC có pause dưới mili giây: đánh dấu và di chuyển object đồng thời với ứng dụng nhờ load barrier và colored pointer. Chia thế hệ là mặc định từ JDK 23 và là chế độ duy nhất từ JDK 24.",
+      "example": "`-XX:+UseZGC` với heap 16 GB: log ghi `Minor Collection ... 0.049s` là thời gian cả chu kỳ đồng thời, pause thật dưới 1 ms.",
+      "related": ["load-barrier", "colored-pointer", "allocation-stall"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "shenandoah",
+      "term": "Shenandoah",
+      "meaning": "GC pause thấp do Red Hat phát triển, di chuyển object đồng thời bằng load barrier, dùng được compressed oops. Có trong Temurin, Corretto nhưng không có trong Oracle JDK.",
+      "example": "`-XX:+UseShenandoahGC`: pause `Pause Final Mark` khoảng 0,1 ms; không theo kịp thì log ghi `Pause Degenerated GC`.",
+      "related": ["zgc", "degenerated-gc", "load-barrier"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "concurrent-marking",
+      "term": "Concurrent marking",
+      "meaning": "Pha GC đánh dấu object sống trong lúc thread ứng dụng vẫn chạy, chỉ dừng ngắn ở đầu và cuối. G1 dùng nó để biết region old nào nhiều rác.",
+      "example": "Log G1: `Concurrent Mark Cycle 334.655ms`, trong đó chỉ `Pause Remark` 0,9 ms là dừng ứng dụng.",
+      "related": ["mixed-gc", "g1-gc"],
+      "topics": ["gc-algorithms"]
+    },
+    {
+      "id": "mixed-gc",
+      "term": "Mixed GC",
+      "meaning": "Lần GC của G1 dọn eden cùng một nhóm region old nhiều rác nhất, sau một chu kỳ đánh dấu đồng thời. Old được dọn dần thay vì một Full GC.",
+      "example": "`Pause Young (Mixed) (G1 Evacuation Pause) 3641M->2260M(4096M) 22.333ms`.",
+      "related": ["g1-gc", "concurrent-marking"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "humongous-object",
+      "term": "Humongous object",
+      "meaning": "Object từ nửa region G1 trở lên, được cấp thẳng vào các region liền nhau ở old và chiếm trọn region đó.",
+      "example": "Mảng 3 MB với region 4 MB là humongous; cấp liên tục thì log có nhiều `G1 Humongous Allocation`.",
+      "related": ["g1-gc"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "remembered-set",
+      "term": "Remembered set",
+      "meaning": "Cấu trúc G1 giữ cho từng region, ghi chỗ nào ở region khác đang trỏ vào nó, để dọn một region mà không phải quét cả heap.",
+      "example": "Young GC chỉ quét root cùng remembered set của các region eden; pha `Merge Heap Roots` trong log là bước gộp chúng.",
+      "related": ["card-table", "write-barrier", "g1-gc"],
+      "topics": ["gc-algorithms"]
+    },
+    {
+      "id": "load-barrier",
+      "term": "Load barrier",
+      "meaning": "Đoạn mã nhỏ JIT chèn vào mỗi lần đọc một tham chiếu từ heap, kiểm tra object đã bị GC chuyển chỗ chưa và sửa tham chiếu ngay.",
+      "example": "Nhờ load barrier, ZGC chuyển object trong lúc ứng dụng chạy; giá là thêm vài lệnh trên mỗi lần đọc field.",
+      "related": ["write-barrier", "zgc", "colored-pointer"],
+      "topics": ["gc-algorithms"]
+    },
+    {
+      "id": "colored-pointer",
+      "term": "Colored pointer",
+      "meaning": "Kỹ thuật của ZGC cất trạng thái GC (đã đánh dấu, đã chuyển...) trong các bit của tham chiếu 64 bit, nên ZGC không dùng compressed oops.",
+      "example": "Với ZGC, `UseCompressedOops` là `false`; mỗi tham chiếu 8 byte thay vì 4.",
+      "related": ["zgc", "load-barrier", "compressed-oops"],
+      "topics": ["gc-algorithms"]
+    },
+    {
+      "id": "allocation-stall",
+      "term": "Allocation stall",
+      "meaning": "Thread ứng dụng bị chặn vì GC đồng thời dọn không kịp tốc độ cấp phát; thời gian chờ không tính vào pause của GC.",
+      "example": "Log ZGC: `Allocation Stall (http-nio-8080-exec-41) 412.551ms` trong khi `jvm.gc.pause` max vẫn 0,4 ms.",
+      "related": ["zgc", "allocation-rate"],
+      "topics": ["gc-algorithms", "gc-logs-tuning"]
+    },
+    {
+      "id": "gc-log",
+      "term": "GC log",
+      "meaning": "Log JVM ghi mỗi lần GC: loại, lý do, heap trước và sau, thời gian dừng; với `gc*` có thêm từng pha và CPU.",
+      "example": "`[0.384s][info][gc] GC(2) Pause Full (System.gc()) 1506M->1499M(4096M) 107.922ms`.",
+      "related": ["unified-logging", "live-set"],
+      "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "unified-logging",
+      "term": "Unified logging (`-Xlog`)",
+      "meaning": "Cơ chế log chung của JVM từ Java 9, chọn tag, mức, nơi ghi, decorator và xoay vòng file trong một cờ `-Xlog`; thay cho các cờ `PrintGC*` cũ.",
+      "example": "`-Xlog:gc*:file=/logs/gc-%p-%t.log:time,uptime,level,tags:filecount=5,filesize=20m`.",
+      "related": ["gc-log"],
+      "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "live-set",
+      "term": "Live set",
+      "meaning": "Lượng dữ liệu còn sống trong heap, đo bằng heap còn lại sau Full GC hoặc sau mixed GC ở cao điểm. Là cơ sở để chọn kích thước heap.",
+      "example": "`Pause Full (G1 Compaction Pause) 4095M->1672M(4096M)`: dữ liệu sống khoảng 1,7 GB, heap 4 GB là chật.",
+      "related": ["gc-log", "memory-leak"],
+      "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "evacuation-failure",
+      "term": "Evacuation failure",
+      "meaning": "Khi G1 chép object sống mà không còn region trống; region chép dở bị giữ nguyên và coi như old, thường kéo theo Full GC. JDK cũ ghi `To-space exhausted`.",
+      "example": "`Pause Young (Mixed) (G1 Evacuation Pause) (Evacuation Failure: Allocation) 3738M->3725M(4096M)` rồi `Pause Full (G1 Compaction Pause)`.",
+      "related": ["g1-gc", "full-gc", "live-set"],
+      "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "degenerated-gc",
+      "term": "Degenerated GC",
+      "meaning": "Khi Shenandoah dọn đồng thời không kịp, nó dừng ứng dụng để làm nốt chu kỳ đang dở; nặng hơn nữa thì Full GC.",
+      "example": "`Pause Degenerated GC (Mark) 2374M->1807M(2425M) 98.730ms` trên heap 2,5 GB với 1,5 GB dữ liệu sống.",
+      "related": ["shenandoah", "full-gc"],
+      "topics": ["gc-logs-tuning"]
+    },
+    {
+      "id": "allocation-rate",
+      "term": "Allocation rate",
+      "meaning": "Tốc độ ứng dụng cấp phát object mới, thường tính bằng MB/s hay GB/s. Càng cao thì GC chạy càng dày và heap càng cần khoảng trống.",
+      "example": "Micrometer `jvm.gc.memory.allocated` cho thấy 1,1 GB/s: eden 4,5 GB đầy sau khoảng 4 giây.",
+      "related": ["live-set", "allocation-stall"],
+      "topics": ["gc-logs-tuning"]
     }
   ]
 }

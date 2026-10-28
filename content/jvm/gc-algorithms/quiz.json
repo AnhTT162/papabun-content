@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "zgc-full-heap",
+      "kind": "single",
+      "prompt": "Service dùng G1, heap 4 GB, sau mỗi GC còn 3,6 GB và Full GC vài phút một lần. Một bạn đề xuất đổi sang ZGC để hết pause. Điều gì có khả năng xảy ra nhất?",
+      "options": [
+        "Thread ứng dụng bị allocation stall vì ZGC thiếu chỗ để dọn kịp",
+        "Hết pause dài, vì ZGC không bao giờ dừng ứng dụng quá 1 ms",
+        "Heap còn dư hơn, vì ZGC nén object tốt hơn hẳn so với G1",
+        "Service ổn định hơn, vì ZGC tự tăng heap vượt quá `-Xmx`"
+      ],
+      "answer": 0,
+      "explanation": "Heap gần đầy sau GC là thiếu bộ nhớ, không phải lỗi của G1. ZGC dọn trong lúc ứng dụng vẫn cấp phát nên cần nhiều khoảng trống hơn; không dùng compressed oops nên cùng dữ liệu còn chiếm nhiều hơn. Không kịp dọn thì thread bị chặn (`Allocation Stall` trong log), thứ không hiện trong số pause. ZGC không vượt `-Xmx`; `SoftMaxHeapSize` chỉ là mức nó cố giữ dưới."
+    },
+    {
+      "id": "batch-gc",
+      "kind": "single",
+      "prompt": "Job đối soát chạy 1 giờ mỗi đêm, không ai gọi tới nó trong lúc chạy, mục tiêu là xong sớm nhất. Chọn GC nào?",
+      "options": [
+        "Parallel GC, vì không tốn CPU nền và pause dài không hại gì",
+        "ZGC, vì pause ngắn thì job cũng sẽ xong sớm hơn nhiều",
+        "Shenandoah, vì chạy đồng thời nên dùng ít CPU hơn hẳn",
+        "Serial GC, vì một thread GC thì không tranh CPU với job"
+      ],
+      "answer": 0,
+      "explanation": "Không ai chờ response, nên thứ cần tối ưu là tổng thời gian, tức throughput. Parallel dùng mọi core để dọn trong pause và không tốn CPU cho việc đồng thời hay load barrier. ZGC và Shenandoah tốn thêm CPU để đổi lấy pause ngắn mà job này không cần. Serial chỉ dùng một thread, pause dài hơn nhiều với heap lớn và kéo dài tổng thời gian."
+    },
+    {
+      "id": "xmn-g1",
+      "kind": "single",
+      "prompt": "Để giảm young GC, một bạn thêm `-Xmn4g` cho service dùng G1 với `MaxGCPauseMillis=100`. Sau đó pause young thường vượt 100 ms. Vì sao?",
+      "options": [
+        "Young bị khoá kích thước nên G1 không co eden để giữ mục tiêu",
+        "`-Xmn` tắt chu kỳ đánh dấu đồng thời của G1 ở vùng old",
+        "G1 bỏ qua `-Xmn` nhưng tự hạ `MaxGCPauseMillis` về 0",
+        "Young lớn hơn làm mọi object bị đẩy thẳng sang vùng old"
+      ],
+      "answer": 0,
+      "explanation": "G1 giữ pause chủ yếu bằng cách co giãn số region eden theo chi phí đo được. `-Xmn` (hay `NewRatio`) cố định young, nên G1 mất công cụ đó và pause theo đúng lượng object sống trong 4 GB eden. Hướng dẫn tuning của G1 khuyên không đặt kích thước young khi đã đặt mục tiêu pause."
+    },
+    {
+      "id": "zgc-memory",
+      "kind": "single",
+      "prompt": "Chuyển một service từ G1 sang ZGC, giữ nguyên `-Xmx`. Dữ liệu là map và list lồng nhau, nhiều tham chiếu. Dashboard cho thấy heap đã dùng sau GC tăng khoảng 15% dù dữ liệu không đổi. Nguyên nhân chính?",
+      "options": [
+        "ZGC không dùng compressed oops, mỗi tham chiếu thành 8 byte",
+        "ZGC không dọn được object có vòng tham chiếu như G1 làm",
+        "ZGC tắt compact object headers nên header object to gấp đôi",
+        "ZGC giữ lại mọi object soft reference cho tới khi heap đầy"
+      ],
+      "answer": 0,
+      "explanation": "ZGC cất trạng thái GC trong các bit của con trỏ 64 bit (colored pointer), nên `UseCompressedOops` là `false`. Dữ liệu nhiều tham chiếu (map, list, object lồng nhau) phình rõ. Mọi GC tracing đều dọn được vòng tham chiếu. Trên JDK 27, `UseCompactObjectHeaders` vẫn bật với ZGC."
+    }
+  ]
+}

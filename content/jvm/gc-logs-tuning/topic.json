@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "gc-logs-tuning",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "Đọc GC log & tuning",
+  "summary": "Bật GC log bằng `-Xlog` có xoay vòng, đọc dòng G1 (trước->sau(commit), pha, `gc,cpu`), dữ liệu sống và sizing heap; dấu hiệu bất thường: evacuation failure rồi Full GC (đã tái hiện trên JDK 27), humongous, allocation stall của ZGC, degenerated GC của Shenandoah; cờ Java 8 làm JVM không chạy, heap khởi đầu nhỏ từ JDK 26, metric Micrometer và thứ tự tuning.",
+  "level": "senior",
+  "order": 6,
+  "minutes": 18,
+  "prerequisites": ["gc-algorithms", "jvm-diagnostic-tools"],
+  "terms": ["gc-log", "unified-logging", "live-set", "evacuation-failure", "full-gc", "humongous-object", "mixed-gc", "allocation-stall", "degenerated-gc", "allocation-rate", "cpu-throttling", "micrometer", "jfr", "memory-leak", "g1-gc", "zgc", "shenandoah", "parallel-gc"],
+  "references": [
+    { "title": "JDK 21 Tools: java, Enable Logging with the JVM Unified Logging Framework", "url": "https://docs.oracle.com/en/java/javase/21/docs/specs/man/java.html#enable-logging-with-the-jvm-unified-logging-framework" },
+    { "title": "HotSpot GC Tuning Guide: Garbage-First Garbage Collector Tuning (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/gctuning/garbage-first-garbage-collector-tuning.html" },
+    { "title": "JDK-8373023: Remove the default value of InitialRAMPercentage", "url": "https://bugs.openjdk.org/browse/JDK-8373023" },
+    { "title": "ZGC (OpenJDK project)", "url": "https://openjdk.org/projects/zgc/" },
+    { "title": "Shenandoah GC (OpenJDK Wiki)", "url": "https://wiki.openjdk.org/display/shenandoah/Main" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn chọn kích thước heap thế nào?\" Trả lời bằng số đo, không bằng quy tắc thuộc lòng: chạy tải gần cao điểm với GC log, lấy dữ liệu sống sau Full GC hoặc sau mixed GC, rồi cho heap rộng gấp vài lần con số đó tuỳ tốc độ cấp phát; kiểm tra tổng RSS (heap cộng metaspace, thread stack, direct buffer) vừa memory limit; đặt `-Xms` bằng `-Xmx`. Sau đó xác nhận bằng p99.9 và tần suất Full GC, và đo lại khi dữ liệu nạp vào bộ nhớ thay đổi." },
+    { "type": "callout", "style": "warning", "markdown": "GC log ghi vào filesystem của container sẽ mất khi container restart, đúng lúc bạn cần nó nhất. Ghi vào volume, dùng `%p`/`%t` trong tên file để mỗi lần khởi động không ghi đè file cũ, và giới hạn bằng `filecount`/`filesize` để không đầy đĩa." }
+  ]
+}

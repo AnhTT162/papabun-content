@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "gc-algorithms",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "jvm",
+  "title": "G1, ZGC, Shenandoah, Parallel",
+  "summary": "Throughput, pause và footprint: Serial và Parallel dừng để dọn, G1 chia region và giữ pause quanh `MaxGCPauseMillis` bằng mixed GC, ZGC và Shenandoah chuyển object đồng thời nhờ load barrier; số đo bốn GC trên cùng một tải JDK 27, ZGC thế hệ (JDK 21/23/24, cờ `ZGenerational` bị gỡ), không có compressed oops, allocation stall, Shenandoah thế hệ, cách chọn GC cho API và batch.",
+  "level": "senior",
+  "order": 5,
+  "minutes": 18,
+  "prerequisites": ["gc-fundamentals"],
+  "terms": ["throughput", "stop-the-world", "full-gc", "parallel-gc", "g1-gc", "zgc", "shenandoah", "concurrent-marking", "mixed-gc", "humongous-object", "remembered-set", "load-barrier", "colored-pointer", "allocation-stall", "write-barrier", "compressed-oops", "time-to-safepoint", "card-table"],
+  "references": [
+    { "title": "HotSpot Virtual Machine Garbage Collection Tuning Guide (Java 21)", "url": "https://docs.oracle.com/en/java/javase/21/gctuning/" },
+    { "title": "JEP 474: ZGC: Generational Mode by Default", "url": "https://openjdk.org/jeps/474" },
+    { "title": "JEP 522: G1 GC: Improve Throughput by Reducing Synchronization", "url": "https://openjdk.org/jeps/522" },
+    { "title": "JEP 439: Generational ZGC", "url": "https://openjdk.org/jeps/439" },
+    { "title": "JEP 490: ZGC: Remove the Non-Generational Mode", "url": "https://openjdk.org/jeps/490" },
+    { "title": "JEP 521: Generational Shenandoah", "url": "https://openjdk.org/jeps/521" },
+    { "title": "JEP 535: Shenandoah GC: Generational Mode by Default", "url": "https://openjdk.org/jeps/535" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Vì sao không dùng ZGC cho mọi service nếu pause dưới 1 ms?\" Trả lời bằng giá phải trả: thread GC chạy song song chiếm CPU và load barrier làm chậm mỗi lần đọc tham chiếu, nên throughput thấp hơn; không có compressed oops và cần khoảng trống để dọn kịp, nên tốn bộ nhớ hơn; heap chật thì allocation stall thay cho pause. Với job batch hay pod 1–2 CPU, G1 hoặc Parallel thường tốt hơn. Chọn theo SLO và đo trên tải thật." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Nâng JDK có thể làm JVM không khởi động vì cờ GC cũ: `-XX:+UseConcMarkSweepGC` (CMS bị gỡ ở JDK 14), `-XX:+UseParNewGC`, và trên JDK 27 (đã kiểm) cả `-XX:+ZGenerational` hay `-XX:-ZGenerational` đều ra `Unrecognized VM option`. Kiểm tra `JAVA_OPTS`, Dockerfile và Helm values trước khi đổi image." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn GC cho API báo giá và job đối soát đêm",
+  "prompt": "Team bạn có hai workload chạy JDK 21 trên Kubernetes, cả hai đang dùng G1 mặc định. (1) `quote-api`: trả giá vé máy bay từ một bảng giá nạp sẵn trong bộ nhớ, khoảng 6 GB dữ liệu sống, `-Xmx16g`, memory limit 20Gi, CPU limit 8 và đang dùng trung bình 3,5 core. SLO: p99.9 dưới 50 ms đo ở gateway; hiện p99.9 khoảng 140 ms, GC log cho thấy mixed GC 60–120 ms vài lần mỗi phút, không có Full GC. Một bạn đề xuất \"chuyển hết sang ZGC\". (2) `reconcile-job`: chạy 1 giờ mỗi đêm, đọc 40 triệu giao dịch, đối chiếu rồi ghi báo cáo; không ai gọi nó trong lúc chạy; mục tiêu là xong sớm và tốn ít node. Hãy chọn GC và cấu hình cho từng workload, và nêu cách triển khai an toàn.",
+  "hints": [
+    "Với từng workload, thứ cần tối ưu là pause, tổng thời gian chạy hay bộ nhớ?",
+    "Trước khi đổi GC: pause hiện tại của `quote-api` đến từ đâu, và G1 còn chỉnh được gì?",
+    "Trên JDK 21, `-XX:+UseZGC` một mình cho ra ZGC loại nào?",
+    "ZGC tốn thêm gì về CPU và bộ nhớ, và `quote-api` có đủ chỗ cho phần đó không? Đo thành công bằng gì?"
+  ],
+  "solution": "**`quote-api`: tối ưu pause.** Đọc log trước: pause mixed GC 60–120 ms đến từ việc chép phần sống của region old (dòng `Evacuate Collection Set` trong `gc+phases`), vì bảng giá 6 GB vừa sống lâu vừa bị cập nhật. Thử G1 trước trên một pod: `-XX:MaxGCPauseMillis=25` để G1 chọn ít region old hơn mỗi lần (mục tiêu phải thấp hơn hẳn SLO 50 ms vì G1 có thể vượt mục tiêu, và p99.9 ở gateway còn gồm mạng và hàng đợi), cùng `-XX:G1MixedGCCountTarget` cao hơn (mặc định 8) để chia việc ra nhiều mixed GC; không đặt `-Xmn`. Nếu p99.9 xuống dưới 50 ms mà throughput không giảm đáng kể thì dừng ở đó.\n\n**Nếu G1 vẫn vượt SLO: ZGC.** Trên JDK 21 phải ghi `-XX:+UseZGC -XX:+ZGenerational`; chỉ `-XX:+UseZGC` là ZGC không thế hệ, phải đánh dấu cả heap mỗi chu kỳ (từ JDK 23 thế hệ là mặc định, JDK 24 là chế độ duy nhất). Tính trước giá: ZGC không dùng compressed oops nên dữ liệu sống tăng (bảng giá nhiều tham chiếu, map và list lồng nhau, có thể tăng 10–20%), và cần khoảng trống để dọn kịp; giữ `-Xmx16g` hoặc tăng nhẹ, kiểm tra RSS so với memory limit 20Gi (heap + metaspace + thread stack + direct buffer). CPU: thread GC chạy song song, pod đang dùng 3,5/8 core nên còn chỗ; pod chỉ 2 CPU thì không nên.\n\n**Triển khai**: canary một pod (hoặc 10% traffic) trong vài ngày có giờ cao điểm. So với pod G1: p99.9 và p99 ở gateway (không chỉ pause trong log), CPU, RSS, throughput mỗi pod, và số dòng `Allocation Stall` trong GC log (phải bằng 0 ở tải bình thường). Có cảnh báo cho allocation stall. Rollback chỉ là đổi lại cờ JVM.\n\n**`reconcile-job`: tối ưu tổng thời gian.** Không ai chờ response, pause dài không hại. Dùng Parallel GC (`-XX:+UseParallelGC`), `-Xms` bằng `-Xmx` để không mất thời gian nới heap, heap đủ lớn để Full GC hiếm. So tổng thời gian chạy và CPU-giờ với G1 trên cùng dữ liệu; Parallel không có việc đồng thời và barrier rẻ hơn, nhưng mức chênh tuỳ tải, có khi không đáng kể; quyết định theo số đo. Đây là chỗ không nên dùng ZGC: trả thêm CPU để mua pause ngắn mà không ai cần.\n\n**Chung**: bật GC log có xoay vòng cho cả hai (bài Đọc GC log & tuning), và lên kế hoạch nâng JDK 25 (LTS): ZGC thế hệ là mặc định, không cần cờ. Cải thiện throughput của G1 (JEP 522) chỉ có từ JDK 26.",
+  "tradeoffs": [
+    {
+      "option": "Giữ G1, hạ `MaxGCPauseMillis` và chia mixed GC",
+      "pros": [
+        "Không đổi GC, rủi ro thấp, compressed oops giữ nguyên",
+        "Throughput và CPU gần như không đổi nếu mục tiêu vừa phải"
+      ],
+      "cons": [
+        "Pause vẫn tỉ lệ với dữ liệu sống phải chép, khó xuống dưới 10 ms",
+        "Mục tiêu quá thấp làm GC dày và old dọn không kịp"
+      ]
+    },
+    {
+      "option": "ZGC thế hệ",
+      "pros": [
+        "Pause dưới mili giây, không tăng theo heap",
+        "Ít cờ phải chỉnh, chủ yếu là kích thước heap"
+      ],
+      "cons": [
+        "Tốn thêm CPU cho thread GC và load barrier, throughput giảm",
+        "Không có compressed oops, cần heap trống nhiều hơn, thiếu thì allocation stall"
+      ]
+    },
+    {
+      "option": "Parallel GC (cho job batch)",
+      "pros": [
+        "Throughput cao nhất, cấu hình đơn giản",
+        "Không có thread GC chạy nền tranh CPU"
+      ],
+      "cons": [
+        "Full GC dài tỉ lệ với dữ liệu sống",
+        "Sai lựa chọn cho service có người chờ response"
+      ]
+    }
+  ]
+}

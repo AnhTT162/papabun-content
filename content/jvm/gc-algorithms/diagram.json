@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một vòng đời heap của G1",
+  "nodes": [
+    { "id": "eden", "label": "Eden regions", "kind": "generic", "x": 0.1, "y": 0.05 },
+    { "id": "survivor", "label": "Survivor regions", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "old", "label": "Old regions", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "mark", "label": "Đánh dấu đồng thời", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "free", "label": "Region trống", "kind": "cache", "x": 0.1, "y": 0.95 },
+    { "id": "full", "label": "Full GC", "kind": "external", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "young", "from": "eden", "to": "survivor", "label": "young GC: chép" },
+    { "id": "promote", "from": "survivor", "to": "old", "label": "đủ tuổi" },
+    { "id": "ihop", "from": "old", "to": "mark", "label": "vượt IHOP" },
+    { "id": "mixed", "from": "mark", "to": "free", "label": "mixed GC" },
+    { "id": "fallback", "from": "old", "to": "full", "label": "hết region trống" }
+  ],
+  "steps": [
+    {
+      "caption": "Thread cấp phát trong TLAB nằm ở các region eden. Số region eden không cố định: G1 tăng giảm nó để young GC vừa mục tiêu `MaxGCPauseMillis`.",
+      "show": ["eden"]
+    },
+    {
+      "caption": "Eden đầy thì young GC dừng ứng dụng và chép object còn sống sang region survivor trống. Cả region eden được trả lại; pause tỉ lệ với số object sống, không với lượng rác.",
+      "show": ["survivor", "young"],
+      "highlight": ["young"]
+    },
+    {
+      "caption": "Object sống qua đủ số lần young GC được chép sang region old. Object từ nửa region trở lên vào thẳng old dưới dạng humongous.",
+      "show": ["old", "promote"],
+      "highlight": ["promote"]
+    },
+    {
+      "caption": "Old vượt ngưỡng IHOP thì G1 đánh dấu cả heap đồng thời với ứng dụng; chỉ dừng ở lần young GC mở đầu (Concurrent Start) và ở Remark, Cleanup ngắn. Kết quả: biết region old nào nhiều rác nhất.",
+      "show": ["mark", "ihop"],
+      "highlight": ["ihop"]
+    },
+    {
+      "caption": "Vài mixed GC tiếp theo dọn eden cùng một nhóm region old nhiều rác, chép phần sống còn lại đi và trả region về danh sách trống. Old được dọn dần, không phải một pause lớn.",
+      "show": ["free", "mixed"],
+      "highlight": ["mixed"]
+    },
+    {
+      "caption": "Nếu lúc chép không còn region trống (cấp phát quá nhanh, heap quá chật so với dữ liệu sống), G1 báo evacuation failure rồi lùi về Full GC: dừng ứng dụng và dồn cả heap.",
+      "show": ["full", "fallback"],
+      "highlight": ["fallback"]
+    },
+    {
+      "caption": "ZGC và Shenandoah làm cả bước đánh dấu lẫn bước chép object đồng thời; điểm yếu chung với G1 vẫn là cần đủ khoảng trống để dọn kịp tốc độ cấp phát.",
+      "show": [],
+      "highlight": ["mark", "free", "full"]
+    }
+  ]
+}

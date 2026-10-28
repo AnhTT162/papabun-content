@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-metrics", "front": "Ba thước đo khi so sánh GC?", "back": "Throughput (thời gian không dành cho GC), latency (độ dài pause) và footprint (bộ nhớ cần thêm). Không GC nào tốt nhất cả ba." },
+    { "id": "parallel-when", "front": "Khi nào Parallel GC là lựa chọn đúng?", "back": "Job batch chỉ quan tâm tổng thời gian chạy: không tốn CPU cho việc nền, cấu hình đơn giản; đổi lại Full GC dừng lâu theo lượng dữ liệu sống." },
+    { "id": "g1-pause-goal", "front": "G1 giữ pause quanh `MaxGCPauseMillis` bằng cách nào?", "back": "Đo chi phí từng region rồi co giãn eden và chọn số region old cho mỗi lần dọn. Đặt `-Xmn` làm mất công cụ này." },
+    { "id": "mixed-gc", "front": "Mixed GC của G1 là gì?", "back": "Young GC dọn thêm vài region old nhiều rác nhất, sau một chu kỳ đánh dấu đồng thời. Old được dọn dần thay vì một Full GC." },
+    { "id": "load-barrier", "front": "Vì sao pause của ZGC không tăng theo kích thước heap?", "back": "Đánh dấu và chuyển object chạy đồng thời; load barrier sửa tham chiếu khi thread đọc. Pause chỉ còn quét root." },
+    { "id": "zgc-no-coops", "front": "Vì sao cùng dữ liệu mà heap dùng nhiều hơn khi chuyển sang ZGC?", "back": "ZGC cất trạng thái trong bit của con trỏ 64 bit nên không dùng compressed oops: mỗi tham chiếu 8 byte thay vì 4." },
+    { "id": "allocation-stall", "front": "Allocation stall của ZGC là gì?", "back": "Cấp phát nhanh hơn tốc độ dọn đồng thời, thread ứng dụng phải chờ có bộ nhớ. Nó không hiện trong số pause của GC." },
+    { "id": "zgenerational-27", "front": "Script cũ có `-XX:-ZGenerational`. Chạy trên JDK 27 thì sao?", "back": "JVM không khởi động (`Unrecognized VM option`, đã kiểm). Cờ obsolete từ JDK 24, ZGC chỉ còn chế độ thế hệ." },
+    { "id": "jdk21-zgc", "front": "Trên JDK 21, `-XX:+UseZGC` một mình ra ZGC loại nào?", "back": "ZGC không thế hệ. Phải thêm `-XX:+ZGenerational`; thế hệ là mặc định từ JDK 23." }
+  ]
+}
