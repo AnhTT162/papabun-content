@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Trang sản phẩm của một shop online",
+  "nodes": [
+    { "id": "user", "label": "Người dùng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "cdn", "label": "CDN", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "app", "label": "LB → App ×3", "kind": "service", "x": 0.1, "y": 0.36 },
+    { "id": "s3", "label": "Object storage", "kind": "database", "x": 0.85, "y": 0.36 },
+    { "id": "cache", "label": "Redis", "kind": "cache", "x": 0.1, "y": 0.66 },
+    { "id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.85, "y": 0.66 },
+    { "id": "queue", "label": "Queue → worker", "kind": "queue", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "user-app", "from": "user", "to": "app", "label": "API" },
+    { "id": "app-db", "from": "app", "to": "db", "label": "đọc, ghi" },
+    { "id": "app-cache", "from": "app", "to": "cache", "label": "đọc trước" },
+    { "id": "user-s3", "from": "user", "to": "s3", "label": "PUT presigned URL" },
+    { "id": "user-cdn", "from": "user", "to": "cdn", "label": "ảnh, JS, CSS" },
+    { "id": "cdn-s3", "from": "cdn", "to": "s3", "label": "khi miss" },
+    { "id": "app-queue", "from": "app", "to": "queue", "label": "tạo thumbnail" }
+  ],
+  "steps": [
+    {
+      "caption": "Request API tới load balancer, LB chia cho 3 instance app stateless; instance nào hỏng health check thì bị rút ra.",
+      "show": ["user", "app", "user-app"],
+      "highlight": ["user-app"]
+    },
+    {
+      "caption": "PostgreSQL là nguồn sự thật. Ban đầu mọi lượt đọc trang sản phẩm đều vào đây, và đọc chiếm 95% tải.",
+      "show": ["db", "app-db"],
+      "highlight": ["app-db"]
+    },
+    {
+      "caption": "Redis giữ trang sản phẩm 5 phút. Hit ratio 95% thì database chỉ nhận 1/20 lượt đọc; Redis mất hết dữ liệu thì database nhận gấp 20.",
+      "show": ["cache", "app-cache"],
+      "highlight": ["app-cache"]
+    },
+    {
+      "caption": "Ảnh không đi qua app: app ký presigned URL, trình duyệt của người bán PUT thẳng lên object storage, database chỉ lưu key.",
+      "show": ["s3", "user-s3"],
+      "highlight": ["user-s3"]
+    },
+    {
+      "caption": "Người mua tải ảnh, JS, CSS qua CDN. Edge gần người dùng trả ngay; chỉ khi miss mới về object storage (100–200 ms).",
+      "show": ["cdn", "user-cdn", "cdn-s3"],
+      "highlight": ["user-cdn", "cdn-s3"]
+    },
+    {
+      "caption": "Tạo thumbnail mất vài giây nên app đẩy việc vào queue rồi trả lời ngay; worker tạo thumbnail sau từ ảnh gốc.",
+      "show": ["queue", "app-queue"],
+      "highlight": ["app-queue"]
+    },
+    {
+      "caption": "Xoá Redis hay CDN thì dựng lại được từ PostgreSQL và object storage. Mất PostgreSQL thì mất dữ liệu: đó là chỗ cần backup và replica.",
+      "show": [],
+      "highlight": ["db", "s3"]
+    }
+  ]
+}

@@ -79,7 +79,7 @@
       "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
       "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
       "related": ["reverse-proxy", "tls-termination"],
-      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api", "proxy-nginx"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api", "proxy-nginx", "sd-building-blocks"]
     },
     {
       "id": "reverse-proxy",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework"]
     },
     {
       "id": "orm",
@@ -1117,7 +1117,7 @@
       "meaning": "Chia dữ liệu qua nhiều database server (shard), mỗi shard giữ một phần dòng theo shard key. Mở rộng được ghi vượt một máy, nhưng query, transaction và index qua nhiều shard phức tạp hơn nhiều.",
       "example": "Khách có `hash(customer_id) % 8 = 3` nằm ở shard số 3.",
       "related": ["partitioning", "hot-partition"],
-      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies", "sd-building-blocks"]
     },
     {
       "id": "hot-partition",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks"]
     },
     {
       "id": "datasource",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks"]
     },
     {
       "id": "replication-slot",
@@ -1781,7 +1781,7 @@
       "meaning": "Database chỉ lưu cặp khoá và giá trị, đọc ghi theo khoá, không tìm được theo nội dung giá trị. Rất nhanh và dễ scale ngang.",
       "example": "Redis: `SET session:abc '{...}' EX 1800`, rồi `GET session:abc`.",
       "related": ["document-database"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "sd-building-blocks"]
     },
     {
       "id": "document-database",
@@ -1789,7 +1789,7 @@
       "meaning": "Database lưu bản ghi dạng document lồng nhau (JSON/BSON), thường chứa trọn một aggregate, có index và query trên các field.",
       "example": "MongoDB lưu một đơn hàng gồm thông tin khách và mảng các dòng hàng trong cùng một document.",
       "related": ["key-value-store", "jsonb"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "sd-building-blocks"]
     },
     {
       "id": "wide-column-store",
@@ -1797,7 +1797,7 @@
       "meaning": "Database chia dữ liệu theo partition key ra các node, trong mỗi partition sắp các dòng theo clustering key. Tối ưu cho ghi lớn và đọc một dải dòng trong partition.",
       "example": "Cassandra, ScyllaDB, HBase, Bigtable.",
       "related": ["partition-key", "clustering-key", "lsm-tree"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "sd-building-blocks"]
     },
     {
       "id": "graph-database",
@@ -1805,7 +1805,7 @@
       "meaning": "Database lưu node và cạnh làm dữ liệu chính, tối ưu cho việc đi theo quan hệ nhiều bước.",
       "example": "Neo4j, gợi ý bạn của bạn: `MATCH (a:User {id: 1})-[:FRIEND*2]-(b) WHERE b <> a AND NOT (a)-[:FRIEND]-(b) RETURN DISTINCT b`.",
       "related": ["document-database"],
-      "topics": ["nosql-overview"]
+      "topics": ["nosql-overview", "sd-building-blocks"]
     },
     {
       "id": "access-pattern",
@@ -1813,7 +1813,7 @@
       "meaning": "Một cách cụ thể ứng dụng đọc hoặc ghi dữ liệu: lọc theo gì, sắp theo gì, lấy bao nhiêu, tần suất ra sao. NoSQL thiết kế khoá theo danh sách access pattern.",
       "example": "\"Lấy 50 tin nhắn mới nhất của một cuộc trò chuyện\", vài nghìn lần mỗi giây.",
       "related": ["partition-key"],
-      "topics": ["nosql-overview", "sharding-strategies"]
+      "topics": ["nosql-overview", "sharding-strategies", "sd-building-blocks"]
     },
     {
       "id": "clustering-key",
@@ -2093,7 +2093,7 @@
       "meaning": "Độ trễ giữa lúc thay đổi commit trên primary và lúc replica áp xong nó. Đọc từ replica trong khoảng này thấy dữ liệu cũ.",
       "example": "`pg_stat_replication.replay_lag = 00:00:04.2`; MySQL `Seconds_Behind_Source: 9612`.",
       "related": ["read-your-writes", "streaming-replication"],
-      "topics": ["replication-ha", "schema-migration", "consistency-cap", "db-performance"]
+      "topics": ["replication-ha", "schema-migration", "consistency-cap", "db-performance", "sd-building-blocks", "sd-framework"]
     },
     {
       "id": "relay-log",
@@ -2117,7 +2117,7 @@
       "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
       "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
       "related": ["replica-lag", "monotonic-reads"],
-      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap", "multi-region-active-active"]
+      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap", "multi-region-active-active", "sd-building-blocks"]
     },
     {
       "id": "monotonic-reads",
@@ -2285,7 +2285,7 @@
       "meaning": "Cấu trúc của search engine: mỗi từ (sau khi qua analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất, nên tra một từ không phải quét mọi tài liệu.",
       "example": "Từ `khoac` → tài liệu 12, 98, 1.204...",
       "related": ["analyzer", "bm25"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "sd-building-blocks"]
     },
     {
       "id": "analyzer",
@@ -2309,7 +2309,7 @@
       "meaning": "Elasticsearch không cho tìm thấy tài liệu ngay khi ghi, mà sau lần refresh tiếp theo (mặc định mỗi giây) tạo segment mới có thể tìm được.",
       "example": "Ghi rồi tìm ngay thì có thể chưa thấy; ghi với `refresh=wait_for` để chờ.",
       "related": ["lucene-segment"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "sd-building-blocks"]
     },
     {
       "id": "lucene-segment",
@@ -2357,7 +2357,7 @@
       "meaning": "Bản sao dữ liệu đặt ở chỗ đọc nhanh hơn nguồn gốc (RAM, cùng process, gần người dùng), đánh đổi độ mới lấy tốc độ và giảm tải cho nguồn.",
       "example": "Thông tin sản phẩm đọc từ Redis trong 1ms thay vì query database 40ms.",
       "related": ["cache-hit-ratio", "ttl"],
-      "topics": ["caching-basics", "cache-patterns"]
+      "topics": ["caching-basics", "cache-patterns", "sd-building-blocks"]
     },
     {
       "id": "cache-hit-ratio",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview", "dns-cdn"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview", "dns-cdn", "sd-building-blocks"]
     },
     {
       "id": "cache-eviction",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance", "dns-cdn"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks"]
     },
     {
       "id": "local-cache",
@@ -2453,7 +2453,7 @@
       "meaning": "Hàng đợi trong broker giữ message tới khi một consumer nhận và xác nhận xử lý xong; mỗi message chỉ được một consumer xử lý.",
       "example": "Amazon SQS, queue của RabbitMQ.",
       "related": ["pub-sub", "competing-consumers"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "sd-building-blocks"]
     },
     {
       "id": "pub-sub",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks"]
     },
     {
       "id": "dead-letter-queue",
@@ -2997,7 +2997,7 @@
       "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
       "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
       "related": ["consumer-group", "kafka-offset"],
-      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture"]
+      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture", "sd-building-blocks"]
     },
     {
       "id": "rebalance-storm",
@@ -4573,7 +4573,7 @@
       "meaning": "Nhất quán sau một khoảng thời gian: các phần dữ liệu có thể lệch nhau tạm thời nhưng sẽ khớp khi mọi sự kiện được xử lý xong.",
       "example": "Đơn ở trạng thái `PENDING` vài trăm mili giây cho tới khi handler giữ hàng xong và phát `StockReserved`.",
       "related": ["domain-event"],
-      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services", "event-driven-architecture", "cqrs-event-sourcing"]
+      "topics": ["ddd-tactical", "service-communication", "consistency-cap", "data-consistency-services", "event-driven-architecture", "cqrs-event-sourcing", "sd-framework"]
     },
     {
       "id": "event-publication-registry",
@@ -4757,7 +4757,7 @@
       "meaning": "Cách load balancer hay orchestrator kiểm tra instance còn phục vụ được không: chủ động (gọi endpoint định kỳ) hoặc bị động (đếm lỗi của request thật).",
       "example": "LB gọi `/actuator/health/readiness` mỗi 5 giây, ba lần lỗi liên tiếp thì rút instance khỏi vòng quay.",
       "related": ["load-balancer", "connection-draining"],
-      "topics": ["load-balancing", "thread-pool-exhaustion", "proxy-nginx"]
+      "topics": ["load-balancing", "thread-pool-exhaustion", "proxy-nginx", "sd-building-blocks"]
     },
     {
       "id": "connection-draining",
@@ -4773,7 +4773,7 @@
       "meaning": "Load balancer gắn một client với cùng một instance (thường qua cookie), để dùng session lưu trong bộ nhớ instance đó.",
       "example": "Cookie `AWSALB` khiến người dùng luôn về instance B; B chết thì mất giỏ hàng trong `HttpSession`.",
       "related": ["load-balancer"],
-      "topics": ["load-balancing", "realtime-rpc-protocols"]
+      "topics": ["load-balancing", "realtime-rpc-protocols", "sd-building-blocks"]
     },
     {
       "id": "causal-consistency",
@@ -4861,7 +4861,7 @@
       "meaning": "Kiến trúc chia hệ thống thành các service deploy độc lập, mỗi service gắn với một năng lực nghiệp vụ, sở hữu dữ liệu riêng và do một đội chủ quản.",
       "example": "Service tìm kiếm scale riêng mùa cao điểm và release nhiều lần mỗi ngày, độc lập với service đặt phòng.",
       "related": ["bounded-context", "distributed-monolith", "modular-monolith"],
-      "topics": ["microservices-tradeoffs"]
+      "topics": ["microservices-tradeoffs", "sd-framework"]
     },
     {
       "id": "consumer-driven-contract",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework"]
     },
     {
       "id": "compensating-transaction",
@@ -5597,7 +5597,7 @@
       "meaning": "Giá trị mà một tỉ lệ phần trăm số mẫu nằm dưới nó. p99 latency 300ms nghĩa là 99% request nhanh hơn 300ms. Không lấy trung bình hay cộng gộp giữa các máy được.",
       "example": "p50 20ms, p99 300ms, max 3 giây trong khi trung bình chỉ 61ms.",
       "related": ["latency", "tail-latency"],
-      "topics": ["perf-methodology", "slow-api"]
+      "topics": ["perf-methodology", "slow-api", "sd-framework"]
     },
     {
       "id": "tail-latency",
@@ -6669,7 +6669,7 @@
       "meaning": "Điểm đặt máy chủ của CDN gần người dùng (PoP), trả nội dung từ cache và chỉ hỏi origin khi miss.",
       "example": "Người dùng ở Hà Nội tải ảnh từ edge ở Hà Nội thay vì từ origin ở Singapore, giảm RTT từ khoảng 40 ms xuống vài ms.",
       "related": ["cdn", "origin-shield"],
-      "topics": ["dns-cdn"]
+      "topics": ["dns-cdn", "sd-building-blocks"]
     },
     {
       "id": "origin-shield",
@@ -8614,6 +8614,174 @@
       "example": "`failureThreshold: 30`, `periodSeconds: 2` cho container tối đa 60 giây để khởi động.",
       "related": ["liveness-probe"],
       "topics": ["startup-native"]
+    },
+    {
+      "id": "object-storage",
+      "term": "Object storage",
+      "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
+      "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
+      "related": ["presigned-url", "multipart-upload", "cdn"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "source-of-truth",
+      "term": "Source of truth",
+      "meaning": "Nơi giữ bản dữ liệu được coi là đúng; các bản sao khác (cache, search index, CDN) phải dựng lại được từ nó và khi lệch thì nó thắng.",
+      "example": "Giá sản phẩm trong PostgreSQL là nguồn sự thật; giá trong Redis và Elasticsearch chỉ là bản sao.",
+      "related": ["cache", "cdc"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "stateless",
+      "term": "Stateless",
+      "meaning": "Service không giữ trạng thái của người dùng giữa các request trên chính instance đó (session, file, job); mọi trạng thái nằm ở kho dùng chung. Nhờ vậy instance nào cũng xử lý được request nào.",
+      "example": "Session lưu trong Redis thay vì `HttpSession` trong bộ nhớ, nên load balancer gửi request tới instance nào cũng được.",
+      "related": ["horizontal-scaling", "sticky-session", "load-balancer"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "horizontal-scaling",
+      "term": "Scale ngang",
+      "meaning": "Tăng năng lực bằng cách thêm máy hay instance chạy song song (scale out). Cần service stateless hoặc dữ liệu được chia.",
+      "example": "Tăng từ 3 lên 6 instance app sau load balancer khi lượng request gấp đôi.",
+      "related": ["vertical-scaling", "stateless", "autoscaling"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "vertical-scaling",
+      "term": "Scale dọc",
+      "meaning": "Tăng năng lực bằng cách đổi sang máy mạnh hơn (thêm CPU, RAM, đĩa nhanh hơn), scale up. Không đổi kiến trúc nhưng có trần là máy lớn nhất và vẫn là một điểm hỏng.",
+      "example": "Nâng database từ 8 vCPU/32 GB lên 32 vCPU/128 GB trước khi tính tới sharding.",
+      "related": ["horizontal-scaling", "single-point-of-failure"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "single-point-of-failure",
+      "term": "SPOF",
+      "meaning": "Single point of failure: thành phần mà khi nó hỏng thì cả hệ thống ngừng, vì không có bản dự phòng.",
+      "example": "Một database không có replica, hay một Nginx duy nhất đứng trước mọi service.",
+      "related": ["failover", "vertical-scaling"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "read-replica",
+      "term": "Read replica",
+      "meaning": "Bản sao của database nhận thay đổi từ primary và phục vụ lượt đọc. Scale được đọc, không scale được ghi, và dữ liệu có thể trễ so với primary.",
+      "example": "Trang báo cáo đọc từ replica; luồng vừa đặt hàng xong thì đọc từ primary để thấy ngay đơn mới.",
+      "related": ["replica-lag", "read-your-writes", "sharding"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "presigned-url",
+      "term": "Presigned URL",
+      "meaning": "URL tới một object trong object storage, đã được ký sẵn bằng quyền của server và có thời hạn, cho phép client tải lên hay tải về thẳng mà không cần credential và không đi qua app server.",
+      "example": "App trả về URL PUT hết hạn sau 15 phút; trình duyệt upload ảnh thẳng lên S3 bằng URL đó.",
+      "related": ["object-storage", "multipart-upload"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "multipart-upload",
+      "term": "Multipart upload",
+      "meaning": "Upload một object lớn thành nhiều phần độc lập, song song và gửi lại được từng phần, rồi ghép lại ở bước hoàn tất. Phần dở dang vẫn tốn tiền tới khi bị huỷ.",
+      "example": "S3: một PUT tối đa 5 GB; video 20 GB chia thành các phần 100 MB, mỗi phần lỗi thì chỉ gửi lại phần đó.",
+      "related": ["object-storage", "presigned-url"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "time-series-database",
+      "term": "Time-series database",
+      "meaning": "Database tối ưu cho chuỗi điểm dữ liệu theo thời gian: ghi nối tiếp rất nhiều, nén theo từng chuỗi (lưu chênh lệch giữa các điểm liền nhau), truy vấn theo khoảng thời gian và gộp, tự xoá dữ liệu cũ.",
+      "example": "Prometheus, InfluxDB, TimescaleDB lưu CPU của mỗi pod mỗi 15 giây.",
+      "related": ["wide-column-store"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "data-warehouse",
+      "term": "Data warehouse",
+      "meaning": "Kho dữ liệu phục vụ phân tích (OLAP): lưu theo cột, quét và gộp hàng trăm triệu dòng nhanh, nạp dữ liệu từ các hệ thống nghiệp vụ (OLTP) theo lô hoặc theo luồng.",
+      "example": "Báo cáo doanh thu theo vùng chạy trên BigQuery hay Redshift thay vì trên primary PostgreSQL.",
+      "related": ["cdc"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "functional-requirement",
+      "term": "Functional requirement",
+      "meaning": "Yêu cầu chức năng: hệ thống cho người dùng làm được gì.",
+      "example": "Người dùng tạo paste và nhận link; ai có link đều đọc được; paste hết hạn nếu người tạo chọn thời hạn.",
+      "related": ["non-functional-requirement"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "non-functional-requirement",
+      "term": "Non-functional requirement",
+      "meaning": "Yêu cầu phi chức năng: hệ thống phải tốt tới mức nào, như quy mô, latency, availability, độ nhất quán, bảo mật, chi phí. Phải có số đo được.",
+      "example": "p99 đọc dưới 200 ms, availability 99,9%, chịu 1 triệu ghi mỗi ngày.",
+      "related": ["functional-requirement", "availability", "slo"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "back-of-envelope-estimation",
+      "term": "Back-of-the-envelope",
+      "meaning": "Ước lượng nhanh bằng số tròn (QPS, dung lượng, băng thông) để biết bài toán ở cỡ nào và quyết định có cần cache, sharding hay không.",
+      "example": "1 triệu ghi/ngày ÷ 86.400 giây ≈ 12 ghi/giây (làm tròn 10⁵ thì ra 10, cùng bậc): một database thừa sức.",
+      "related": ["qps", "read-write-ratio"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "qps",
+      "term": "QPS",
+      "meaning": "Queries per second: số request hay query mỗi giây. Thường nêu cả trung bình và đỉnh.",
+      "example": "10 triệu lượt đọc mỗi ngày ≈ 116 QPS trung bình, đỉnh khoảng 350.",
+      "related": ["throughput", "back-of-envelope-estimation"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "availability",
+      "term": "Availability",
+      "meaning": "Tỉ lệ thời gian hệ thống phục vụ được, thường nói bằng số số 9. Mỗi số 9 thêm vào giảm thời gian ngừng cho phép đi 10 lần.",
+      "example": "99,9% cho phép khoảng 43 phút ngừng mỗi tháng; 99,99% khoảng 4,3 phút.",
+      "related": ["slo", "non-functional-requirement"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "read-write-ratio",
+      "term": "Read/write ratio",
+      "meaning": "Tỉ lệ lượt đọc so với lượt ghi. Đọc nhiều thì cache và replica hiệu quả; ghi nhiều thì phải nghĩ tới batch, queue, sharding.",
+      "example": "Trang sản phẩm đọc gấp 100 lần ghi; log sự kiện thì gần như chỉ ghi.",
+      "related": ["qps", "cache"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "premature-scaling",
+      "term": "Premature scaling",
+      "meaning": "Thêm sharding, microservices, multi-region hay queue khi con số chưa đòi hỏi, trả giá phức tạp và chi phí mà không giải bài toán nào.",
+      "example": "Shard database cho 50 ghi mỗi giây và 200 GB dữ liệu.",
+      "related": ["microservices", "sharding"],
+      "topics": ["sd-framework"]
+    },
+    {
+      "id": "availability-zone",
+      "term": "Availability Zone (AZ)",
+      "meaning": "Một hay nhiều data center tách biệt về điện, mạng và làm mát trong cùng một region của cloud. Chạy qua nhiều AZ để một data center hỏng không làm ngừng hệ thống.",
+      "example": "Ba instance app đặt ở ba AZ `ap-southeast-1a/b/c`; mất một AZ vẫn còn hai.",
+      "related": ["single-point-of-failure", "availability"],
+      "topics": ["sd-building-blocks", "sd-framework"]
+    },
+    {
+      "id": "oltp",
+      "term": "OLTP",
+      "meaning": "Online Transaction Processing: hệ thống nghiệp vụ xử lý nhiều transaction nhỏ (đặt hàng, thanh toán), đọc ghi vài dòng mỗi lần, cần latency thấp. Đối lập với OLAP là phân tích, quét nhiều dòng.",
+      "example": "PostgreSQL của service đơn hàng là OLTP; báo cáo doanh thu năm chạy trên data warehouse.",
+      "related": ["data-warehouse"],
+      "topics": ["sd-building-blocks"]
+    },
+    {
+      "id": "dau",
+      "term": "DAU",
+      "meaning": "Daily active users: số người dùng khác nhau có hoạt động trong một ngày. Điểm xuất phát hay dùng để ước lượng tải.",
+      "example": "10 triệu DAU, mỗi người đọc 20 lần mỗi ngày ≈ 2.300 lượt đọc mỗi giây trung bình.",
+      "related": ["qps"],
+      "topics": ["sd-framework"]
     }
   ]
 }

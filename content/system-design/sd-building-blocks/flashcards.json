@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "stateless-why", "front": "Vì sao app server nên stateless?", "back": "Để load balancer gửi request tới instance nào cũng được: scale ngang chỉ là thêm instance, instance chết không làm mất session của người dùng." },
+    { "id": "cache-db-load", "front": "Hit ratio giảm từ 95% xuống 90% thì tải đọc về database thay đổi thế nào?", "back": "Tăng gấp đôi: phần miss đi từ 5% lên 10% tổng lượt đọc." },
+    { "id": "replica-scales", "front": "Read replica giải quyết giới hạn nào và không giải quyết giới hạn nào?", "back": "Scale lượt đọc. Mọi lượt ghi vẫn vào primary; ghi vượt một máy thì cần sharding." },
+    { "id": "queue-limit", "front": "Queue giúp gì khi tải vượt năng lực của worker?", "back": "Chỉ hấp thụ đỉnh ngắn thành backlog. Nếu tốc độ đến trung bình lớn hơn tốc độ xử lý, backlog tăng mãi." },
+    { "id": "file-upload", "front": "File người dùng upload nên đi đường nào?", "back": "Client PUT thẳng lên object storage bằng presigned URL có thời hạn; database chỉ lưu key và metadata, file không đi qua app server." },
+    { "id": "object-not-fs", "front": "Object storage khác file system ở đâu khi sửa file?", "back": "Không sửa được một phần object: phải ghi đè cả object. Đổi tên là copy rồi xoá, thư mục chỉ là prefix của key." },
+    { "id": "search-not-primary", "front": "Vì sao search engine không nên là database chính?", "back": "Dữ liệu chỉ tìm thấy sau khoảng 1 giây và index phải dựng lại được; nguồn sự thật nằm ở database, đồng bộ sang qua CDC." },
+    { "id": "dual-write-risk", "front": "Ghi database rồi ghi cache và search trong cùng request có rủi ro gì?", "back": "Dual write: một bước lỗi là các bản sao lệch vĩnh viễn. Dùng outbox hoặc CDC để bản sao đi theo database." }
+  ]
+}

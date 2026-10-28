@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "45 phút thiết kế dịch vụ chia sẻ đoạn text",
+  "nodes": [
+    { "id": "req", "label": "Yêu cầu", "kind": "generic", "x": 0.1, "y": 0.05 },
+    { "id": "est", "label": "Ước lượng", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "api", "label": "API & dữ liệu", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "hld", "label": "High-level", "kind": "service", "x": 0.85, "y": 0.95 },
+    { "id": "deep", "label": "Deep dive", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "wrap", "label": "Tổng kết", "kind": "generic", "x": 0.85, "y": 0.05 }
+  ],
+  "edges": [
+    { "id": "req-est", "from": "req", "to": "est", "label": "phút 5" },
+    { "id": "est-api", "from": "est", "to": "api", "label": "phút 10" },
+    { "id": "api-hld", "from": "api", "to": "hld", "label": "phút 15" },
+    { "id": "hld-deep", "from": "hld", "to": "deep", "label": "phút 25" },
+    { "id": "deep-req", "from": "deep", "to": "req", "label": "hỏi lại khi cần" },
+    { "id": "deep-wrap", "from": "deep", "to": "wrap", "label": "phút 40" }
+  ],
+  "steps": [
+    {
+      "caption": "Làm rõ: tạo paste, đọc theo link, hết hạn nếu người tạo chọn; không cần sửa paste. Chốt 1 triệu paste mới/ngày, đọc gấp 10, p99 đọc dưới 200 ms.",
+      "show": ["req"],
+      "highlight": ["req"]
+    },
+    {
+      "caption": "Khoảng 12 ghi và 120 đọc mỗi giây, đỉnh 350 đọc; nội dung 3,65 TB/năm. Kết luận: một database đủ, nội dung nên ra object storage.",
+      "show": ["est", "req-est"],
+      "highlight": ["req-est"]
+    },
+    {
+      "caption": "POST /pastes trả id, GET /pastes/{id}. Bảng pastes giữ id, key nội dung, chủ sở hữu, hạn; query chính là lấy theo id.",
+      "show": ["api", "est-api"],
+      "highlight": ["est-api"]
+    },
+    {
+      "caption": "Vẽ bản đơn giản: LB, app stateless, PostgreSQL cho metadata, object storage cho nội dung. 350 đọc/giây chưa cần cache.",
+      "show": ["hld", "api-hld"],
+      "highlight": ["api-hld"]
+    },
+    {
+      "caption": "Đi sâu phần khó của bài: sinh id ngắn không trùng, và xoá paste hết hạn mà không quét cả bảng.",
+      "show": ["deep", "hld-deep"],
+      "highlight": ["hld-deep"]
+    },
+    {
+      "caption": "Người phỏng vấn hỏi thêm paste riêng tư. Quay lại yêu cầu, chốt phạm vi mới, rồi chỉ sửa phần thiết kế bị ảnh hưởng.",
+      "show": ["deep-req"],
+      "highlight": ["deep-req"]
+    },
+    {
+      "caption": "Tổng kết: tải gấp 10 thì thêm cache cho paste đọc nhiều; PostgreSQL cần replica và backup vì mất nó là mất ánh xạ id → nội dung; theo dõi p99, lỗi upload.",
+      "show": ["wrap", "deep-wrap"],
+      "highlight": ["deep-wrap"]
+    }
+  ]
+}

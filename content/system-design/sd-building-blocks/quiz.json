@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cache-outage-load",
+      "kind": "single",
+      "prompt": "Trang sản phẩm có 20.000 lượt đọc mỗi giây, Redis đang hit 95%. Database chịu tối đa 4.000 query đọc mỗi giây. Redis restart và mất hết dữ liệu. Điều gì xảy ra ngay sau đó?",
+      "options": [
+        "Database nhận 20.000/giây, gấp 5 lần sức chịu",
+        "Database nhận 2.000/giây, vẫn trong sức chịu",
+        "Database nhận 1.000/giây như lúc bình thường",
+        "Database nhận 4.000/giây vì pool giới hạn lại"
+      ],
+      "answer": 0,
+      "explanation": "Lúc bình thường database chỉ nhận phần miss: 20.000 × 5% = 1.000/giây. Cache trống thì mọi lượt đọc đều miss, database nhận đủ 20.000/giây, gấp 5 lần sức chịu. Connection pool chỉ giới hạn số query chạy cùng lúc; phần dư xếp hàng trong pool, request chậm dần rồi timeout chứ không biến mất. Đây là lý do phải tính tải khi cache trống và có cơ chế đỡ (replica cho Redis, coalescing, làm ấm)."
+    },
+    {
+      "id": "replica-write-bound",
+      "kind": "single",
+      "prompt": "Database primary đang 90% CPU, và 80% tải là lệnh `INSERT` từ luồng ghi log hoạt động của người dùng. Đồng nghiệp đề xuất thêm 2 read replica. Nhận xét nào đúng?",
+      "options": [
+        "Không đỡ được: mọi INSERT vẫn chạy trên primary",
+        "Đỡ được: replica nhận bớt INSERT từ primary",
+        "Đỡ được: replica giúp primary commit nhanh hơn",
+        "Không đỡ được: replica chỉ dùng cho failover"
+      ],
+      "answer": 0,
+      "explanation": "Read replica chỉ nhận lượt đọc; mọi ghi vẫn vào primary rồi được chép sang replica, nên replica còn phải tự áp lại đúng khối lượng ghi đó. Replica không chỉ để failover: nó scale đọc rất tốt. Ở đây cần giảm ghi (gom batch, đưa log hoạt động sang queue rồi kho chuyên cho log, hoặc sharding khi thật cần)."
+    },
+    {
+      "id": "upload-path",
+      "kind": "single",
+      "prompt": "App cho người dùng upload video tới 2 GB. Cách nào hợp lý nhất?",
+      "options": [
+        "Client upload thẳng lên object storage bằng presigned URL",
+        "Client gửi video lên app, app lưu vào cột BLOB của database",
+        "Client gửi video lên app, app ghi ra đĩa local của instance",
+        "Client gửi video vào message queue, worker lưu xuống đĩa"
+      ],
+      "answer": 0,
+      "explanation": "Presigned URL cho client PUT thẳng lên object storage (file lớn thì multipart upload), app chỉ ký URL và lưu key cùng metadata. BLOB 2 GB làm phình backup và replication của database. Đĩa local làm app mất tính stateless: instance khác không thấy file, instance chết là mất file. Queue có giới hạn kích thước message (cỡ 1 MB với Kafka mặc định), không dùng để chở file."
+    },
+    {
+      "id": "queue-backlog",
+      "kind": "single",
+      "prompt": "Job gửi email nhận trung bình 300 message/giây cả ngày, 4 worker xử lý tổng 250 message/giây. Queue đang có 0 message lúc 8 giờ sáng. Nhận xét nào đúng?",
+      "options": [
+        "Backlog tăng 50/giây mãi, cần tăng năng lực xử lý",
+        "Queue hấp thụ được vì đây chỉ là đỉnh tải ngắn",
+        "Backlog tự hết khi broker tăng tốc độ phân phối",
+        "Chỉ cần tăng retention của queue lên vài ngày"
+      ],
+      "answer": 0,
+      "explanation": "Tốc độ đến trung bình (300) lớn hơn tốc độ xử lý (250) suốt cả ngày, không phải đỉnh ngắn, nên backlog tăng 50 message mỗi giây, khoảng 180.000 mỗi giờ. Broker phân phối nhanh hơn không làm worker xử lý nhanh hơn; tăng retention chỉ giữ message lâu hơn chứ không xử lý hết. Phải thêm worker hoặc làm mỗi lần xử lý rẻ hơn."
+    },
+    {
+      "id": "search-sync",
+      "kind": "single",
+      "prompt": "Shop thêm Elasticsearch cho tìm sản phẩm. Code cũ: lưu sản phẩm vào PostgreSQL, commit, rồi gọi API index sang Elasticsearch trong cùng request. Rủi ro chính là gì?",
+      "options": [
+        "Gọi index lỗi sau commit thì search lệch mãi",
+        "Elasticsearch không nhận được sản phẩm trùng tên",
+        "PostgreSQL bị khoá bảng trong lúc chờ index xong",
+        "Sản phẩm mới không bao giờ hiện trong kết quả"
+      ],
+      "answer": 0,
+      "explanation": "Đây là dual write: commit xong mà gọi index lỗi (timeout, Elasticsearch đang restart) thì không ai ghi lại, search lệch với database mãi mãi. Transaction đã commit trước khi gọi nên không khoá bảng chờ index. Cách đúng: transactional outbox hoặc CDC đọc thay đổi từ database rồi index, có retry, và dựng lại được toàn bộ index từ database."
+    }
+  ]
+}

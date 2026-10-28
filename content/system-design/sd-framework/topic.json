@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sd-framework",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Khung trả lời System Design",
+  "summary": "Sáu bước cho một buổi System Design 45 phút: làm rõ yêu cầu, ước lượng, API và dữ liệu, thiết kế tổng, đi sâu, tổng kết; cách nói trade-off, chia thời gian và những bẫy làm ứng viên trượt.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["sd-building-blocks"],
+  "terms": ["dau", "availability-zone", "functional-requirement", "non-functional-requirement", "back-of-envelope-estimation", "qps", "availability", "read-write-ratio", "microservices", "percentile", "eventual-consistency", "idempotency-key", "slo", "replica-lag", "premature-scaling"],
+  "references": [
+    { "title": "AWS Well-Architected Framework: Reliability pillar, availability", "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/availability.html" },
+    { "title": "Google SRE Book: Embracing Risk", "url": "https://sre.google/sre-book/embracing-risk/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Nếu tải tăng gấp 10 thì thiết kế của anh hỏng ở đâu trước?\" Đừng trả lời \"thêm server\". Đi theo con số: 350 đọc/giây thành 3.500, lúc này mới đáng thêm cache cho paste đọc nhiều (và CDN cho paste public); 12 ghi/giây thành 120, một PostgreSQL vẫn dư sức; dung lượng 3,65 TB/năm thành 36,5 TB, đây mới là chỗ phải nghĩ (object storage và lifecycle xoá paste hết hạn). Chỉ ra khối nghẽn trước, rồi nói thay đổi nhỏ nhất để vượt qua nó." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng mở đầu bằng sơ đồ microservices với Kafka, Redis Cluster và multi-region. Nếu yêu cầu chỉ là vài chục ghi mỗi giây, người phỏng vấn sẽ hỏi vì sao cần chúng, và \"để dễ scale\" không phải câu trả lời. Thiết kế đơn giản đáp ứng đủ yêu cầu được điểm cao hơn thiết kế phức tạp không có lý do." },
+    { "type": "callout", "style": "tip", "markdown": "Ghi yêu cầu và con số thành danh sách ở góc bảng ngay từ đầu (\"1M paste/ngày, đọc ×10, p99 < 200 ms, 99,9%\"). Mỗi khi chọn phương án, chỉ vào dòng tương ứng: người phỏng vấn thấy ngay quyết định của bạn có căn cứ." }
+  ]
+}

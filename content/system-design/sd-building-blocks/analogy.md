@@ -1,0 +1,5 @@
+Một quán phở lớn ngày cuối tuần. Ở cửa có **người dẫn chỗ** chia khách cho các dãy bàn còn trống; bàn nào hỏng thì không xếp khách vào. Bếp có **nồi nước dùng nấu sẵn** và rau thái sẵn trên quầy: lấy ngay, khỏi đi lấy từ kho mỗi lần, nhưng thỉnh thoảng phải thay để không bị cũ.
+
+Khách đặt giao hàng thì quán ghi **phiếu, treo lên dây**; người làm lấy phiếu theo sức mình, giờ cao điểm phiếu dài ra chứ không ai bị đuổi về. Tiền bạc, công nợ ghi trong **sổ cái** của chủ quán: đó là sự thật duy nhất, mọi thứ khác có thể làm lại. Bao gạo, thùng xương to thì để ở **kho sau nhà**, chỉ ghi vào sổ là "thùng số 12 ở kho". Quán mở thêm **điểm bán nhỏ ở các quận** để khách gần đó khỏi phải đi xa, và có **cuốn danh mục** tra "món nào có bò tái" mà khỏi lật từng trang sổ.
+
+Một hệ thống phần mềm ghép từ đúng những khối đó: người dẫn chỗ là [[load-balancer|load balancer]], quầy đồ làm sẵn là [[cache]], phiếu treo dây là [[message-queue|queue]], sổ cái là database làm [[source-of-truth|nguồn sự thật]], kho sau nhà là [[object-storage|object storage]], điểm bán ở các quận là [[cdn|CDN]], còn cuốn danh mục là search engine với [[inverted-index|inverted index]].

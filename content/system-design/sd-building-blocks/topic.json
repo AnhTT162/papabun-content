@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sd-building-blocks",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Các khối xây dựng",
+  "summary": "Load balancer, cache, CDN, queue, các loại database, object storage và search engine: mỗi khối giải bài toán gì, giá phải trả là gì, và khi nào chưa cần thêm nó vào thiết kế.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["availability-zone", "oltp", "idempotent-consumer", "load-balancer", "cache", "cdn", "message-queue", "object-storage", "source-of-truth", "inverted-index", "stateless", "horizontal-scaling", "vertical-scaling", "single-point-of-failure", "health-check", "access-pattern", "read-replica", "replica-lag", "sharding", "ttl", "edge-location", "presigned-url", "multipart-upload", "cdc", "sticky-session", "consumer-lag", "key-value-store", "document-database", "wide-column-store", "time-series-database", "graph-database", "data-warehouse", "read-your-writes", "near-real-time", "dual-write", "outbox"],
+  "references": [
+    { "title": "AWS: Best practices design patterns: optimizing Amazon S3 performance", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html" },
+    { "title": "AWS: Uploading objects (Amazon S3)", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html" },
+    { "title": "AWS: Amazon S3 data consistency model", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Cache của anh chết thì sao?\" Trả lời bằng con số: hit ratio 95% nghĩa là database đang chỉ nhận 1/20 lượt đọc, cache mất hết thì database nhận gấp 20 lần. Rồi nêu cách đỡ: Redis có replica và failover, giới hạn số request về database khi miss (request coalescing, rate limit), làm ấm cache trước khi chuyển traffic, và chấp nhận trả lỗi nhanh ở các trang ít quan trọng thay vì để database sập kéo theo cả hệ thống." },
+    { "type": "callout", "style": "warning", "markdown": "Queue không cứu được consumer chậm. Nếu message đến trung bình 500/giây mà worker chỉ xử lý 400/giây, backlog tăng 100 message mỗi giây, tức 360.000 message mỗi giờ, và không bao giờ tự hết. Queue chỉ hấp thụ đỉnh ngắn; tải trung bình vẫn phải nằm dưới năng lực xử lý. Cảnh báo theo tuổi của message cũ nhất, không chỉ theo số message." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ thiết kế, ghi lên mỗi khối nó giữ gì và lấy dữ liệu từ đâu (\"Redis: trang sản phẩm, TTL 5 phút, đọc từ PostgreSQL\"). Khối nào không ghi được câu đó thì có lẽ chưa cần." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "six-steps", "front": "Sáu bước của một buổi System Design là gì?", "back": "Làm rõ yêu cầu, ước lượng, API và dữ liệu, thiết kế tổng (high-level), đi sâu (deep dive), tổng kết điểm nghẽn và trade-off." },
+    { "id": "func-vs-nonfunc", "front": "Yêu cầu chức năng khác yêu cầu phi chức năng thế nào?", "back": "Chức năng: người dùng làm được gì (tạo paste, đọc theo link). Phi chức năng: hệ thống phải tốt tới mức nào, có số đo được (p99 < 200 ms, 99,9%, 1 triệu ghi/ngày)." },
+    { "id": "nines", "front": "99,9% và 99,99% availability cho phép ngừng bao lâu mỗi tháng?", "back": "Khoảng 43 phút và khoảng 4,3 phút (tháng 30 ngày)." },
+    { "id": "qps-from-day", "front": "1 triệu request mỗi ngày là bao nhiêu request mỗi giây?", "back": "Khoảng 12/giây trung bình (1 ngày ≈ 86.400 giây); đỉnh thường gấp 2–3 lần, còn sự kiện đặc biệt có thể gấp hơn 10 lần." },
+    { "id": "estimate-purpose", "front": "Ước lượng trong buổi phỏng vấn dùng để làm gì?", "back": "Để ra quyết định: có cần sharding, cache, object storage hay không. Con số không dẫn tới quyết định nào thì bỏ." },
+    { "id": "tradeoff-template", "front": "Mẫu câu nói trade-off là gì?", "back": "Tôi chọn X vì yêu cầu Y; giá là Z; nếu yêu cầu đổi thành W thì tôi chuyển sang V." },
+    { "id": "deep-dive-pick", "front": "Nên chọn phần nào để deep dive?", "back": "Phần khó riêng của đề bài (sinh mã ngắn, fan-out của feed, thứ tự tin nhắn), hoặc phần người phỏng vấn gợi ý; không phải phần chung như load balancer." },
+    { "id": "wrap-up", "front": "Phần tổng kết nên nói gì?", "back": "Khối nào nghẽn trước khi tải gấp 10, người dùng thấy gì khi một khối chết, và metric cảnh báo chính." },
+    { "id": "time-check", "front": "Dấu hiệu đang chậm trong buổi 45 phút là gì?", "back": "Hết khoảng phút 25 vẫn chưa có sơ đồ tổng chạy được; khi đó rút gọn phần ước lượng và API để kịp tới deep dive." }
+  ]
+}

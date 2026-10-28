@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "first-move",
+      "kind": "single",
+      "prompt": "Đề bài: \"Thiết kế hệ thống đặt vé xem phim.\" Việc đầu tiên nên làm là gì?",
+      "options": [
+        "Hỏi phạm vi, quy mô và yêu cầu về giữ ghế",
+        "Vẽ sơ đồ microservices cho vé, phim, thanh toán",
+        "Chọn database và vẽ bảng cho phim, suất, ghế",
+        "Tính QPS theo số rạp và số ghế cả nước"
+      ],
+      "answer": 0,
+      "explanation": "Chưa biết phạm vi (có thanh toán không, có chọn ghế không), quy mô và yêu cầu nhất quán (hai người không được giữ cùng ghế) thì mọi sơ đồ hay bảng đều là đoán. Ước lượng cũng cần giả định từ bước làm rõ (bao nhiêu người đặt lúc mở bán) nên đi sau. Vẽ microservices ngay là bẫy kinh điển."
+    },
+    {
+      "id": "estimate-conclusion",
+      "kind": "single",
+      "prompt": "Dịch vụ dự kiến 2 triệu bản ghi mới mỗi ngày, mỗi bản ghi 1 KB, giữ 3 năm. Kết luận hợp lý nhất từ con số này?",
+      "options": [
+        "Khoảng 23 ghi/giây, 2,2 TB: một database còn đủ",
+        "Khoảng 230 ghi/giây, 22 TB: cần sharding ngay",
+        "Khoảng 23 ghi/giây, 22 TB: cần sharding ngay",
+        "Khoảng 2.300 ghi/giây, 2,2 TB: cần thêm queue"
+      ],
+      "answer": 0,
+      "explanation": "2.000.000 ÷ 86.400 ≈ 23 ghi/giây; 2 triệu × 1 KB = 2 GB/ngày × 1.095 ngày ≈ 2,2 TB (chưa tính index). Cả tải ghi lẫn dung lượng đều nằm trong sức một PostgreSQL hay MySQL được cấu hình tốt, có replica cho HA. Sharding hay queue ở mức này là scale sớm, thêm độ phức tạp mà không giải bài toán nào."
+    },
+    {
+      "id": "nonfunctional-number",
+      "kind": "single",
+      "prompt": "Câu nào là yêu cầu phi chức năng viết đúng cách?",
+      "options": [
+        "p99 đọc dưới 200 ms, availability 99,9%",
+        "Hệ thống phải nhanh và luôn luôn sẵn sàng",
+        "Người dùng xem được lịch sử đơn hàng của mình",
+        "Dùng Redis để trang chủ tải nhanh hơn"
+      ],
+      "answer": 0,
+      "explanation": "Yêu cầu phi chức năng phải đo được để dùng làm căn cứ chọn thiết kế. \"Nhanh, luôn sẵn sàng\" không đo được. Xem lịch sử đơn hàng là yêu cầu chức năng. \"Dùng Redis\" là giải pháp, không phải yêu cầu."
+    },
+    {
+      "id": "nines-downtime",
+      "kind": "single",
+      "prompt": "Người phỏng vấn yêu cầu 99,99% availability. Mỗi tháng 30 ngày, hệ thống được phép ngừng khoảng bao lâu?",
+      "options": [
+        "Khoảng 4,3 phút",
+        "Khoảng 43 phút",
+        "Khoảng 26 giây",
+        "Khoảng 7,2 giờ"
+      ],
+      "answer": 0,
+      "explanation": "30 × 24 × 60 = 43.200 phút; 0,01% của nó là 4,32 phút. 43 phút là của 99,9%, 26 giây là của 99,999%, 7,2 giờ là của 99%. Với 4 phút mỗi tháng, một lần deploy có downtime hay failover thủ công đã tiêu hết ngân sách, nên cần deploy không downtime và failover tự động."
+    },
+    {
+      "id": "interviewer-redirect",
+      "kind": "single",
+      "prompt": "Bạn định deep dive vào cache, nhưng người phỏng vấn hỏi: \"Hai người cùng giữ một ghế thì sao?\" Nên làm gì?",
+      "options": [
+        "Chuyển sang xử lý tranh chấp giữ ghế ngay",
+        "Xin làm xong phần cache rồi mới quay lại",
+        "Trả lời ngắn \"dùng lock\" rồi tiếp tục cache",
+        "Nói phần đó ngoài phạm vi đã chốt từ đầu"
+      ],
+      "answer": 0,
+      "explanation": "Câu hỏi của người phỏng vấn thường chỉ ra phần họ muốn chấm, và tranh chấp giữ ghế là phần khó riêng của bài này. Đi theo họ: so khoá bi quan, khoá lạc quan, giữ chỗ có thời hạn, rồi chọn và nói giá. Trả lời \"dùng lock\" rồi bỏ qua cho thấy bạn né phần sâu; từ chối vì ngoài phạm vi là bỏ lỡ chính điều họ muốn đánh giá."
+    }
+  ]
+}
