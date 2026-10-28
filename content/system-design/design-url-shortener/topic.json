@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-url-shortener",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế URL shortener",
+  "summary": "Sinh mã ngắn không trùng và khó đoán (băm, counter có hoán vị, ngẫu nhiên), 301 hay 302, đường redirect qua cache và mã nóng, đếm click bất đồng bộ, alias tự đặt, thu hồi link lừa đảo.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 16,
+  "prerequisites": ["sd-framework", "back-of-envelope", "cache-patterns"],
+  "terms": ["url-shortener", "temporary-redirect", "permanent-redirect", "base62", "cache-aside", "link-preview", "birthday-paradox", "feistel-cipher", "hot-key", "negative-caching", "cache-penetration", "phishing", "rate-limiting", "unique-constraint", "bloom-filter", "outbox", "hyperloglog", "cache-hit-ratio", "sharding"],
+  "references": [
+    { "title": "RFC 9110: HTTP Semantics, 15.4 Redirection 3xx", "url": "https://www.rfc-editor.org/rfc/rfc9110#name-redirection-3xx" },
+    { "title": "MDN: 302 Found", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/302" },
+    { "title": "Google Safe Browsing / Web Risk overview", "url": "https://cloud.google.com/web-risk/docs/overview" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai người rút gọn cùng một URL thì có trả cùng mã không?\" Không có đáp án đúng duy nhất, nên nói trade-off. Trả cùng mã tiết kiệm chỗ, nhưng hai người chung số liệu click, và ai biết URL là tính ra mã. Tôi chọn mỗi lần tạo một mã mới; nếu cần khử trùng thì chỉ khử trong phạm vi một tài khoản, bằng unique index trên `(owner_id, hash(long_url))`." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng kiểm tra mã bằng `SELECT` rồi mới `INSERT`. Hai request có thể cùng thấy mã còn trống và cùng chèn. Để unique constraint quyết định: `INSERT ... ON CONFLICT (code) DO NOTHING`, 0 dòng thì sinh mã khác." },
+    { "type": "callout", "style": "tip", "markdown": "Deep dive của bài này thường xoay quanh sinh mã. Nói cả ba cách (băm, counter, ngẫu nhiên) trong một phút với điểm yếu của từng cách, chọn một, rồi tính xác suất trùng bằng số đã ước lượng: người phỏng vấn thấy bạn nối được con số với quyết định." }
+  ]
+}

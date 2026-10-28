@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Link rút gọn cho chiến dịch SMS và dashboard click theo phút",
+  "prompt": "Một nền tảng gửi SMS và email marketing cần dịch vụ rút gọn link riêng (`sho.rt/<mã>`). Ràng buộc: 100 triệu link mới mỗi tháng, giữ 5 năm; khoảng 10 tỉ click mỗi tháng, nhưng khi một chiến dịch SMS gửi tới 3 triệu người thì một link duy nhất có thể nhận 40.000 click/giây trong khoảng một phút đầu; p99 redirect dưới 50 ms trong region; mã sinh tự động tối đa 7 ký tự và không đoán được (link có thể chứa mã giảm giá cá nhân); khách hàng có thể tự đặt alias; dashboard hiện click theo phút, trễ không quá 2 phút, và không đếm bot; link bị báo lừa đảo phải ngừng redirect trong 5 phút. Thiết kế sinh mã, đường redirect, đường đếm click và cách tắt link.",
+  "hints": [
+    "Ước lượng trước: bao nhiêu ghi/giây, bao nhiêu link sau 5 năm, 7 ký tự base62 có đủ không, và xác suất trùng mỗi lần chèn là bao nhiêu?",
+    "Cách sinh mã nào vừa không đoán được vừa không cần phối hợp giữa các instance? Cái gì đảm bảo không trùng, kể cả với alias?",
+    "40.000 click/giây vào một mã thì Redis, database và bộ đếm click chịu thế nào? Nên trả 301 hay 302?",
+    "Tắt link trong 5 phút phải xoá ở những tầng cache nào, và tầng nào bạn không xoá được?"
+  ],
+  "solution": "**Ước lượng**: 100 triệu/tháng ÷ 2,6 triệu giây ≈ 40 ghi/giây. 5 năm là 6 tỉ link; 500 byte mỗi dòng ≈ 3 TB, thêm index khoảng 5 TB. Click trung bình khoảng 3.900/giây, đỉnh tập trung 40.000/giây vào một mã. 62⁷ ≈ 3,5 nghìn tỉ, ở 6 tỉ link xác suất trùng mỗi lần chèn ngẫu nhiên khoảng 0,17%.\n\n**Sinh mã**: 7 ký tự base62 từ `SecureRandom`, `INSERT INTO links ... ON CONFLICT (code) DO NOTHING`; 0 dòng thì sinh lại (tối đa vài lần, rồi báo lỗi và cảnh báo vì không gian sắp đầy). Không cần counter hay phối hợp giữa instance. Alias tự đặt đi cùng bảng, cùng unique constraint, nên một mã ngẫu nhiên trùng alias cũng chỉ là một lần sinh lại. Alias phải chứa `-` hoặc dài khác 7 ký tự, và không thuộc danh sách từ cấm (`api`, `login`, `admin`). Lúc tạo: chỉ nhận `http`/`https`, kiểm qua dịch vụ danh sách đen URL, rate limit theo tài khoản.\n\n**Dò mã**: 6 tỉ link trong 3,5 nghìn tỉ mã nghĩa là cứ khoảng 600 lần thử ngẫu nhiên lại trúng một link thật. Mã ngẫu nhiên chỉ chống đoán mã kế tiếp, không chống dò. Rate limit theo IP các request trả 404 và cảnh báo khi tỉ lệ 404 tăng; link chứa mã giảm giá cá nhân thì không nên dựa vào mã 7 ký tự: dùng token ngẫu nhiên dài (128 bit) hoặc bắt đăng nhập ở trang đích.\n\n**Redirect**: service stateless, Redis cache-aside `code → long_url, status, expires_at` với TTL 1 giờ (không vượt thời hạn còn lại của link). Mã không tồn tại cache 60 giây. Trả `302` với `Cache-Control: private, max-age=60`: trình duyệt không hỏi lại trong một phút, server vẫn thấy hầu hết click mới. Không dùng `301` vì trình duyệt giữ lâu, mất click và không thu hồi được.\n\n**Mã nóng**: 40.000 click/giây vào một key thì một node Redis vẫn chịu được về throughput, nhưng dồn hết vào một shard và một kết nối mạng. Mỗi instance giữ cache trong process (Caffeine) 5 giây cho mã được đọc nhiều; với 20 instance, Redis chỉ nhận khoảng 4 lần đọc mỗi giây cho mã đó. Có thể làm nóng cache ngay khi chiến dịch bắt đầu gửi.\n\n**Đếm click**: redirect ghi event `(code, thời điểm, User-Agent, IP đã băm)` vào buffer trong process, gửi Kafka theo lô mỗi 100 ms, không chờ ack trên đường redirect. Job stream lọc User-Agent của bot và link preview, gộp theo `(code, phút)`, ghi vào kho dạng cột; dashboard đọc từ đó, trễ khoảng 1 phút. Chấp nhận mất một ít event khi instance chết; nếu click dùng để tính tiền khách hàng thì ghi event bền hơn (ack từ Kafka trước khi trả lời, đổi lấy latency).\n\n**Tắt link**: đổi `status = BLOCKED` trong database rồi ghi đè key Redis bằng bản `BLOCKED` (chỉ xoá thì một request miss vừa đọc replica trễ có thể ghi lại bản cũ ngay sau đó; đường miss nên đọc primary), cache trong process tự hết sau 5 giây, trình duyệt đã nhận `302` giữ tối đa 60 giây. Tổng thời gian dưới 2 phút, trong ngưỡng 5 phút. Nếu sau này đặt CDN trước dịch vụ thì thêm bước purge CDN và giữ `s-maxage` ngắn.\n\n**Database**: một PostgreSQL primary với hai replica trong hai AZ, index trên `expires_at` và job xoá link hết hạn theo lô. Không partition theo thời gian tạo: unique constraint trên `code` phải chứa partition key, và thời hạn do từng link đặt. Chuyển sang key-value store shard theo mã khi cần ghi ở nhiều region.",
+  "tradeoffs": [
+    {
+      "option": "Mã ngẫu nhiên từ SecureRandom, INSERT dựa vào unique constraint",
+      "pros": [
+        "Không đoán được, không lộ số link tạo mỗi ngày",
+        "Không cần phối hợp hay cấp khối giữa các instance"
+      ],
+      "cons": [
+        "Phải xử lý trùng và sinh lại, tỉ lệ tăng khi không gian đầy",
+        "Mã không theo thứ tự thời gian, index chèn rải rác hơn"
+      ]
+    },
+    {
+      "option": "Counter cấp theo khối, che bằng hoán vị Feistel trên 62⁷",
+      "pros": [
+        "Không bao giờ trùng giữa các mã sinh ra",
+        "Dùng hết không gian mã trước khi phải tăng độ dài"
+      ],
+      "cons": [
+        "Lộ khoá hoán vị là đoán được mọi mã",
+        "Vẫn phải kiểm trùng với alias tự đặt, thêm một nguồn cấp số"
+      ]
+    },
+    {
+      "option": "Băm SHA-256 của URL, lấy 64 bit rồi mod 62⁷",
+      "pros": [
+        "Cùng URL ra cùng mã, tự khử trùng link lặp lại",
+        "Không cần nguồn ngẫu nhiên hay counter"
+      ],
+      "cons": [
+        "Biết URL là tính được mã, link cá nhân bị đoán",
+        "Vẫn có va chạm giữa URL khác nhau, cần thử lại có salt"
+      ]
+    }
+  ]
+}

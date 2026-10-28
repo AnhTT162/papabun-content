@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "code-length", "front": "7 ký tự base62 cho bao nhiêu mã?", "back": "62⁷ ≈ 3,5 nghìn tỉ (khoảng 41,7 bit). 6 ký tự chỉ khoảng 57 tỉ." },
+    { "id": "three-generators", "front": "Ba cách sinh mã ngắn và điểm yếu chính của từng cách?", "back": "Băm URL: vẫn va chạm và biết URL là tính được mã. Counter: đoán được, lộ số lượng. Ngẫu nhiên: phải xử lý trùng và sinh lại." },
+    { "id": "insert-conflict", "front": "Chèn mã ngẫu nhiên an toàn thế nào?", "back": "`INSERT ... ON CONFLICT (code) DO NOTHING` rồi kiểm số dòng; 0 thì sinh mã khác. Không SELECT trước rồi mới INSERT." },
+    { "id": "redirect-code", "front": "Vì sao link rút gọn thường trả 302 thay vì 301?", "back": "301 được trình duyệt cache lâu nên lần bấm sau không về server: mất click và không thu hồi được link xấu. 302 chỉ cache khi có header cache rõ ràng." },
+    { "id": "hot-link", "front": "Một link nhận hàng chục nghìn click/giây thì xử lý cache thế nào?", "back": "Thêm cache trong process vài giây ở mỗi instance trước Redis, để key nóng không dồn vào một shard Redis." },
+    { "id": "click-analytics", "front": "Đếm click mà không làm chậm redirect thế nào?", "back": "Đẩy event click bất đồng bộ (buffer rồi Kafka theo lô), job stream lọc bot và gộp theo phút. Không UPDATE bộ đếm trên đường redirect." },
+    { "id": "alias-namespace", "front": "Alias tự đặt gây rủi ro gì cho bộ sinh mã?", "back": "Dùng chung không gian khoá nên mã sinh tự động có thể trùng alias đã có; cần unique constraint hoặc tách không gian (độ dài khác, có `-`)." },
+    { "id": "block-link", "front": "Tắt một link lừa đảo phải làm gì?", "back": "Đổi status trong database, xoá cache Redis, chờ cache trong process và max-age của trình duyệt hết hạn, purge CDN nếu có." },
+    { "id": "abuse", "front": "Chống lạm dụng khi tạo link?", "back": "Chỉ nhận http/https, kiểm URL qua danh sách đen và quét lại định kỳ, rate limit theo tài khoản và IP, không rút gọn chính domain của mình." }
+  ]
+}

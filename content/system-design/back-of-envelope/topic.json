@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "back-of-envelope",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Ước lượng nhanh",
+  "summary": "Tính QPS trung bình và đỉnh, dung lượng theo thời hạn lưu, băng thông và bộ nhớ cache bằng số tròn; các con số cần nhớ, quy ước 86.400 so với 10⁵, và những lỗi đơn vị làm lệch 8 lần.",
+  "level": "junior",
+  "order": 3,
+  "minutes": 11,
+  "prerequisites": ["sd-framework", "computer-architecture"],
+  "terms": ["back-of-envelope-estimation", "qps", "bandwidth", "dau", "peak-factor", "object-storage", "cdn", "push-notification", "replication-factor", "cache-hit-ratio", "hot-data", "littles-law", "iops", "headroom"],
+  "references": [
+    { "title": "Google SRE Book: Handling Overload (đo capacity theo tài nguyên)", "url": "https://sre.google/sre-book/handling-overload/" },
+    { "title": "Redis docs: Redis benchmark", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Nếu con số DAU sai gấp 10 thì sao?\" Trả lời bằng điểm chuyển, không bằng phép tính lại. Ví dụ app ảnh: 12 ghi/giây thành 120 thì một database vẫn đủ; 17.000 đọc/giây thành 170.000 thì metadata phải qua cache nhiều tầng và nhiều replica; 28 Gbps thành 280 Gbps thì vẫn là CDN, chỉ khác hoá đơn. Chỉ ra khối nào đổi thiết kế khi con số đổi, khối nào không." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chọn capacity theo QPS trung bình ngày. Đỉnh theo giờ đã bị làm phẳng; một flash sale hay một đợt push notification dồn tải vào vài phút, có thể gấp hàng chục lần trung bình. Hỏi rõ có sự kiện nào như vậy không." },
+    { "type": "callout", "style": "tip", "markdown": "Viết đơn vị cạnh mọi con số trên bảng (\"5.800 req/s\", \"1,16 GB/s = 9,3 Gbps\") và làm tròn tới một hai chữ số có nghĩa. Lỗi bit/byte, ms/s, KB/MB lộ ra ngay khi đơn vị nằm trên giấy." }
+  ]
+}

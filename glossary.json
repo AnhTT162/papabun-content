@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing", "back-of-envelope"]
     },
     {
       "id": "virtual-thread",
@@ -1117,7 +1117,7 @@
       "meaning": "Chia dữ liệu qua nhiều database server (shard), mỗi shard giữ một phần dòng theo shard key. Mở rộng được ghi vượt một máy, nhưng query, transaction và index qua nhiều shard phức tạp hơn nhiều.",
       "example": "Khách có `hash(customer_id) % 8 = 3` nằm ở shard số 3.",
       "related": ["partitioning", "hot-partition"],
-      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies", "sd-building-blocks"]
+      "topics": ["partitioning-index", "nosql-overview", "sharding-strategies", "sd-building-blocks", "design-url-shortener"]
     },
     {
       "id": "hot-partition",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures"]
+      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures", "design-url-shortener"]
     },
     {
       "id": "group-commit",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener"]
     },
     {
       "id": "replication-slot",
@@ -2365,7 +2365,7 @@
       "meaning": "Tỉ lệ lần đọc tìm thấy dữ liệu trong cache. Phần còn lại (miss ratio) là tải đi xuống nguồn.",
       "example": "Hit ratio 99% nghĩa là cứ 100 lần đọc chỉ 1 lần xuống database.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-failures", "dns-cdn"]
+      "topics": ["caching-basics", "cache-failures", "dns-cdn", "back-of-envelope", "design-url-shortener"]
     },
     {
       "id": "ttl",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope"]
     },
     {
       "id": "local-cache",
@@ -2445,7 +2445,7 @@
       "meaning": "Cache cả kết quả \"không tồn tại\" (thường với TTL ngắn), để những lần tra id không có thật không đi xuống database mỗi lần.",
       "example": "Lưu `product:999999 = NONE` trong 60 giây.",
       "related": ["cache", "ttl"],
-      "topics": ["caching-basics", "cache-failures", "dns-cdn"]
+      "topics": ["caching-basics", "cache-failures", "dns-cdn", "design-url-shortener"]
     },
     {
       "id": "message-queue",
@@ -2533,7 +2533,7 @@
       "meaning": "Pattern cache phổ biến nhất (còn gọi lazy loading): ứng dụng tự hỏi cache, miss thì đọc database rồi ghi vào cache; khi ghi thì cập nhật database rồi xoá key.",
       "example": "`get(\"product:42\")` miss → `SELECT` → `SET product:42 ... EX 300`.",
       "related": ["read-through", "cache-invalidation"],
-      "topics": ["cache-patterns"]
+      "topics": ["cache-patterns", "design-url-shortener"]
     },
     {
       "id": "read-through",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener"]
     },
     {
       "id": "redis-single-thread",
@@ -2805,7 +2805,7 @@
       "meaning": "Request hỏi key không tồn tại ở nguồn, cache không bao giờ có nên lần nào cũng xuống database; hay gặp khi bị dò id ngẫu nhiên.",
       "example": "Bot gửi id sản phẩm ngẫu nhiên 20.000 lần mỗi giây.",
       "related": ["negative-caching", "bloom-filter"],
-      "topics": ["cache-failures"]
+      "topics": ["cache-failures", "design-url-shortener"]
     },
     {
       "id": "cache-avalanche",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener"]
     },
     {
       "id": "redis-sentinel",
@@ -6069,7 +6069,7 @@
       "meaning": "Phần capacity chừa lại giữa mức tải chạy thường và trần của hệ thống, để chịu đỉnh bất ngờ, mất một node hay zone mà latency không vọt lên.",
       "example": "Pod giữ SLO tới 400 req/s nhưng chỉ lên kế hoạch 240 req/s: headroom 40%.",
       "related": ["saturation", "n-plus-1"],
-      "topics": ["capacity-planning"]
+      "topics": ["capacity-planning", "back-of-envelope"]
     },
     {
       "id": "n-plus-1",
@@ -6325,7 +6325,7 @@
       "meaning": "Số thao tác đọc/ghi một ổ đĩa làm được mỗi giây. Phụ thuộc cả latency mỗi lần lẫn số request chạy song song (queue depth).",
       "example": "Mỗi lần đọc 100 µs, đọc lần lượt thì tối đa 10.000 IOPS; EBS gp3 cho mặc định 3.000 IOPS.",
       "related": ["latency", "throughput"],
-      "topics": ["computer-architecture", "linux-troubleshooting"]
+      "topics": ["computer-architecture", "linux-troubleshooting", "back-of-envelope"]
     },
     {
       "id": "forward-proxy",
@@ -6845,7 +6845,7 @@
       "meaning": "Thông báo gửi qua dịch vụ của hệ điều hành di động (APNs của Apple, FCM của Google) tới thiết bị, kể cả khi app đang ở nền hay đã tắt; app không cần giữ kết nối riêng.",
       "example": "Đơn đã tới: backend gọi FCM với token thiết bị, điện thoại hiện thông báo dù app không mở.",
       "related": ["websocket"],
-      "topics": ["realtime-rpc-protocols"]
+      "topics": ["realtime-rpc-protocols", "back-of-envelope"]
     },
     {
       "id": "stomp",
@@ -7109,7 +7109,7 @@
       "meaning": "Cấu trúc xác suất ước lượng số phần tử khác nhau: băm từng phần tử, ghi độ dài chuỗi bit 0 dẫn đầu lớn nhất vào m thanh ghi, sai số chuẩn 1,04/√m. Gộp được bằng cách lấy max từng thanh ghi.",
       "example": "Redis `PFADD visitors:2026-10-27 user:881`, `PFCOUNT`, rồi `PFMERGE` bảy ngày thành một tuần; mỗi khoá tối đa 12 KB.",
       "related": ["probabilistic-data-structure"],
-      "topics": ["advanced-data-structures"]
+      "topics": ["advanced-data-structures", "design-url-shortener"]
     },
     {
       "id": "count-min-sketch",
@@ -8621,7 +8621,7 @@
       "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
       "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
       "related": ["presigned-url", "multipart-upload", "cdn"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "back-of-envelope"]
     },
     {
       "id": "source-of-truth",
@@ -8725,7 +8725,7 @@
       "meaning": "Ước lượng nhanh bằng số tròn (QPS, dung lượng, băng thông) để biết bài toán ở cỡ nào và quyết định có cần cache, sharding hay không.",
       "example": "1 triệu ghi/ngày ÷ 86.400 giây ≈ 12 ghi/giây (làm tròn 10⁵ thì ra 10, cùng bậc): một database thừa sức.",
       "related": ["qps", "read-write-ratio"],
-      "topics": ["sd-framework"]
+      "topics": ["sd-framework", "back-of-envelope"]
     },
     {
       "id": "qps",
@@ -8733,7 +8733,7 @@
       "meaning": "Queries per second: số request hay query mỗi giây. Thường nêu cả trung bình và đỉnh.",
       "example": "10 triệu lượt đọc mỗi ngày ≈ 116 QPS trung bình, đỉnh khoảng 350.",
       "related": ["throughput", "back-of-envelope-estimation"],
-      "topics": ["sd-framework"]
+      "topics": ["sd-framework", "back-of-envelope"]
     },
     {
       "id": "availability",
@@ -8781,7 +8781,111 @@
       "meaning": "Daily active users: số người dùng khác nhau có hoạt động trong một ngày. Điểm xuất phát hay dùng để ước lượng tải.",
       "example": "10 triệu DAU, mỗi người đọc 20 lần mỗi ngày ≈ 2.300 lượt đọc mỗi giây trung bình.",
       "related": ["qps"],
-      "topics": ["sd-framework"]
+      "topics": ["sd-framework", "back-of-envelope"]
+    },
+    {
+      "id": "bandwidth",
+      "term": "Bandwidth",
+      "meaning": "Băng thông: lượng dữ liệu truyền được mỗi giây. Đường truyền và card mạng đo bằng bit/giây (Gbps), còn dữ liệu thường tính bằng byte, nên đổi qua lại phải nhân hoặc chia 8.",
+      "example": "5.800 ảnh/giây × 200 KB ≈ 1,16 GB/giây ≈ 9,3 Gbps; 1 Gbps = 125 MB/giây.",
+      "related": ["qps", "cdn"],
+      "topics": ["back-of-envelope"]
+    },
+    {
+      "id": "peak-factor",
+      "term": "Peak factor",
+      "meaning": "Hệ số đỉnh: tỉ lệ giữa tải đỉnh và tải trung bình. Dùng để đổi QPS trung bình ngày thành QPS đỉnh khi tính capacity.",
+      "example": "Traffic theo giờ sinh hoạt thường có hệ số 2–3; flash sale hay đợt push notification có thể gấp hàng chục lần trong vài phút.",
+      "related": ["qps", "headroom"],
+      "topics": ["back-of-envelope"]
+    },
+    {
+      "id": "replication-factor",
+      "term": "Replication factor",
+      "meaning": "Số bản sao của mỗi phần dữ liệu trong hệ thống phân tán. Dung lượng đĩa thật bằng dữ liệu logic nhân hệ số này.",
+      "example": "Topic Kafka với replication factor 3: 700 GB dữ liệu logic chiếm 2,1 TB đĩa trên cả cụm.",
+      "related": ["back-of-envelope-estimation"],
+      "topics": ["back-of-envelope"]
+    },
+    {
+      "id": "hot-data",
+      "term": "Hot data",
+      "meaning": "Dữ liệu nóng: phần nhỏ dữ liệu nhận phần lớn lượt đọc. Cache chỉ cần chứa phần này thay vì toàn bộ dữ liệu.",
+      "example": "Ảnh của 7 ngày gần nhất nhận phần lớn lượt xem: metadata 7 triệu ảnh × 1 KB = 7 GB, vừa một Redis.",
+      "related": ["cache-hit-ratio"],
+      "topics": ["back-of-envelope"]
+    },
+    {
+      "id": "url-shortener",
+      "term": "URL shortener",
+      "meaning": "Dịch vụ rút gọn link: đổi URL dài thành mã ngắn trên domain riêng và chuyển hướng (redirect) người bấm tới URL gốc.",
+      "example": "`sho.rt/aZ3kQ9x` trả 302 với `Location: https://shop.example.com/san-pham/...`.",
+      "related": ["base62", "temporary-redirect"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "temporary-redirect",
+      "term": "302 / 307",
+      "meaning": "Redirect tạm thời. Theo RFC 9110, trình duyệt chỉ cache khi có header cache rõ ràng, nên lần bấm sau vẫn hỏi lại server. 307 giữ nguyên method, 302 cho phép client đổi POST thành GET.",
+      "example": "Link rút gọn trả `302` với `Cache-Control: private, max-age=60` để vẫn đếm được click và thu hồi được link.",
+      "related": ["permanent-redirect", "url-shortener"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "permanent-redirect",
+      "term": "301 / 308",
+      "meaning": "Redirect vĩnh viễn. Được cache theo heuristic khi không có header cache, và trình duyệt giữ rất lâu mà không hỏi lại server. 308 giữ nguyên method, 301 cho phép đổi POST thành GET.",
+      "example": "Đổi domain cũ sang domain mới thì dùng 301; link rút gọn cần analytics thì không.",
+      "related": ["temporary-redirect"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "base62",
+      "term": "Base62",
+      "meaning": "Cách viết số bằng 62 ký tự `0–9`, `A–Z`, `a–z`, an toàn trong URL mà không cần mã hoá. Mỗi ký tự mang khoảng 5,95 bit.",
+      "example": "7 ký tự base62 cho 62⁷ ≈ 3,5 nghìn tỉ giá trị (khoảng 41,7 bit).",
+      "related": ["url-shortener"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "link-preview",
+      "term": "Link preview",
+      "meaning": "Khung xem trước (tiêu đề, ảnh) mà app chat hay mạng xã hội tự dựng khi người dùng dán link, bằng cách cho máy chủ của họ gọi link đó.",
+      "example": "Dán link rút gọn vào nhóm chat: máy chủ của app gọi link trước khi ai bấm, nên phải lọc theo User-Agent để không đếm thành click.",
+      "related": ["url-shortener"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "birthday-paradox",
+      "term": "Birthday paradox",
+      "meaning": "Nghịch lý ngày sinh: trong không gian N giá trị ngẫu nhiên, sau khoảng √N lần chọn đã có khả năng cao xuất hiện một cặp trùng. Tổng số cặp trùng sau n lần chọn ≈ n² / (2N).",
+      "example": "Chỉ 23 người là đã có hơn 50% khả năng hai người trùng ngày sinh; 6 tỉ mã ngẫu nhiên 7 ký tự base62 gây khoảng 5 triệu lần trùng.",
+      "related": ["hash-collision", "base62"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "feistel-cipher",
+      "term": "Feistel cipher",
+      "meaning": "Cấu trúc mã hoá chia khối thành hai nửa và trộn qua nhiều vòng; luôn là một hoán vị (giải ngược được) bất kể hàm vòng là gì. Dùng để biến số thứ tự thành số trông ngẫu nhiên trên cùng không gian.",
+      "example": "Counter 1, 2, 3 qua Feistel 4 vòng trên 42 bit ra `NZcwCpI`, `KMpXoFE`, `ILITSrB`; không trùng và không lộ thứ tự.",
+      "related": ["base62"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "phishing",
+      "term": "Phishing",
+      "meaning": "Lừa đảo giả mạo: dụ người dùng vào trang giả để lấy mật khẩu hay thông tin thanh toán. Link rút gọn hay bị dùng để giấu domain thật của trang giả.",
+      "example": "Dịch vụ rút gọn kiểm URL qua danh sách đen lúc tạo, quét lại định kỳ, và tắt link bị báo trong vài phút.",
+      "related": ["url-shortener"],
+      "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "unique-constraint",
+      "term": "Unique constraint",
+      "meaning": "Ràng buộc của database bắt một cột hay một nhóm cột không được trùng giữa các dòng. Kiểm tra nằm trong lúc ghi nên không có race như \"SELECT rồi INSERT\".",
+      "example": "`INSERT INTO links (code, ...) VALUES (...) ON CONFLICT (code) DO NOTHING` trả 0 dòng nếu mã đã có.",
+      "related": ["idempotency-key"],
+      "topics": ["design-url-shortener"]
     }
   ]
 }

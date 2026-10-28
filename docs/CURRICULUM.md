@@ -381,8 +381,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 |---|---|---|---|---|---|---|
 | 1 | `sd-building-blocks` | ✚ Các khối xây dựng | foundation | LB, cache, CDN, queue, các loại DB, object storage, search: mỗi khối giải bài toán gì | A L D | ✅ |
 | 2 | `sd-framework` | Khung trả lời System Design | junior | Yêu cầu, ước lượng, high-level, deep dive, trade-off, quản lý thời gian | A L D | ✅ |
-| 3 | `back-of-envelope` | Ước lượng nhanh | junior | Các con số cần nhớ, QPS, dung lượng, băng thông | L B | ⬜ |
-| 4 | `design-url-shortener` | Thiết kế URL shortener | mid | Sinh mã, redirect, cache, analytics | L D Sc | ⬜ |
+| 3 | `back-of-envelope` | Ước lượng nhanh | junior | Các con số cần nhớ, QPS, dung lượng, băng thông | L B | ✅ |
+| 4 | `design-url-shortener` | Thiết kế URL shortener | mid | Sinh mã, redirect, cache, analytics | L D Sc | ✅ |
 | 5 | `design-rate-limiter` | Thiết kế rate limiter | mid | Thuật toán, phân tán, nơi đặt | L D Sc | ⬜ |
 | 6 | `design-id-generator` | Thiết kế bộ sinh ID phân tán | mid | Snowflake, sequence theo khối, thứ tự | L D Sc | ⬜ |
 | 7 | `design-notification` | Thiết kế hệ thống thông báo | senior | Nhiều kênh, retry, dedup, tuỳ chọn của người dùng | L D Sc | ⬜ |

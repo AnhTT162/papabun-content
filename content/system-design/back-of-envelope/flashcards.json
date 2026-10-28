@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "seconds-per-day", "front": "Một ngày, một tháng, một năm có khoảng bao nhiêu giây?", "back": "86.400 giây (≈ 10⁵), khoảng 2,6 triệu giây, khoảng 3,15 × 10⁷ giây (π × 10⁷)." },
+    { "id": "per-day-to-qps", "front": "1 triệu và 1 tỉ request mỗi ngày là bao nhiêu mỗi giây?", "back": "Khoảng 12/giây và khoảng 11.600/giây (chia 86.400). Làm tròn 10⁵ thì ra 10 và 10.000, thấp hơn khoảng 14%." },
+    { "id": "bits-bytes", "front": "1 Gbps là bao nhiêu MB/giây?", "back": "125 MB/giây. Đường truyền đo bằng bit, dữ liệu đo bằng byte: đổi từ byte sang bit nhân 8." },
+    { "id": "peak-factor", "front": "Capacity tính theo QPS trung bình hay đỉnh?", "back": "Theo đỉnh ở cửa sổ ngắn (phút, giây). Đỉnh hằng ngày thường gấp 2–3 trung bình, sự kiện như flash sale có thể gấp hàng chục lần. Trung bình dùng cho dung lượng và chi phí." },
+    { "id": "storage-formula", "front": "Công thức ước lượng dung lượng?", "back": "Bản ghi mỗi ngày × kích thước × số ngày giữ × overhead (index, thường 1,5–2) × replication factor, cộng backup và tăng trưởng." },
+    { "id": "retention", "front": "Vì sao phải hỏi thời hạn lưu trước khi tính dung lượng?", "back": "Dữ liệu hết hạn sau N ngày thì dung lượng ổn định chỉ là N ngày dữ liệu, có thể nhỏ hơn hàng chục lần so với giữ vĩnh viễn." },
+    { "id": "little-law", "front": "Tính số request đồng thời từ QPS thế nào?", "back": "Little's law: đồng thời = QPS × latency trung bình (theo giây). 17.000/giây × 50 ms = 850." },
+    { "id": "powers-of-two", "front": "2³¹ và 2³² xấp xỉ bao nhiêu?", "back": "Khoảng 2,1 tỉ (trần `int` của Java) và khoảng 4,3 tỉ (số địa chỉ IPv4)." },
+    { "id": "cross-check", "front": "Kiểm tra một con số ước lượng thế nào?", "back": "Tính lại bằng đường khác (theo người dùng mỗi ngày thay vì theo request mỗi giây). Hai đường lệch nhau nhiều thì có lỗi đơn vị hoặc giả định." }
+  ]
+}

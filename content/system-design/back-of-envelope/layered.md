@@ -1,0 +1,32 @@
+## Quick
+
+[[back-of-envelope-estimation|Ước lượng nhanh]] là tính bằng số tròn để biết bài toán thuộc **bậc độ lớn** nào: 10 hay 10.000 request mỗi giây, vài GB hay vài trăm TB. Bốn phép tính hay dùng: [[qps|QPS]] (trung bình và đỉnh), dung lượng sau vài năm, [[bandwidth|băng thông]], bộ nhớ cho cache. **Mỗi con số phải có đơn vị, có giả định đi kèm, và dẫn tới một quyết định; số không đổi được thiết kế thì bỏ.**
+
+## Interview
+
+Tôi ghi giả định lên bảng trước, rồi tính theo bốn bước. Lấy ví dụ một app chia sẻ ảnh có 10 triệu [[dau|DAU]].
+
+**QPS**: mỗi người xem 50 ảnh mỗi ngày, tức 500 triệu lượt. Một ngày có 86.400 giây, nên trung bình khoảng 5.800 lượt/giây. Tôi nhân [[peak-factor|hệ số đỉnh]] 3 cho giờ cao điểm: khoảng 17.000/giây. Ghi: 10% người dùng đăng một ảnh mỗi ngày, tức 1 triệu ảnh, khoảng 12/giây. Kết luận đầu tiên: đọc gấp 500 lần ghi, nên thiết kế xoay quanh đường đọc.
+
+**Dung lượng**: ảnh gốc 2 MB, 1 triệu ảnh mỗi ngày là 2 TB/ngày, khoảng 730 TB/năm. Cỡ này phải lên [[object-storage|object storage]]. Metadata khoảng 1 KB mỗi ảnh, 365 GB/năm: một database quan hệ vẫn đủ.
+
+**Băng thông**: ảnh hiển thị 200 KB. 5.800 lượt/giây × 200 KB ≈ 1,16 GB/giây, nhân 8 thành khoảng 9,3 Gbps trung bình, đỉnh khoảng 28 Gbps. Không thể phục vụ từ vài máy chủ: cần [[cdn|CDN]].
+
+**Bộ nhớ**: nếu phần lớn lượt xem rơi vào ảnh của 7 ngày gần nhất, metadata nóng là 7 triệu × 1 KB = 7 GB, vừa một Redis.
+
+Bẫy hay gặp: nhầm bit với byte (lệch 8 lần), lấy QPS trung bình để chọn capacity, quên thời hạn lưu và hệ số nhân bản, tính số lẻ tới hàng đơn vị rồi không kết luận gì. Tôi kiểm tra chéo bằng một đường khác: mỗi người xem 50 × 200 KB = 10 MB/ngày, 10 triệu người là 100 TB/ngày, chia 86.400 vẫn ra khoảng 1,16 GB/giây. Hai đường khớp nhau thì tôi mới dùng con số đó để chọn kiến trúc.
+
+## Deep
+
+- **Luỹ thừa của 2 và 10**: 2¹⁰ = 1.024 ≈ 10³ (KB), 2²⁰ ≈ 10⁶ (MB), 2³⁰ ≈ 10⁹ (GB), 2⁴⁰ ≈ 10¹² (TB). 2³² ≈ 4,3 tỉ (trần của `int` không dấu, của IPv4), 2³¹ − 1 ≈ 2,1 tỉ (trần `int` của Java), 2⁶³ ≈ 9,2 × 10¹⁸. KB (1.000) và KiB (1.024) chênh 2,4%, tới TB và TiB thì chênh 10%: đủ nhỏ để bỏ qua khi ước lượng, nhưng đủ lớn để gây tranh cãi khi đối chiếu hoá đơn cloud (thường tính theo GiB).
+- **Thời gian**: 1 ngày = 86.400 giây, 1 tháng ≈ 2,6 triệu giây, 1 năm ≈ 3,15 × 10⁷ giây (dễ nhớ: π × 10⁷). Bảng nhẩm: 1 triệu/ngày ≈ 12/giây, 100 triệu/ngày ≈ 1.160/giây, 1 tỉ/ngày ≈ 11.600/giây, 100 triệu/tháng ≈ 40/giây. Làm tròn 86.400 thành 10⁵ cho nhanh thì kết quả thấp hơn khoảng 14% (1 triệu/ngày ra 10/giây thay vì 12): cùng bậc, nhưng nên nói rõ mình đang dùng quy ước nào để người nghe không bắt lỗi số.
+- **Đỉnh, không phải trung bình**: traffic theo giờ sinh hoạt thường có đỉnh gấp 2–3 lần trung bình ngày. Sự kiện thì khác hẳn: flash sale, gửi [[push-notification|push notification]] cho 5 triệu người mà 5% mở trong một phút là 250.000 request dồn vào 60 giây, khoảng 4.200/giây cộng thêm vào tải sẵn có. Trung bình dùng để tính dung lượng và chi phí; capacity phải tính theo đỉnh ở cửa sổ ngắn (phút, giây), vì đỉnh theo giờ đã bị làm phẳng.
+- **Công thức dung lượng**: số bản ghi mỗi ngày × kích thước × số ngày giữ × hệ số overhead × hệ số nhân bản. Với database dạng hàng, index và phần dư của MVCC thường làm dung lượng thật gấp 1,5–2 lần dữ liệu thô. Hệ thống tự vận hành như Kafka, Cassandra với [[replication-factor|replication factor]] 3 thì nhân 3. Object storage như S3 tự nhân bản bên trong và tính tiền theo dung lượng logic, nên không nhân. Thêm backup nếu có. Và nhân tăng trưởng: gấp đôi mỗi năm thì sau 3 năm là gấp 8.
+- **Thời hạn lưu đổi kết luận**: dữ liệu hết hạn sau N ngày thì dung lượng ổn định chỉ là N ngày dữ liệu, không tăng mãi. Ví dụ pastebin với thời hạn 30 ngày ở bài Khung trả lời System Design: từ 3,65 TB/năm xuống khoảng 300 GB. Luôn hỏi "giữ bao lâu" trước khi tính.
+- **Băng thông**: QPS × kích thước response cho ra byte/giây; nhân 8 để ra bit/giây vì card mạng và đường truyền đo bằng bit. 1 Gbps = 125 MB/giây, 10 Gbps = 1,25 GB/giây. Tách ingress (dữ liệu vào, thường rẻ hoặc miễn phí trên cloud) khỏi egress (ra internet, tính tiền theo GB): ước lượng egress cũng là ước lượng chi phí. Có CDN với [[cache-hit-ratio|hit ratio]] 95% thì origin chỉ còn 5% băng thông, nhưng hit ratio là giả định cần nói ra.
+- **Bộ nhớ cho cache**: chỉ cache phần nóng ([[hot-data|dữ liệu nóng]]), không cache toàn bộ. Quy tắc 80/20 (20% dữ liệu nhận 80% lượt đọc) là giả định phổ biến, không phải định luật; nếu biết phân bố thật (như "ảnh 7 ngày gần nhất") thì dùng nó. Nhớ overhead: object trong Java heap thường tốn gấp vài lần dữ liệu thô (`HashMap<Long, Long>` 1 triệu phần tử khoảng 68 MB so với 16 MB của hai mảng `long[]`, xem bài Cấu trúc dữ liệu cơ bản), Redis cũng tốn thêm cho mỗi key.
+- **Số máy và số kết nối**: số instance tính từ QPS đỉnh, capacity đo được của một instance và phần [[headroom]] chừa lại; cách tính ở bài Capacity planning. Số request đang xử lý đồng thời theo [[littles-law|Little's law]]: 17.000 request/giây × 50 ms = 850 request cùng lúc, từ đó ra số thread và cỡ connection pool. Khi phỏng vấn, capacity một instance là giả định ("khoảng 1.000 request/giây mỗi instance cho API đọc đơn giản"); ở dự án thật thì phải đo bằng load test.
+- **Con số throughput nên biết theo bậc** (thay đổi nhiều theo phần cứng và workload, chỉ để biết cỡ): một Redis cỡ 100 nghìn lệnh đơn giản mỗi giây; một PostgreSQL hay MySQL primary vài nghìn tới vài chục nghìn transaction ghi nhỏ mỗi giây; NVMe SSD hàng trăm nghìn [[iops|IOPS]] và vài GB/giây đọc tuần tự, ổ HDD chỉ khoảng 100–200 IOPS ngẫu nhiên; card mạng máy chủ thường 10–25 Gbps. Latency từng tầng (RAM, SSD, mạng) ở bài CPU, bộ nhớ & các con số latency.
+- **Code ước lượng cũng có bug**: `30 * 24 * 60 * 60 * 1000` (số mili giây trong 30 ngày) tràn `int` và ra số âm vì phép nhân thực hiện trên `int` trước khi gán vào `long`; viết `30L * ...`. Đặt đơn vị vào tên biến (`photoBytes`, `peakBitsPerSec`) để phép nhân 8 không bị quên.
+- **Độ chính xác giả**: "5.787,04 request/giây" không chính xác hơn "khoảng 6.000" vì mọi đầu vào đều là đoán. Làm tròn tới một hai chữ số có nghĩa, và nói bậc độ lớn khi kết luận ("hàng chục nghìn request/giây, nên cần cache và nhiều instance").
+- **Khi không được cho số**: đưa ra khoảng hợp lý (1–10 triệu DAU) và kiểm tra kết luận có đổi trong khoảng đó không. Nếu đầu thấp cần một database còn đầu cao cần sharding, hãy nói điểm chuyển ở đâu ("trên khoảng 5.000 ghi/giây thì tôi sẽ tính tới shard"). Người phỏng vấn chấm cách lập luận, không chấm con số đúng.

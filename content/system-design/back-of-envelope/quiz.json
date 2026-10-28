@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "int-overflow-month",
+      "kind": "output",
+      "prompt": "Đoạn code tính số mili giây trong 30 ngày để đặt thời hạn lưu (JDK 17+). Dòng in ra gì?",
+      "code": "long retentionMs = 30 * 24 * 60 * 60 * 1000;\nSystem.out.println(retentionMs);",
+      "options": [
+        "-1702967296",
+        "2592000000",
+        "2147483647",
+        "Lỗi biên dịch"
+      ],
+      "answer": 0,
+      "explanation": "Cả năm toán hạng đều là `int`, nên phép nhân chạy trên `int` rồi mới được mở rộng thành `long` khi gán. 2.592.000.000 vượt 2.147.483.647 nên bị tràn và quấn thành số âm; Java không ném lỗi và không dừng ở giá trị lớn nhất. Viết `30L * 24 * 60 * 60 * 1000`, hoặc `Duration.ofDays(30).toMillis()`."
+    },
+    {
+      "id": "bits-bytes",
+      "kind": "single",
+      "prompt": "API trả trung bình 2.000 response/giây, mỗi response 50 KB. Băng thông egress trung bình cỡ bao nhiêu?",
+      "options": [
+        "Khoảng 0,8 Gbps",
+        "Khoảng 0,1 Gbps",
+        "Khoảng 8 Gbps",
+        "Khoảng 100 Gbps"
+      ],
+      "answer": 0,
+      "explanation": "2.000 × 50 KB = 100 MB/giây. Đường truyền đo bằng bit nên nhân 8: 800 Mbps, khoảng 0,8 Gbps. 0,1 Gbps là lỗi quên nhân 8 (đọc 100 MB/giây thành 0,1 Gbps). Ở mức trung bình đã gần 1 Gbps thì đỉnh gấp 2–3 lần sẽ vượt một card 1 Gbps."
+    },
+    {
+      "id": "peak-vs-average",
+      "kind": "single",
+      "prompt": "Tính capacity cho API đặt hàng của một sàn có flash sale lúc 12:00. Con số nào nên dùng?",
+      "options": [
+        "QPS đỉnh theo giây trong vài phút đầu sale",
+        "QPS trung bình của cả ngày có flash sale",
+        "QPS trung bình theo giờ của giờ 12:00–13:00",
+        "Tổng số đơn mong đợi trong ngày chia 24"
+      ],
+      "answer": 0,
+      "explanation": "Hệ thống phải chịu được lúc tải dồn nhất, và flash sale dồn phần lớn request vào vài phút đầu. Trung bình theo ngày hay theo giờ làm phẳng đỉnh đó, có thể thấp hơn hàng chục lần. Trung bình chỉ dùng để tính dung lượng và chi phí."
+    },
+    {
+      "id": "retention-storage",
+      "kind": "single",
+      "prompt": "Mỗi ngày ghi 50 GB log, giữ 14 ngày rồi xoá, lưu trên Kafka với replication factor 3. Dung lượng ổn định cỡ bao nhiêu?",
+      "options": [
+        "Khoảng 2,1 TB",
+        "Khoảng 700 GB",
+        "Khoảng 18 TB",
+        "Khoảng 55 TB"
+      ],
+      "answer": 0,
+      "explanation": "Dữ liệu hết hạn sau 14 ngày nên dung lượng không tăng mãi: 50 GB × 14 = 700 GB dữ liệu logic, nhân 3 bản sao là 2,1 TB. 700 GB là quên replication factor. 18 TB và 55 TB là tính như giữ cả năm (50 GB × 365, không và có nhân 3)."
+    },
+    {
+      "id": "little-concurrency",
+      "kind": "single",
+      "prompt": "Service nhận 3.000 request/giây ở đỉnh, mỗi request mất trung bình 80 ms. Trung bình có bao nhiêu request đang xử lý cùng lúc?",
+      "options": [
+        "Khoảng 240",
+        "Khoảng 37",
+        "Khoảng 3.000",
+        "Khoảng 240.000"
+      ],
+      "answer": 0,
+      "explanation": "Little's law: số request đồng thời = throughput × thời gian xử lý = 3.000/giây × 0,08 giây = 240. 37 là chia 3.000 cho 80, 240.000 là quên đổi 80 ms sang giây (lệch 1.000 lần), 3.000 là nhầm throughput với số đồng thời. Con số 240 là điểm bắt đầu để chọn số thread và cỡ connection pool."
+    }
+  ]
+}

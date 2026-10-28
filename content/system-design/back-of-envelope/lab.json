@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Ước lượng nói uplink chỉ dùng 36%, thực tế nghẽn cả ngày",
+  "context": "Một trang tin tức tự vận hành cụm máy chủ ảnh trong datacenter, chung một uplink 1 Gbps. Trước khi bỏ CDN để tiết kiệm chi phí, team viết đoạn ước lượng dưới đây: 1 triệu DAU, mỗi người xem khoảng 50 ảnh, ảnh trung bình 200 KB, đỉnh gấp 3 trung bình. Kết quả 36% nên team chuyển toàn bộ ảnh về origin.",
+  "buggyCode": "public class BandwidthEstimate {\n    public static void main(String[] args) {\n        long dau = 1_000_000L;\n        long viewsPerUser = 50;\n        long photoBytes = 200 * 1024;            // ảnh trong bài viết ~200 KB\n        double peakFactor = 3.0;\n\n        long viewsPerDay = dau * viewsPerUser;\n        double avgQps = viewsPerDay / 86_400.0;\n        double peakQps = avgQps * peakFactor;\n        double peakBytesPerSec = peakQps * photoBytes;\n        double peakGbps = peakBytesPerSec / 1_000_000_000;\n\n        System.out.printf(\"Lượt xem/ngày : %,d%n\", viewsPerDay);\n        System.out.printf(\"QPS trung bình: %,.0f%n\", avgQps);\n        System.out.printf(\"QPS đỉnh      : %,.0f%n\", peakQps);\n        System.out.printf(\"Egress đỉnh   : %.2f Gbps%n\", peakGbps);\n        System.out.printf(\"Uplink 1 Gbps dùng: %.0f%%%n\", peakGbps * 100);\n    }\n}",
+  "symptom": {
+    "description": "Chạy đoạn ước lượng (JDK 27) ra kết quả bên dưới. Một tuần sau khi bỏ CDN, người dùng than ảnh tải chậm. Metric ghi ở cuối output.",
+    "output": "Lượt xem/ngày : 50,000,000\nQPS trung bình: 579\nQPS đỉnh      : 1,736\nEgress đỉnh   : 0.36 Gbps\nUplink 1 Gbps dùng: 36%\n\n--- Metric sau một tuần ---\nLB ảnh: request đến đỉnh 1.790/s, trung bình cả ngày 590/s, body trung bình 204 KB\nnginx: kết nối đang chờ gửi xong 300 → 9.000 vào giờ cao điểm\nuplink egress 08:00–23:30: phẳng ở 0,94–0,97 Gbps\nTCP retransmit: 0,1% → 3,8%\np99 tải một ảnh: 250 ms → 6,4 s"
+  },
+  "diagnosis": {
+    "question": "QPS đo được khớp ước lượng, vì sao uplink vẫn nghẽn?",
+    "options": [
+      "Kết quả là gigabyte/giây nhưng được đọc là gigabit/giây: thiếu nhân 8",
+      "Chia cho 86.400 thay vì 10⁵ nên QPS trung bình bị tính sai nhiều",
+      "Dùng 200 × 1.024 thay vì 200 × 1.000 nên kích thước ảnh lệch hẳn",
+      "Hệ số đỉnh 3 quá thấp, cao điểm thật gấp hơn 8 lần trung bình"
+    ],
+    "answer": 0,
+    "explanation": "`peakBytesPerSec / 1_000_000_000` là GB/giây (0,36 GB/giây), nhưng dòng in ghi Gbps. Đổi sang bit phải nhân 8: đỉnh khoảng 2,84 Gbps, trung bình khoảng 0,95 Gbps. Tức uplink 1 Gbps đầy ngay ở mức trung bình, nên đồ thị phẳng gần như cả ngày, gói bị rớt và retransmit tăng. Metric loại các giả thuyết khác: request đến đo ở LB đỉnh 1.790/s và trung bình 590/s, khớp ước lượng 1.736 và 579, nên hệ số đỉnh và phép chia đúng (dùng 10⁵ còn làm QPS thấp đi, không cao lên). Body 204 KB khớp giả định; KB hay KiB chỉ lệch 2,4%. Lỗi đơn vị lệch 8 lần mới giải thích được."
+  },
+  "fix": {
+    "code": "long photoBytes = 200 * 1024;\ndouble peakQps = dau * viewsPerUser / 86_400.0 * peakFactor;\ndouble peakBitsPerSec = peakQps * photoBytes * 8;          // đường truyền đo bằng bit\ndouble peakGbps = peakBitsPerSec / 1_000_000_000;\n// Egress đỉnh   : 2.84 Gbps\n// Uplink 1 Gbps dùng: 284%\n\ndouble targetUtilization = 0.6;                              // chừa headroom cho đỉnh ngắn\ndouble cdnHitRatio = 0.95;                                    // giả định, kiểm lại bằng log CDN\ndouble originGbps = peakGbps * (1 - cdnHitRatio);             // ≈ 0,14 Gbps\nboolean fits = originGbps <= 1.0 * targetUtilization;",
+    "explanation": "Đặt đơn vị vào tên biến (`peakBitsPerSec`) để phép nhân 8 hiện ra ngay trong code, và kiểm tra chéo bằng đường khác: 50 triệu lượt × 200 KB ≈ 10 TB/ngày, chia 86.400 ≈ 120 MB/giây trung bình, gần 1 Gbps. Với con số đúng, origin tự phục vụ cần ít nhất 3 Gbps cho đỉnh, chưa kể headroom (bài Capacity planning). Giữ CDN thì origin chỉ còn khoảng 5% băng thông, nhưng hit ratio 95% là giả định phải kiểm bằng log thật. Trước mắt bật lại CDN; sau đó so chi phí CDN với nâng uplink bằng số đã sửa."
+  }
+}

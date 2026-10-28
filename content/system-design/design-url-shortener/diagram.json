@@ -1,0 +1,61 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Tạo link, redirect và đếm click",
+  "nodes": [
+    { "id": "user", "label": "Người dùng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "app", "label": "Service ×N", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "redis", "label": "Redis", "kind": "cache", "x": 0.1, "y": 0.4 },
+    { "id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.85, "y": 0.4 },
+    { "id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.85, "y": 0.75 },
+    { "id": "olap", "label": "Job gộp → kho phân tích", "kind": "database", "x": 0.1, "y": 0.75 }
+  ],
+  "edges": [
+    { "id": "user-app", "from": "user", "to": "app", "label": "POST, GET /mã" },
+    { "id": "app-db", "from": "app", "to": "db", "label": "INSERT, đọc khi miss" },
+    { "id": "app-redis", "from": "app", "to": "redis", "label": "đọc trước" },
+    { "id": "app-kafka", "from": "app", "to": "kafka", "label": "event click" },
+    { "id": "kafka-olap", "from": "kafka", "to": "olap", "label": "gộp theo phút" }
+  ],
+  "steps": [
+    {
+      "caption": "Tạo link: service kiểm URL (chỉ http/https, không nằm trong danh sách đen), sinh mã ngẫu nhiên 7 ký tự base62 từ SecureRandom.",
+      "show": ["user", "app", "user-app"],
+      "highlight": ["user-app"]
+    },
+    {
+      "caption": "INSERT ... ON CONFLICT (code) DO NOTHING; 0 dòng được chèn thì sinh mã khác. Unique constraint là thứ duy nhất đảm bảo không trùng, kể cả với alias tự đặt.",
+      "show": ["db", "app-db"],
+      "highlight": ["app-db"]
+    },
+    {
+      "caption": "Redirect: GET /aZ3kQ9x đọc Redis trước; hit thì trả 302 kèm Cache-Control: private, max-age=300, không chạm database.",
+      "show": ["redis", "app-redis"],
+      "highlight": ["app-redis"]
+    },
+    {
+      "caption": "Miss thì đọc PostgreSQL theo khoá chính rồi ghi lại Redis với TTL. Mã không tồn tại cũng được cache 60 giây để kẻ dò mã không đánh xuống database.",
+      "show": [],
+      "highlight": ["app-db", "app-redis"]
+    },
+    {
+      "caption": "Link lan truyền nhanh dồn hàng nghìn click mỗi giây vào một key Redis: mỗi instance giữ thêm cache trong process vài giây cho các mã nóng.",
+      "show": [],
+      "highlight": ["app"]
+    },
+    {
+      "caption": "Mỗi click thành một event ghi vào buffer rồi gửi Kafka theo lô. Redirect không chờ Kafka và không UPDATE bộ đếm trong database.",
+      "show": ["kafka", "app-kafka"],
+      "highlight": ["app-kafka"]
+    },
+    {
+      "caption": "Job stream lọc bot và link preview, gộp theo (mã, phút) rồi ghi vào kho dạng cột. Số liệu trễ khoảng một phút so với click thật.",
+      "show": ["olap", "kafka-olap"],
+      "highlight": ["kafka-olap"]
+    },
+    {
+      "caption": "Link bị báo lừa đảo: đổi status trong database và xoá key Redis; cache trong process tự hết sau vài giây. Trình duyệt đã nhận 302 với max-age 300 chỉ giữ đích cũ tối đa 5 phút.",
+      "show": [],
+      "highlight": ["db", "redis"]
+    }
+  ]
+}

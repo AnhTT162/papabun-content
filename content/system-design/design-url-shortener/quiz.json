@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "301-vs-302",
+      "kind": "single",
+      "prompt": "Dịch vụ rút gọn link trả `301 Moved Permanently` không kèm header cache. Sau một tháng, team analytics thấy số click thấp hơn hẳn số lượt mở trong log của trang đích. Vì sao?",
+      "options": [
+        "Trình duyệt cache 301 và lần bấm sau không gọi lại dịch vụ",
+        "301 đổi request từ GET sang POST nên trang đích không đếm",
+        "301 không được theo trên ứng dụng di động, chỉ 302 mới được",
+        "Load balancer gộp các lần redirect 301 trùng URL làm một"
+      ],
+      "answer": 0,
+      "explanation": "Theo RFC 9110, 301 được cache theo heuristic khi không có header cache, và trình duyệt giữ nó lâu. Người đã bấm một lần thì lần sau trình duyệt đi thẳng tới đích, dịch vụ không thấy request nên không đếm được. Đổi method chỉ có thể xảy ra từ POST sang GET, và link rút gọn vốn là GET. Dùng 302 với max-age ngắn để vẫn thấy phần lớn click."
+    },
+    {
+      "id": "counter-enumerable",
+      "kind": "single",
+      "prompt": "Mã sinh từ counter tăng dần rồi đổi sang base62 (`0000001`, `0000002`...). Rủi ro lớn nhất khi link chứa tài liệu riêng tư là gì?",
+      "options": [
+        "Ai cũng dò hết được mọi link bằng cách tăng mã dần",
+        "Hai instance có thể sinh trùng mã ở cùng một thời điểm",
+        "Mã sinh từ counter dài hơn hẳn so với mã ngẫu nhiên",
+        "Base62 không encode được số lớn hơn 2³¹ của counter"
+      ],
+      "answer": 0,
+      "explanation": "Mã liên tiếp nên chỉ cần đếm từ 1 là đọc được mọi link, kể cả link tài liệu riêng, và lộ cả số link tạo mỗi ngày. Counter cấp theo khối thì không trùng. Mã counter còn ngắn hơn hoặc bằng mã ngẫu nhiên, và base62 encode được mọi số `long`. Che bằng hoán vị (Feistel) hoặc dùng mã ngẫu nhiên."
+    },
+    {
+      "id": "collision-rate",
+      "kind": "single",
+      "prompt": "Đã có 6 tỉ mã ngẫu nhiên 7 ký tự base62 (62⁷ ≈ 3,5 × 10¹²). Xác suất một mã ngẫu nhiên mới bị trùng khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 0,17%",
+        "Khoảng 17%",
+        "Khoảng 0,0017%",
+        "Gần 100% do nghịch lý ngày sinh"
+      ],
+      "answer": 0,
+      "explanation": "Xác suất trùng của một lần chèn = số mã đã có / không gian = 6 × 10⁹ / 3,5 × 10¹² ≈ 0,17%. Nghịch lý ngày sinh nói về việc có ít nhất một cặp trùng trong cả tập, điều đó gần như chắc chắn xảy ra, nhưng mỗi lần trùng chỉ tốn một lần sinh lại. Với 6 ký tự, con số này là khoảng 10,6%."
+    },
+    {
+      "id": "click-counter",
+      "kind": "single",
+      "prompt": "Mỗi lần redirect, service chạy `UPDATE links SET clicks = clicks + 1 WHERE code = ?` trong cùng request. Một link chiến dịch nhận 5.000 click/giây. Chuyện gì xảy ra?",
+      "options": [
+        "Các UPDATE xếp hàng chờ khoá cùng một dòng, redirect chậm dần",
+        "PostgreSQL gộp các UPDATE nên chỉ tăng 1 cho mỗi giây",
+        "Bộ đếm sai vì clicks + 1 đọc giá trị cũ ở READ COMMITTED",
+        "Không sao, UPDATE theo khoá chính luôn dưới một mili giây"
+      ],
+      "answer": 0,
+      "explanation": "Mọi UPDATE cùng ghi một dòng nên phải lấy lần lượt khoá dòng đó; mỗi transaction giữ khoá tới khi commit (kể cả fsync), nên throughput của một dòng có trần, và hàng đợi khoá làm latency redirect tăng, giữ cả connection. Giá trị không sai: `clicks = clicks + 1` đọc lại bản mới nhất sau khi chờ khoá. Ở PostgreSQL, mỗi UPDATE còn tạo một phiên bản dòng mới, nên bảng và index phình nhanh nếu autovacuum không theo kịp. Sửa: đẩy event click bất đồng bộ và gộp ở nơi khác."
+    },
+    {
+      "id": "alias-collision",
+      "kind": "single",
+      "prompt": "Bộ sinh dùng counter + hoán vị nên không bao giờ sinh trùng. Có cần unique constraint trên cột `code` không?",
+      "options": [
+        "Cần, vì mã sinh ra có thể trùng alias người dùng đã đặt",
+        "Không cần, hoán vị đảm bảo mọi mã khác nhau trên toàn bảng",
+        "Không cần, chỉ cần kiểm tra bằng SELECT trước khi INSERT",
+        "Cần, nhưng chỉ khi chạy nhiều region với nhiều counter"
+      ],
+      "answer": 0,
+      "explanation": "Hoán vị chỉ đảm bảo các mã do bộ sinh tạo ra khác nhau. Alias tự đặt dùng chung không gian khoá, nên một alias 7 ký tự như `summer7` mà người dùng đặt trước có thể trùng đúng mã sinh sau. SELECT rồi INSERT có race giữa hai request. Unique constraint là chốt chặn cuối cho mọi đường ghi."
+    }
+  ]
+}
