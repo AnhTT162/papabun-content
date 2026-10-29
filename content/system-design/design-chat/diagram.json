@@ -1,0 +1,156 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường đi của một tin nhắn",
+  "nodes": [
+    {
+      "id": "sender",
+      "label": "Người gửi",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "registry",
+      "label": "Registry kết nối",
+      "kind": "cache",
+      "x": 0.85,
+      "y": 0.35
+    },
+    {
+      "id": "chat",
+      "label": "Chat service",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "store",
+      "label": "Kho tin + sync log",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.35
+    },
+    {
+      "id": "gw-b",
+      "label": "Gateway B",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.65
+    },
+    {
+      "id": "push",
+      "label": "APNs, FCM",
+      "kind": "external",
+      "x": 0.1,
+      "y": 0.65
+    },
+    {
+      "id": "receiver",
+      "label": "Thiết bị nhận",
+      "kind": "client",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "sender-chat",
+      "from": "sender",
+      "to": "chat",
+      "label": "qua gateway"
+    },
+    {
+      "id": "chat-store",
+      "from": "chat",
+      "to": "store",
+      "label": "cấp seq, lưu"
+    },
+    {
+      "id": "chat-registry",
+      "from": "chat",
+      "to": "registry",
+      "label": "thiết bị ở đâu"
+    },
+    {
+      "id": "chat-gwb",
+      "from": "chat",
+      "to": "gw-b",
+      "label": "đẩy tin"
+    },
+    {
+      "id": "gwb-receiver",
+      "from": "gw-b",
+      "to": "receiver",
+      "label": "tin + seq, chờ ack"
+    },
+    {
+      "id": "chat-push",
+      "from": "chat",
+      "to": "push",
+      "label": "thiết bị offline"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Thiết bị gửi tin qua WebSocket tới gateway của nó, kèm client message id do chính nó sinh, để gửi lại khi mất ack mà không tạo bản trùng. Gateway chỉ giữ kết nối và chuyển tin cho Chat service.",
+      "show": [
+        "sender",
+        "chat",
+        "sender-chat"
+      ],
+      "highlight": [
+        "sender-chat"
+      ]
+    },
+    {
+      "caption": "Chat service cấp seq tiếp theo của cuộc chat, lưu tin và ghi event vào sync log của từng thành viên, rồi mới ack cho người gửi.",
+      "show": [
+        "store",
+        "chat-store"
+      ],
+      "highlight": [
+        "chat-store"
+      ]
+    },
+    {
+      "caption": "Chat service tra registry: thiết bị nào của các thành viên đang online và ở gateway nào. Registry có TTL và chỉ bị xoá bởi đúng kết nối đã ghi nó.",
+      "show": [
+        "registry",
+        "chat-registry"
+      ],
+      "highlight": [
+        "chat-registry"
+      ]
+    },
+    {
+      "caption": "Tin được đẩy tới gateway đang giữ kết nối của người nhận. Đây là đường tắt: mất ở đây thì thiết bị vẫn kéo bù được từ kho.",
+      "show": [
+        "gw-b",
+        "chat-gwb"
+      ],
+      "highlight": [
+        "chat-gwb"
+      ]
+    },
+    {
+      "caption": "Thiết bị nhận tin kèm seq, ack last_delivered_seq. Thấy seq nhảy thì kéo bù; không ack sau vài giây thì server đẩy lại hoặc gửi push.",
+      "show": [
+        "receiver",
+        "gwb-receiver"
+      ],
+      "highlight": [
+        "gwb-receiver"
+      ]
+    },
+    {
+      "caption": "Thiết bị không có trong registry nhận push, collapse theo cuộc chat. Khi mở app, nó hỏi sync log các event sau user_seq đã nhớ.",
+      "show": [
+        "push",
+        "chat-push"
+      ],
+      "highlight": [
+        "chat-push"
+      ]
+    }
+  ]
+}

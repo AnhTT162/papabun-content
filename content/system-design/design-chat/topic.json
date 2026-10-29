@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-chat",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế ứng dụng chat",
+  "summary": "Gateway giữ kết nối và registry thiết bị, seq theo cuộc chat làm thứ tự chung và để phát hiện thiếu tin, client message id để gửi lại không trùng, ack từ thiết bị, con trỏ đã nhận và đã đọc, sync log cho nhiều thiết bị, vì sao presence tốn hơn tin nhắn, deploy gateway không rớt tin.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 18,
+  "prerequisites": ["sd-framework", "realtime-rpc-protocols", "nosql-overview", "design-id-generator", "design-notification"],
+  "terms": ["websocket", "chat-gateway", "conversation-sequence", "client-message-id", "heartbeat", "push-notification", "reconnect-storm", "k-sorted", "idempotency-key", "read-receipt", "sync-log", "fan-out-on-write", "presence"],
+  "references": [
+    { "title": "RFC 6455: The WebSocket Protocol", "url": "https://www.rfc-editor.org/rfc/rfc6455" },
+    { "title": "Redis: Pub/Sub (delivery semantics)", "url": "https://redis.io/docs/latest/develop/pubsub/" },
+    { "title": "WhatsApp Encryption Overview: Technical white paper (Sender Keys)", "url": "https://www.whatsapp.com/security/WhatsApp-Security-Whitepaper.pdf" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đảm bảo không mất tin và đúng thứ tự?\" Tách hai việc. Không mất: chỉ ack cho người gửi sau khi tin đã lưu bền; thiết bị nhận ack lại, và kéo bù theo seq khi thấy lỗ, khi nối lại hoặc khi ra foreground, nên đẩy realtime có mất cũng không sao. Đúng thứ tự: seq do server cấp cho từng cuộc chat; không có thứ tự toàn cục giữa các cuộc chat, và cũng không cần." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng coi lệnh đẩy tới gateway thành công là tin đã tới. Kết nối có thể đã chết mà gateway chưa biết (heartbeat 30 giây), Redis Pub/Sub bỏ tin khi subscriber đang nối lại. Tin chỉ là delivered khi thiết bị ack `last_delivered_seq`; không có ack thì đẩy lại hoặc gửi push." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, tách ba đường: gửi (client → gateway → chat service → kho, rồi ack), giao (registry → gateway của người nhận → ack của thiết bị), và đồng bộ (thiết bị hỏi sync log khi nối lại). Phần lớn câu hỏi đào sâu rơi vào đường thứ ba." }
+  ]
+}

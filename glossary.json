@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat"]
     },
     {
       "id": "orm",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures", "design-url-shortener"]
+      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures", "design-url-shortener", "design-news-feed"]
     },
     {
       "id": "group-commit",
@@ -2117,7 +2117,7 @@
       "meaning": "Đảm bảo người vừa ghi thì lần đọc sau của chính họ thấy thay đổi đó, kể cả khi đọc được định tuyến sang replica.",
       "example": "Sau khi đổi tên, đọc từ primary trong 5 giây, hoặc chờ replica áp tới GTID của lần ghi.",
       "related": ["replica-lag", "monotonic-reads"],
-      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap", "multi-region-active-active", "sd-building-blocks"]
+      "topics": ["replication-ha", "redis-ha-cluster", "consistency-cap", "multi-region-active-active", "sd-building-blocks", "design-news-feed"]
     },
     {
       "id": "monotonic-reads",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-notification"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-notification", "design-news-feed"]
     },
     {
       "id": "dead-letter-queue",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener", "design-rate-limiter"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener", "design-rate-limiter", "design-news-feed"]
     },
     {
       "id": "redis-single-thread",
@@ -2813,7 +2813,7 @@
       "meaning": "Rất nhiều key hết hạn cùng lúc hoặc cả cụm cache sập, khiến tải dồn hết xuống database.",
       "example": "Job nạp 2 triệu key lúc 03:00 với cùng TTL 6 giờ: 09:00 mọi key cùng hết hạn.",
       "related": ["ttl-jitter", "cache-stampede"],
-      "topics": ["cache-failures"]
+      "topics": ["cache-failures", "design-news-feed"]
     },
     {
       "id": "single-flight",
@@ -2909,7 +2909,7 @@
       "meaning": "Kiểu dữ liệu Redis lưu member duy nhất kèm score số thực, luôn sắp theo score; lấy hạng trong O(log N), lấy khoảng M phần tử trong O(log N + M). Cùng score thì sắp theo thứ tự từ điển của member.",
       "example": "`ZINCRBY lb 50 player:9`, `ZREVRANK lb player:9`.",
       "related": ["lua-script"],
-      "topics": ["redis-use-cases"]
+      "topics": ["redis-use-cases", "design-news-feed"]
     },
     {
       "id": "redis-stream",
@@ -2997,7 +2997,7 @@
       "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
       "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
       "related": ["consumer-group", "kafka-offset"],
-      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture", "sd-building-blocks", "design-notification"]
+      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture", "sd-building-blocks", "design-notification", "design-news-feed"]
     },
     {
       "id": "rebalance-storm",
@@ -5429,7 +5429,7 @@
       "meaning": "ID 64 bit gồm mili giây từ một epoch tự chọn (41 bit), id của máy sinh (10 bit) và sequence trong mili giây (12 bit). Tăng theo thời gian, vừa kiểu `bigint`.",
       "example": "Worker 7 sinh 4096 ID mỗi mili giây; 41 bit thời gian đủ khoảng 69 năm.",
       "related": ["uuid-v7", "clock-skew"],
-      "topics": ["clocks-ids", "design-id-generator"]
+      "topics": ["clocks-ids", "design-id-generator", "design-news-feed"]
     },
     {
       "id": "ulid",
@@ -6805,7 +6805,7 @@
       "meaning": "Giao thức hai chiều (RFC 6455) bắt đầu bằng request HTTP có `Upgrade: websocket`; server trả `101 Switching Protocols`, sau đó hai bên gửi frame text hoặc nhị phân tuỳ ý trên cùng kết nối TCP.",
       "example": "Chat: client gửi frame `{\"type\":\"message\",\"text\":\"Tới chưa?\"}`, server đẩy tin nhắn của shipper xuống cùng kết nối.",
       "related": ["server-sent-events", "heartbeat", "stomp"],
-      "topics": ["realtime-rpc-protocols"]
+      "topics": ["realtime-rpc-protocols", "design-chat"]
     },
     {
       "id": "grpc-streaming",
@@ -6829,7 +6829,7 @@
       "meaning": "Message nhỏ gửi định kỳ trên kết nối dài để giữ nó không bị proxy, load balancer cắt vì im lặng, và để phát hiện sớm kết nối đã chết.",
       "example": "Gửi WebSocket ping hoặc dòng comment SSE `: ping` mỗi 25 giây khi idle timeout của load balancer là 60 giây.",
       "related": ["websocket", "server-sent-events", "tcp-keepalive"],
-      "topics": ["realtime-rpc-protocols"]
+      "topics": ["realtime-rpc-protocols", "design-chat"]
     },
     {
       "id": "reconnect-storm",
@@ -6837,7 +6837,7 @@
       "meaning": "Rất nhiều client cùng nối lại trong một khoảnh khắc, thường sau khi một instance giữ kết nối bị deploy hay sập, làm quá tải phần xác thực và các instance còn lại.",
       "example": "Pod giữ 20.000 WebSocket tắt; nếu client nối lại ngay, 20.000 handshake và lần tải lại dữ liệu dồn vào một giây. Sửa bằng đóng dần và backoff có jitter.",
       "related": ["jitter", "retry-backoff", "websocket"],
-      "topics": ["realtime-rpc-protocols"]
+      "topics": ["realtime-rpc-protocols", "design-chat"]
     },
     {
       "id": "push-notification",
@@ -6845,7 +6845,7 @@
       "meaning": "Thông báo gửi qua dịch vụ của hệ điều hành di động (APNs của Apple, FCM của Google) tới thiết bị, kể cả khi app đang ở nền hay đã tắt; app không cần giữ kết nối riêng.",
       "example": "Đơn đã tới: backend gọi FCM với token thiết bị, điện thoại hiện thông báo dù app không mở.",
       "related": ["websocket"],
-      "topics": ["realtime-rpc-protocols", "back-of-envelope", "design-notification"]
+      "topics": ["realtime-rpc-protocols", "back-of-envelope", "design-notification", "design-chat"]
     },
     {
       "id": "stomp",
@@ -6885,7 +6885,7 @@
       "meaning": "Phân trang mà server trả một chuỗi mờ (cursor) đánh dấu vị trí sau dòng cuối của trang; client gửi lại để lấy trang tiếp. Bên dưới thường là keyset pagination, nên không sót hay lặp khi dữ liệu thay đổi.",
       "example": "Response có `\"nextCursor\": \"eyJ1IjoiMjAyNi0xMC0yN1QwODowMDowMFoiLCJpZCI6ODgxfQ\"`, mã hoá `(updated_at, id)` của dòng cuối.",
       "related": ["keyset-pagination", "rest"],
-      "topics": ["rest-api-design"]
+      "topics": ["rest-api-design", "design-news-feed"]
     },
     {
       "id": "breaking-change",
@@ -8957,7 +8957,7 @@
       "meaning": "Gần có thứ tự: mỗi phần tử chỉ lệch khỏi vị trí đúng trong một khoảng nhỏ. ID theo thời gian từ nhiều máy là k-sorted vì đồng hồ lệch nhau.",
       "example": "Đơn tạo sau 2 ms trên máy chậm giờ 5 ms có Snowflake ID nhỏ hơn đơn tạo trước trên máy khác.",
       "related": ["snowflake-id", "clock-skew"],
-      "topics": ["design-id-generator"]
+      "topics": ["design-id-generator", "design-news-feed", "design-chat"]
     },
     {
       "id": "ticket-server",
@@ -9134,6 +9134,110 @@
       "example": "Trang sản phẩm hiện \"còn 3\" từ cache; lúc đặt, câu UPDATE có điều kiện mới quyết định còn hay hết.",
       "related": ["inventory-reservation", "eventual-consistency"],
       "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "news-feed",
+      "term": "News feed",
+      "meaning": "Danh sách bài của những người mình theo dõi, sắp theo thời gian hoặc theo điểm xếp hạng. Thường được dựng sẵn thành timeline cho từng người.",
+      "example": "Mở app mạng xã hội, màn hình đầu là feed gồm bài của bạn bè và trang đã theo dõi.",
+      "related": ["home-timeline", "fan-out-on-write", "fan-out-on-read"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "home-timeline",
+      "term": "Home timeline",
+      "meaning": "Danh sách id bài dựng sẵn cho từng người đọc, thường nằm trong cache và giới hạn vài trăm mục mới nhất. Là bản sao dựng lại được, không phải nguồn sự thật.",
+      "example": "`timeline:{user}` trong Redis giữ 800 id bài mới nhất; mất thì dựng lại từ đồ thị follow và bảng bài theo tác giả.",
+      "related": ["news-feed", "fan-out-on-write"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "fan-out-on-write",
+      "term": "Fan-out on write",
+      "meaning": "Khi có dữ liệu mới thì chép ngay vào chỗ đọc của từng người nhận (push). Đọc rẻ, ghi đắt theo số người nhận.",
+      "example": "Một bài của người có 200 follower thành 200 lệnh ZADD vào 200 timeline.",
+      "related": ["fan-out-on-read", "fan-out", "home-timeline"],
+      "topics": ["design-news-feed", "design-chat"]
+    },
+    {
+      "id": "fan-out-on-read",
+      "term": "Fan-out on read",
+      "meaning": "Không chép trước; khi người dùng đọc mới gom dữ liệu từ các nguồn họ theo dõi (pull). Ghi rẻ, đọc đắt theo số nguồn.",
+      "example": "Bài của tài khoản 20 triệu follower không được đẩy; lúc mở feed, hệ thống lấy bài mới nhất của tài khoản đó rồi ghép vào.",
+      "related": ["fan-out-on-write", "fan-out"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "hydration",
+      "term": "Hydration",
+      "meaning": "Bước biến danh sách id thành dữ liệu hiển thị: lấy nội dung, tác giả, bộ đếm theo lô, đồng thời lọc thứ không còn được hiện.",
+      "example": "Feed service lấy 30 id từ timeline, MGET nội dung bài, bỏ bài đã xoá và tác giả bị chặn, còn 20 bài để trả.",
+      "related": ["home-timeline", "news-feed"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "candidate-generation",
+      "term": "Candidate generation",
+      "meaning": "Tầng đầu của hệ xếp hạng: gom nhanh vài trăm tới vài nghìn ứng viên từ nhiều nguồn để tầng sau chấm điểm, vì model nặng không chấm nổi toàn bộ.",
+      "example": "Lấy 300 id từ timeline, 50 bài của tài khoản lớn đang theo dõi, 50 gợi ý, rồi mới đưa vào model.",
+      "related": ["feed-ranking", "news-feed"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "feed-ranking",
+      "term": "Feed ranking",
+      "meaning": "Chấm điểm và sắp ứng viên theo xác suất người dùng tương tác, rồi sắp lại theo luật như đa dạng tác giả và chèn quảng cáo.",
+      "example": "Model dự đoán khả năng like từ tuổi bài, mức thân với tác giả, loại nội dung; re-rank không cho quá 2 bài liên tiếp cùng tác giả.",
+      "related": ["candidate-generation", "news-feed"],
+      "topics": ["design-news-feed"]
+    },
+    {
+      "id": "chat-gateway",
+      "term": "Chat gateway",
+      "meaning": "Server chỉ giữ kết nối lâu (WebSocket) với client và chuyển tin hai chiều, không chứa logic nghiệp vụ. Ghi thiết bị nào đang ở gateway nào vào registry.",
+      "example": "50 gateway, mỗi cái giữ 200.000 kết nối; chat service tra registry rồi đẩy tin tới đúng gateway của người nhận.",
+      "related": ["websocket", "heartbeat", "presence"],
+      "topics": ["design-chat"]
+    },
+    {
+      "id": "conversation-sequence",
+      "term": "Conversation sequence",
+      "meaning": "Số thứ tự liên tục do server cấp cho từng tin trong một cuộc chat. Là thứ tự chung mọi thiết bị thấy, và cho phép phát hiện tin bị thiếu.",
+      "example": "Thiết bị nhận seq 39 rồi 41 thì biết thiếu tin 40 và kéo bù; số tin chưa đọc là last_seq trừ last_read_seq.",
+      "related": ["client-message-id", "k-sorted", "sync-log"],
+      "topics": ["design-chat"]
+    },
+    {
+      "id": "client-message-id",
+      "term": "Client message id",
+      "meaning": "Id do client sinh cho mỗi tin trước khi gửi, để gửi lại khi mất ack mà server nhận ra là cùng một tin. Là idempotency key của việc gửi tin.",
+      "example": "Máy chuyển từ Wi-Fi sang 4G, gửi lại tin với cùng UUID; server thấy đã có và trả lại seq cũ thay vì tạo tin thứ hai.",
+      "related": ["idempotency-key", "conversation-sequence"],
+      "topics": ["design-chat"]
+    },
+    {
+      "id": "read-receipt",
+      "term": "Read receipt",
+      "meaning": "Thông tin \"đã xem\" gửi về cho người gửi. Lưu bằng con trỏ last_read_seq của từng thành viên trong cuộc chat, không phải trạng thái từng tin.",
+      "example": "Tin seq 120 hiện \"đã xem bởi 12 người\" là đếm thành viên có last_read_seq >= 120.",
+      "related": ["conversation-sequence", "sync-log"],
+      "topics": ["design-chat"]
+    },
+    {
+      "id": "sync-log",
+      "term": "Sync log",
+      "meaning": "Log event theo từng người dùng (tin mới, đã đọc, sửa, xoá, thay đổi thành viên), mỗi event có số thứ tự riêng. Thiết bị chỉ cần nhớ một số để đồng bộ.",
+      "example": "Laptop mở lại sau một tuần hỏi \"event sau user_seq 88.120\" và nhận cả tin mới lẫn việc điện thoại đã đọc cuộc chat nào.",
+      "related": ["conversation-sequence", "fan-out-on-write"],
+      "topics": ["design-chat"]
+    },
+    {
+      "id": "presence",
+      "term": "Presence",
+      "meaning": "Trạng thái online, offline hay online lần cuối của người dùng. Lưu rẻ (Redis có TTL), nhưng lan trạng thái tới mọi liên hệ thì đắt.",
+      "example": "Điện thoại chuyển nền 10 phút một lần; chỉ báo offline sau 45 giây và chỉ đẩy cho người đang mở màn hình có người đó.",
+      "related": ["heartbeat", "chat-gateway"],
+      "topics": ["design-chat"]
     }
   ]
 }

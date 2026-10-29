@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chat cho 30 triệu DAU, nhiều thiết bị",
+  "prompt": "Một ứng dụng chat có 30 triệu DAU, mỗi người gửi trung bình 50 tin mỗi ngày, đỉnh gấp 3 lần trung bình. 70% tin là chat 1-1, còn lại trong nhóm, nhóm tối đa 1.000 người. Mỗi người dùng tới 4 thiết bị (điện thoại, máy tính bảng, web, desktop); lúc đỉnh 20% DAU online, trung bình 1,5 thiết bị mỗi người. Ràng buộc: tin tới thiết bị đang online trong 500 ms ở p99; tin đã ack cho người gửi thì không bao giờ mất; mọi thiết bị của mọi thành viên thấy cùng một thứ tự; thiết bị offline một tuần mở lại phải đồng bộ xong trong vài giây; chat 1-1 có \"đã xem\", nhóm hiện số người đã xem; hiện trạng thái online cho danh bạ; gateway được deploy mỗi ngày mà không làm rớt tin. Thiết kế kết nối, gửi và giao tin, thứ tự, đồng bộ nhiều thiết bị và presence.",
+  "hints": [
+    "Lúc đỉnh có bao nhiêu kết nối đồng thời, cần bao nhiêu gateway? Gateway giữ trạng thái gì, và chat service biết đẩy tin tới gateway nào bằng cách nào?",
+    "Thứ tự chuẩn lấy từ đâu để mọi thiết bị thấy giống nhau? Client gửi lại khi mất ack thì làm sao không tạo tin trùng?",
+    "Thiết bị offline một tuần, tham gia 300 cuộc chat: hỏi từng cuộc chat hay hỏi một chỗ? Đã đọc trên điện thoại thì laptop biết bằng cách nào?",
+    "Mỗi người có hàng trăm liên hệ. Đẩy mọi lần đổi trạng thái online cho mọi liên hệ thì tốn bao nhiêu tin mỗi giây so với tin nhắn thật?"
+  ],
+  "solution": "**Ước lượng**: 30 triệu × 50 tin / 86.400 là khoảng 17.400 tin mỗi giây, đỉnh 52.000. Lúc đỉnh có 6 triệu người online × 1,5 thiết bị là 9 triệu kết nối. Mỗi gateway giữ 200.000 kết nối (đo bằng load test, giới hạn chính là bộ nhớ đệm mỗi kết nối) thì cần 45 gateway; chia đều trên 3 AZ và mất một AZ vẫn còn đủ 45 thì phải chạy khoảng 68. Giả định nhóm trung bình 30 người. Lúc đỉnh mỗi người dùng có trung bình 0,3 thiết bị online (20% × 1,5); coi người nhận online độc lập, một tin 1-1 tới khoảng 0,8 thiết bị online (người nhận cộng các thiết bị khác của người gửi), tin nhóm khoảng 9. Trung bình 3,3, nên đỉnh khoảng 170.000 lần đẩy mỗi giây, chia trên 45 gateway là khoảng 3.800 lần mỗi gateway; phần còn lại là push cho thiết bị offline. Dung lượng: 1,5 tỉ tin mỗi ngày × 300 byte là 450 GB thô mỗi ngày, trước khi nhân bản sao.\n\n**Kết nối**: client nối WebSocket qua load balancer L4 giữ nguyên IP client (không SNAT, để không đụng giới hạn 28.232 port mỗi cặp IP). Gateway xác thực bằng vé dùng một lần, ghi `conn:{user}` gồm thiết bị, `gateway_id`, `connection_id` vào Redis với TTL 90 giây, gia hạn theo lô từ heartbeat 30 giây. Khi kết nối đóng, gateway chỉ xoá entry nếu `connection_id` vẫn là của mình. Mỗi gateway nghe một kênh riêng để chat service đẩy tin tới.\n\n**Gửi và thứ tự**: client sinh `client_msg_id` (UUID) và gửi. Tin, dòng đếm `last_seq` và outbox nằm cùng một shard SQL (PostgreSQL shard theo `conversation_id`). Chat service, trong một transaction trên shard đó: kiểm unique `(sender_device_id, client_msg_id)`, nếu đã có thì trả lại kết quả cũ; tăng `last_seq` của cuộc chat (`UPDATE ... RETURNING`); lưu tin; ghi một dòng outbox. Commit xong mới ack cho người gửi với seq và `message_id`. Seq theo cuộc chat là thứ tự chuẩn; client dời tin của mình về đúng chỗ khi ack về. Một dòng `last_seq` chịu vài nghìn cập nhật mỗi giây, thừa cho mọi nhóm vì một nhóm 1.000 người hiếm khi quá vài chục tin mỗi giây. Relay đẩy outbox vào Kafka; consumer theo partition `user_id` là bên duy nhất cấp `user_seq` cho từng user và ghi event vào sync log trong kho wide-column, partition theo `(user_id, tháng)` (nhóm trên 100 người chỉ ghi event ngắn \"cuộc chat C có tin tới seq N\"). Sync log là phần ghi nhiều nhất: trung bình khoảng 0,7 × 2 + 0,3 × 30 ≈ 10 event mỗi tin (cả người gửi), đỉnh khoảng 540.000 lần ghi mỗi giây, gấp 10 lần tin nhắn; event ngắn cỡ 100 byte thì thêm khoảng 1,5 TB mỗi ngày, nên sync log chỉ giữ 30 ngày.\n\n**Giao**: sau commit, chat service tra registry của các thành viên và đẩy tin tới gateway của từng thiết bị online. Thiết bị ack `last_delivered_seq`; không có ack sau 5 giây thì đẩy lại một lần rồi gửi push. Thiết bị không online thì nhận push, collapse theo cuộc chat. Đường đẩy chỉ là đường tắt: mất ở đâu thì thiết bị cũng sẽ đồng bộ khi thấy lỗ seq, khi ra foreground, hoặc khi nối lại.\n\n**Đồng bộ nhiều thiết bị**: mỗi thiết bị nhớ một `user_seq`. Nối lại thì hỏi \"event sau `user_seq` X\" theo trang 500 event. Thiết bị offline một tuần có thể có vài nghìn event; với event ngắn của nhóm lớn, thiết bị kéo trang tin mới nhất của cuộc chat đó khi người dùng mở nó, nên đồng bộ đầu tiên chỉ cần danh sách cuộc chat có thay đổi và số tin chưa đọc. Sync log giữ 30 ngày; quá thì đồng bộ lại toàn bộ.\n\n**Đã nhận, đã xem**: lưu `(conversation_id, user_id, last_delivered_seq, last_read_seq)`, client gửi con trỏ cao nhất, gộp theo vài giây. Chat 1-1: tin có seq ≤ `last_read_seq` của người kia là đã xem. Nhóm: số người có `last_read_seq >= seq`, chỉ tính khi người gửi mở chi tiết. Đọc trên một thiết bị thì ghi event đã đọc vào sync log của chính người đó, nên các thiết bị khác tắt badge.\n\n**Presence**: 6 triệu người online đổi trạng thái khoảng 10 phút một lần là 10.000 lần mỗi giây. Chỉ đẩy cho người đang mở màn hình có người đó (danh sách chat đang hiện, cuộc chat đang mở), chờ 45 giây mới báo offline, \"online lần cuối\" làm tròn tới phút và chỉ đọc khi cần. Nhóm trên 100 người không hiện presence từng người.\n\n**Deploy gateway**: gateway sắp tắt ngừng nhận kết nối mới, gửi `1012` cho từng phần kết nối trong 10–15 phút; client nối lại với backoff có jitter rồi đồng bộ từ `user_seq`. Theo dõi tải đọc sync log trong lúc deploy.\n\n**Quan sát**: p99 từ lúc ack người gửi tới lúc thiết bị ack delivered, tỉ lệ đẩy không có ack, số lần kéo bù vì lỗ seq, số kết nối và tốc độ nối lại trên mỗi gateway, tin presence mỗi giây.",
+  "tradeoffs": [
+    {
+      "option": "Seq theo cuộc chat cấp bằng dòng đếm trong database, cùng transaction với tin",
+      "pros": [
+        "Không có lỗ và không trùng seq, kể cả khi lỗi giữa chừng",
+        "Thiết bị phát hiện thiếu tin và đếm chưa đọc bằng phép trừ"
+      ],
+      "cons": [
+        "Mỗi cuộc chat là một dòng nóng, giới hạn vài nghìn tin mỗi giây",
+        "Cần database có transaction cho dòng đếm và dòng tin"
+      ]
+    },
+    {
+      "option": "Seq bằng Redis INCR, lưu tin sau",
+      "pros": [
+        "Nhanh, không giữ khoá trong database",
+        "Dễ tách lưu tin sang kho không có transaction"
+      ],
+      "cons": [
+        "Lưu lỗi sau INCR để lại lỗ vĩnh viễn, client phải xử lý",
+        "Failover có thể làm counter lùi và hai tin cùng seq"
+      ]
+    },
+    {
+      "option": "Sắp theo id Snowflake, không có seq theo cuộc chat",
+      "pros": [
+        "Không có dòng nóng, mỗi máy tự sinh id",
+        "Một loại id cho cả hệ thống"
+      ],
+      "cons": [
+        "Không liên tục nên không phát hiện được tin bị thiếu",
+        "Chỉ k-sorted giữa các máy, hai tin sát nhau có thể đảo"
+      ]
+    }
+  ]
+}

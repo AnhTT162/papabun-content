@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đăng bài và đọc feed",
+  "nodes": [
+    { "id": "author", "label": "Người đăng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "post", "label": "Post service", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "store", "label": "Bài + đồ thị follow", "kind": "database", "x": 0.1, "y": 0.35 },
+    { "id": "queue", "label": "Kafka fan-out", "kind": "queue", "x": 0.85, "y": 0.35 },
+    { "id": "timeline", "label": "Timeline Redis", "kind": "cache", "x": 0.1, "y": 0.65 },
+    { "id": "worker", "label": "Fan-out worker", "kind": "service", "x": 0.85, "y": 0.65 },
+    { "id": "feed", "label": "Feed service", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "author-post", "from": "author", "to": "post", "label": "đăng bài" },
+    { "id": "post-store", "from": "post", "to": "store", "label": "lưu theo tác giả" },
+    { "id": "post-queue", "from": "post", "to": "queue", "label": "event bài mới" },
+    { "id": "queue-worker", "from": "queue", "to": "worker", "label": "theo cỡ tác giả" },
+    { "id": "worker-store", "from": "worker", "to": "store", "label": "follower theo trang" },
+    { "id": "worker-timeline", "from": "worker", "to": "timeline", "label": "ZADD, cắt 800" },
+    { "id": "feed-timeline", "from": "feed", "to": "timeline", "label": "ZREVRANGE" },
+    { "id": "feed-store", "from": "feed", "to": "store", "label": "bài tài khoản lớn" }
+  ],
+  "steps": [
+    {
+      "caption": "Người dùng đăng bài. Post service sinh id Snowflake và lưu bài vào bảng theo tác giả. Bảng này là nguồn sự thật, timeline chỉ là bản sao dựng lại được.",
+      "show": ["author", "post", "store", "author-post", "post-store"],
+      "highlight": ["post-store"]
+    },
+    {
+      "caption": "Post service phát event bài mới vào Kafka. Tác giả trên ngưỡng (ví dụ 1 triệu follower) thì dừng ở đây: bài của họ được ghép lúc đọc.",
+      "show": ["queue", "post-queue"],
+      "highlight": ["post-queue"]
+    },
+    {
+      "caption": "Fan-out worker nhận event qua hàng đợi tách theo cỡ tác giả, để bài của tài khoản 500.000 follower không chặn bài của người có 200 follower.",
+      "show": ["worker", "queue-worker"],
+      "highlight": ["queue-worker"]
+    },
+    {
+      "caption": "Worker đọc danh sách follower theo trang vài nghìn người, bỏ người 30 ngày không mở app. Mỗi trang là một task retry riêng.",
+      "show": ["worker-store"],
+      "highlight": ["worker-store"]
+    },
+    {
+      "caption": "Mỗi task ghi id bài vào timeline của từng follower bằng ZADD rồi cắt còn 800 mục. ZADD lặp lại không đổi gì, nên chạy lại task an toàn.",
+      "show": ["timeline", "worker-timeline"],
+      "highlight": ["worker-timeline"]
+    },
+    {
+      "caption": "Khi mở feed, Feed service đọc timeline đã đẩy sẵn bằng một ZREVRANGE theo cursor max_id.",
+      "show": ["feed", "feed-timeline"],
+      "highlight": ["feed-timeline"]
+    },
+    {
+      "caption": "Feed service ghép thêm bài mới nhất của các tài khoản nổi tiếng mà người đọc theo dõi, bỏ trùng theo id, rồi hydrate: lấy nội dung, lọc bài đã xoá, tác giả bị chặn, bài không còn quyền xem.",
+      "show": ["feed-store"],
+      "highlight": ["feed-store"]
+    }
+  ]
+}

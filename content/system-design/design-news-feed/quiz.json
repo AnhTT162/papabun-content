@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "celebrity-fanout-time",
+      "kind": "single",
+      "prompt": "Mọi bài đều fan-out on write. Cụm worker ghi được tổng cộng 1 triệu lượt mỗi giây. Một tài khoản 20 triệu follower đăng bài. Điều gì xảy ra?",
+      "options": [
+        "Bài tới follower cuối sau ít nhất 20 giây, bài khác xếp hàng sau",
+        "Bài tới mọi follower trong khoảng 1 giây vì ghi chạy song song",
+        "Redis từ chối ghi vì một key nhận quá nhiều lệnh cùng lúc",
+        "Kafka chia bài thành 20 triệu message nên không ảnh hưởng ai"
+      ],
+      "answer": 0,
+      "explanation": "20 triệu lượt ghi chia cho 1 triệu lượt mỗi giây là ít nhất 20 giây, kể cả khi chạy song song hết công suất; trong lúc đó bài của người khác phải chờ. Các lượt ghi rơi vào 20 triệu key khác nhau nên không có hot key ở Redis. Vì vậy tài khoản trên ngưỡng được ghép lúc đọc, hoặc ít nhất được tách hàng đợi."
+    },
+    {
+      "id": "threshold-low",
+      "kind": "single",
+      "prompt": "Đội đề xuất hạ ngưỡng kéo bài từ 1 triệu xuống 10.000 follower để giảm ghi. Theo mô hình Zipf của bài, hệ quả chính là gì?",
+      "options": [
+        "Lượt ghi giảm gần một nửa, lượt đọc gần như không đổi",
+        "Lượt ghi giảm ít, mỗi lượt đọc ghép từ 3 lên khoảng 26 nguồn",
+        "Lượt đọc không đổi vì cache theo tác giả đã có sẵn",
+        "Không đổi gì vì tài khoản lớn chỉ có vài chục cái"
+      ],
+      "answer": 1,
+      "explanation": "Trong mô hình, ngưỡng 10.000 bớt 12,9% tổng lượt ghi (so với 1,7% ở ngưỡng 1 triệu), nhưng có 38.432 tài khoản trên ngưỡng và mỗi người đọc theo dõi trung bình 26 trong số đó. Ở đỉnh 17.000 lượt đọc mỗi giây, phải đọc thêm khoảng 450.000 cache theo tác giả mỗi giây. Đổi một ít lượt ghi lấy nhiều lượt đọc, trong khi đọc mới là phần nhiều hơn."
+    },
+    {
+      "id": "delete-after-fanout",
+      "kind": "single",
+      "prompt": "Một bài đã được fan-out vào 2 triệu timeline thì tác giả xoá bài. Cách nào giữ đúng yêu cầu \"không hiện ở lần tải feed tiếp theo\"?",
+      "options": [
+        "Xoá id khỏi 2 triệu timeline đồng bộ trước khi trả lời tác giả",
+        "Đặt TTL ngắn cho timeline để bài tự biến mất sau vài phút",
+        "Lọc bài đã xoá khi hydrate, rồi dọn khỏi timeline ở nền",
+        "Ghi đè nội dung bài trong từng timeline thành chuỗi rỗng"
+      ],
+      "answer": 2,
+      "explanation": "Timeline chỉ chứa id, nên lúc hydrate feed service thấy bài đã xoá và bỏ nó ngay ở lần tải sau. Dọn id khỏi timeline chạy ở nền, không chặn tác giả. Xoá đồng bộ 2 triệu key làm thao tác xoá chậm và dễ lỗi giữa chừng; TTL thì làm mất cả timeline; nội dung không nằm trong timeline nên không có gì để ghi đè."
+    },
+    {
+      "id": "ranked-cursor",
+      "kind": "single",
+      "prompt": "Feed xếp hạng phân trang bằng cursor là điểm của bài cuối trang (`score < 0.73`). Người dùng báo cuộn xuống thấy lại bài đã xem. Vì sao?",
+      "options": [
+        "Điểm là số thực nên phép so sánh bị sai số làm tròn",
+        "Điểm được tính lại giữa hai trang nên bài đổi chỗ qua cursor",
+        "Redis trả các bài cùng điểm theo thứ tự ngẫu nhiên",
+        "Client gửi cursor của trang đầu thay vì trang vừa xem"
+      ],
+      "answer": 1,
+      "explanation": "Điểm xếp hạng phụ thuộc like mới, tuổi bài, nên mỗi lần tính lại thì một bài đã ở trang 1 với điểm 0,8 có thể tụt xuống 0,7 và hiện lại ở trang 2. Cursor theo giá trị chỉ đúng khi giá trị không đổi. Sửa: lưu bản chụp danh sách đã xếp theo phiên và dùng vị trí trong bản chụp làm cursor."
+    },
+    {
+      "id": "own-post-missing",
+      "kind": "single",
+      "prompt": "Người dùng đăng bài rồi mở feed ngay, không thấy bài của mình; 5 giây sau làm mới thì thấy. Nguyên nhân và cách sửa hợp lý nhất?",
+      "options": [
+        "Cache bài chưa có bài mới; nên ghi bài vào cache trước database",
+        "Fan-out bất đồng bộ chưa tới; ghép bài mới của chính người đọc",
+        "Replica database bị trễ; nên đọc feed từ primary mọi lúc",
+        "Redis mất dữ liệu; nên bật AOF với fsync mỗi lệnh ghi"
+      ],
+      "answer": 1,
+      "explanation": "Fan-out chạy qua Kafka và worker nên mất vài giây; timeline của chính tác giả cũng chỉ có bài sau khi worker ghi. Đây là thiếu read-your-writes, không phải mất dữ liệu. Client chèn bài vừa đăng lên đầu, hoặc feed service luôn ghép vài bài mới nhất của chính người đọc. Đọc primary mọi lúc không giúp vì timeline không nằm ở database."
+    }
+  ]
+}

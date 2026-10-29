@@ -387,8 +387,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 6 | `design-id-generator` | Thiết kế bộ sinh ID phân tán | mid | Snowflake, sequence theo khối, thứ tự | L D Sc | ✅ |
 | 7 | `design-notification` | Thiết kế hệ thống thông báo | senior | Nhiều kênh, retry, dedup, tuỳ chọn của người dùng | L D Sc | ✅ |
 | 8 | `design-ecommerce-order` | ✚ Thiết kế đơn hàng & tồn kho | senior | Trạng thái đơn, giữ hàng, thanh toán, huỷ và hoàn, tính nhất quán giữa các service | L D Sc | ✅ |
-| 9 | `design-news-feed` | Thiết kế news feed | senior | Fan-out on write và on read, người dùng nổi tiếng, xếp hạng | L D Sc | ⬜ |
-| 10 | `design-chat` | Thiết kế ứng dụng chat | senior | WebSocket, presence, thứ tự tin nhắn, đồng bộ nhiều thiết bị | L D Sc | ⬜ |
+| 9 | `design-news-feed` | Thiết kế news feed | senior | Fan-out on write và on read, người dùng nổi tiếng, xếp hạng | L D Sc | ✅ |
+| 10 | `design-chat` | Thiết kế ứng dụng chat | senior | WebSocket, presence, thứ tự tin nhắn, đồng bộ nhiều thiết bị | L D Sc | ✅ |
 | 11 | `design-search-autocomplete` | Thiết kế autocomplete | senior | Trie, top-k, cập nhật, cache | L D Sc | ⬜ |
 | 12 | `design-job-scheduler` | ✚ Thiết kế job scheduler phân tán | senior | Cron phân tán, chạy đúng một lần, retry, phân phối việc, theo dõi | L D Sc | ⬜ |
 | 13 | `design-web-crawler` | ✚ Thiết kế web crawler | senior | Frontier, politeness, dedup URL và nội dung, mở rộng | L D Sc | ⬜ |

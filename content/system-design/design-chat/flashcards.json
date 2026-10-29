@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "gateway-role", "front": "Chat gateway giữ gì, không giữ gì?", "back": "Chỉ giữ kết nối WebSocket và ghi thiết bị nào đang ở gateway nào vào registry. Không có logic nghiệp vụ, nên deploy và scale theo số kết nối." },
+    { "id": "source-of-truth", "front": "Đẩy tin qua WebSocket bị mất thì sao?", "back": "Đường đẩy chỉ là đường tắt. Nguồn sự thật là kho tin và con trỏ của thiết bị: thiết bị kéo bù khi thấy lỗ seq, khi ra foreground hoặc khi nối lại." },
+    { "id": "seq-vs-clock", "front": "Vì sao sắp tin theo seq của server, không theo giờ client?", "back": "Đồng hồ các máy lệch nhau, nên mỗi thiết bị có thể thấy một thứ tự khác. Seq do server cấp theo cuộc chat là thứ tự chung cho mọi thiết bị." },
+    { "id": "seq-gap", "front": "Seq liên tục theo cuộc chat giúp gì mà id Snowflake không giúp được?", "back": "Thiết bị thấy 39 rồi 41 là biết thiếu tin 40 để kéo bù, và số chưa đọc là last_seq trừ last_read_seq. Id Snowflake không liên tục." },
+    { "id": "client-msg-id", "front": "Gửi lại tin khi mất ack mà không tạo bản trùng thế nào?", "back": "Client sinh client_msg_id và gửi kèm. Server giữ unique theo thiết bị gửi và id đó, gặp trùng thì trả lại seq cũ." },
+    { "id": "last-message-ack", "front": "Vì sao thiết bị nhận vẫn phải ack dù đã có kéo bù theo lỗ seq?", "back": "Tin cuối cùng bị mất thì không có tin sau nó để lộ lỗ. Không có ack sau vài giây thì server đẩy lại hoặc gửi push." },
+    { "id": "read-pointer", "front": "Lưu trạng thái \"đã đọc\" thế nào cho rẻ?", "back": "Một con trỏ last_read_seq cho mỗi người trong mỗi cuộc chat, không phải một dòng cho mỗi tin. Đọc 30 tin chỉ là một lần cập nhật." },
+    { "id": "sync-log", "front": "Thiết bị nối lại sau một tuần đồng bộ thế nào cho nhanh?", "back": "Hỏi sync log của người dùng: các event sau user_seq đã nhớ, theo trang. Không phải hỏi lần lượt hàng trăm cuộc chat." },
+    { "id": "registry-race", "front": "Vì sao gateway chỉ xoá entry registry khi connection_id còn khớp?", "back": "Kết nối cũ có thể timeout sau khi thiết bị đã nối lại bằng kết nối mới. Xoá mù thì kết nối mới bị coi là offline." },
+    { "id": "presence-cost", "front": "Vì sao presence có thể tốn hơn tin nhắn?", "back": "Mỗi lần đổi trạng thái đẩy cho mọi liên hệ đang online: 10 triệu người, 60 liên hệ là 1 triệu tin mỗi giây. Chỉ đẩy cho người đang xem và chờ trước khi báo offline." }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "write-vs-read", "front": "Fan-out on write và fan-out on read khác nhau thế nào?", "back": "On write chép id bài vào timeline của từng follower lúc đăng: đọc rẻ, ghi đắt. On read gom bài của những người mình theo dõi lúc mở feed: ghi rẻ, đọc đắt." },
+    { "id": "celebrity", "front": "Vì sao tài khoản nổi tiếng không fan-out on write?", "back": "Một bài của tài khoản 20 triệu follower là 20 triệu lượt ghi dồn một lúc, làm bài tới follower chậm và chiếm hết worker. Bài của họ được ghép lúc đọc." },
+    { "id": "threshold-tradeoff", "front": "Hạ ngưỡng tài khoản nổi tiếng thì được gì, mất gì?", "back": "Bớt lượt ghi, nhưng mỗi lượt đọc phải ghép nhiều nguồn hơn. Trong mô hình Zipf, ngưỡng 10.000 bắt mỗi lượt đọc ghép 26 nguồn mà chỉ bớt 12,9% lượt ghi." },
+    { "id": "ids-only", "front": "Vì sao timeline chỉ chứa id bài?", "back": "Để sửa, xoá, chặn và quyền xem được áp lúc hydrate. Chép nội dung vào hàng triệu timeline thì không cập nhật được." },
+    { "id": "inactive", "front": "Làm gì với follower không mở app lâu ngày?", "back": "Không fan-out cho họ (ví dụ 30 ngày không hoạt động). Khi họ quay lại thì dựng lại timeline bằng cách kéo." },
+    { "id": "rebuild", "front": "Mất timeline cache thì sao?", "back": "Dựng lại từ đồ thị follow và bảng bài theo tác giả. Timeline là bản sao, không phải nguồn sự thật; giới hạn số lần dựng đồng thời." },
+    { "id": "zadd-idempotent", "front": "Vì sao chạy lại task fan-out là an toàn?", "back": "ZADD cùng member và cùng score không thay đổi gì, nên ghi lặp một id vào timeline không tạo bản trùng." },
+    { "id": "cursor", "front": "Phân trang feed theo thời gian dùng gì?", "back": "Cursor max_id (bài có id nhỏ hơn bài cuối trang trước). Offset làm lặp bài khi có bài mới chèn vào đầu." },
+    { "id": "ranked-pagination", "front": "Phân trang feed xếp hạng thế nào để không lặp bài?", "back": "Lưu bản chụp danh sách đã xếp theo phiên, cursor là vị trí trong bản chụp. Bài mới hiện qua nút \"Có bài mới\"." },
+    { "id": "own-post", "front": "Vì sao người vừa đăng không thấy bài mình trong feed, và sửa thế nào?", "back": "Fan-out bất đồng bộ mất vài giây. Client chèn bài của mình lên đầu, hoặc feed luôn ghép bài mới nhất của chính người đọc (read-your-writes)." }
+  ]
+}

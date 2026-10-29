@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-news-feed",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế news feed",
+  "summary": "Fan-out khi ghi hay khi đọc, vì sao tài khoản nổi tiếng hại ở đỉnh chứ không ở tổng lượt ghi, chọn ngưỡng bằng số nguồn phải ghép, timeline chỉ chứa id, bộ nhớ của timeline cache, dựng lại khi mất cache, các tầng xếp hạng và phân trang không lặp bài.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 18,
+  "prerequisites": ["sd-framework", "back-of-envelope", "redis-use-cases", "cache-failures", "design-id-generator"],
+  "terms": ["news-feed", "fan-out-on-write", "fan-out-on-read", "home-timeline", "hydration", "candidate-generation", "feed-ranking", "snowflake-id", "cursor-pagination", "sorted-set", "hot-key", "idempotent-consumer", "k-sorted", "bloom-filter", "read-your-writes", "consumer-lag", "cache-avalanche"],
+  "references": [
+    { "title": "High Scalability: The Architecture Twitter Uses To Deal With 150M Active Users", "url": "https://highscalability.com/the-architecture-twitter-uses-to-deal-with-150m-active-users/" },
+    { "title": "Redis: Sorted sets", "url": "https://redis.io/docs/latest/develop/data-types/sorted-sets/" },
+    { "title": "Redis: Memory optimization (listpack thresholds)", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Chọn ngưỡng tài khoản nổi tiếng thế nào?\" Đừng đưa một con số thuộc lòng. Hạ ngưỡng thì bớt ghi nhưng mỗi lượt đọc phải ghép thêm nguồn, mà đọc nhiều gấp trăm lần ghi. Tôi chọn ngưỡng theo hai giới hạn: bài lớn nhất dưới ngưỡng phải fan-out xong trong SLA (10 giây), và số nguồn ghép trung bình mỗi lượt đọc chỉ vài cái. Rồi đo lại theo phân bố follower thật, tính theo người còn hoạt động." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chép nội dung bài vào timeline của từng follower để \"đọc nhanh hơn\". Khi đó sửa bài, xoá bài, chặn người dùng hay đổi quyền xem phải cập nhật hàng triệu bản sao, và bản nào sót là lộ nội dung đã xoá. Timeline chỉ giữ `(post_id, author_id)`; mọi kiểm tra chạy lúc hydrate." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, tách ngay đường ghi (đăng bài → fan-out) và đường đọc (timeline → ghép → hydrate → xếp hạng), rồi ghi số request mỗi giây lên từng đường. Đọc gấp trăm lần ghi là lý do chọn fan-out on write; một bài 20 triệu lượt ghi là lý do có ngoại lệ." }
+  ]
+}

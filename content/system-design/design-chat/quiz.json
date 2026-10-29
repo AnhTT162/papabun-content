@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "registry-stale-delete",
+      "kind": "single",
+      "prompt": "Người dùng đi vào thang máy, mất sóng 20 giây rồi điện thoại tự nối lại vào gateway khác. 40 giây sau, gateway cũ phát hiện kết nối cũ đã chết và gọi `HDEL conn:{user} phone`. Từ đó điện thoại chỉ nhận push dù vẫn đang online. Sửa thế nào?",
+      "options": [
+        "Giảm heartbeat xuống 5 giây để gateway cũ phát hiện sớm hơn",
+        "Chỉ xoá entry khi connection_id trong đó vẫn là của mình",
+        "Bật sticky session để thiết bị luôn nối lại đúng gateway cũ",
+        "Tắt TTL của registry để entry không bao giờ tự hết hạn"
+      ],
+      "answer": 1,
+      "explanation": "Entry lúc gateway cũ xoá đã là của kết nối mới. Ghi `connection_id` vào entry và chỉ xoá khi còn khớp (so rồi xoá trong một script Lua) thì kết nối đóng muộn không xoá nhầm. Heartbeat ngắn hơn chỉ thu hẹp cửa sổ lỗi và làm tốn hơn; sticky không giữ được khi gateway cũ đang chết; tắt TTL thì thiết bị chết đột ngột bị coi là online mãi."
+    },
+    {
+      "id": "client-clock-order",
+      "kind": "single",
+      "prompt": "Nhóm chat sắp tin theo `sent_at` do client gửi lên. Người dùng báo trên điện thoại của An, câu trả lời của Bình hiện trước câu hỏi của An. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Đồng hồ máy Bình chạy chậm hơn đồng hồ máy An",
+        "Mạng của Bình chậm nên tin của Bình tới server sau",
+        "Database trả tin theo thứ tự ghi vào đĩa, không theo giờ",
+        "WebSocket không giữ thứ tự frame giữa hai người gửi"
+      ],
+      "answer": 0,
+      "explanation": "Giờ trên máy client có thể lệch vài giây tới vài phút. Máy Bình chậm thì câu trả lời gửi sau vẫn mang `sent_at` nhỏ hơn. Mạng chậm làm tin tới muộn, không làm `sent_at` nhỏ đi. Sửa: thứ tự lấy theo seq do server cấp cho từng cuộc chat; `sent_at` chỉ để hiển thị."
+    },
+    {
+      "id": "incr-gap",
+      "kind": "single",
+      "prompt": "Chat service lấy seq bằng `INCR seq:{conv}` rồi mới ghi tin vào Cassandra. Một lần ghi lỗi hẳn và không được retry. Client thấy seq 41 sau 39, kéo bù seq 40 mãi không có. Cách xử lý đúng?",
+      "options": [
+        "Retry INCR cho tới khi Redis trả lại đúng giá trị 40",
+        "Chờ quá thời gian ghi tối đa, kéo lại, vẫn trống thì coi là lỗ",
+        "Chuyển sang sắp theo giờ server để không bao giờ có lỗ",
+        "Xoá tin 41 để seq liên tục trở lại cho mọi thiết bị"
+      ],
+      "answer": 1,
+      "explanation": "Khi cấp seq và lưu tin nằm ở hai hệ khác nhau, lưu lỗi sau `INCR` để lại lỗ vĩnh viễn, nên client phải biết bỏ qua lỗ. Nhưng không được bỏ ngay lần kéo đầu: seq 40 có thể commit sau 41, và timeout ghi của Cassandra không có nghĩa là ghi thất bại. Chờ quá thời gian ghi tối đa rồi kiểm lại. Muốn không có lỗ thì cấp seq cùng transaction với lần lưu tin. `INCR` không lùi được; sắp theo giờ thì mất khả năng phát hiện thiếu tin."
+    },
+    {
+      "id": "presence-load",
+      "kind": "single",
+      "prompt": "10 triệu người online, mỗi người đổi trạng thái khoảng 10 phút một lần (chuyển nền, mở lại). Mỗi lần đổi được đẩy cho 60 liên hệ đang online. Đỉnh tin nhắn là 70.000 tin mỗi giây. Tin presence mỗi giây khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 17.000, ít hơn tin nhắn thật",
+        "Khoảng 70.000, ngang tin nhắn thật",
+        "Khoảng 1 triệu, gấp 14 lần tin nhắn",
+        "Khoảng 10 triệu, gấp 140 lần tin nhắn"
+      ],
+      "answer": 2,
+      "explanation": "10 triệu / 600 giây là khoảng 16.700 lần đổi trạng thái mỗi giây; nhân 60 người nhận là 1 triệu tin presence mỗi giây, gấp khoảng 14 lần đỉnh tin nhắn. 17.000 là số lần đổi, chưa nhân người nhận; 10 triệu là nhân với 600 liên hệ trong danh bạ thay vì 60 người đang online. Vì vậy presence chỉ đẩy cho người đang xem và chờ vài chục giây trước khi báo offline."
+    },
+    {
+      "id": "duplicate-on-retry",
+      "kind": "single",
+      "prompt": "Điện thoại gửi tin, server lưu xong nhưng ack bị mất khi máy chuyển từ Wi-Fi sang 4G. Client gửi lại và tin hiện hai lần trong nhóm. Sửa ở đâu?",
+      "options": [
+        "Tăng timeout chờ ack lên 60 giây trước khi gửi lại",
+        "Unique theo thiết bị và client_msg_id, trùng trả seq cũ",
+        "Lọc tin trùng ở client nhận nếu nội dung giống nhau",
+        "Gửi tin bằng HTTP thay vì WebSocket để có retry sẵn"
+      ],
+      "answer": 1,
+      "explanation": "Client không biết server đã lưu hay chưa, nên phải gửi lại được an toàn. Gửi kèm client message id và giữ unique `(sender_device_id, client_msg_id)` thì lần gửi lại nhận đúng seq và `message_id` cũ. Lọc theo nội dung sai với người gửi \"ok\" hai lần thật; timeout dài chỉ làm chậm; HTTP retry cũng tạo trùng nếu không có idempotency key."
+    }
+  ]
+}

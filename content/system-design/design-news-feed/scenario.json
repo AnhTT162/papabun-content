@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Feed cho mạng xã hội 50 triệu DAU",
+  "prompt": "Một mạng xã hội có 100 triệu tài khoản hoạt động trong 30 ngày, 50 triệu DAU. Mỗi người theo dõi trung bình 200 tài khoản (tối đa 5.000). Mỗi ngày có 5 triệu bài mới, đỉnh gấp 3 lần trung bình. Phân bố follower rất lệch: trung vị dưới 100, vài chục tài khoản trên 1 triệu, tài khoản lớn nhất 20 triệu. Mỗi DAU mở feed 10 lần mỗi ngày. Ràng buộc: trang đầu của feed p99 dưới 300 ms; bài mới hiện với follower trong 10 giây ở p99, kể cả bài của tài khoản lớn nhất; bài bị xoá hoặc tác giả bị chặn không được hiện ở lần tải feed tiếp theo; feed có xếp hạng, nhưng cuộn xuống không được thấy lại bài đã xem trong cùng phiên. Ngân sách Redis cho timeline cache khoảng 3 TB tính cả bản sao. Thiết kế cách dựng timeline, ngưỡng cho tài khoản lớn, lưu trữ, xếp hạng và phân trang.",
+  "hints": [
+    "Đọc feed mỗi giây gấp bao nhiêu lần bài mới mỗi giây? Fan-out cho mọi follower tốn bao nhiêu lượt ghi mỗi giây ở đỉnh?",
+    "Bài của tài khoản 20 triệu follower phải tới follower trong 10 giây: worker cần ghi bao nhiêu lượt mỗi giây cho riêng bài đó? Nếu không đẩy thì lượt đọc phải làm thêm gì?",
+    "800 id cho 100 triệu người là bao nhiêu byte thô, và sorted set tốn hơn thế bao nhiêu? Ngân sách 3 TB buộc bạn cắt ở đâu?",
+    "Điểm xếp hạng đổi mỗi lần tính lại. Cursor theo điểm hay theo offset có giữ được yêu cầu không lặp bài khi cuộn không?"
+  ],
+  "solution": "**Ước lượng**: 50 triệu × 10 lượt / 86.400 là khoảng 5.800 lượt đọc feed mỗi giây, đỉnh 17.000. Bài mới trung bình 58 mỗi giây, đỉnh 174; nhân 200 follower là khoảng 11.600 lượt ghi timeline mỗi giây, đỉnh 35.000. Đọc gấp trăm lần ghi tính theo request, nên mặc định là fan-out on write.\n\n**Ngưỡng tài khoản lớn**: đẩy một bài tới 20 triệu follower trong 10 giây cần 2 triệu lượt ghi mỗi giây cho riêng bài đó, gấp gần 60 lần đỉnh của cả hệ. Vì vậy tài khoản có trên 1 triệu follower đang hoạt động không fan-out; dưới 800.000 mới chuyển lại sang đẩy, để tránh đổi chế độ liên tục. Theo mô hình Zipf của bài (50 triệu tài khoản; với 100 triệu tài khoản các con số chỉ là gần đúng), ngưỡng đó gồm vài chục tài khoản và mỗi lượt đọc chỉ ghép thêm trung bình 3–4 nguồn: ở đỉnh là khoảng 60.000 lượt đọc cache theo tác giả mỗi giây, gom bằng pipeline. Ngưỡng 10.000 thì lượt đọc phải ghép trung bình 26 nguồn (khoảng 450.000 lượt mỗi giây ở đỉnh) mà chỉ bớt thêm khoảng 11 điểm phần trăm lượt ghi: không đáng. Tài khoản giữa 100.000 và 1 triệu (theo mô hình khoảng 1.500 tài khoản) vẫn được đẩy nhưng vào hàng đợi riêng. Bài của tài khoản gần 1 triệu follower cần 100.000 lượt ghi mỗi giây để xong trong 10 giây, gấp 3 đỉnh của cả hệ, nên hàng đợi này có worker và shard Redis chịu khoảng 200.000 lượt mỗi giây, đủ cho hai bài lớn cùng lúc mà không chặn bài thường.\n\n**Lưu trữ**: bài nằm trong bảng theo tác giả (`author_id`, id bài giảm dần), là nguồn sự thật. Mỗi tài khoản lớn có thêm cache `author:{id}:recent` gồm 100 id mới nhất, đọc qua local cache vài giây vì đây là hot key. Timeline cache: mỗi mục là `(post_id, author_id)` 16 byte; 100 triệu × 800 mục đã là 1,28 TB thô, sorted set ước cỡ 100 byte mỗi mục là 8 TB, vượt ngân sách. Chọn: chỉ giữ cho người mở app trong 30 ngày, giữ 300 mục mới nhất (người đọc hiếm khi cuộn quá vài trang; quá đó thì kéo), và lưu mảng đóng gói thay vì sorted set: khoảng 480 GB thô mỗi bản, ba bản khoảng 1,44 TB, còn chỗ cho cache bài. Đổi lại, chèn phải tự kiểm id đã có và chèn đúng chỗ theo id (bài từ hàng đợi tài khoản lớn tới muộn), việc `ZADD` làm sẵn. Timeline mất thì dựng lại từ đồ thị follow và bảng theo tác giả, có giới hạn số lần dựng đồng thời.\n\n**Fan-out**: event bài mới vào Kafka; worker đọc follower theo trang 2.000 người, bỏ người không hoạt động, ghi id vào timeline. Bước chèn kiểm id đã có nên ghi lặp không tạo bản trùng, và task lỗi được chạy lại. Cảnh báo theo độ trễ fan-out p99 của từng hàng đợi.\n\n**Đọc và xếp hạng**: Feed service lấy 300 id từ timeline, ghép bài mới nhất của các tài khoản lớn đang theo dõi, bài của chính người đọc, vài chục gợi ý; bỏ trùng; lọc bài đã xem trong 7 ngày; hydrate theo lô, bỏ bài đã xoá, tác giả bị chặn, bài không còn quyền xem. Model chấm khoảng 300 ứng viên trong vài chục mili giây; re-rank không quá 2 bài liên tiếp cùng tác giả. Xoá và chặn được kiểm khi hydrate nên không cần chờ dọn timeline. Để đúng ngay ở lần tải sau, xoá bài thì xoá khỏi cache bài và `author:{id}:recent`, rồi phát event để các local cache bỏ key đó; local cache chỉ giữ bài vài giây và không giữ trạng thái xoá hay chặn.\n\n**Phân trang**: lưu danh sách đã xếp của phiên (khoảng 300 id, TTL 30 phút) trong Redis; cursor là session id cộng vị trí. Mỗi trang lấy từ bản chụp vẫn được hydrate lại, nên bài vừa xoá hay tác giả vừa bị chặn trong phiên cũng bị bỏ. Cuộn không bao giờ lặp vì danh sách không đổi trong phiên; bài mới tới thì hiện nút \"Có bài mới\". Hết danh sách thì xếp thêm một lô từ phần còn lại, loại các id đã trả trong phiên.\n\n**Quan sát**: p99 độ trễ fan-out theo hàng đợi, p99 của từng tầng (đọc timeline, ghép, hydrate, chấm điểm), hit ratio timeline, số lần dựng lại mỗi phút, tỉ lệ bài bị lọc khi hydrate.",
+  "tradeoffs": [
+    {
+      "option": "Fan-out on write cho mọi tài khoản",
+      "pros": [
+        "Đọc feed chỉ là một lệnh đọc timeline, latency thấp và đều",
+        "Đơn giản: một đường đọc, không phải ghép nhiều nguồn"
+      ],
+      "cons": [
+        "Một bài của tài khoản 20 triệu follower là 20 triệu lượt ghi dồn một lúc",
+        "Tốn ghi và bộ nhớ cho cả người không bao giờ đọc"
+      ]
+    },
+    {
+      "option": "Fan-out on read cho mọi tài khoản",
+      "pros": [
+        "Ghi rẻ, không có bộ nhớ timeline cho từng người",
+        "Xoá, chặn, follow mới đúng ngay, không cần dọn hay đẩy bù"
+      ],
+      "cons": [
+        "Mỗi lượt đọc phải ghép bài từ tới 5.000 nguồn",
+        "Latency đọc cao và thất thường, tải dồn vào bảng bài"
+      ]
+    },
+    {
+      "option": "Lai: đẩy cho tài khoản thường, kéo cho tài khoản trên ngưỡng",
+      "pros": [
+        "Cắt các đỉnh ghi lớn nhất mà lượt đọc chỉ ghép vài nguồn",
+        "Có nút chỉnh là ngưỡng để cân ghi và đọc"
+      ],
+      "cons": [
+        "Hai đường dữ liệu phải giữ đúng, phải bỏ trùng khi đổi chế độ",
+        "Cache bài của tài khoản lớn thành hot key"
+      ]
+    }
+  ]
+}
