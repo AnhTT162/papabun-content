@@ -56,7 +56,7 @@
     {
       "id": "bit-budget",
       "kind": "single",
-      "prompt": "Hệ thống cần tối đa 800 worker mỗi region và mỗi pod chỉ sinh vài trăm ID mỗi giây. Với 41 bit thời gian và 2 bit region, nên chia 20 bit còn lại thế nào?",
+      "prompt": "Hệ thống cần tối đa 800 worker mỗi region, và lúc đỉnh một pod có thể phải sinh 600 ID trong một mili giây. Với 41 bit thời gian và 2 bit region, nên chia 20 bit còn lại thế nào?",
       "options": [
         "8 bit worker, 12 bit sequence như cấu hình gốc",
         "6 bit worker, 14 bit sequence để chịu đỉnh lớn",
@@ -64,7 +64,7 @@
         "10 bit worker, 10 bit sequence, đủ cả hai phía"
       ],
       "answer": 3,
-      "explanation": "800 worker cần ít nhất 10 bit (1.024). 10 bit sequence cho 1.024 ID mỗi mili giây mỗi pod, khoảng 1 triệu mỗi giây, dư xa so với vài trăm. 8 bit worker chỉ có 256. 12 bit worker cũng đủ nhưng 8 bit sequence chỉ 256 ID mỗi mili giây mỗi pod, ít dư hơn cho đỉnh; khi cả hai đều đủ, 10/10 cân bằng hơn."
+      "explanation": "800 worker cần ít nhất 10 bit (1.024), nên 8 hay 6 bit worker không đủ. 600 ID mỗi mili giây cần ít nhất 10 bit sequence (1.024), nên 12 bit worker với 8 bit sequence (256 mỗi mili giây) không đủ. Chỉ 10 bit worker và 10 bit sequence thoả cả hai."
     }
   ]
 }

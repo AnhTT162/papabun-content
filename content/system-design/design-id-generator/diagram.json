@@ -36,7 +36,7 @@
       "highlight": ["pod-db"]
     },
     {
-      "caption": "Pod gia hạn lease mỗi phút và ghi mốc thời gian mới. Không gia hạn được trước khoảng an toàn (đo bằng monotonic clock) thì ngừng sinh ID và báo not ready.",
+      "caption": "Pod gia hạn lease mỗi phút và ghi mốc cận trên: bây giờ cộng khoảng an toàn còn được sinh. Không gia hạn được trước khoảng an toàn (đo bằng monotonic clock) thì ngừng sinh ID và báo not ready.",
       "show": [],
       "highlight": ["pod-lease"]
     },
@@ -46,7 +46,7 @@
       "highlight": ["clock-pod"]
     },
     {
-      "caption": "Pod tắt êm xoá lease của mình; pod chết bất thường giữ worker id tới khi lease hết hạn. Số bit worker phải đủ cho cả số id bị giữ trong lúc rollout.",
+      "caption": "Pod tắt êm trả lease (đặt hết hạn, giữ dòng và mốc thời gian); pod chết bất thường giữ worker id tới khi lease hết hạn. Số bit worker phải đủ cho cả số id bị giữ trong lúc rollout.",
       "show": [],
       "highlight": ["lease"]
     }

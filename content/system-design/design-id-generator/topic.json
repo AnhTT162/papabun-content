@@ -10,11 +10,13 @@
   "order": 6,
   "minutes": 15,
   "prerequisites": ["clocks-ids", "sd-framework", "distributed-locks"],
-  "terms": ["segment-allocation", "snowflake-id", "worker-id", "uuid-v7", "k-sorted", "single-point-of-failure", "lease", "clock-skew", "ticket-server", "double-buffering", "birthday-paradox", "statefulset", "monotonic-clock", "outbox", "idor", "feistel-cipher"],
+  "terms": ["segment-allocation", "snowflake-id", "worker-id", "uuid-v7", "k-sorted", "single-point-of-failure", "lease", "clock-skew", "ticket-server", "double-buffering", "birthday-paradox", "statefulset", "monotonic-clock", "outbox", "idor", "feistel-cipher", "cdc"],
   "references": [
     { "title": "Twitter Engineering: Announcing Snowflake (2010)", "url": "https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake" },
     { "title": "Instagram Engineering: Sharding & IDs at Instagram", "url": "https://instagram-engineering.com/sharding-ids-at-instagram-1cf5a71e5a5c" },
-    { "title": "RFC 9562: Universally Unique IDentifiers (UUIDs)", "url": "https://www.rfc-editor.org/rfc/rfc9562" }
+    { "title": "RFC 9562: Universally Unique IDentifiers (UUIDs)", "url": "https://www.rfc-editor.org/rfc/rfc9562" },
+    { "title": "Flickr: Ticket Servers, Distributed Unique Primary Keys on the Cheap", "url": "https://code.flickr.net/2010/02/08/ticket-servers-distributed-unique-primary-keys-on-the-cheap/" },
+    { "title": "Meituan Leaf: distributed ID generator (segment and snowflake)", "url": "https://github.com/Meituan-Dianping/Leaf" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

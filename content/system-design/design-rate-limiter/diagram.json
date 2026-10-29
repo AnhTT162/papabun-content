@@ -19,7 +19,7 @@
   ],
   "steps": [
     {
-      "caption": "Edge chặn lũ request theo IP trước khi tới hệ thống. Nó không biết API key hay khách hàng nào, chỉ thấy IP, header và đường dẫn.",
+      "caption": "Edge chặn lũ request theo IP trước khi tới hệ thống. Nó thấy IP và mẫu request, nhưng không biết API key thuộc khách hàng nào.",
       "show": ["client", "edge", "client-edge"],
       "highlight": ["client-edge"]
     },

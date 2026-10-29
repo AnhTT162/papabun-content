@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator"]
     },
     {
       "id": "security-definer",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope", "design-rate-limiter"]
     },
     {
       "id": "local-cache",
@@ -6245,7 +6245,7 @@
       "meaning": "Thiết bị đổi địa chỉ trong gói khi đi qua ranh giới mạng, thường thay IP nguồn private bằng IP public của nó (SNAT) và ghi lại để chuyển response về đúng máy.",
       "example": "Cả 20 pod ra Internet qua một NAT gateway nên đối tác chỉ cần whitelist một IP.",
       "related": ["private-ip", "conntrack"],
-      "topics": ["network-basics", "proxy-nginx"]
+      "topics": ["network-basics", "proxy-nginx", "design-rate-limiter"]
     },
     {
       "id": "security-group",
@@ -8890,7 +8890,7 @@
     {
       "id": "waf",
       "term": "WAF",
-      "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó chỉ thấy IP, header, đường dẫn, không biết khách hàng nào.",
+      "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó không biết khách hàng nào hay kết quả xử lý của ứng dụng.",
       "example": "Luật WAF chặn một IP gửi quá vài nghìn request trong 5 phút trước khi request chạm gateway.",
       "related": ["rate-limiting", "cdn", "api-gateway"],
       "topics": ["design-rate-limiter"]

@@ -51,7 +51,7 @@
         "Ở client, vì app có thể khoá nút đăng nhập ngay"
       ],
       "answer": 2,
-      "explanation": "Luật đếm lần sai mật khẩu, mà chỉ auth service biết kết quả. Gateway đếm mọi request thì người đăng nhập đúng cũng bị tính; WAF chỉ thấy IP, không thấy username trong body một cách đáng tin; client thì kẻ tấn công bỏ qua được. Auth service đếm theo username và theo IP, và nên làm chậm dần hoặc đòi CAPTCHA thay vì khoá cứng."
+      "explanation": "Luật đếm lần sai mật khẩu, mà chỉ auth service biết kết quả. Gateway đếm mọi request thì người đăng nhập đúng cũng bị tính; WAF cũng không biết kết quả xác thực; client thì kẻ tấn công bỏ qua được. Auth service đếm theo username và theo IP, và nên làm chậm dần hoặc đòi CAPTCHA thay vì khoá cứng."
     },
     {
       "id": "quota-vs-rate",

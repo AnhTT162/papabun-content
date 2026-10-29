@@ -10,7 +10,7 @@
   "order": 5,
   "minutes": 16,
   "prerequisites": ["rate-limiting", "sd-framework", "redis-use-cases"],
-  "terms": ["rate-limiting", "waf", "api-gateway", "token-bucket", "lua-script", "shadow-mode", "circuit-breaker", "fail-open", "api-quota", "envoy", "sidecar", "hash-slot", "hash-tag", "hot-key", "crdt", "credential-stuffing", "load-shedding", "noisy-neighbor"],
+  "terms": ["rate-limiting", "waf", "api-gateway", "token-bucket", "lua-script", "shadow-mode", "circuit-breaker", "fail-open", "api-quota", "envoy", "sidecar", "hash-slot", "hash-tag", "hot-key", "crdt", "credential-stuffing", "load-shedding", "noisy-neighbor", "cdn", "nat"],
   "references": [
     { "title": "Envoy: Global rate limiting", "url": "https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting" },
     { "title": "Redis: Cluster specification, hash tags", "url": "https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/" },
