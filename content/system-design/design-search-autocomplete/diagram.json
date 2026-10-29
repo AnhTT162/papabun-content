@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường đọc và đường cập nhật của autocomplete",
+  "nodes": [
+    { "id": "client", "label": "App / web", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "kafka", "label": "Kafka search-events", "kind": "queue", "x": 0.85, "y": 0.05 },
+    { "id": "suggest", "label": "Suggest (FST)", "kind": "service", "x": 0.1, "y": 0.35 },
+    { "id": "es", "label": "ES sản phẩm", "kind": "database", "x": 0.85, "y": 0.4 },
+    { "id": "s3", "label": "Snapshot S3", "kind": "external", "x": 0.1, "y": 0.65 },
+    { "id": "builder", "label": "Builder mỗi giờ", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "doris", "label": "Doris đếm theo ngày", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-suggest", "from": "client", "to": "suggest", "label": "GET /suggest?q=ip" },
+    { "id": "suggest-es", "from": "suggest", "to": "es", "label": "3 sản phẩm còn hàng" },
+    { "id": "client-kafka", "from": "client", "to": "kafka", "label": "tìm, bấm gợi ý" },
+    { "id": "kafka-doris", "from": "kafka", "to": "doris", "label": "Routine Load" },
+    { "id": "doris-builder", "from": "doris", "to": "builder", "label": "top 1 triệu câu" },
+    { "id": "builder-s3", "from": "builder", "to": "s3", "label": "kiểm rồi đăng" },
+    { "id": "s3-suggest", "from": "s3", "to": "suggest", "label": "nạp nền, tráo" }
+  ],
+  "steps": [
+    {
+      "caption": "Client debounce khoảng 100 ms rồi gọi suggest service. Tiền tố ngắn và không cá nhân hoá thì CDN cache được vài phút.",
+      "show": ["client", "suggest", "client-suggest"],
+      "highlight": ["client-suggest"]
+    },
+    {
+      "caption": "Mỗi node giữ toàn bộ FST trong RAM (khoảng 9 MB cho 1 triệu câu) và tra top-10 trong dưới 25 micro giây. Không chia shard theo chữ cái, chỉ thêm replica.",
+      "show": [],
+      "highlight": ["suggest"]
+    },
+    {
+      "caption": "Song song, service hỏi Elasticsearch vài sản phẩm khớp giữa tên bằng search_as_you_type, lọc còn hàng và vùng giao. Chỉ gọi khi tiền tố từ 3 ký tự.",
+      "show": ["es", "suggest-es"],
+      "highlight": ["suggest-es"]
+    },
+    {
+      "caption": "Lượt tìm và lượt bấm gợi ý đi vào Kafka. Đường đọc không đếm gì; đếm là việc của đường cập nhật.",
+      "show": ["kafka", "client-kafka"],
+      "highlight": ["client-kafka"]
+    },
+    {
+      "caption": "Doris kéo event bằng Routine Load vào bảng Aggregate: số lượt theo ngày và số người khác nhau bằng HyperLogLog.",
+      "show": ["doris", "kafka-doris"],
+      "highlight": ["kafka-doris"]
+    },
+    {
+      "caption": "Mỗi giờ builder tính điểm theo số người khác nhau mỗi ngày, giảm dần theo tuổi, bỏ câu có ít người dùng và câu trong blocklist, lấy 1 triệu câu đầu rồi dựng FST.",
+      "show": ["builder", "doris-builder"],
+      "highlight": ["doris-builder"]
+    },
+    {
+      "caption": "Builder kiểm snapshot (số câu, tiền tố phổ biến, blocklist) rồi mới đăng lên S3. Các node nạp bản mới ở nền và tráo con trỏ, giữ bản cũ để quay lại.",
+      "show": ["s3", "builder-s3", "s3-suggest"],
+      "highlight": ["s3-suggest"]
+    }
+  ]
+}

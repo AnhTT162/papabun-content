@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "row-vs-column", "front": "Vì sao lưu theo cột nhanh hơn cho báo cáo?", "back": "Truy vấn chỉ đọc vài cột cần thay vì cả dòng, giá trị cùng kiểu nằm cạnh nhau nên nén mạnh, và engine xử lý theo khối hàng nghìn giá trị." },
+    { "id": "fe-be", "front": "FE và BE của Doris làm gì?", "back": "FE (Java) giữ metadata, nhận SQL qua giao thức MySQL và lập kế hoạch. BE (C++) lưu dữ liệu theo cột và thực thi truy vấn." },
+    { "id": "three-models", "front": "Ba mô hình bảng của Doris dùng khi nào?", "back": "Duplicate cho log và event giữ mọi dòng; Aggregate cho báo cáo gộp sẵn theo khoá; Unique cho dữ liệu cần upsert theo khoá như đồng bộ từ OLTP." },
+    { "id": "error-235", "front": "Lỗi -235 TOO_MANY_VERSION nghĩa là gì?", "back": "Tablet có quá nhiều phiên bản chưa gộp vì nạp quá dày với lô quá nhỏ. Sửa bằng gom lô, group commit hoặc Routine Load, không phải nâng ngưỡng." },
+    { "id": "sort-key", "front": "Chọn khoá sắp xếp của bảng Doris thế nào?", "back": "Cột lọc nhiều nhất đứng đầu, vì prefix index chỉ dùng tối đa 36 byte đầu của khoá và dừng ở cột VARCHAR đầu tiên." },
+    { "id": "sequence-col", "front": "Sequence column của bảng Unique để làm gì?", "back": "Để Doris giữ bản có giá trị sequence lớn nhất (ví dụ `updated_at`) thay vì bản nạp sau cùng, nên sự kiện CDC tới sai thứ tự không đè bản mới." },
+    { "id": "mow", "front": "Merge-on-write khác merge-on-read thế nào?", "back": "Merge-on-write đánh dấu bản cũ là đã xoá ngay khi ghi, truy vấn không phải gộp và đẩy được điều kiện lọc xuống. Merge-on-read ghi nhanh hơn nhưng gộp lúc đọc." },
+    { "id": "routine-load", "front": "Routine Load đảm bảo gì và không đảm bảo gì?", "back": "Mỗi task commit offset Kafka cùng dữ liệu nên không mất, không trùng tính từ Kafka. Producer gửi trùng message thì Doris vẫn nạp hai lần." },
+    { "id": "colocate", "front": "Colocate join là gì?", "back": "Hai bảng cùng cột bucket, cùng số bucket trong một colocation group thì các bucket tương ứng nằm cùng node, join tại chỗ không truyền dữ liệu qua mạng." }
+  ]
+}

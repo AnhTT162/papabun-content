@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-search-autocomplete",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế autocomplete",
+  "summary": "Tách đường đọc (tra FST hay trie trong RAM, không đếm gì) khỏi đường cập nhật (log tìm kiếm qua Kafka vào Doris, đếm theo số người, dựng snapshot rồi tráo), số đo bộ nhớ FST so với bảng tiền tố, completion suggester và search_as_you_type của Elasticsearch đi sâu (bỏ dấu tiếng Việt, gợi ý trùng, fuzzy, max_gram), xu hướng trong vài phút, gỡ gợi ý, chống bot và cache.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 20,
+  "prerequisites": ["sd-framework", "back-of-envelope", "search-elasticsearch", "olap-doris", "advanced-data-structures"],
+  "terms": ["autocomplete", "debounce", "trie", "fst", "top-k", "hyperloglog", "completion-suggester", "edge-ngram", "analyzer", "index-alias", "count-min-sketch", "heavy-hitter", "hot-key", "cdn", "olap"],
+  "references": [
+    { "title": "Elasticsearch Reference: Suggesters (completion suggester)", "url": "https://www.elastic.co/docs/reference/elasticsearch/rest-apis/search-suggesters" },
+    { "title": "Elasticsearch Reference: search_as_you_type field type", "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/search-as-you-type" },
+    { "title": "Apache Lucene 10.5: suggest module (FST, WFSTCompletionLookup)", "url": "https://lucene.apache.org/core/10_5_2/suggest/index.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sao không dùng luôn Elasticsearch cho mọi gợi ý?\" Được, và với đội nhỏ thì nên bắt đầu như vậy. Nhưng tôi tách hai loại: gợi ý câu tìm kiếm (từ log, chỉ cần tiền tố, nhiều request nhất) và gợi ý sản phẩm (khớp giữa tên, lọc còn hàng). Loại đầu là dữ liệu nhỏ, đổi theo giờ, nên một [[fst|FST]] trong RAM mỗi node nhanh hơn và không kéo sức khoẻ của cụm vào đường đọc. Loại sau mới cần truy vấn tìm kiếm thật, và tôi gọi nó với timeout ngắn, chậm thì bỏ phần sản phẩm." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng biến log tìm kiếm thô thành gợi ý. Câu chỉ một người gõ thường là lỗi gõ, hoặc chứa số điện thoại, email, địa chỉ của chính họ. Chỉ câu có đủ nhiều người khác nhau tìm mới được vào snapshot, và lọc thêm các mẫu dữ liệu cá nhân trước khi dựng." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, ghi hai con số lên sơ đồ: request mỗi giây của đường đọc (hàng chục nghìn) và kích thước dữ liệu gợi ý (khoảng chục MB cho 1 triệu câu). Hai số đó tự giải thích vì sao đường đọc chỉ tra RAM, không chia shard và không gọi database." }
+  ]
+}

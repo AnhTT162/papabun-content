@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "too-many-versions",
+      "kind": "single",
+      "prompt": "Service ghi từng event vào Doris bằng JDBC `INSERT`, khoảng 5.000 lần mỗi giây. Sau vài phút mọi lần ghi lỗi `-235 TOO_MANY_VERSION`. Cách sửa đúng là gì?",
+      "options": [
+        "Tăng `max_tablet_version_num` lên 20.000 cho đủ chỗ",
+        "Gom lô vài giây một lần, hoặc bật group commit",
+        "Tăng số bucket để chia phiên bản ra nhiều tablet",
+        "Đổi bảng sang Unique merge-on-write để ghi nhanh hơn"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi lần nạp tạo một phiên bản trên mỗi tablet nó chạm tới, và compaction không gộp kịp 5.000 phiên bản mỗi giây. Nâng ngưỡng chỉ hoãn lỗi. Thêm bucket chỉ rải phiên bản ra nhiều tablet hơn: FE vẫn phải commit và publish 5.000 transaction mỗi giây, tablet nhỏ làm metadata nặng thêm, và tải tăng là lỗi quay lại. Đổi mô hình bảng không đổi số lần nạp. Gom lô (hoặc group commit, hoặc ghi vào Kafka rồi Routine Load) đưa số phiên bản về vài cái mỗi chục giây."
+    },
+    {
+      "id": "prefix-index-order",
+      "kind": "single",
+      "prompt": "Bảng Duplicate có khoá `(session_id VARCHAR(64), shop_id BIGINT, event_time DATETIME)`, partition theo ngày. Gần như mọi truy vấn là `WHERE shop_id = ? AND event_time >= ?`. Vấn đề là gì?",
+      "options": [
+        "Không sao: ZoneMap trên `shop_id` đã bỏ được phần lớn page",
+        "Prefix index dừng ở `session_id` nên lọc `shop_id` không dùng được",
+        "Khoá có `VARCHAR` nên mọi truy vấn phải quét cả các partition khác",
+        "Không sao: Doris tự tạo Bloom filter cho mọi cột trong khoá"
+      ],
+      "answer": 1,
+      "explanation": "Prefix index chỉ dùng phần đầu của khoá và dừng ở cột `VARCHAR` đầu tiên, nên ở đây nó chỉ chứa `session_id`; điều kiện trên `shop_id` không dùng được nó. Dữ liệu sắp theo `session_id` trước, mà session có hàng triệu giá trị ngẫu nhiên, nên mỗi page chứa đủ loại shop và min/max của ZoneMap trên `shop_id` trải rộng, gần như không bỏ được page nào. Bloom filter phải tạo tường minh. Partition pruning theo ngày vẫn chạy bình thường. Sửa: đưa `shop_id` lên đầu khoá; `ALTER TABLE ... ORDER BY` làm được nhưng là schema change nặng, viết lại toàn bộ dữ liệu."
+    },
+    {
+      "id": "aggregate-cancel",
+      "kind": "single",
+      "prompt": "Doanh thu theo shop theo ngày được nạp vào bảng Aggregate với cột `revenue SUM`. Đơn bị huỷ sau 3 ngày. Cách nào giữ số liệu đúng mà ít rủi ro nhất?",
+      "options": [
+        "Chạy `UPDATE` trên bảng Aggregate để trừ doanh thu đơn huỷ",
+        "Đổi cột `revenue` sang `REPLACE` để ghi đè tổng mới",
+        "Nạp thêm một dòng doanh thu âm cho ngày của đơn bị huỷ",
+        "Lưu đơn ở bảng Unique theo order_id rồi gộp từ bảng đó"
+      ],
+      "answer": 3,
+      "explanation": "Bảng Unique theo order_id chịu được thay đổi trạng thái và gửi trùng: mỗi lần chỉ là upsert theo khoá, kèm sequence column để bản cũ tới muộn không đè. Tổng theo ngày gộp từ bảng này (truy vấn hoặc materialized view). Bảng Aggregate không hỗ trợ `UPDATE`. Dòng âm chạy được nhưng phải nhớ phiên bản cũ của từng đơn, và gửi trùng thì trừ hai lần. `REPLACE` cần biết tổng mới, tức phải tính lại ở nơi khác."
+    },
+    {
+      "id": "doris-fit",
+      "kind": "single",
+      "prompt": "Trường hợp nào Doris là lựa chọn sai?",
+      "options": [
+        "Dashboard cho 30.000 shop, số liệu trễ dưới 1 phút",
+        "Phân tích log 2 TB mỗi ngày bằng SQL, có tìm theo từ",
+        "Lưu giỏ hàng, mỗi lượt thêm sản phẩm là một update",
+        "Đồng bộ đơn hàng từ PostgreSQL qua CDC để báo cáo"
+      ],
+      "answer": 2,
+      "explanation": "Giỏ hàng là dữ liệu OLTP: mỗi thao tác cập nhật một dòng, cần đọc lại ngay và transaction. Doris nạp theo lô và mỗi lần nạp là một phiên bản, nên update từng dòng tần suất cao là đúng điều nó làm kém. Dashboard real-time, phân tích log (inverted index, BM25 từ 4.0) và báo cáo từ dữ liệu CDC đều là việc Doris được thiết kế cho."
+    }
+  ]
+}

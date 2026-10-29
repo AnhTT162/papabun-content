@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "completion-infix",
+      "kind": "single",
+      "prompt": "Field `completion` của Elasticsearch có input \"Điện thoại Samsung Galaxy S25\", analyzer đã bỏ dấu. Người dùng gõ \"samsung\". Kết quả là gì?",
+      "options": [
+        "Có gợi ý, vì analyzer tách input thành từng từ để tra",
+        "Không có gợi ý, vì completion chỉ khớp từ đầu chuỗi input",
+        "Có gợi ý nhưng điểm thấp, vì từ khớp nằm giữa chuỗi",
+        "Lỗi truy vấn, vì completion cần tiền tố dài ít nhất 3 từ"
+      ],
+      "answer": 1,
+      "explanation": "Completion suggester dựng FST trên cả chuỗi input đã phân tích và chỉ tìm theo tiền tố của chuỗi đó, nên \"samsung\" không khớp (đã thử với Lucene 10.5). Muốn khớp từ giữa thì thêm nhiều input cho cùng tài liệu (\"samsung galaxy s25\", \"galaxy s25\"), hoặc dùng `search_as_you_type` cho gợi ý sản phẩm."
+    },
+    {
+      "id": "duplicate-suggestions",
+      "kind": "single",
+      "prompt": "Mỗi sản phẩm là một tài liệu có field `completion` là tên sản phẩm. Gõ \"op lung\" thì ra 5 dòng \"Ốp lưng iPhone 17\" giống hệt nhau. Sửa thế nào là tốt nhất?",
+      "options": [
+        "Tăng `size` lên 50 rồi bỏ trùng ở service trước khi trả về",
+        "Bật fuzzy để FST duyệt thêm các nhánh gần với tiền tố",
+        "Index mỗi câu gợi ý một tài liệu, id là khoá đã chuẩn hoá",
+        "Chia index completion thành nhiều shard để kết quả đa dạng"
+      ],
+      "answer": 2,
+      "explanation": "Completion trả theo tài liệu, nên 40 sản phẩm cùng tên là 40 gợi ý giống nhau. Index mỗi câu gợi ý một tài liệu (trọng số là điểm đã tính) thì không còn trùng ngay từ dữ liệu. `skip_duplicates` cũng sửa được nhưng phải duyệt thêm nên chậm hơn; tăng `size` rồi tự lọc vẫn có thể thiếu khi hơn 50 bản trùng; nhiều shard chỉ thêm một vòng trộn kết quả."
+    },
+    {
+      "id": "edge-ngram-max-gram",
+      "kind": "single",
+      "prompt": "Field `name` dùng analyzer lúc index có edge n-gram `min_gram` 1, `max_gram` 5; `search_analyzer` là `standard`. Tìm \"sams\" ra Samsung, tìm \"samsung\" ra rỗng. Vì sao?",
+      "options": [
+        "Index chỉ có tới `samsu`, nên từ tìm `samsung` không khớp term nào",
+        "`search_analyzer` cũng phải dùng edge n-gram thì mới khớp đủ",
+        "Refresh chưa chạy nên term dài hơn 5 ký tự chưa tìm thấy được",
+        "`standard` tách `samsung` thành `sam` và `sung` khi tìm kiếm"
+      ],
+      "answer": 0,
+      "explanation": "Edge n-gram với `max_gram` 5 chỉ sinh `s, sa, sam, sams, samsu` (đã thử), còn câu tìm đi qua `standard` nên giữ nguyên `samsung`, không trùng term nào. Sửa: tăng `max_gram` (ví dụ 15–20) hoặc thêm filter `truncate` ở analyzer lúc tìm. Dùng edge n-gram ở cả lúc tìm là sai hướng: \"samsung\" sẽ khớp mọi thứ bắt đầu bằng \"s\"."
+    },
+    {
+      "id": "shard-by-letter",
+      "kind": "single",
+      "prompt": "Dữ liệu gợi ý của 1 triệu câu khoảng 9 MB. Một đề xuất chia suggest service thành 26 shard theo chữ cái đầu để scale. Nhận xét nào đúng nhất?",
+      "options": [
+        "Đúng hướng: mỗi shard nhỏ hơn nên tra nhanh hơn 26 lần",
+        "Đúng hướng nhưng nên chia theo hai chữ cái đầu cho đều",
+        "Không nên: dữ liệu vừa RAM mỗi node, shard theo chữ thì lệch",
+        "Không nên: FST không chia được theo tiền tố mà phải dựng lại"
+      ],
+      "answer": 2,
+      "explanation": "9 MB vừa RAM của mọi node, nên mỗi node giữ bản đầy đủ và scale bằng thêm replica; mất một node không mất chữ cái nào. Chia theo chữ cái đầu làm shard của các chữ phổ biến như `t`, `d`, `i` nóng hơn hẳn, và hai chữ cái đầu vẫn lệch. Tra FST tốn dưới 25 micro giây, nhỏ hơn mạng nhiều, nên chia nhỏ không làm request nhanh hơn đáng kể."
+    },
+    {
+      "id": "bot-poisoning",
+      "kind": "single",
+      "prompt": "Một nhóm bot tìm một câu quảng cáo 2 triệu lần trong một ngày và câu đó lên đầu gợi ý cho chữ \"m\". Cách chặn đúng gốc là gì?",
+      "options": [
+        "Rate limit theo IP ở API tìm kiếm để bot không gửi được nhiều",
+        "Tính điểm theo số người khác nhau mỗi ngày, có ngưỡng tối thiểu",
+        "Chỉ đếm các lượt tìm có bấm vào kết quả, bỏ lượt không bấm",
+        "Giảm chu kỳ dựng snapshot để câu sai sớm bị thay thế hơn"
+      ],
+      "answer": 1,
+      "explanation": "Điểm theo lượt thì ai gửi nhiều nhất thắng. Tính điểm theo số người khác nhau mỗi ngày (HyperLogLog) thì mỗi tài khoản đóng góp tối đa 1 cho một câu mỗi ngày: 2 triệu lượt từ vài trăm tài khoản chỉ tính như vài trăm người, không thắng được câu hàng chục nghìn người thật tìm. Lọc thêm tài khoản vừa tạo trước khi đếm. Rate limit theo IP giúp nhưng bot đổi IP dễ; bot cũng bấm được kết quả; dựng nhanh hơn thì câu sai lên nhanh hơn."
+    }
+  ]
+}

@@ -49,7 +49,7 @@ Thứ tự **học** khác thứ tự **viết** (mục 4): học theo tầng xu
 | Lời khuyên | Bài chính |
 |---|---|
 | System design | Toàn bộ track System Design, cùng Distributed Systems |
-| Database | Track Database (24 bài, từ SQL cơ bản tới partitioning, replication) |
+| Database | Track Database (25 bài, từ SQL cơ bản tới partitioning, replication) |
 | Troubleshooting | Bài có block troubleshoot ở Performance, JVM, Database, Kubernetes, Kafka |
 | Performance (DB, client, server, cache, Redis) | `db-performance`, `client-performance`, `server-tuning`, `cache-patterns`, `redis-internals` |
 | Security AuthN/AuthZ | Track Security, cùng `spring-security-architecture` |
@@ -95,6 +95,7 @@ Nhiều khái niệm xuất hiện ở nhiều bài. Bài **sở hữu** giải 
 | Cô lập tenant | `multi-tenancy` | `authorization-models` |
 | Reactive | `reactive` (khái niệm, Reactor) | `spring-webflux` (runtime, Netty) |
 | Load test | `load-testing` | `capacity-planning`, `perf-methodology` |
+| OLAP, lưu theo cột | `olap-doris` | `storage-engine`, `data-architecture`, `design-search-autocomplete` |
 
 ## 6. Danh sách bài
 
@@ -253,6 +254,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 22 | `schema-migration` | Migration không downtime | senior | Flyway/Liquibase, expand-contract, online DDL, backfill lớn | L B Sc | ✅ |
 | 23 | `search-elasticsearch` | ✚ Search engine & Elasticsearch | senior | Inverted index, analyzer, relevance, đồng bộ từ DB, khi nào không cần | L D Sc | ✅ |
 | 24 | `postgres-vs-mysql` | ✚ PostgreSQL và MySQL: khác nhau ở đâu | senior | Lưu trữ (heap và clustered), MVCC, replication, index, tính năng; chọn cho dự án mới | L Sc | ✅ |
+| 25 | `olap-doris` | ✚ OLAP & Apache Doris | senior | Lưu theo cột, MPP, FE/BE, mô hình Duplicate/Aggregate/Unique, partition và bucket, khoá sắp xếp, nạp dữ liệu và lỗi -235, materialized view; so với ClickHouse và warehouse managed | L D Sc | ✅ |
 
 ### 8. Caching & Messaging (`caching-messaging`)
 
@@ -389,7 +391,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 8 | `design-ecommerce-order` | ✚ Thiết kế đơn hàng & tồn kho | senior | Trạng thái đơn, giữ hàng, thanh toán, huỷ và hoàn, tính nhất quán giữa các service | L D Sc | ✅ |
 | 9 | `design-news-feed` | Thiết kế news feed | senior | Fan-out on write và on read, người dùng nổi tiếng, xếp hạng | L D Sc | ✅ |
 | 10 | `design-chat` | Thiết kế ứng dụng chat | senior | WebSocket, presence, thứ tự tin nhắn, đồng bộ nhiều thiết bị | L D Sc | ✅ |
-| 11 | `design-search-autocomplete` | Thiết kế autocomplete | senior | Trie, top-k, cập nhật, cache | L D Sc | ⬜ |
+| 11 | `design-search-autocomplete` | Thiết kế autocomplete | senior | Trie/FST, top-k, cập nhật bằng snapshot, cache; Elasticsearch completion suggester và search_as_you_type; Doris đếm log tìm kiếm | L D Sc | ✅ |
 | 12 | `design-job-scheduler` | ✚ Thiết kế job scheduler phân tán | senior | Cron phân tán, chạy đúng một lần, retry, phân phối việc, theo dõi | L D Sc | ⬜ |
 | 13 | `design-web-crawler` | ✚ Thiết kế web crawler | senior | Frontier, politeness, dedup URL và nội dung, mở rộng | L D Sc | ⬜ |
 | 14 | `design-file-storage` | Thiết kế lưu trữ file / video | senior | Upload theo phần, CDN, transcoding, metadata | L D Sc | ⬜ |
@@ -437,7 +439,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | JVM | 2 | 2 | 7 | 0 | 11 |
 | Spring | 2 | 9 | 6 | 0 | 17 |
 | Testing | 2 | 6 | 1 | 0 | 9 |
-| Database | 4 | 12 | 8 | 18 | 24 |
+| Database | 4 | 12 | 9 | 18 | 25 |
 | Caching & Messaging | 2 | 5 | 6 | 0 | 13 |
 | Security | 3 | 5 | 4 | 0 | 12 |
 | Performance & Troubleshooting | 2 | 4 | 9 | 1 | 15 |
@@ -446,4 +448,4 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
 | System Design | 3 | 3 | 14 | 0 | 20 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **94** | **107** | **30** | **252** |
+| **Tổng** | **51** | **94** | **108** | **30** | **253** |

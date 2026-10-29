@@ -1093,7 +1093,7 @@
       "meaning": "Planner loại bỏ các partition chắc chắn không chứa dòng cần tìm, dựa trên điều kiện trên partition key.",
       "example": "`WHERE created_at >= '2026-10-01' AND created_at < '2026-11-01'` chỉ đọc partition tháng 10.",
       "related": ["partitioning", "sargable"],
-      "topics": ["partitioning-index"]
+      "topics": ["partitioning-index", "olap-doris"]
     },
     {
       "id": "local-index",
@@ -1605,7 +1605,7 @@
       "meaning": "Quá trình gộp các file dữ liệu của LSM-tree, bỏ bản cũ và bản đã xoá, để giảm số file phải đọc và dung lượng.",
       "example": "Compaction không theo kịp lượng ghi thì RocksDB chặn ghi (write stall).",
       "related": ["lsm-tree", "write-amplification"],
-      "topics": ["storage-engine", "tail-latency"]
+      "topics": ["storage-engine", "tail-latency", "olap-doris"]
     },
     {
       "id": "write-amplification",
@@ -1653,7 +1653,7 @@
       "meaning": "View lưu sẵn kết quả như một bảng và có thể đánh index; dữ liệu chỉ mới khi được refresh. PostgreSQL và Oracle có, MySQL không có.",
       "example": "`REFRESH MATERIALIZED VIEW CONCURRENTLY sales_summary;` mỗi 10 phút.",
       "related": ["view"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "olap-doris"]
     },
     {
       "id": "stored-procedure",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris"]
     },
     {
       "id": "security-definer",
@@ -2285,7 +2285,7 @@
       "meaning": "Cấu trúc của search engine: mỗi từ (sau khi qua analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất, nên tra một từ không phải quét mọi tài liệu.",
       "example": "Từ `khoac` → tài liệu 12, 98, 1.204...",
       "related": ["analyzer", "bm25"],
-      "topics": ["search-elasticsearch", "sd-building-blocks"]
+      "topics": ["search-elasticsearch", "sd-building-blocks", "olap-doris"]
     },
     {
       "id": "analyzer",
@@ -2293,7 +2293,7 @@
       "meaning": "Chuỗi xử lý văn bản trước khi đưa vào inverted index và trước khi tìm: character filter, tokenizer, rồi token filter (chữ thường, bỏ dấu, đồng nghĩa).",
       "example": "\"Áo Khoác Gió\" qua `standard` + `lowercase` + `asciifolding` thành `ao`, `khoac`, `gio`.",
       "related": ["inverted-index"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "design-search-autocomplete"]
     },
     {
       "id": "bm25",
@@ -2325,7 +2325,7 @@
       "meaning": "Tên phụ trỏ tới một hoặc nhiều index Elasticsearch. Ứng dụng đọc ghi qua alias, nên reindex sang index mới chỉ cần chuyển alias trong một lệnh nguyên tử.",
       "example": "`POST _aliases` với `remove products_v1` và `add products_v2` cho alias `products`.",
       "related": ["lucene-segment"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "design-search-autocomplete"]
     },
     {
       "id": "search-after",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope", "design-rate-limiter"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope", "design-rate-limiter", "design-search-autocomplete"]
     },
     {
       "id": "local-cache",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener", "design-rate-limiter", "design-news-feed"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener", "design-rate-limiter", "design-news-feed", "design-search-autocomplete"]
     },
     {
       "id": "redis-single-thread",
@@ -7077,7 +7077,7 @@
       "meaning": "Cây tiền tố: mỗi cạnh là một ký tự, các khoá chung tiền tố dùng chung đường đi, nên tìm mọi khoá bắt đầu bằng một tiền tố trong thời gian theo độ dài tiền tố.",
       "example": "Gợi ý tìm kiếm: gõ `iph` thì đi 3 node rồi trả các từ trong nhánh đó như `iphone`, `iphone 17`.",
       "related": ["radix-tree"],
-      "topics": ["advanced-data-structures"]
+      "topics": ["advanced-data-structures", "design-search-autocomplete"]
     },
     {
       "id": "radix-tree",
@@ -7109,7 +7109,7 @@
       "meaning": "Cấu trúc xác suất ước lượng số phần tử khác nhau: băm từng phần tử, ghi độ dài chuỗi bit 0 dẫn đầu lớn nhất vào m thanh ghi, sai số chuẩn 1,04/√m. Gộp được bằng cách lấy max từng thanh ghi.",
       "example": "Redis `PFADD visitors:2026-10-27 user:881`, `PFCOUNT`, rồi `PFMERGE` bảy ngày thành một tuần; mỗi khoá tối đa 12 KB.",
       "related": ["probabilistic-data-structure"],
-      "topics": ["advanced-data-structures", "design-url-shortener"]
+      "topics": ["advanced-data-structures", "design-url-shortener", "olap-doris", "design-search-autocomplete"]
     },
     {
       "id": "count-min-sketch",
@@ -7117,7 +7117,7 @@
       "meaning": "Ma trận d hàng × w bộ đếm, mỗi hàng một hàm hash; ghi tăng một ô mỗi hàng, đọc lấy ô nhỏ nhất. Ước lượng tần suất từng phần tử, chỉ đếm dư, sai số tỉ lệ với tổng số sự kiện.",
       "example": "4 × 2.000 ô (62 KB) đếm 1 triệu lượt xem: sản phẩm hot thật 82.706 ước 82.844, sản phẩm hiếm thật 2 ước 205.",
       "related": ["heavy-hitter", "probabilistic-data-structure"],
-      "topics": ["advanced-data-structures"]
+      "topics": ["advanced-data-structures", "design-search-autocomplete"]
     },
     {
       "id": "heavy-hitter",
@@ -7125,7 +7125,7 @@
       "meaning": "Phần tử xuất hiện rất nhiều lần trong luồng dữ liệu, ví dụ key nóng, IP gửi nhiều request nhất. Thường tìm bằng Count-Min Sketch cộng một heap giữ top-k ứng viên.",
       "example": "Phát hiện 10 key Redis được đọc nhiều nhất trong 1 phút để cache cục bộ, không cần đếm chính xác mọi key.",
       "related": ["count-min-sketch", "hot-key"],
-      "topics": ["advanced-data-structures"]
+      "topics": ["advanced-data-structures", "design-search-autocomplete"]
     },
     {
       "id": "blocking-io",
@@ -8701,7 +8701,7 @@
       "meaning": "Kho dữ liệu phục vụ phân tích (OLAP): lưu theo cột, quét và gộp hàng trăm triệu dòng nhanh, nạp dữ liệu từ các hệ thống nghiệp vụ (OLTP) theo lô hoặc theo luồng.",
       "example": "Báo cáo doanh thu theo vùng chạy trên BigQuery hay Redshift thay vì trên primary PostgreSQL.",
       "related": ["cdc"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "olap-doris"]
     },
     {
       "id": "functional-requirement",
@@ -8773,7 +8773,7 @@
       "meaning": "Online Transaction Processing: hệ thống nghiệp vụ xử lý nhiều transaction nhỏ (đặt hàng, thanh toán), đọc ghi vài dòng mỗi lần, cần latency thấp. Đối lập với OLAP là phân tích, quét nhiều dòng.",
       "example": "PostgreSQL của service đơn hàng là OLTP; báo cáo doanh thu năm chạy trên data warehouse.",
       "related": ["data-warehouse"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "olap-doris"]
     },
     {
       "id": "dau",
@@ -9238,6 +9238,142 @@
       "example": "Điện thoại chuyển nền 10 phút một lần; chỉ báo offline sau 45 giây và chỉ đẩy cho người đang mở màn hình có người đó.",
       "related": ["heartbeat", "chat-gateway"],
       "topics": ["design-chat"]
+    },
+    {
+      "id": "olap",
+      "term": "OLAP",
+      "meaning": "Online Analytical Processing: truy vấn phân tích quét và gộp rất nhiều dòng nhưng chỉ vài cột, ví dụ doanh thu theo ngày theo vùng. Đối lập với OLTP là đọc ghi vài dòng mỗi transaction.",
+      "example": "`SELECT region, SUM(amount) FROM orders WHERE dt >= ... GROUP BY region` trên 2 tỉ dòng chạy trên Doris thay vì PostgreSQL.",
+      "related": ["oltp", "data-warehouse", "columnar-storage"],
+      "topics": ["olap-doris", "design-search-autocomplete"]
+    },
+    {
+      "id": "columnar-storage",
+      "term": "Columnar storage",
+      "meaning": "Lưu dữ liệu theo cột thay vì theo dòng: mỗi cột nằm riêng, nén tốt vì giá trị cùng kiểu đứng cạnh nhau, và truy vấn chỉ đọc các cột được nhắc tới.",
+      "example": "Bảng event 200 cột: `SELECT COUNT(*) ... GROUP BY event_type` chỉ đọc cột `event_type` và cột lọc theo ngày.",
+      "related": ["olap", "vectorized-execution"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "mpp",
+      "term": "MPP",
+      "meaning": "Massively Parallel Processing: một truy vấn được chia thành nhiều phần chạy song song trên nhiều node, mỗi node xử lý phần dữ liệu của mình, rồi trao đổi kết quả trung gian qua mạng (shuffle).",
+      "example": "Doris chia `GROUP BY shop_id` cho 10 BE, mỗi BE gộp tablet của mình rồi gửi kết quả theo hash của `shop_id` để gộp lần cuối.",
+      "related": ["olap", "colocate-join"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "vectorized-execution",
+      "term": "Vectorized execution",
+      "meaning": "Engine xử lý dữ liệu theo khối hàng nghìn giá trị của một cột mỗi lần gọi thay vì từng dòng, giảm chi phí gọi hàm và tận dụng cache CPU, SIMD.",
+      "example": "Phép lọc `amount > 100` chạy trên một mảng 4.096 giá trị `amount` rồi trả về bitmap các dòng khớp.",
+      "related": ["columnar-storage"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "doris-table-model",
+      "term": "Doris table model",
+      "meaning": "Ba kiểu bảng của Apache Doris, chốt lúc tạo bảng: Duplicate giữ mọi dòng, Aggregate gộp các dòng cùng khoá theo hàm của từng cột (SUM, MAX, REPLACE, HLL_UNION...), Unique giữ bản mới nhất của mỗi khoá.",
+      "example": "Clickstream vào bảng Duplicate, đơn hàng đồng bộ CDC vào bảng Unique theo `order_id`, số liệu dashboard vào bảng Aggregate theo `(shop_id, dt, hour)`.",
+      "related": ["merge-on-write", "olap"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "tablet",
+      "term": "Tablet",
+      "meaning": "Đơn vị lưu trữ và nhân bản của Doris: mỗi partition chia thành các bucket theo hash, mỗi bucket là một tablet có nhiều bản sao trên các BE khác nhau.",
+      "example": "Partition một ngày 55 GB chia 16 bucket thì mỗi tablet khoảng 3,5 GB, mỗi tablet 3 bản sao.",
+      "related": ["partition-pruning", "compaction"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "prefix-index",
+      "term": "Prefix index",
+      "meaning": "Index thưa tự có của Doris trên phần đầu khoá sắp xếp: mỗi 1.024 dòng một mục, tối đa 36 byte, dừng ở cột VARCHAR đầu tiên. Chỉ giúp điều kiện lọc trên các cột đầu của khoá.",
+      "example": "Khoá `(shop_id, event_time)`: `WHERE shop_id = 42` dùng được prefix index, `WHERE event_time > ...` một mình thì không.",
+      "related": ["zone-map", "tablet"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "doris-group-commit",
+      "term": "Group commit (Doris)",
+      "meaning": "Chế độ của Doris gộp nhiều lần ghi nhỏ (JDBC INSERT, Stream Load) vào ít transaction hơn, commit theo thời gian (mặc định 10 giây) hoặc dung lượng (64 MB), để không sinh quá nhiều phiên bản.",
+      "example": "`SET group_commit = async_mode;` trước khi INSERT: trả lời ngay sau khi ghi WAL, dữ liệu thấy được sau lần commit kế tiếp.",
+      "related": ["compaction", "tablet"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "merge-on-write",
+      "term": "Merge-on-write",
+      "meaning": "Cách bảng Unique của Doris xử lý upsert: lúc ghi tìm bản cũ cùng khoá và đánh dấu xoá bằng delete bitmap, nên truy vấn đọc thẳng không phải gộp phiên bản. Mặc định cho bảng mới từ Doris 2.1.",
+      "example": "Bảng `orders` Unique theo `order_id`: đơn đổi trạng thái 5 lần thì truy vấn chỉ thấy bản cuối, không cần GROUP BY lấy bản mới nhất.",
+      "related": ["doris-table-model", "compaction"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "zone-map",
+      "term": "ZoneMap",
+      "meaning": "Thống kê min/max (và có NULL không) của mỗi cột trên từng khối dữ liệu, giúp engine bỏ qua khối chắc chắn không khớp điều kiện lọc. Hiệu quả khi dữ liệu được sắp theo cột đó.",
+      "example": "Page có `event_time` từ 08:00 tới 08:05 bị bỏ qua khi truy vấn `event_time >= 09:00`.",
+      "related": ["prefix-index", "partition-pruning"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "colocate-join",
+      "term": "Colocate join",
+      "meaning": "Join của Doris khi hai bảng cùng cột bucket, cùng số bucket và thuộc một colocation group: các bucket tương ứng nằm trên cùng node nên join tại chỗ, không truyền dữ liệu qua mạng.",
+      "example": "Bảng `orders` và `order_items` cùng `HASH(order_id) BUCKETS 32` trong group `order_grp` thì join theo `order_id` chạy cục bộ.",
+      "related": ["mpp", "hash-join"],
+      "topics": ["olap-doris"]
+    },
+    {
+      "id": "autocomplete",
+      "term": "Autocomplete",
+      "meaning": "Gợi ý hoàn thành câu tìm kiếm khi người dùng đang gõ, thường top 5–10 câu hoặc sản phẩm khớp tiền tố, phải trả lời trong vài chục mili giây vì mỗi phím có thể là một request.",
+      "example": "Gõ \"ip\" hiện \"iphone 17\", \"iphone 17 pro max\", \"ipad air\".",
+      "related": ["trie", "fst", "top-k"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "fst",
+      "term": "FST",
+      "meaning": "Finite State Transducer: automat nén một tập chuỗi có thứ tự, dùng chung cả tiền tố lẫn hậu tố, và gắn một giá trị (ví dụ trọng số) cho mỗi chuỗi. Lucene dùng FST cho từ điển term và cho completion suggester.",
+      "example": "1 triệu câu tìm kiếm trung bình 16 ký tự: FST có trọng số khoảng 9 MB, tra top-10 theo tiền tố trong dưới 25 micro giây.",
+      "related": ["trie", "radix-tree", "completion-suggester"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "top-k",
+      "term": "Top-k",
+      "meaning": "Bài toán lấy k phần tử có điểm cao nhất mà không sắp xếp toàn bộ, thường bằng heap kích thước k hoặc bằng cấu trúc đã tính sẵn.",
+      "example": "Mỗi tiền tố trả 10 câu có điểm cao nhất trong số hàng nghìn câu bắt đầu bằng nó.",
+      "related": ["binary-heap", "heavy-hitter"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "debounce",
+      "term": "Debounce",
+      "meaning": "Chỉ gửi hành động khi người dùng ngừng thao tác một khoảng ngắn, các lần thao tác dồn dập trước đó bị gộp thành một.",
+      "example": "Debounce 100 ms: gõ nhanh \"iphone\" chỉ gửi 1–2 request thay vì 6.",
+      "related": ["autocomplete"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "completion-suggester",
+      "term": "Completion suggester",
+      "meaning": "Tính năng của Elasticsearch gợi ý theo tiền tố trên field kiểu `completion`: dựng FST theo segment, nằm trên heap, xếp theo `weight` số nguyên đặt lúc index, chỉ khớp từ đầu chuỗi input.",
+      "example": "`\"suggest\": {\"s\": {\"prefix\": \"dien th\", \"completion\": {\"field\": \"suggest\", \"skip_duplicates\": true}}}`",
+      "related": ["fst", "edge-ngram", "analyzer"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "edge-ngram",
+      "term": "Edge n-gram",
+      "meaning": "Cách tách mỗi từ thành các tiền tố của nó lúc index để tìm theo tiền tố bằng truy vấn thường. Chỉ dùng lúc index; từ dài hơn `max_gram` bị cắt nên câu tìm dài hơn không khớp.",
+      "example": "`min_gram` 1, `max_gram` 10: \"galaxy\" thành `g, ga, gal, gala, galax, galaxy`.",
+      "related": ["analyzer", "inverted-index", "completion-suggester"],
+      "topics": ["design-search-autocomplete"]
     }
   ]
 }

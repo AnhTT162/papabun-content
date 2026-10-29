@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "no-count-on-read", "front": "Quy tắc gốc của đường đọc autocomplete là gì?", "back": "Không đếm, không sắp xếp lúc đọc. Chỉ tra cấu trúc trong RAM đã tính sẵn top-k; điểm được tính ở pipeline riêng." },
+    { "id": "fst-size", "front": "FST cho 1 triệu câu gợi ý tốn bao nhiêu bộ nhớ, so với bảng tiền tố?", "back": "Khoảng 9 MB với Lucene WFST trong mô hình của bài, so với khoảng 727 MB cho HashMap từ 6,1 triệu tiền tố tới top-10." },
+    { "id": "replicate-not-shard", "front": "Vì sao không chia shard suggest service theo chữ cái đầu?", "back": "Dữ liệu vừa RAM mỗi node, và shard của chữ phổ biến sẽ nóng. Mỗi node giữ bản đầy đủ, scale bằng replica." },
+    { "id": "snapshot-swap", "front": "Cập nhật dữ liệu gợi ý thế nào cho an toàn?", "back": "Dựng snapshot mới theo lô, kiểm trước khi đăng, node nạp ở nền rồi tráo con trỏ nguyên tử, giữ bản cũ để quay lại." },
+    { "id": "completion-limits", "front": "Completion suggester của Elasticsearch có giới hạn gì?", "back": "Chỉ khớp từ đầu chuỗi input, trọng số cố định lúc index, FST nằm trên heap, mặc định trả 5 gợi ý." },
+    { "id": "completion-analyzer", "front": "Vì sao gõ \"dien th\" không ra \"Điện thoại\" với field completion mặc định?", "back": "Analyzer mặc định là `simple`, không bỏ dấu. Dùng tokenizer standard + lowercase + asciifolding cho field đó." },
+    { "id": "edge-ngram-search", "front": "Edge n-gram dùng ở lúc index hay lúc tìm?", "back": "Chỉ lúc index. Lúc tìm dùng analyzer thường, nếu không \"samsung\" sẽ khớp mọi từ bắt đầu bằng \"s\"." },
+    { "id": "doris-role", "front": "Doris làm gì trong hệ autocomplete?", "back": "Đếm và lọc: nạp log tìm kiếm từ Kafka, gộp theo ngày, đếm người khác nhau bằng HLL, xuất top câu cho builder. Không phục vụ từng phím gõ." },
+    { "id": "distinct-users", "front": "Vì sao điểm gợi ý dựa trên số người khác nhau mỗi ngày?", "back": "Để mỗi tài khoản chỉ đóng góp tối đa 1 cho một câu mỗi ngày, bot gửi một câu triệu lần không đẩy được nó lên, và để câu chứa dữ liệu cá nhân của một người không thành gợi ý cho người khác." },
+    { "id": "stale-response", "front": "Response của \"ip\" về sau response của \"iph\" thì sao?", "back": "Danh sách nhảy về kết quả cũ. Gắn số thứ tự cho request, bỏ response cũ, và huỷ request đang chạy khi gõ tiếp." }
+  ]
+}

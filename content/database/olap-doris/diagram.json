@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Dữ liệu đi vào Doris và truy vấn đi ra",
+  "nodes": [
+    { "id": "pg", "label": "PostgreSQL đơn hàng", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "kafka", "label": "Kafka clickstream", "kind": "queue", "x": 0.85, "y": 0.05 },
+    { "id": "flink", "label": "Flink CDC", "kind": "service", "x": 0.1, "y": 0.4 },
+    { "id": "fe", "label": "Doris FE", "kind": "service", "x": 0.85, "y": 0.4 },
+    { "id": "be", "label": "Doris BE (tablet)", "kind": "database", "x": 0.1, "y": 0.8 },
+    { "id": "dash", "label": "Dashboard", "kind": "client", "x": 0.85, "y": 0.8 }
+  ],
+  "edges": [
+    { "id": "pg-flink", "from": "pg", "to": "flink", "label": "đọc WAL" },
+    { "id": "flink-be", "from": "flink", "to": "be", "label": "Stream Load theo lô" },
+    { "id": "kafka-fe", "from": "kafka", "to": "fe", "label": "Routine Load" },
+    { "id": "fe-be", "from": "fe", "to": "be", "label": "task nạp, kế hoạch" },
+    { "id": "dash-fe", "from": "dash", "to": "fe", "label": "SQL qua MySQL" }
+  ],
+  "steps": [
+    {
+      "caption": "Đơn hàng vẫn ghi vào PostgreSQL, nguồn sự thật. Flink CDC đọc WAL nên không thêm truy vấn nặng lên primary.",
+      "show": ["pg", "flink", "pg-flink"],
+      "highlight": ["pg-flink"]
+    },
+    {
+      "caption": "Flink gom thay đổi vài giây một lô rồi Stream Load vào bảng Unique theo order_id. Mỗi lô là một phiên bản trên tablet; lô quá nhỏ và quá dày sinh lỗi -235.",
+      "show": ["be", "flink-be"],
+      "highlight": ["flink-be"]
+    },
+    {
+      "caption": "Clickstream đã nằm trong Kafka. FE lập lịch job Routine Load; mỗi task chạy trên một BE, BE đọc thẳng một đoạn offset từ Kafka, rồi FE commit offset cùng dữ liệu trong một transaction.",
+      "show": ["kafka", "fe", "kafka-fe"],
+      "highlight": ["kafka-fe"]
+    },
+    {
+      "caption": "FE giữ metadata (bảng, partition, tablet nằm ở BE nào) và chia task cho BE. BE lưu dữ liệu theo cột, compaction gộp phiên bản ở nền.",
+      "show": ["fe-be"],
+      "highlight": ["fe-be"]
+    },
+    {
+      "caption": "Dashboard gửi SQL qua driver MySQL tới FE. FE bỏ partition ngoài khoảng ngày, chọn materialized view nếu khớp, rồi chia truy vấn cho các BE chạy song song.",
+      "show": ["dash", "dash-fe"],
+      "highlight": ["dash-fe"]
+    }
+  ]
+}
