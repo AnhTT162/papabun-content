@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-numbers", "front": "Ba con số tồn kho cần lưu?", "back": "`on_hand` (hàng thật trong kho), `reserved` (đang giữ cho đơn chưa xuất), và `available = on_hand - reserved` là phần còn bán được." },
+    { "id": "conditional-reserve", "front": "Giữ hàng không bán vượt bằng câu SQL nào?", "back": "`UPDATE stock SET reserved = reserved + :q WHERE sku = :s AND on_hand - reserved >= :q`, rồi kiểm số dòng: 0 là hết hàng." },
+    { "id": "read-then-write", "front": "Đọc available rồi UPDATE reserved + 1 có an toàn không?", "back": "Không. Nhiều người cùng đọc giá trị cũ rồi cùng đi tiếp: thử với 100 món và 300 người, 130 người được báo thành công." },
+    { "id": "guarded-transition", "front": "Chuyển trạng thái đơn an toàn thế nào?", "back": "`UPDATE ... WHERE id = :id AND status = <trạng thái cũ>`. 0 dòng là ai đó đã chuyển trước: đọc trạng thái rồi rẽ nhánh, không ghi đè." },
+    { "id": "when-reserve", "front": "Giữ hàng lúc nào là hợp lý?", "back": "Lúc bấm đặt hàng, có thời hạn. Lúc thêm giỏ thì khoá hàng của giỏ bỏ dở; lúc trả tiền xong thì người đã trả có thể hết hàng." },
+    { "id": "hot-row-lock", "front": "Vì sao không gọi service ngoài trong transaction giữ hàng?", "back": "Khoá dòng giữ tới commit, nên thời gian gọi cộng vào mọi lượt trên SKU đó. Đo được: 5.200 lượt/giây còn 153 khi thêm lời gọi 5 ms." },
+    { "id": "late-payment", "front": "Tiền về sau khi đơn đã EXPIRED thì làm gì?", "back": "Thử giữ lại hàng; còn thì đưa đơn về PAID, hết thì hoàn tiền tự động. Cho phiên thanh toán ở cổng hết hạn trước reservation." },
+    { "id": "auth-capture", "front": "Authorize rồi capture giúp gì cho đơn hàng?", "back": "Giữ tiền lúc đặt, chỉ thu khi xuất kho, nên huỷ trước khi gửi chỉ là huỷ authorization. Authorization hết hạn sau khoảng 5–7 ngày." },
+    { "id": "cancel-owner", "front": "Ai quyết định đơn đang đóng gói còn huỷ được không?", "back": "Kho (Fulfillment). Order ghi CANCEL_REQUESTED và chờ kho xác nhận, không tự chuyển CANCELLED." },
+    { "id": "voucher-allocation", "front": "Hoàn tiền một dòng của đơn có voucher tính thế nào?", "back": "Phân bổ voucher vào từng dòng lúc đặt (dồn phần dư) và lưu lại; hoàn = giá dòng trừ phần voucher của dòng. Voucher có điều kiện cần chính sách tính lại." }
+  ]
+}

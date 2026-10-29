@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đơn hàng và tồn kho cho sàn nhiều người bán",
+  "prompt": "Một sàn thương mại điện tử có 400.000 đơn mỗi ngày bình thường; ngày sale, 10 phút đầu đạt 1.500 đơn/giây, trung bình 2,5 dòng mỗi đơn. Có 200.000 SKU ở 3 kho; vài SKU giảm giá sâu nhận khoảng 400 lượt giữ hàng mỗi giây lúc mở bán. Thanh toán: thẻ (hỗ trợ authorize rồi capture), ví điện tử (thu ngay, kết quả qua webhook, có khi sau vài phút) và COD (40% số đơn). Order, Inventory, Payment và Fulfillment là bốn service, mỗi service một database PostgreSQL, giao tiếp qua Kafka. Ràng buộc: không được bán vượt; đơn thanh toán online được giữ hàng tối đa 15 phút; huỷ trước khi đóng gói thì hoàn tiền trong 24 giờ; có voucher toàn sàn cho đơn từ 500.000 đ; người mua được trả một phần đơn trong 7 ngày. Thiết kế luồng đặt hàng, giữ và nhả hàng, xử lý tiền về muộn, huỷ, và hoàn tiền một phần.",
+  "hints": [
+    "Mỗi giây có bao nhiêu lượt giữ hàng? SKU nóng 400 lượt/giây có vượt trần của một dòng không, khi transaction phải đi mấy vòng mạng tới database?",
+    "Một đơn ba dòng giữ hàng trong một transaction: hai đơn cùng chứa SKU A và B theo thứ tự ngược nhau thì chuyện gì xảy ra?",
+    "Ví trả kết quả sau 16 phút, khi đơn đã EXPIRED. Và người mua bấm huỷ đúng lúc kho đang đóng gói. Service nào quyết định?",
+    "Đơn 600.000 đ dùng voucher 100.000 đ, trả lại một món 300.000 đ: hoàn bao nhiêu, và lưu gì lúc đặt để trả lời được?"
+  ],
+  "solution": "**Tải**: 1.500 đơn/giây × 2,5 dòng là khoảng 3.750 lượt giữ/giây trải trên 200.000 SKU, một primary PostgreSQL chịu được. SKU nóng 400 lượt/giây thì khác: thời gian giữ khoá dòng gồm mọi vòng mạng từ `UPDATE` tới `COMMIT`. Ba câu riêng (`UPDATE`, `INSERT reservation`, `COMMIT`) trong cùng AZ, mỗi vòng khoảng 0,5 ms, giữ khoá cỡ 1,5 ms, tức trần khoảng 650 lượt/giây cho một dòng, quá sát. Gộp cả lượt giữ vào một vòng mạng: với một dòng là câu `WITH s AS (UPDATE stock ... RETURNING ...) INSERT INTO reservation SELECT ... FROM s` chạy autocommit (đã thử: hết hàng thì `INSERT` 0 dòng); với cả đơn là một hàm PL/pgSQL nhận danh sách dòng, thiếu hàng thì `RAISE` để rollback cả đơn. Khoá khi đó chỉ giữ trong server; với SKU được đánh dấu nóng thì chia tồn kho thành 4 dòng con, giữ ở dòng con chọn ngẫu nhiên, hết thì thử dòng khác. Không gọi khuyến mãi hay phí ship trong transaction này: tính trước.\n\n**Đặt hàng**: client gửi idempotency key. Order tính lại giá và voucher ở server, phân bổ voucher vào từng dòng, chụp giá và tên vào `order_line`, tạo đơn `PENDING_PAYMENT` (COD: `PENDING_STOCK`) với id sinh trước, và ghi lệnh `ReserveStock` vào outbox trong cùng transaction. Đơn của nhiều người bán hoặc nhiều kho được tách thành đơn con. Order là orchestrator: lưu bước hiện tại của saga trong bảng đơn.\n\n**Giữ hàng**: Inventory giữ mọi dòng của một đơn trong một transaction (hàm nói trên), sắp theo `sku_id` trước khi `UPDATE` để hai đơn chứa cùng SKU không khoá chéo nhau (deadlock). Một dòng trả 0 thì rollback cả đơn và trả `OutOfStock`. Mỗi dòng giữ ghi một reservation `ACTIVE` với `expires_at` = now + 25 phút (lưới an toàn); consumer khử trùng theo `order_id`. COD giữ xong thì đơn `CONFIRMED` và reservation `CONFIRMED` ngay. Đơn sang `PAID` thì Order gửi `ConfirmReservation`; reservation `CONFIRMED` không còn hạn và chỉ được trừ khỏi `on_hand` và `reserved` khi xuất kho.\n\n**Thanh toán**: thẻ thì authorize, capture khi xuất kho (authorization còn hiệu lực khoảng 5–7 ngày tuỳ mạng thẻ, đủ cho đơn thường; đơn đặt trước thì capture ngay). Capture lỗi thì kho giữ hàng lại, Payment thử lại hoặc xin người mua thanh toán lại; đơn không được giao khi chưa capture. Ví thì tạo phiên thanh toán hết hạn sau 12 phút, trước reservation 3 phút. Chỉ tin webhook đã kiểm chữ ký (lưu `event_id` của cổng với unique constraint); quá 12 phút chưa có kết quả thì gọi API tra trạng thái. Payment phát `PaymentSucceeded`; Order chuyển `PAID` bằng `UPDATE ... WHERE status = 'PENDING_PAYMENT'`.\n\n**Hết hạn và tiền về muộn**: đơn có `deadline` = lúc đặt + 15 phút, do Order sở hữu. Job của Order mỗi phút chuyển đơn `PENDING_PAYMENT` quá deadline sang `EXPIRED` rồi gửi `ReleaseStock` qua outbox. Job ở Inventory chỉ nhả reservation `ACTIVE` quá 25 phút (lệnh nhả bị mất), gộp theo SKU và sắp theo `sku_id`. Thứ tự: phiên ví 12 phút < deadline đơn 15 phút < TTL reservation 25 phút. `PaymentSucceeded` tới sau đó: `UPDATE` trả 0 dòng, Order đọc trạng thái `EXPIRED`, gửi lệnh giữ lại hàng; còn hàng thì đơn về `PAID`, hết thì phát lệnh hoàn tiền tự động và báo người mua. Phiên ví hết hạn trước reservation làm nhánh này hiếm, nhưng webhook vẫn có thể tới muộn hàng giờ khi cổng gặp sự cố.\n\n**Huỷ**: trước `PACKING` thì Order huỷ ngay, nhả hàng, huỷ authorization hoặc hoàn ví. Từ `PACKING`, Order ghi `CANCEL_REQUESTED` và gửi lệnh tới Fulfillment; kho trả `CancelAccepted` (chưa đóng gói xong) hoặc `CancelRejected` (đã giao hãng vận chuyển: người mua phải từ chối nhận hoặc trả hàng). Order không tự `CANCELLED` khi kho chưa xác nhận. Hoàn tiền có `refund_id` duy nhất theo yêu cầu huỷ, cổng nhận nó làm idempotency key.\n\n**Trả một phần và voucher**: lúc đặt đã lưu phần voucher của từng dòng (chia theo tỉ lệ, phần dư dồn cho dòng có phần lẻ lớn nhất), nên hoàn một dòng thường là giá dòng trừ phần voucher của dòng. Với voucher có điều kiện, chính sách là tính lại phần đơn còn giữ: đơn 600.000 đ trả món 300.000 đ thì phần còn lại 300.000 đ không đủ điều kiện, hoàn 500.000 − 300.000 = 200.000 đ, và trang trả hàng hiển thị con số này trước khi người mua xác nhận. Kho nhận hàng trả và kiểm xong mới cộng lại `on_hand` (hàng hỏng thì không cộng).\n\n**Đối soát**: mỗi giờ so tổng `reserved` từng SKU với tổng reservation `ACTIVE` và `CONFIRMED`; mỗi ngày so đơn `PAID` với giao dịch thành công ở cổng và với capture; cảnh báo đơn kẹt ở `PENDING_PAYMENT` quá 30 phút hay `CANCEL_REQUESTED` quá 2 giờ.",
+  "tradeoffs": [
+    {
+      "option": "Giữ hàng khi đặt hàng, có thời hạn 15 phút",
+      "pros": [
+        "Người đã trả tiền chắc chắn có hàng",
+        "Giỏ bỏ dở không khoá hàng"
+      ],
+      "cons": [
+        "Phải có job nhả hàng và nhánh tiền về sau khi hết hạn",
+        "Đơn chưa trả tiền vẫn chiếm hàng tới 15 phút"
+      ]
+    },
+    {
+      "option": "Chỉ trừ tồn kho khi thanh toán thành công",
+      "pros": [
+        "Không có reservation, không cần job nhả hàng",
+        "Hàng không bị giữ bởi người không trả tiền"
+      ],
+      "cons": [
+        "Người đã trả tiền có thể không còn hàng, phải hoàn",
+        "SKU nóng gây nhiều lần hoàn tiền và khiếu nại"
+      ]
+    },
+    {
+      "option": "Order và Inventory chung database, một transaction",
+      "pros": [
+        "Giữ hàng và tạo đơn nguyên tử, không cần saga",
+        "Ít service, ít event, dễ debug"
+      ],
+      "cons": [
+        "Hai đội phải deploy và đổi schema cùng nhau",
+        "Tải tồn kho nóng ảnh hưởng chung database của đơn"
+      ]
+    }
+  ]
+}

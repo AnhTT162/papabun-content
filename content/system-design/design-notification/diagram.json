@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường đi của một thông báo",
+  "nodes": [
+    { "id": "source", "label": "Service nguồn", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "api", "label": "Notification service", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "db", "label": "Notification DB", "kind": "database", "x": 0.1, "y": 0.38 },
+    { "id": "queues", "label": "Kafka 3 mức", "kind": "queue", "x": 0.85, "y": 0.38 },
+    { "id": "providers", "label": "APNs, FCM, SMS, email", "kind": "external", "x": 0.1, "y": 0.72 },
+    { "id": "workers", "label": "Worker theo kênh", "kind": "service", "x": 0.85, "y": 0.72 }
+  ],
+  "edges": [
+    { "id": "source-api", "from": "source", "to": "api", "label": "event + key" },
+    { "id": "api-db", "from": "api", "to": "db", "label": "khử trùng, tuỳ chọn" },
+    { "id": "api-queues", "from": "api", "to": "queues", "label": "theo mức ưu tiên" },
+    { "id": "queues-workers", "from": "queues", "to": "workers", "label": "nhóm worker riêng" },
+    { "id": "workers-providers", "from": "workers", "to": "providers", "label": "token bucket" },
+    { "id": "workers-db", "from": "workers", "to": "db", "label": "lease, trạng thái" },
+    { "id": "providers-api", "from": "providers", "to": "api", "label": "webhook DLR, bounce" }
+  ],
+  "steps": [
+    {
+      "caption": "Service đặt hàng phát event \"đơn đã giao\" kèm idempotency key là id event cộng loại tin. Nó không biết người dùng có mấy thiết bị hay đã tắt kênh nào.",
+      "show": ["source", "api", "source-api"],
+      "highlight": ["source-api"]
+    },
+    {
+      "caption": "Notification service ghi một dòng với unique constraint trên key (event lặp bị bỏ) cùng dòng outbox trong một transaction. Nó đọc tuỳ chọn theo loại tin và kênh, và danh sách token thiết bị.",
+      "show": ["db", "api-db"],
+      "highlight": ["api-db"]
+    },
+    {
+      "caption": "Tin được đẩy vào một trong ba topic: khẩn (OTP, bảo mật), giao dịch, hàng loạt. Chung một topic thì 10 triệu tin marketing xếp trước OTP.",
+      "show": ["queues", "api-queues"],
+      "highlight": ["api-queues"]
+    },
+    {
+      "caption": "Mỗi mức có nhóm worker riêng cho từng kênh. Worker bỏ tin đã quá expires_at, kiểm lại tuỳ chọn và giờ yên lặng, rồi render template.",
+      "show": ["workers", "queues-workers"],
+      "highlight": ["queues-workers"]
+    },
+    {
+      "caption": "Trước khi gọi nhà cung cấp, worker giữ lease trên dòng lần gửi (SENDING) để không có hai worker gửi cùng một tin, rồi ghi SENT hoặc FAILED.",
+      "show": ["workers-db"],
+      "highlight": ["workers-db"]
+    },
+    {
+      "caption": "Gọi APNs, FCM, gateway SMS qua token bucket có phần riêng cho mức khẩn. Lỗi tạm thì sang retry topic, token chết thì xoá token, lỗi payload thì không retry.",
+      "show": ["providers", "workers-providers"],
+      "highlight": ["workers-providers"]
+    },
+    {
+      "caption": "Kết quả thật về sau: delivery report của SMS, bounce và complaint của email qua webhook vào Notification service. Bounce cứng vào suppression list. Push thì không có biên nhận, chỉ app báo về khi hiển thị.",
+      "show": ["providers-api"],
+      "highlight": ["providers-api"]
+    }
+  ]
+}

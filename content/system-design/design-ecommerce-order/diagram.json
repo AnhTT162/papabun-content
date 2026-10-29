@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một đơn hàng đi qua bốn service",
+  "nodes": [
+    { "id": "buyer", "label": "Người mua", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "order", "label": "Order service", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "inventory", "label": "Inventory", "kind": "service", "x": 0.1, "y": 0.38 },
+    { "id": "payment", "label": "Payment", "kind": "service", "x": 0.85, "y": 0.38 },
+    { "id": "fulfillment", "label": "Kho", "kind": "service", "x": 0.1, "y": 0.72 },
+    { "id": "gateway", "label": "Cổng thanh toán", "kind": "external", "x": 0.85, "y": 0.72 }
+  ],
+  "edges": [
+    { "id": "buyer-order", "from": "buyer", "to": "order", "label": "đặt hàng + key" },
+    { "id": "order-inventory", "from": "order", "to": "inventory", "label": "giữ hàng" },
+    { "id": "order-payment", "from": "order", "to": "payment", "label": "tạo thanh toán" },
+    { "id": "payment-order", "from": "payment", "to": "order", "label": "PaymentSucceeded" },
+    { "id": "gateway-payment", "from": "gateway", "to": "payment", "label": "webhook có ký" },
+    { "id": "order-fulfillment", "from": "order", "to": "fulfillment", "label": "đóng gói" },
+    { "id": "fulfillment-inventory", "from": "fulfillment", "to": "inventory", "label": "xuất kho" }
+  ],
+  "steps": [
+    {
+      "caption": "Người mua bấm đặt hàng kèm idempotency key. Order tính lại giá và voucher ở server, chụp giá vào từng dòng, tạo đơn PENDING_PAYMENT và ghi lệnh vào outbox trong cùng transaction.",
+      "show": ["buyer", "order", "buyer-order"],
+      "highlight": ["buyer-order"]
+    },
+    {
+      "caption": "Inventory giữ hàng bằng một UPDATE có điều kiện on_hand - reserved >= qty và ghi reservation hết hạn sau 15 phút. Số dòng bằng 0 là hết hàng: đơn bị huỷ ngay.",
+      "show": ["inventory", "order-inventory"],
+      "highlight": ["order-inventory"]
+    },
+    {
+      "caption": "Payment tạo yêu cầu ở cổng (authorization với thẻ, thu ngay với ví) và trả link cho người mua. Phiên thanh toán ở cổng phải hết hạn trước reservation.",
+      "show": ["payment", "gateway", "order-payment"],
+      "highlight": ["order-payment"]
+    },
+    {
+      "caption": "Kết quả về qua webhook đã kiểm chữ ký, không qua redirect của trình duyệt. Payment phát PaymentSucceeded; Order chuyển đơn sang PAID bằng UPDATE ... WHERE status = 'PENDING_PAYMENT' và xác nhận reservation để nó không còn hạn.",
+      "show": ["gateway-payment", "payment-order"],
+      "highlight": ["gateway-payment", "payment-order"]
+    },
+    {
+      "caption": "Order gửi lệnh đóng gói. Kho là nguồn sự thật cho 'đã đóng gói chưa': yêu cầu huỷ lúc này phải hỏi kho, không tự chuyển CANCELLED.",
+      "show": ["fulfillment", "order-fulfillment"],
+      "highlight": ["order-fulfillment"]
+    },
+    {
+      "caption": "Xuất kho thì trừ cả on_hand lẫn reserved và capture tiền với thẻ. Từ đây huỷ đơn thành quy trình trả hàng.",
+      "show": ["fulfillment-inventory"],
+      "highlight": ["fulfillment-inventory"]
+    },
+    {
+      "caption": "Nhánh hết hạn: job của Order chuyển đơn quá deadline 15 phút sang EXPIRED rồi gửi lệnh nhả hàng; TTL reservation dài hơn, chỉ là lưới an toàn. Tiền về sau đó thì UPDATE trả 0 dòng: giữ lại hàng nếu còn, không thì hoàn tiền tự động.",
+      "show": [],
+      "highlight": ["inventory", "order"]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "shared-topic-otp-delay",
+      "kind": "single",
+      "prompt": "OTP và tin marketing chung một topic Kafka. Lúc 20:00 một chiến dịch đẩy 10 triệu tin vào topic, worker gửi 5.000 tin/giây. Một OTP vào topic lúc 20:01. Nó được gửi khoảng khi nào?",
+      "options": [
+        "Gần như ngay, vì worker chọn tin có priority cao trước",
+        "Sau khoảng 1 phút, khi worker xong lô hiện tại",
+        "Sau khoảng 33 phút, khi hết các tin đã vào trước",
+        "Không bao giờ, vì consumer lag làm Kafka xoá tin mới"
+      ],
+      "answer": 2,
+      "explanation": "Mỗi partition Kafka là một hàng FIFO; consumer đọc theo offset nên không nhảy qua tin cũ để lấy tin có priority cao. 10 triệu tin ở 5.000 tin/giây là 2.000 giây, khoảng 33 phút, mà OTP chỉ có giá trị vài phút. Tách topic và nhóm worker theo mức ưu tiên. Kafka xoá theo thời gian giữ, không theo lag."
+    },
+    {
+      "id": "apns-200-meaning",
+      "kind": "single",
+      "prompt": "Worker gọi APNs và nhận `200`. Điều nào chắc chắn đúng?",
+      "options": [
+        "Thông báo đã hiện trên màn hình thiết bị của người dùng",
+        "APNs đã nhận tin và sẽ cố giao khi thiết bị sẵn sàng",
+        "Thiết bị đang online và đã gửi biên nhận về cho APNs",
+        "Người dùng đang bật quyền nhận thông báo cho app"
+      ],
+      "answer": 1,
+      "explanation": "`200` chỉ nói APNs đã nhận request. Thiết bị có thể đang offline (APNs chỉ giữ một tin cho mỗi bundle ID), hoặc người dùng đã tắt quyền thông báo mà APNs vẫn trả `200`. APNs không trả biên nhận tới máy theo thời gian thực; muốn biết thì app phải báo về khi hiển thị."
+    },
+    {
+      "id": "lease-expired-campaign",
+      "kind": "single",
+      "prompt": "Worker chiếm một lần gửi (`SENDING`, lease 30 giây), gọi FCM rồi chết trước khi ghi `SENT`. Lease hết hạn. Với tin chiến dịch marketing, cách nào hợp lý?",
+      "options": [
+        "Gửi lại ngay, vì at-least-once là mặc định an toàn",
+        "Hỏi FCM xem tin đã giao chưa rồi mới quyết định",
+        "Đánh dấu `UNKNOWN` và không gửi lại tin này nữa",
+        "Gửi lại kèm idempotency key để FCM tự bỏ bản trùng"
+      ],
+      "answer": 2,
+      "explanation": "Không biết tin đã đi hay chưa, nên phải chọn trùng hoặc mất. Với marketing, mất một tin ít hại hơn gửi trùng làm người dùng tắt thông báo: chọn at-most-once. FCM không có API tra từng tin đã giao chưa và không nhận idempotency key. Với tin trạng thái đơn qua push thì ngược lại: gửi lại, kèm collapse id để thiết bị gộp bản trùng."
+    },
+    {
+      "id": "invalid-argument-delete",
+      "kind": "single",
+      "prompt": "Sau một lần deploy, số token bị xoá mỗi giờ tăng từ 2.000 lên 900.000. Log cho thấy FCM trả `INVALID_ARGUMENT` cho hầu hết request. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Đa số người dùng vừa gỡ app trong cùng một giờ",
+        "Payload mới bị lỗi, worker coi lỗi đó là token hỏng",
+        "FCM đã hết hạn mức của dự án và trả lỗi thay cho 429",
+        "Token Android quá 270 ngày không hoạt động bị hết hạn"
+      ],
+      "answer": 1,
+      "explanation": "`INVALID_ARGUMENT` chỉ nghĩa là token hỏng khi payload chắc chắn hợp lệ. Bug payload sau deploy làm mọi request lỗi, và worker xoá token theo mã này thì xoá oan cả triệu token. Hết hạn mức là `429`; token hết hạn 270 ngày hay người dùng gỡ app là `UNREGISTERED` và không dồn vào một giờ. Cảnh báo theo số token bị xoá mỗi giờ để bắt sớm."
+    },
+    {
+      "id": "unsubscribe-mid-campaign",
+      "kind": "single",
+      "prompt": "Chiến dịch chạy 33 phút. Người dùng tắt nhận marketing ở phút thứ 5 nhưng vẫn nhận tin ở phút thứ 20. Sửa ở đâu?",
+      "options": [
+        "Chọn tập người nhận lại mỗi phút trong lúc chạy",
+        "Kiểm tuỳ chọn lúc worker gửi, từ cache TTL ngắn",
+        "Gửi qua FCM topic để Google lọc người đã huỷ",
+        "Chặn đổi tuỳ chọn cho tới khi chiến dịch kết thúc"
+      ],
+      "answer": 1,
+      "explanation": "Tuỳ chọn được đọc khi chọn tập người nhận, nhưng tin nằm trong hàng đợi tới 33 phút. Worker phải kiểm lại ngay trước khi gửi; cache TTL 1 phút giữ tải database thấp mà người huỷ không nhận tin quá một phút sau. FCM topic không biết tuỳ chọn của bạn; chọn lại tập người nhận mỗi phút thì tốn và vẫn sót tin đã xếp hàng."
+    }
+  ]
+}

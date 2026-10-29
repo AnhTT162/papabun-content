@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thông báo cho app bán lẻ 20 triệu người dùng",
+  "prompt": "Một app bán lẻ có 20 triệu tài khoản, khoảng 12 triệu token push đang hoạt động (iOS và Android). Mỗi ngày có khoảng 3 triệu tin trạng thái đơn, đỉnh 2.000 tin/giây trong ngày sale; 400.000 OTP qua SMS, đỉnh 150 OTP/giây khi nhiều người đăng nhập cùng lúc; hai chiến dịch push mỗi ngày, mỗi chiến dịch tới 10 triệu người, và một bản tin email cho 4 triệu người mỗi tuần. Ràng buộc: OTP tới tay trong 10 giây ở p99; trạng thái đơn trong 1 phút; chiến dịch phải xong trong 1 giờ và không gửi trùng; không gửi marketing từ 22:00 tới 8:00 theo giờ địa phương của người dùng (có người dùng ở nước ngoài); hợp đồng SMS chỉ có một gateway 300 tin/giây cho cả công ty; dự án FCM có hạn mức mặc định 600.000 tin/phút. Thiết kế đường đi của thông báo, cách chia hạn mức, retry và khử trùng, tuỳ chọn người dùng.",
+  "hints": [
+    "Ba loại tin cần mục tiêu khác nhau: loại nào cần nhanh, loại nào cần đều, loại nào không được trùng? Tách ở những chỗ nào thì mới thật sự tách?",
+    "Chiến dịch 10 triệu tin trong 1 giờ cần bao nhiêu tin mỗi giây, so với 10.000 tin/giây của FCM và 2.000 tin/giây trạng thái đơn? Gateway SMS 300 tin/giây chia cho OTP thế nào?",
+    "Worker chết sau khi FCM nhận tin mà chưa ghi trạng thái: OTP thì làm gì, tin chiến dịch thì làm gì?",
+    "Người dùng huỷ đăng ký ở phút thứ 10 của chiến dịch; người dùng ở múi giờ khác đang 23:00: kiểm tuỳ chọn và giờ ở bước nào?"
+  ],
+  "solution": "**Đường đi**: service nguồn gọi Notification service (hoặc phát event) kèm key là id event cộng loại tin; bảng `notification` có unique constraint trên key nên event lặp bị bỏ, và được ghi cùng dòng outbox trong một transaction để service chết giữa chừng không làm mất tin. Notification service đọc tuỳ chọn và token, tách thành các lần gửi theo kênh và thiết bị, đẩy vào ba topic: `notif.critical` (OTP, bảo mật), `notif.transactional` (trạng thái đơn), `notif.bulk` (chiến dịch, bản tin). Mỗi topic có nhóm worker riêng, scale riêng, cảnh báo lag riêng.\n\n**Push**: chiến dịch 10 triệu tin trong 1 giờ cần tối thiểu 2.800 tin/giây. FCM cho 10.000/giây cả dự án, trạng thái đơn đỉnh 2.000/giây. Token bucket gọi FCM đặt hạn mức cho bulk 5.000/giây (chiến dịch xong trong khoảng 33 phút), phần còn lại cho critical và transactional; bulk không mượn phần của mức khác. Theo Little's law, 5.000 tin/giây với mỗi request khoảng 100 ms là 500 request đang chạy, chia trên vài kết nối HTTP/2 mỗi worker. Hai chiến dịch không chạy chồng nhau. Gửi đều trong 33 phút cũng giúp backend không bị dồn khi người dùng mở app.\n\n**SMS**: một token bucket 300 tin/giây toàn công ty đặt trong worker SMS (một nơi duy nhất gọi gateway). OTP lấy token trước, mọi loại khác chỉ được dùng tối đa 100 tin/giây và nhường hết khi OTP tăng. OTP đỉnh 150/giây nên luôn còn chỗ. Template OTP viết không dấu để vừa một đoạn 160 ký tự GSM-7. Rate limit gửi OTP theo số điện thoại, IP và thiết bị để chặn SMS pumping.\n\n**Retry**: lỗi `429` chờ `Retry-After`, `5xx` và timeout thì retry qua retry topic 10 giây, 1 phút, 10 phút rồi DLQ; `400`/`404` không retry; FCM `UNREGISTERED`, APNs `410` thì xoá token (APNs: chỉ khi token không được đăng ký lại sau mốc thời gian trong phản hồi). Mỗi tin có `expires_at`: OTP 5 phút, trạng thái đơn 1 giờ, chiến dịch tới hết khung giờ được gửi; quá hạn thì bỏ. OTP không qua retry topic 10 phút: hết hạn trước khi tới lượt.\n\n**Khử trùng**: dòng lần gửi `(notification_id, channel, device_token)` có trạng thái và lease. Worker chiếm dòng (`PENDING → SENDING`, lease 30 giây cho push; 5 giây cho OTP, timeout gọi gateway 3 giây) rồi mới gọi nhà cung cấp, xong ghi `SENT`. Lease hết hạn mà vẫn `SENDING`: trạng thái đơn gửi lại (at-least-once) với `apns-collapse-id` và `tag` Android bằng id thông báo, nên bản trùng thay bản cũ trên máy; OTP gửi lại SMS với đúng mã cũ (người dùng có thể nhận hai tin, mã nào cũng nhập được), tối đa một lần; chiến dịch đánh dấu `UNKNOWN` và không gửi lại (at-most-once). Unique `(campaign_id, user_id)` chặn một người nhận hai lần khi job chọn tập người nhận chạy lại.\n\n**Tuỳ chọn và giờ yên lặng**: job chiến dịch đọc tuỳ chọn theo lô khi chọn tập người nhận, worker bulk kiểm lại từ cache TTL 1 phút trước khi gửi, nên người huỷ đăng ký giữa chiến dịch không nhận tin sau đó quá một phút. Mỗi người dùng có múi giờ (lấy từ thiết bị); người đang trong 22:00–8:00 thì lần gửi được dời vào bảng lịch tới 8:00 giờ địa phương, có rải ngẫu nhiên vài phút để không dồn đúng 8:00, và `expires_at` tính lại theo giờ gửi mới (8:00 + 2 giờ); chiến dịch chỉ có nghĩa trong tối nay thì không dời mà bỏ. Tin bảo mật và OTP bỏ qua tuỳ chọn marketing và giờ yên lặng.\n\n**Email**: bản tin gửi từ subdomain riêng (ví dụ `news.shop.example.com`) có SPF, DKIM, DMARC, header unsubscribe một chạm, để tỉ lệ spam của bản tin không kéo thư giao dịch vào spam. Bounce cứng và complaint vào suppression list, kiểm trước mọi lần gửi.\n\n**Lưu trữ**: khoảng 25 triệu lần gửi mỗi ngày, mỗi dòng cỡ 300 byte là 7,5 GB/ngày; partition theo ngày, giữ 30 ngày rồi drop partition. Hộp thư trong app lưu tin chiến dịch một bản cộng mốc đã đọc của từng người, tin cá nhân (trạng thái đơn) lưu theo `user_id`.\n\n**Quan sát**: độ trễ event tới lúc nhà cung cấp nhận theo từng mức (OTP p99 phải dưới vài giây để còn chỗ cho SMS tới máy), lag từng topic, lỗi theo mã của từng nhà cung cấp, số token bị xoá mỗi giờ, tỉ lệ OTP được nhập đúng.",
+  "tradeoffs": [
+    {
+      "option": "Ba topic, nhóm worker và phần hạn mức riêng cho từng mức",
+      "pros": [
+        "Chiến dịch không làm chậm OTP ở cả hàng đợi lẫn nhà cung cấp",
+        "Scale, cảnh báo và retry theo đúng mục tiêu từng loại tin"
+      ],
+      "cons": [
+        "Nhiều thành phần phải vận hành và theo dõi",
+        "Hạn mức chia cứng có lúc để trống phần của mức khác"
+      ]
+    },
+    {
+      "option": "Một topic chung, worker ưu tiên theo trường priority",
+      "pros": [
+        "Ít topic, ít cấu hình",
+        "Hạn mức nhà cung cấp dùng hết, không để trống"
+      ],
+      "cons": [
+        "Partition Kafka là FIFO: OTP vẫn xếp sau tin đã vào trước",
+        "Một chiến dịch lớn có thể làm lag 30 phút cho mọi loại tin"
+      ]
+    },
+    {
+      "option": "Dùng FCM topic hoặc nền tảng marketing có sẵn cho chiến dịch",
+      "pros": [
+        "Google tự fan-out, không tốn hạn mức theo từng tin",
+        "Ít code, có sẵn báo cáo chiến dịch"
+      ],
+      "cons": [
+        "Bỏ qua tuỳ chọn, giờ yên lặng và cá nhân hoá của bạn",
+        "Không khử trùng hay giới hạn số tin mỗi người được"
+      ]
+    }
+  ]
+}

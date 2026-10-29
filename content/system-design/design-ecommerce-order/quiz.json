@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "check-then-increment",
+      "kind": "output",
+      "prompt": "SKU có `on_hand = 100`, `reserved = 0`. 300 người mua chạy đoạn dưới cùng lúc qua 32 kết nối PostgreSQL ở `READ COMMITTED`. Kết quả gần nhất với điều gì?",
+      "code": "int[] row = jdbc.queryForObject(\n    \"SELECT on_hand, reserved FROM stock WHERE sku = ?\", mapper, sku);\nif (row[0] - row[1] < 1) {\n    throw new OutOfStockException(sku);\n}\njdbc.update(\"UPDATE stock SET reserved = reserved + 1 WHERE sku = ?\", sku);\n// commit, báo người mua đặt thành công",
+      "options": [
+        "Đúng 100 người thành công, vì `reserved + 1` cộng nguyên tử",
+        "Khoảng 130 người thành công, `reserved` lên khoảng 130",
+        "Đúng 100 người thành công, nhưng `reserved` chỉ còn khoảng 10",
+        "Cả 300 người nhận `OutOfStockException` do khoá dòng chéo"
+      ],
+      "answer": 1,
+      "explanation": "Câu `UPDATE` cộng nguyên tử, nên không mất lượt cộng nào, nhưng điều kiện được kiểm ở câu `SELECT` trước đó trên bản đã cũ. Nhiều người cùng đọc `reserved = 99` và cùng đi tiếp. Chạy thử ra 130–131 người thành công, bán vượt 30%. Đưa điều kiện vào `WHERE on_hand - reserved >= 1` của chính câu `UPDATE` và kiểm số dòng thì ra đúng 100. Ghi đè `reserved = <giá trị đã đọc + 1>` mới là trường hợp cột chỉ còn khoảng 10."
+    },
+    {
+      "id": "late-payment-zero-rows",
+      "kind": "single",
+      "prompt": "Webhook báo thanh toán thành công. `UPDATE orders SET status = 'PAID' WHERE id = 42 AND status = 'PENDING_PAYMENT'` trả về 0 dòng. Handler nên làm gì?",
+      "options": [
+        "Ném lỗi để cổng gửi lại webhook cho tới khi ghi được",
+        "Ghi `PAID` không điều kiện, vì tiền đã thật sự về",
+        "Đọc trạng thái hiện tại rồi rẽ nhánh theo trạng thái",
+        "Bỏ qua, vì 0 dòng nghĩa là webhook này bị gửi trùng"
+      ],
+      "answer": 2,
+      "explanation": "0 dòng nghĩa là đơn không còn ở `PENDING_PAYMENT`, nhưng có nhiều lý do. Đã `PAID` thì đúng là webhook trùng, bỏ qua. `EXPIRED` hay `CANCELLED` thì tiền đã về cho đơn đã nhả hàng: thử giữ lại hàng, không được thì hoàn tiền. Retry không bao giờ đổi được kết quả, còn ghi đè thì tạo đơn `PAID` không còn hàng."
+    },
+    {
+      "id": "lock-held-external-call",
+      "kind": "single",
+      "prompt": "Transaction giữ hàng chạy 5.200 lượt/giây trên một SKU. Team thêm lời gọi service khuyến mãi (5 ms) giữa câu `UPDATE stock` và `COMMIT`. Throughput trên SKU đó còn khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 5.000 lượt/giây, vì 5 ms chạy song song trên 32 kết nối",
+        "Khoảng 2.600 lượt/giây, vì mỗi lượt chậm gấp đôi lúc trước",
+        "Khoảng 150 lượt/giây, vì khoá dòng bị giữ thêm 5 ms mỗi lượt",
+        "Không đổi, vì PostgreSQL nhả khoá dòng ngay sau câu `UPDATE`"
+      ],
+      "answer": 2,
+      "explanation": "Khoá dòng giữ tới `COMMIT`, nên mọi lượt trên cùng SKU xếp hàng tuần tự và mỗi lượt giữ khoá hơn 5 ms: trần khoảng 1 / 5 ms = 200, đo được 153. Thêm kết nối không giúp vì chúng cùng chờ một khoá. Gọi khuyến mãi trước khi mở transaction."
+    },
+    {
+      "id": "cancel-while-packing",
+      "kind": "single",
+      "prompt": "Người mua bấm huỷ khi đơn đang `PACKING`. Cách xử lý nào tránh được cảnh hàng vẫn đi mà tiền đã hoàn?",
+      "options": [
+        "Order chuyển `CANCELLED` ngay rồi phát event cho kho dừng",
+        "Order ghi `CANCEL_REQUESTED` và chờ kho xác nhận huỷ được",
+        "Order hoàn tiền trước, kho tự huỷ khi nhận event hoàn tiền",
+        "Order từ chối mọi yêu cầu huỷ khi đơn đã sang `PACKING`"
+      ],
+      "answer": 1,
+      "explanation": "Chỉ kho biết hàng đã đóng gói và giao hãng vận chuyển chưa. Order tự `CANCELLED` hay hoàn tiền trước thì event tới kho khi hàng đã đi. Ghi `CANCEL_REQUESTED`, gửi lệnh huỷ, kho trả chấp nhận hoặc từ chối; từ chối thì chuyển sang chặn giao hoặc trả hàng. Từ chối mọi yêu cầu huỷ thì an toàn nhưng làm mất cả những đơn kho còn huỷ được."
+    },
+    {
+      "id": "voucher-refund",
+      "kind": "single",
+      "prompt": "Đơn ba món, mỗi món 100.000 đ, voucher 100.000 đ không điều kiện. Người mua trả một món. Hệ thống đã phân bổ voucher theo tỉ lệ và dồn phần dư lúc đặt. Hoàn bao nhiêu cho món đó?",
+      "options": [
+        "100.000 đ, giá niêm yết của món bị trả",
+        "66.666 hoặc 66.667 đ, tuỳ món được dồn phần dư",
+        "0 đ, vì đơn đã dùng voucher thì không được hoàn",
+        "67.000 đ, phần voucher làm tròn về nghìn đồng"
+      ],
+      "answer": 1,
+      "explanation": "Voucher chia thành 33.334, 33.333 và 33.333 đ, lưu vào từng dòng lúc đặt. Hoàn một món là giá món trừ phần voucher của chính dòng đó: 66.666 đ cho dòng nhận phần dư, 66.667 đ cho dòng còn lại. Hoàn giá niêm yết thì người mua giữ cả phần giảm giá; làm tròn phần voucher về nghìn đồng thì hoàn sai số đã trả. Tính lại lúc hoàn từ tổng đơn thì không khớp với số đã lưu và tổng các lần hoàn có thể lệch số đã trả."
+    }
+  ]
+}

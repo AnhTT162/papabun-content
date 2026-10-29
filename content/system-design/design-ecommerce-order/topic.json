@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-ecommerce-order",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế đơn hàng & tồn kho",
+  "summary": "Đơn hàng là máy trạng thái qua Order, Inventory, Payment, kho: giữ hàng bằng UPDATE có điều kiện (đọc rồi ghi thì bán vượt 30%), dòng nóng, reservation hết hạn và tiền về muộn, authorize/capture, huỷ đua với kho, phân bổ voucher khi hoàn một phần.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 18,
+  "prerequisites": ["saga", "data-consistency-services", "optimistic-pessimistic-locking", "idempotency"],
+  "terms": ["state-machine", "inventory-reservation", "oversell", "conditional-update", "lost-update", "hot-row", "skip-locked", "idempotency-key", "outbox", "webhook", "orchestration", "saga", "payment-authorization", "proration", "reconciliation", "read-model", "available-to-promise"],
+  "references": [
+    { "title": "PostgreSQL: Transaction isolation, Read Committed", "url": "https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED" },
+    { "title": "Microservices.io: Pattern Saga", "url": "https://microservices.io/patterns/data/saga.html" },
+    { "title": "Stripe: Place a hold on a payment method", "url": "https://docs.stripe.com/payments/place-a-hold-on-a-payment-method" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Reservation hết hạn và đơn đã `EXPIRED`, rồi webhook báo người mua đã trả tiền. Làm gì?\" Đừng để handler ghi đè trạng thái. Chuyển `PAID` bằng `UPDATE ... WHERE status = 'PENDING_PAYMENT'`; trả 0 dòng thì đọc trạng thái, thử giữ lại hàng, còn hàng thì đưa đơn về `PAID`, hết hàng thì hoàn tiền tự động và báo người mua. Rồi chặn từ gốc: phiên thanh toán ở cổng phải hết hạn trước reservation." },
+    { "type": "callout", "style": "warning", "markdown": "Đọc `available` rồi `UPDATE` là bán vượt, kể cả khi câu ghi là `reserved = reserved + 1`: chạy thử trên PostgreSQL với 100 món và 300 người mua, 130 người được báo thành công. Kiểm điều kiện trong chính câu `UPDATE` và đọc số dòng bị ảnh hưởng." },
+    { "type": "callout", "style": "tip", "markdown": "Vẽ máy trạng thái của đơn trước khi vẽ service. Với mỗi mũi tên, hỏi: event này đến hai lần thì sao, đến muộn sau trạng thái kế tiếp thì sao, không bao giờ đến thì job nào dọn. Ba câu đó lộ ra gần hết phần deep dive người phỏng vấn muốn nghe." }
+  ]
+}

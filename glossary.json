@@ -445,7 +445,7 @@
       "meaning": "Hai thread hoặc transaction cùng đọc một giá trị cũ, mỗi thread tính và ghi kết quả của mình, lần ghi sau đè lên lần ghi trước nên một cập nhật biến mất.",
       "example": "Cả hai thread đọc `count = 0` rồi cùng ghi `1`, thay vì kết quả `2`.",
       "related": ["atomicity", "race-condition"],
-      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns", "idempotency", "rest-api-design"]
+      "topics": ["synchronized-volatile", "transaction-isolation", "optimistic-pessimistic-locking", "concurrency-basics", "behavioral-patterns", "idempotency", "rest-api-design", "design-ecommerce-order"]
     },
     {
       "id": "race-condition",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns", "design-notification"]
     },
     {
       "id": "idempotency-key",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order"]
     },
     {
       "id": "orm",
@@ -1389,7 +1389,7 @@
       "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
       "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
       "related": ["pessimistic-locking", "lock-timeout"],
-      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc", "distributed-locks"]
+      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc", "distributed-locks", "design-ecommerce-order"]
     },
     {
       "id": "lock-timeout",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification"]
     },
     {
       "id": "replication-slot",
@@ -1717,7 +1717,7 @@
       "meaning": "Một dòng bị rất nhiều transaction cùng cập nhật, nên mọi transaction phải lần lượt chờ khoá của nó; throughput bị giới hạn bởi thời gian giữ khoá.",
       "example": "Dòng tổng doanh thu của một merchant lớn được cộng trong mọi transaction đặt đơn.",
       "related": ["pessimistic-locking", "trigger"],
-      "topics": ["views-procedures-triggers"]
+      "topics": ["views-procedures-triggers", "design-ecommerce-order"]
     },
     {
       "id": "uuid-v7",
@@ -2493,7 +2493,7 @@
       "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
       "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
       "related": ["message-ack", "idempotent-consumer"],
-      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "idempotency"]
+      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "idempotency", "design-notification"]
     },
     {
       "id": "idempotent-consumer",
@@ -2501,7 +2501,7 @@
       "meaning": "Consumer mà xử lý cùng một message nhiều lần cho kết quả như xử lý một lần, thường bằng cách ghi id message đã xử lý trong cùng transaction với thay đổi dữ liệu.",
       "example": "`INSERT INTO processed_message(id) ...` trùng khoá thì bỏ qua message đó.",
       "related": ["delivery-semantics", "idempotency-key"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-producer-consumer", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-notification"]
     },
     {
       "id": "dead-letter-queue",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification"]
     },
     {
       "id": "poison-message",
@@ -2525,7 +2525,7 @@
       "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
-      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture", "tail-latency"]
+      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture", "tail-latency", "design-notification"]
     },
     {
       "id": "cache-aside",
@@ -2997,7 +2997,7 @@
       "meaning": "Khoảng cách giữa message mới nhất trong partition và offset consumer group đã commit; đo theo số message hoặc theo thời gian message cũ nhất phải chờ.",
       "example": "Partition 3: log-end 1.200.000, committed 1.150.000, lag 50.000 (khoảng 4 phút).",
       "related": ["consumer-group", "kafka-offset"],
-      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture", "sd-building-blocks"]
+      "topics": ["kafka-troubleshooting", "service-communication", "event-driven-architecture", "sd-building-blocks", "design-notification"]
     },
     {
       "id": "rebalance-storm",
@@ -4589,7 +4589,7 @@
       "meaning": "Cách thực hiện một nghiệp vụ trải qua nhiều service hay aggregate bằng chuỗi transaction cục bộ, mỗi bước có hành động bù trừ khi bước sau thất bại.",
       "example": "Đặt hàng: tạo đơn, giữ hàng, thu tiền; thu tiền lỗi thì nhả hàng và huỷ đơn.",
       "related": ["eventual-consistency", "outbox"],
-      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "saga", "distributed-transactions", "cqrs-event-sourcing"]
+      "topics": ["modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "saga", "distributed-transactions", "cqrs-event-sourcing", "design-ecommerce-order"]
     },
     {
       "id": "jpms",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order"]
     },
     {
       "id": "jitter",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols", "design-notification"]
     },
     {
       "id": "fallback",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "design-notification"]
     },
     {
       "id": "ingress",
@@ -5061,7 +5061,7 @@
       "meaning": "Cách phối hợp nhiều service trong đó một orchestrator giữ trạng thái, gửi lệnh cho từng bên và quyết định bước tiếp theo hoặc bù trừ.",
       "example": "Orchestrator của đơn gửi `ReserveStock`, nhận `StockReserved`, rồi gửi `ChargePayment`.",
       "related": ["choreography", "saga"],
-      "topics": ["saga"]
+      "topics": ["saga", "design-ecommerce-order"]
     },
     {
       "id": "pivot-transaction",
@@ -5125,7 +5125,7 @@
       "meaning": "Dữ liệu được dàn sẵn theo đúng nhu cầu của một màn hình hay truy vấn, tách khỏi mô hình ghi; thường cập nhật bất đồng bộ nên có thể trễ.",
       "example": "Bảng `wallet_statement(wallet_id, seq, description, amount, balance_after)` chỉ để hiện sao kê, không ai ghi trực tiếp vào nó.",
       "related": ["projection", "cqrs"],
-      "topics": ["cqrs-event-sourcing"]
+      "topics": ["cqrs-event-sourcing", "design-ecommerce-order"]
     },
     {
       "id": "event-store",
@@ -5285,7 +5285,7 @@
       "meaning": "Thuật toán rate limit: thùng chứa tối đa `capacity` token, nạp với tốc độ cố định; mỗi request lấy một token, hết thì từ chối. Cho phép burst bằng `capacity`.",
       "example": "Spring Cloud Gateway `replenishRate: 10`, `burstCapacity: 20`: trung bình 10 request mỗi giây, dồn được 20.",
       "related": ["leaky-bucket", "rate-limiting"],
-      "topics": ["rate-limiting", "design-rate-limiter"]
+      "topics": ["rate-limiting", "design-rate-limiter", "design-notification"]
     },
     {
       "id": "leaky-bucket",
@@ -5333,7 +5333,7 @@
       "meaning": "Quyền (giữ khoá, làm leader) có thời hạn: hết hạn mà không gia hạn thì tự mất, nên người giữ chết không làm hệ thống kẹt mãi.",
       "example": "Lease etcd TTL 10 giây, client gửi keepalive mỗi 3 giây; process treo thì sau 10 giây khoá tự nhả.",
       "related": ["distributed-lock", "fencing"],
-      "topics": ["distributed-locks", "clocks-ids", "consensus", "design-id-generator"]
+      "topics": ["distributed-locks", "clocks-ids", "consensus", "design-id-generator", "design-notification"]
     },
     {
       "id": "fencing-token",
@@ -6845,7 +6845,7 @@
       "meaning": "Thông báo gửi qua dịch vụ của hệ điều hành di động (APNs của Apple, FCM của Google) tới thiết bị, kể cả khi app đang ở nền hay đã tắt; app không cần giữ kết nối riêng.",
       "example": "Đơn đã tới: backend gọi FCM với token thiết bị, điện thoại hiện thông báo dù app không mở.",
       "related": ["websocket"],
-      "topics": ["realtime-rpc-protocols", "back-of-envelope"]
+      "topics": ["realtime-rpc-protocols", "back-of-envelope", "design-notification"]
     },
     {
       "id": "stomp",
@@ -8982,6 +8982,158 @@
       "example": "Pod order-3 của StatefulSet dùng số 3 làm worker id Snowflake, không cần kho phối hợp.",
       "related": ["worker-id"],
       "topics": ["design-id-generator"]
+    },
+    {
+      "id": "apns",
+      "term": "APNs",
+      "meaning": "Apple Push Notification service: dịch vụ của Apple chuyển push tới thiết bị iOS/macOS. Backend gọi qua HTTP/2, xác thực bằng JWT hoặc chứng chỉ.",
+      "example": "Worker gửi POST /3/device/<token> tới APNs với header apns-topic là bundle ID của app.",
+      "related": ["fcm", "push-notification", "device-token"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "fcm",
+      "term": "FCM",
+      "meaning": "Firebase Cloud Messaging: dịch vụ push của Google cho Android (và chuyển tiếp sang APNs cho iOS). API HTTP v1 gửi mỗi tin một request, có hạn mức theo dự án.",
+      "example": "Dự án FCM mặc định được 600.000 tin mỗi phút; vượt thì nhận 429.",
+      "related": ["apns", "push-notification", "device-token"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "device-token",
+      "term": "Device token",
+      "meaning": "Chuỗi định danh một bản cài app trên một thiết bị, do APNs hoặc FCM cấp; backend dùng nó làm địa chỉ gửi push. Token đổi khi cài lại app và có thể hết hạn.",
+      "example": "Một người dùng có ba token (hai điện thoại, một máy tính bảng); APNs trả 410 cho token của máy đã gỡ app.",
+      "related": ["apns", "fcm"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "collapse-key",
+      "term": "Collapse key",
+      "meaning": "Định danh để nhà cung cấp push hoặc thiết bị gộp các thông báo cùng loại: tin mới thay tin cũ cùng khoá thay vì hiện thêm. APNs dùng header apns-collapse-id, Android dùng tag hoặc collapse_key.",
+      "example": "Hai lần gửi tin \"đơn 123 đã giao\" với cùng apns-collapse-id chỉ hiện một thông báo.",
+      "related": ["apns", "fcm", "idempotency"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "retry-topic",
+      "term": "Retry topic",
+      "meaning": "Topic Kafka riêng chứa message xử lý lỗi, được consumer đọc lại sau một khoảng trễ; thay cho sleep trong consumer vốn chặn cả partition.",
+      "example": "Tin gửi FCM lỗi 503 được đẩy sang notif.retry.1m; quá bậc 10 phút thì vào DLQ.",
+      "related": ["dead-letter-queue", "retry-backoff"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "suppression-list",
+      "term": "Suppression list",
+      "meaning": "Danh sách địa chỉ không được gửi tới nữa: email bounce cứng, người báo spam, người huỷ đăng ký. Kiểm trước mọi lần gửi.",
+      "example": "Địa chỉ trả về lỗi \"user unknown\" được đưa vào suppression list, chiến dịch sau tự bỏ qua.",
+      "related": ["delivery-report", "one-click-unsubscribe"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "delivery-report",
+      "term": "Delivery report",
+      "meaning": "Báo cáo trạng thái giao tin do nhà cung cấp gửi về sau (thường qua webhook): SMS đã tới máy, email delivered/bounce/complaint. Viết tắt DLR với SMS.",
+      "example": "Gateway SMS gọi webhook báo DELIVRD cho tin OTP sau 4 giây.",
+      "related": ["suppression-list"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "quiet-hours",
+      "term": "Quiet hours",
+      "meaning": "Khung giờ không gửi thông báo không khẩn cấp, tính theo múi giờ của người nhận; tin rơi vào khung này được dời lại chứ không bỏ.",
+      "example": "Chiến dịch lúc 20:00 giờ Việt Nam; người dùng ở múi giờ đang 23:00 nhận tin lúc 8:00 sáng hôm sau giờ địa phương.",
+      "related": ["frequency-cap", "time-zone"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "frequency-cap",
+      "term": "Frequency cap",
+      "meaning": "Giới hạn số thông báo marketing một người nhận trong một khoảng thời gian, để không làm phiền tới mức họ tắt thông báo hay gỡ app.",
+      "example": "Mỗi người tối đa 3 tin marketing mỗi ngày, đếm bằng bộ đếm Redis theo user và ngày.",
+      "related": ["quiet-hours", "rate-limiting"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "sms-pumping",
+      "term": "SMS pumping",
+      "meaning": "Gian lận gọi API gửi OTP hàng loạt tới dải số đắt tiền để ăn chia cước với nhà mạng; bên gửi trả tiền cho tin không ai dùng.",
+      "example": "Tỉ lệ OTP được nhập đúng rơi từ 80% xuống 5% trong khi số SMS tăng gấp mười: dấu hiệu SMS pumping.",
+      "related": ["rate-limiting", "credential-stuffing"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "one-click-unsubscribe",
+      "term": "One-click unsubscribe",
+      "meaning": "Cơ chế huỷ đăng ký email bằng một lần bấm trong ứng dụng mail, qua header List-Unsubscribe và List-Unsubscribe-Post (RFC 8058). Gmail bắt buộc với bên gửi marketing hơn 5.000 thư mỗi ngày.",
+      "example": "Thư bản tin có header List-Unsubscribe-Post: List-Unsubscribe=One-Click; Gmail hiện nút Unsubscribe cạnh tên người gửi.",
+      "related": ["suppression-list"],
+      "topics": ["design-notification"]
+    },
+    {
+      "id": "state-machine",
+      "term": "State machine",
+      "meaning": "Mô hình gồm tập trạng thái hữu hạn và các chuyển trạng thái hợp lệ giữa chúng; mọi thay đổi phải đi theo một mũi tên đã khai báo.",
+      "example": "Đơn hàng chỉ đi PENDING_PAYMENT → PAID hoặc → EXPIRED; event muốn đưa đơn EXPIRED sang PAID phải qua nhánh xử lý riêng.",
+      "related": ["state-pattern", "saga"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "inventory-reservation",
+      "term": "Inventory reservation",
+      "meaning": "Giữ một lượng hàng cho một đơn: tăng reserved và ghi một bản ghi reservation. Đơn chưa thanh toán thì reservation có hạn và bị nhả khi đơn hết hạn; đơn đã thanh toán thì reservation được xác nhận và giữ tới khi xuất kho.",
+      "example": "Bấm đặt hàng giữ 2 cái áo; quá 15 phút chưa trả tiền, Order chuyển đơn sang EXPIRED và gửi lệnh nhả, Inventory trừ reserved đi 2.",
+      "related": ["oversell", "available-to-promise"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "oversell",
+      "term": "Oversell",
+      "meaning": "Bán vượt: hệ thống nhận nhiều đơn hơn số hàng có thật, thường do kiểm tồn kho và ghi tồn kho là hai bước rời.",
+      "example": "100 món nhưng 130 người được báo đặt thành công vì cùng đọc reserved = 99 rồi cùng cộng thêm.",
+      "related": ["race-condition", "conditional-update"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "conditional-update",
+      "term": "Conditional update",
+      "meaning": "Câu UPDATE đặt điều kiện nghiệp vụ ngay trong WHERE và dựa vào số dòng bị ảnh hưởng để biết thành công, thay cho đọc rồi kiểm rồi ghi.",
+      "example": "UPDATE stock SET reserved = reserved + 1 WHERE sku = ? AND on_hand - reserved >= 1 trả 0 dòng nghĩa là hết hàng.",
+      "related": ["optimistic-locking", "lost-update", "oversell"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "webhook",
+      "term": "Webhook",
+      "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
+      "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
+      "related": ["idempotency", "idempotent-consumer"],
+      "topics": ["design-ecommerce-order", "design-notification"]
+    },
+    {
+      "id": "payment-authorization",
+      "term": "Authorization (thẻ)",
+      "meaning": "Bước giữ tiền trên thẻ mà chưa thu; sau đó capture để thu thật hoặc void để huỷ. Authorization chỉ có hiệu lực vài ngày tới khoảng một tuần tuỳ mạng thẻ.",
+      "example": "Đặt hàng giữ 500.000 đ trên thẻ, capture khi kho xuất hàng; huỷ trước đó chỉ là void, không phát sinh hoàn tiền.",
+      "related": ["tcc", "saga"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "proration",
+      "term": "Proration",
+      "meaning": "Phân bổ một khoản (voucher, phí ship) cho từng dòng theo tỉ lệ, cộng lại phải bằng đúng tổng; phần lẻ do làm tròn được dồn có quy tắc.",
+      "example": "Voucher 100.000 đ cho ba dòng bằng giá: 33.334, 33.333 và 33.333 đ.",
+      "related": ["inventory-reservation"],
+      "topics": ["design-ecommerce-order"]
+    },
+    {
+      "id": "available-to-promise",
+      "term": "Available to promise",
+      "meaning": "Lượng hàng còn có thể hứa bán cho đơn mới: thường là on_hand trừ reserved, có thể cộng hàng sắp nhập. Số hiển thị cho người mua có thể cũ vài giây, số dùng lúc giữ hàng thì không.",
+      "example": "Trang sản phẩm hiện \"còn 3\" từ cache; lúc đặt, câu UPDATE có điều kiện mới quyết định còn hay hết.",
+      "related": ["inventory-reservation", "eventual-consistency"],
+      "topics": ["design-ecommerce-order"]
     }
   ]
 }

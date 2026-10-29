@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-notification",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế hệ thống thông báo",
+  "summary": "Push, SMS, email và hộp thư trong app: tách luồng theo mức ưu tiên tới tận hạn mức nhà cung cấp, phân loại lỗi để retry, chọn trùng hay mất cho từng loại tin, token thiết bị, tuỳ chọn và giờ yên lặng, vì sao 200 của APNs chưa phải là đã tới tay.",
+  "level": "senior",
+  "order": 7,
+  "minutes": 18,
+  "prerequisites": ["sd-framework", "idempotency", "messaging-fundamentals", "design-rate-limiter"],
+  "terms": ["push-notification", "idempotency-key", "token-bucket", "retry-backoff", "jitter", "delivery-semantics", "dead-letter-queue", "idempotent-consumer", "consumer-lag", "apns", "fcm", "device-token", "collapse-key", "retry-topic", "suppression-list", "delivery-report", "quiet-hours", "frequency-cap", "sms-pumping", "one-click-unsubscribe", "outbox", "lease", "jwt", "webhook", "fan-out"],
+  "references": [
+    { "title": "Firebase: Scale your FCM app (quota, retry)", "url": "https://firebase.google.com/docs/cloud-messaging/scale-fcm" },
+    { "title": "Apple: Sending notification requests to APNs", "url": "https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns" },
+    { "title": "Google: Email sender guidelines", "url": "https://support.google.com/a/answer/81126" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đảm bảo mỗi thông báo gửi đúng một lần?\" Trả lời thẳng là không được: worker có thể chết sau khi APNs nhận tin mà trước khi ghi `SENT`, và nhà cung cấp email, SMS thường không nhận idempotency key. Tôi chặn trùng ở ba tầng (unique key cho event, lease cho lần gửi, collapse id ở thiết bị) rồi chọn theo loại tin: OTP và trạng thái đơn thì gửi lại khi không chắc, marketing thì bỏ." },
+    { "type": "callout", "style": "warning", "markdown": "Tách topic theo mức ưu tiên mà vẫn dùng chung hạn mức của nhà cung cấp thì chưa tách. FCM cấp 600.000 tin mỗi phút: chiến dịch chạy hết hạn mức thì OTP và tin giao dịch nhận `429` dù nằm ở topic riêng. Mỗi mức phải có phần hạn mức riêng ở token bucket gọi nhà cung cấp." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, tách ngay hai đường: đường khẩn (OTP, bảo mật) ít tin, cần nhanh và chắc tới; đường hàng loạt (marketing) nhiều tin, cần đều và rẻ. Hầu hết quyết định sau đó (ưu tiên, retry, trùng hay mất, kênh dự phòng) chỉ là áp hai mục tiêu này cho từng chỗ." }
+  ]
+}

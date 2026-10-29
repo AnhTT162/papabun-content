@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-tiers", "front": "Vì sao tách thông báo thành nhiều mức ưu tiên?", "back": "Partition Kafka là FIFO: chung topic thì 10 triệu tin marketing xếp trước OTP. Mỗi mức có topic, worker và phần hạn mức nhà cung cấp riêng." },
+    { "id": "provider-quota", "front": "Tách topic rồi mà OTP vẫn chậm, vì sao?", "back": "Các mức dùng chung hạn mức của nhà cung cấp (FCM 600.000 tin/phút, gateway SMS). Chiến dịch ăn hết hạn mức thì mọi tin khác nhận 429." },
+    { "id": "exactly-once", "front": "Gửi thông báo đúng một lần được không?", "back": "Không: worker có thể chết sau khi nhà cung cấp nhận mà trước khi ghi trạng thái. Chỉ chọn được gửi lại (OTP, đơn hàng) hoặc bỏ (marketing). Ghi dòng khử trùng cùng outbox để khỏi mất tin." },
+    { "id": "collapse-id", "front": "Collapse id giúp gì cho khử trùng?", "back": "Tin cùng `apns-collapse-id` hoặc `tag` Android thay tin cũ trên thiết bị, nên bản gửi lại không hiện hai lần." },
+    { "id": "error-classes", "front": "Lỗi nào của nhà cung cấp push thì retry, lỗi nào thì không?", "back": "429 chờ Retry-After, 5xx và timeout thì backoff có jitter; 400/404 không retry. Token chết (410, UNREGISTERED) thì xoá token." },
+    { "id": "expires-at", "front": "Vì sao mỗi thông báo cần expires_at?", "back": "Tin quá hạn vô dụng hoặc sai: OTP sau 5 phút, \"shipper sắp tới\" khi đã giao. Worker bỏ tin quá hạn, và đặt TTL ở APNs/FCM." },
+    { "id": "apns-offline", "front": "APNs giữ bao nhiêu tin khi thiết bị offline?", "back": "Một tin cho mỗi bundle ID. Tin quan trọng phải nằm cả trong hộp thư của app, push chỉ là lời nhắc." },
+    { "id": "check-pref-at-send", "front": "Kiểm tuỳ chọn của người dùng ở bước nào?", "back": "Cả lúc chọn người nhận lẫn ngay trước khi gửi, vì tin có thể nằm trong hàng đợi hàng chục phút và người dùng huỷ đăng ký giữa chừng." },
+    { "id": "sms-vietnamese", "front": "Vì sao SMS tiếng Việt có dấu tốn hơn?", "back": "Có dấu thì mã hoá UCS-2, mỗi đoạn 70 ký tự thay vì 160 của GSM-7, nên tin dài thành nhiều đoạn và tính tiền nhiều tin." },
+    { "id": "sms-pumping", "front": "SMS pumping là gì và chặn thế nào?", "back": "Kẻ xấu gọi API gửi OTP tới dải số đắt để ăn chia cước. Rate limit theo số điện thoại, IP, thiết bị và theo dõi tỉ lệ OTP được nhập." }
+  ]
+}
