@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hash-worker-id",
+      "kind": "single",
+      "prompt": "Mỗi pod lấy worker id Snowflake bằng `hash(tên pod) % 1024`. Với 50 pod, xác suất có ít nhất hai pod trùng worker id khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 5%, vì 50 chỉ chiếm 5% của 1.024",
+        "Khoảng 70%, theo nghịch lý ngày sinh",
+        "Khoảng 0,1%, vì hàm băm phân bố rất đều",
+        "Bằng 0 nếu tên pod luôn khác nhau"
+      ],
+      "answer": 1,
+      "explanation": "Xác suất không trùng là tích (1 − i/1.024) với i từ 0 tới 49, ra khoảng 30%, nên trùng khoảng 70% (mô phỏng 100.000 lần ra 70,5%). Tên pod khác nhau không giúp gì: hai tên khác nhau vẫn có thể cho cùng kết quả sau `% 1024`. Phân bố đều chính là giả định của phép tính này. Cấp worker id bằng lease hoặc ordinal của StatefulSet."
+    },
+    {
+      "id": "skew-ordering",
+      "kind": "single",
+      "prompt": "Pod A và pod B sinh Snowflake, đồng hồ B chậm hơn A 5 ms. Đơn X tạo trên A, 2 ms sau đơn Y tạo trên B. So sánh ID thế nào?",
+      "options": [
+        "ID của Y lớn hơn, vì Y được tạo sau",
+        "Không so được, vì hai worker id khác nhau",
+        "ID của Y nhỏ hơn, vì mốc mili giây của B lùi 3 ms",
+        "Bằng nhau ở phần thời gian, chỉ khác sequence"
+      ],
+      "answer": 2,
+      "explanation": "Phần thời gian chiếm các bit cao nhất. Lúc Y được tạo, đồng hồ B chỉ ở mốc X − 3 ms, nên ID của Y nhỏ hơn dù tạo sau (đã chạy thử). Worker id nằm ở bit thấp hơn, chỉ phân định khi cùng mili giây. Snowflake chỉ gần theo thời gian trong phạm vi lệch đồng hồ."
+    },
+    {
+      "id": "pagination-gap",
+      "kind": "single",
+      "prompt": "Job đồng bộ chạy mỗi 10 giây: `SELECT ... WHERE id > :last ORDER BY id`, rồi lưu `id` lớn nhất làm `:last`. ID lấy từ sequence. Thỉnh thoảng một vài đơn không bao giờ được đồng bộ. Vì sao?",
+      "options": [
+        "Sequence có lỗ khi rollback nên job bỏ qua các số đó",
+        "ID nhỏ được cấp trước nhưng commit sau lần đọc của job",
+        "`ORDER BY id` không dùng index nên trả thiếu dòng",
+        "Sequence cấp trùng ID khi hai transaction chạy song song"
+      ],
+      "answer": 1,
+      "explanation": "ID được cấp khi INSERT, trước khi commit. Transaction giữ ID 1003 commit chậm; job đã đọc thấy 1005 và lưu `:last = 1005`, nên 1003 không bao giờ thoả `id > 1005`. Lỗ do rollback không làm mất dòng nào vì các số đó không có dòng. Sequence không cấp trùng. Chỉ đọc dòng cũ hơn vài giây, hoặc đọc theo thứ tự commit qua CDC."
+    },
+    {
+      "id": "segment-ordering",
+      "kind": "single",
+      "prompt": "Hai pod cấp ID theo khối: pod A giữ khối 1–100.000, pod B giữ khối 100.001–200.000. Điều gì đúng?",
+      "options": [
+        "Đơn tạo sau trên A có thể có ID nhỏ hơn đơn tạo trước trên B",
+        "ID giữa hai pod vẫn tăng theo thời gian vì database cấp khối",
+        "Hai pod có thể cấp trùng ID ở ranh giới giữa hai khối",
+        "Pod restart sẽ cấp lại từ đầu khối cũ của nó, gây trùng ID"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi pod cấp trong khối riêng, nên ID chỉ cho biết khối nào, không cho biết thời điểm. Đơn lúc 10:05 trên A (ID 5.000) nhỏ hơn đơn lúc 10:00 trên B (ID 100.500). Khối không giao nhau nên không trùng; pod restart xin khối mới và bỏ phần còn lại của khối cũ, tạo lỗ chứ không trùng."
+    },
+    {
+      "id": "bit-budget",
+      "kind": "single",
+      "prompt": "Hệ thống cần tối đa 800 worker mỗi region và mỗi pod chỉ sinh vài trăm ID mỗi giây. Với 41 bit thời gian và 2 bit region, nên chia 20 bit còn lại thế nào?",
+      "options": [
+        "8 bit worker, 12 bit sequence như cấu hình gốc",
+        "6 bit worker, 14 bit sequence để chịu đỉnh lớn",
+        "12 bit worker, 8 bit sequence cho thật nhiều pod",
+        "10 bit worker, 10 bit sequence, đủ cả hai phía"
+      ],
+      "answer": 3,
+      "explanation": "800 worker cần ít nhất 10 bit (1.024). 10 bit sequence cho 1.024 ID mỗi mili giây mỗi pod, khoảng 1 triệu mỗi giây, dư xa so với vài trăm. 8 bit worker chỉ có 256. 12 bit worker cũng đủ nhưng 8 bit sequence chỉ 256 ID mỗi mili giây mỗi pod, ít dư hơn cho đỉnh; khi cả hai đều đủ, 10/10 cân bằng hơn."
+    }
+  ]
+}

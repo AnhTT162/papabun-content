@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-families", "front": "Ba họ bộ sinh ID phân tán?", "back": "Cấp theo khối từ database, Snowflake (64 bit theo thời gian, cần worker id), UUID v7 (128 bit, không cần phối hợp)." },
+    { "id": "segment", "front": "Cấp theo khối chạy thế nào?", "back": "Instance `UPDATE max_id = max_id + step` lấy một khối số rồi cấp trong bộ nhớ; database chỉ bị gọi khi hết khối." },
+    { "id": "double-buffer", "front": "Đệm kép trong cấp theo khối để làm gì?", "back": "Nạp khối sau bằng thread nền khi khối hiện tại đã dùng một phần, để không chờ database lúc hết khối và chịu được database chết một lúc." },
+    { "id": "snowflake-bits", "front": "Bố cục Snowflake gốc và ba con số đi kèm?", "back": "41 bit mili giây (≈ 69,7 năm), 10 bit worker (1.024), 12 bit sequence (4.096 mỗi mili giây). Tổng 63 bit, bit dấu luôn 0." },
+    { "id": "worker-id", "front": "Cấp worker id đúng cách?", "back": "Lease trong database, etcd hay ZooKeeper, hoặc ordinal của StatefulSet. Không dùng hash(tên) % 1024: 50 pod trùng với xác suất 70%." },
+    { "id": "lease-stop", "front": "Không gia hạn được lease worker id thì pod làm gì?", "back": "Ngừng sinh ID trước khi lease có thể hết hạn (đo bằng monotonic clock), vì pod khác có thể đã nhận cùng worker id." },
+    { "id": "clock-restart", "front": "Vì sao phải lưu mốc thời gian cuối của mỗi worker id?", "back": "Máy mới nhận lại worker id có thể chạy chậm giờ hơn máy cũ và sinh lại ID đã cấp. Chờ đồng hồ vượt mốc đã lưu rồi mới sinh." },
+    { "id": "k-sorted", "front": "Snowflake có tăng dần toàn cục không?", "back": "Không. Tăng dần trong một worker; giữa các worker chỉ đúng trong phạm vi lệch đồng hồ." },
+    { "id": "id-pagination", "front": "Vì sao đọc `WHERE id > :last` có thể bỏ sót dòng?", "back": "ID được cấp trước khi commit; dòng có ID nhỏ commit muộn sau lần đọc sẽ không bao giờ được đọc. Đọc trễ vài giây hoặc theo thứ tự commit qua CDC." },
+    { "id": "public-id", "front": "Có nên đưa ID Snowflake làm mã đơn cho khách?", "back": "Không. Nó lộ thời điểm và số lượng. Dùng cột mã riêng, ngẫu nhiên có unique constraint hoặc hoán vị của ID." }
+  ]
+}

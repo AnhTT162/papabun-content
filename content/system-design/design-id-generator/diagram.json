@@ -1,0 +1,54 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Snowflake với worker id cấp bằng lease",
+  "nodes": [
+    { "id": "client", "label": "Request tạo đơn", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "pod", "label": "Order pod (generator)", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "lease", "label": "Bảng lease worker", "kind": "database", "x": 0.1, "y": 0.5 },
+    { "id": "clock", "label": "Đồng hồ (chrony)", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "db", "label": "PostgreSQL đơn hàng", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "pod-lease", "from": "pod", "to": "lease", "label": "xin, gia hạn lease" },
+    { "id": "clock-pod", "from": "clock", "to": "pod", "label": "giờ hệ thống" },
+    { "id": "client-pod", "from": "client", "to": "pod", "label": "tạo đơn" },
+    { "id": "pod-db", "from": "pod", "to": "db", "label": "INSERT id bigint" }
+  ],
+  "steps": [
+    {
+      "caption": "Pod khởi động xin một worker id còn trống trong bảng lease: ghi tên pod và hạn lease. Unique constraint trên (region, worker_id) đảm bảo hai pod không cùng giữ một id.",
+      "show": ["pod", "lease", "pod-lease"],
+      "highlight": ["pod-lease"]
+    },
+    {
+      "caption": "Dòng lease còn lưu mốc thời gian cuối mà worker id này đã dùng. Pod chờ tới khi đồng hồ của mình vượt mốc đó rồi mới sinh, phòng trường hợp máy mới chạy chậm giờ hơn máy cũ.",
+      "show": ["clock", "clock-pod"],
+      "highlight": ["clock-pod"]
+    },
+    {
+      "caption": "Mỗi request tạo đơn lấy ID ngay trong bộ nhớ: mili giây, region, worker id, sequence ghép thành 63 bit. Không có lời gọi mạng nào.",
+      "show": ["client", "client-pod"],
+      "highlight": ["client-pod"]
+    },
+    {
+      "caption": "ID gần tăng theo thời gian nên INSERT luôn rơi vào cuối B-tree, không chèn rải rác như UUID v4. Giữa các pod, thứ tự chỉ đúng trong phạm vi lệch đồng hồ.",
+      "show": ["db", "pod-db"],
+      "highlight": ["pod-db"]
+    },
+    {
+      "caption": "Pod gia hạn lease mỗi phút và ghi mốc thời gian mới. Không gia hạn được trước khoảng an toàn (đo bằng monotonic clock) thì ngừng sinh ID và báo not ready.",
+      "show": [],
+      "highlight": ["pod-lease"]
+    },
+    {
+      "caption": "Đồng hồ lùi vài mili giây thì chờ cho qua; lùi nhiều hơn ngưỡng thì ngừng sinh và cảnh báo, vì tiếp tục là có nguy cơ sinh lại ID đã cấp.",
+      "show": [],
+      "highlight": ["clock-pod"]
+    },
+    {
+      "caption": "Pod tắt êm xoá lease của mình; pod chết bất thường giữ worker id tới khi lease hết hạn. Số bit worker phải đủ cho cả số id bị giữ trong lúc rollout.",
+      "show": [],
+      "highlight": ["lease"]
+    }
+  ]
+}

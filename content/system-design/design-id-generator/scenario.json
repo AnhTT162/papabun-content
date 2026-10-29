@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "ID cho hệ thống đơn hàng ba region",
+  "prompt": "Một sàn thương mại điện tử chạy active-active ở ba region. Mỗi đơn hàng, dòng hàng và giao dịch thanh toán cần một ID. Ràng buộc: ID phải vừa cột `bigint` (hàng trăm bảng và các consumer Kafka đã dùng `long`); gần tăng theo thời gian để bảng đơn được partition theo tháng và phân trang trang quản trị; đỉnh flash sale 200.000 ID/giây toàn hệ thống; mỗi region autoscale tới 400 pod, mỗi lần deploy thay toàn bộ pod trong vài phút; kho phối hợp (database hoặc etcd) lỗi tới 1 phút thì vẫn phải tạo được đơn; mã đơn hiện cho khách không được lộ số đơn mỗi ngày. Thiết kế bộ sinh ID: bố cục bit, cách cấp worker id, xử lý đồng hồ, và cách tạo mã đơn cho khách.",
+  "hints": [
+    "Cấp theo khối, Snowflake hay UUID v7: ràng buộc nào loại phương án nào?",
+    "Bao nhiêu bit cho region, cho worker, cho sequence? Tính cả số worker id bị pod chết giữ trong lúc deploy.",
+    "Kho phối hợp lỗi 1 phút thì lease phải dài bao nhiêu, và pod phải làm gì khi không gia hạn được?",
+    "Partition theo tháng mà vẫn giữ unique trên `id` thì làm thế nào khi ID đã chứa thời gian?"
+  ],
+  "solution": "**Chọn phương án**: UUID v7 bị loại vì không vừa `bigint`. Cấp theo khối vừa 64 bit nhưng ID không theo thời gian giữa các pod, nên không partition theo tháng bằng ID được. Chọn Snowflake nhúng trong thư viện của mỗi service, không có dịch vụ ID riêng.\n\n**Bố cục 63 bit**: 41 bit mili giây từ epoch 2026-01-01 (dùng tới 2095), 2 bit region (tối đa 4), 10 bit worker (1.024 mỗi region), 10 bit sequence (1.024 ID mỗi mili giây mỗi pod, khoảng 1 triệu ID/giây). 200.000 ID/giây chia cho hàng trăm pod thì mỗi pod chỉ vài trăm ID/giây, nên lấy bớt bit sequence cho worker: 400 pod cộng 400 pod cũ chưa trả id trong lúc deploy là 800, vẫn dưới 1.024. Bố cục 12 bit sequence với 8 bit worker (256) sẽ không đủ.\n\n**Worker id**: bảng `worker_lease(region, worker_id, holder, expires_at, last_ms)` với khoá chính `(region, worker_id)`, nằm trên database của region (hoặc etcd). Pod khởi động chọn một id hết hạn bằng `UPDATE ... WHERE expires_at < now() ... RETURNING`, lease 5 phút, gia hạn mỗi phút. Kho lỗi 1 phút thì lần gia hạn tiếp theo vẫn kịp. Pod đo thời gian từ lần gia hạn thành công cuối bằng `System.nanoTime()`; quá 4 phút thì ngừng sinh và báo not ready, để không còn sinh khi lease có thể đã sang tay pod khác. Pod tắt êm xoá lease của mình trong `preStop`.\n\n**Đồng hồ**: chrony đặt `makestep 1.0 3`: chỉ step trong ba lần cập nhật đầu sau khởi động, sau đó chỉ slew. Generator thấy đồng hồ lùi dưới 10 ms thì chờ; lùi hơn thì ngừng sinh và cảnh báo. Mỗi lần gia hạn ghi `last_ms`; pod mới nhận một worker id chờ tới khi đồng hồ vượt `last_ms` cộng biên an toàn, phòng trường hợp máy mới chậm giờ.\n\n**Partition**: bảng đơn partition theo khoảng `id`, mỗi khoảng tương ứng một tháng (ranh giới tính bằng `(mốc đầu tháng - epoch) << 22`). Khoá chính `id` vẫn là unique toàn bảng vì cột partition chính là `id`. Lọc theo tháng trên trang quản trị đổi thành điều kiện trên `id`.\n\n**Thứ tự**: ID giữa các pod chỉ gần theo thời gian (lệch đồng hồ vài mili giây), đủ cho phân trang trang quản trị. Job đồng bộ sang kho phân tích không đọc `WHERE id > :last` vì sẽ bỏ sót dòng commit muộn; nó đọc qua CDC theo thứ tự commit.\n\n**Mã đơn cho khách**: cột riêng `order_code`, 10 ký tự từ bảng chữ không có ký tự dễ nhầm, sinh ngẫu nhiên từ `SecureRandom` với unique constraint, trùng thì sinh lại. Không đưa `id` ra ngoài; API trả `id` dạng chuỗi nếu cần cho client JavaScript.",
+  "tradeoffs": [
+    {
+      "option": "Snowflake nhúng thư viện, worker id cấp bằng lease",
+      "pros": [
+        "Sinh cục bộ, không có lời gọi mạng mỗi ID",
+        "Gần theo thời gian, partition theo khoảng ID được"
+      ],
+      "cons": [
+        "Phải vận hành lease và xử lý đồng hồ lùi",
+        "Lộ thời điểm tạo, cần mã riêng cho khách"
+      ]
+    },
+    {
+      "option": "Cấp theo khối từ database, đệm kép",
+      "pros": [
+        "Đơn giản, không phụ thuộc đồng hồ",
+        "ID nhỏ và dày, không cần cấp worker id"
+      ],
+      "cons": [
+        "Không theo thời gian giữa các pod",
+        "Database chết lâu hơn hai khối là ngừng cấp"
+      ]
+    },
+    {
+      "option": "UUID v7",
+      "pros": [
+        "Không cần phối hợp, client offline tự sinh được",
+        "Chuẩn RFC, database và thư viện hỗ trợ sẵn"
+      ],
+      "cons": [
+        "128 bit, không vừa các cột và consumer dùng long",
+        "Khoá và index lớn gấp đôi"
+      ]
+    }
+  ]
+}

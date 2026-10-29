@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Rate limit nhiều lớp với bộ đếm chung",
+  "nodes": [
+    { "id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "edge", "label": "WAF / CDN", "kind": "external", "x": 0.85, "y": 0.05 },
+    { "id": "rules", "label": "Kho luật", "kind": "database", "x": 0.1, "y": 0.4 },
+    { "id": "gateway", "label": "Gateway ×40", "kind": "service", "x": 0.85, "y": 0.4 },
+    { "id": "redis", "label": "Redis Cluster", "kind": "cache", "x": 0.1, "y": 0.75 },
+    { "id": "service", "label": "Service", "kind": "service", "x": 0.85, "y": 0.75 }
+  ],
+  "edges": [
+    { "id": "client-edge", "from": "client", "to": "edge", "label": "request" },
+    { "id": "edge-gateway", "from": "edge", "to": "gateway", "label": "đã lọc theo IP" },
+    { "id": "rules-gateway", "from": "rules", "to": "gateway", "label": "luật, watch" },
+    { "id": "gateway-redis", "from": "gateway", "to": "redis", "label": "Lua token bucket" },
+    { "id": "gateway-service", "from": "gateway", "to": "service", "label": "được phép" },
+    { "id": "service-redis", "from": "service", "to": "redis", "label": "luật nghiệp vụ" }
+  ],
+  "steps": [
+    {
+      "caption": "Edge chặn lũ request theo IP trước khi tới hệ thống. Nó không biết API key hay khách hàng nào, chỉ thấy IP, header và đường dẫn.",
+      "show": ["client", "edge", "client-edge"],
+      "highlight": ["client-edge"]
+    },
+    {
+      "caption": "Gateway xác thực rồi lấy API key và gói cước. Lớp IP thô đứng trước vì kiểm chữ ký token tốn CPU.",
+      "show": ["gateway", "edge-gateway"],
+      "highlight": ["edge-gateway"]
+    },
+    {
+      "caption": "Luật (gói nào bao nhiêu request mỗi giây, endpoint nào đắt) nằm trong database. Gateway nạp vào bộ nhớ và nhận thay đổi qua watch, không phải deploy.",
+      "show": ["rules", "rules-gateway"],
+      "highlight": ["rules-gateway"]
+    },
+    {
+      "caption": "Mỗi request chạy một Lua script token bucket trên key rl:{api_key}: đọc, nạp bù, trừ token trong một bước nguyên tử. Timeout vài mili giây.",
+      "show": ["redis", "gateway-redis"],
+      "highlight": ["gateway-redis"]
+    },
+    {
+      "caption": "Hết token thì trả 429 kèm Retry-After ngay tại gateway; còn token thì chuyển tiếp. Luật mới chạy shadow mode trước: chỉ ghi metric would_reject.",
+      "show": ["service", "gateway-service"],
+      "highlight": ["gateway-service"]
+    },
+    {
+      "caption": "Luật cần hiểu nghiệp vụ (đăng nhập sai theo username, OTP theo số điện thoại) do service tự kiểm, vì chỉ service biết lần đó thất bại hay đã gửi SMS.",
+      "show": ["service-redis"],
+      "highlight": ["service-redis"]
+    },
+    {
+      "caption": "Redis chậm hay chết: circuit breaker mở, gateway fail open sang token bucket cục bộ với hạn mức rộng hơn và bắn cảnh báo. API vẫn chạy, chỉ kém chính xác.",
+      "show": [],
+      "highlight": ["gateway", "redis"]
+    }
+  ]
+}

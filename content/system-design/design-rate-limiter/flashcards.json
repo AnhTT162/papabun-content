@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-decisions", "front": "Ba quyết định chính khi thiết kế rate limiter?", "back": "Đặt ở lớp nào (edge, gateway, service), bộ đếm nằm ở đâu (cục bộ, Redis chung, hai lớp), và làm gì khi kho bộ đếm lỗi." },
+    { "id": "layers", "front": "Edge, gateway và service mỗi lớp giới hạn theo gì?", "back": "Edge theo IP để đỡ lũ request; gateway theo API key và gói cước sau xác thực; service theo luật nghiệp vụ như đăng nhập sai hay OTP." },
+    { "id": "sync-overshoot", "front": "Đếm cục bộ rồi đồng bộ định kỳ lọt thêm bao nhiêu?", "back": "Khoảng tốc độ gửi × chu kỳ đồng bộ. Hạn mức 1.000/giây, client 20.000/giây, đồng bộ 100 ms: lọt khoảng 2.900." },
+    { "id": "static-split", "front": "Chia tĩnh hạn mức cho từng gateway sai khi nào?", "back": "Khi tải lệch: keep-alive và HTTP/2 làm một client chỉ chạm vài gateway, nên bị chặn sớm hơn hạn mức. Số gateway đổi thì phải chia lại." },
+    { "id": "token-lease", "front": "Xin trước lô token giúp gì và giá của nó?", "back": "Giảm số lời gọi Redis cho key lớn mà tổng vẫn không vượt. Giá: token nằm ở gateway này thì gateway khác thiếu, nên chỉ dùng khi hạn mức lớn." },
+    { "id": "hash-tag", "front": "Tách hot key trong Redis Cluster đúng cách?", "back": "Đưa số thứ tự vào trong hash tag: `rl:{tenant:0}`. `rl:{tenant}:0` vẫn chung slot với mọi key con." },
+    { "id": "bucket-ttl", "front": "TTL cho key token bucket nên bằng bao nhiêu?", "back": "Thời gian để thùng đầy lại, `capacity / rate`. Sau đó trạng thái chính là thùng đầy, xoá key không đổi kết quả." },
+    { "id": "redis-down", "front": "Redis chết thì rate limiter làm gì?", "back": "Circuit breaker mở, fail open sang token bucket cục bộ với hạn mức rộng hơn, cảnh báo ngay. Backend vẫn cần load shedding riêng." },
+    { "id": "multi-region", "front": "Chia hạn mức giữa hai region thế nào?", "back": "Không gọi Redis khác region trên đường request. Chia theo tỉ lệ lưu lượng phút trước, có sàn, tính lại định kỳ." },
+    { "id": "quota-store", "front": "Vì sao quota tính tiền không để trong Redis như rate limit?", "back": "Redis có thể mất ghi khi failover. Quota cần bộ đếm bền, đếm từ log hoặc event rồi gộp vào database." }
+  ]
+}

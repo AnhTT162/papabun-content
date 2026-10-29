@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-id-generator",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế bộ sinh ID phân tán",
+  "summary": "Ticket server, cấp theo khối với đệm kép, Snowflake và cách chọn số bit, cấp worker id bằng lease, đồng hồ lùi sau restart, thứ tự chỉ gần đúng, phân trang theo ID bỏ sót dòng, UUID v7 khi nào hợp hơn.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 15,
+  "prerequisites": ["clocks-ids", "sd-framework", "distributed-locks"],
+  "terms": ["segment-allocation", "snowflake-id", "worker-id", "uuid-v7", "k-sorted", "single-point-of-failure", "lease", "clock-skew", "ticket-server", "double-buffering", "birthday-paradox", "statefulset", "monotonic-clock", "outbox", "idor", "feistel-cipher"],
+  "references": [
+    { "title": "Twitter Engineering: Announcing Snowflake (2010)", "url": "https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake" },
+    { "title": "Instagram Engineering: Sharding & IDs at Instagram", "url": "https://instagram-engineering.com/sharding-ids-at-instagram-1cf5a71e5a5c" },
+    { "title": "RFC 9562: Universally Unique IDentifiers (UUIDs)", "url": "https://www.rfc-editor.org/rfc/rfc9562" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Snowflake có đảm bảo ID tăng dần toàn cục không?\" Không. Trong một worker thì tăng dần; giữa hai worker chỉ đúng tới mức lệch đồng hồ, nên đơn tạo sau 2 ms trên máy chậm 5 ms có ID nhỏ hơn. Thêm nữa, ID được cấp trước khi commit, nên kể cả ID tăng chặt thì thứ tự commit vẫn khác. Cần thứ tự chặt thì cấp số trong phạm vi một thực thể, hoặc đọc theo thứ tự commit qua CDC." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng lấy worker id bằng `hash(hostname) % 1024`. Với 50 pod, xác suất có hai pod trùng worker id là khoảng 70%, và hai pod trùng worker id sinh trùng ID ngay trong cùng mili giây. Cấp bằng lease hoặc ordinal của StatefulSet." },
+    { "type": "callout", "style": "tip", "markdown": "Khi trình bày Snowflake, nói ba con số đi kèm số bit: tuổi thọ (41 bit mili giây ≈ 69,7 năm), số worker (10 bit = 1.024), tốc độ mỗi worker (12 bit = 4.096 mỗi mili giây). Rồi chỉnh bit theo yêu cầu đề bài thay vì chép nguyên cấu hình của Twitter." }
+  ]
+}

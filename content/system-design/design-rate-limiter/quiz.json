@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "periodic-sync-overshoot",
+      "kind": "single",
+      "prompt": "20 gateway đếm cục bộ và cứ 100 ms gửi phần chênh lên Redis. Hạn mức 1.000 request/giây. Một client gửi 20.000 request/giây. Mỗi giây lọt khoảng bao nhiêu?",
+      "options": [
+        "Khoảng 1.000, vì tổng trên Redis vẫn được kiểm",
+        "Khoảng 1.100, lọt thêm một chu kỳ của hạn mức",
+        "Khoảng 2.900, lọt thêm theo tốc độ gửi × chu kỳ",
+        "Khoảng 20.000, vì đếm cục bộ không chặn được gì"
+      ],
+      "answer": 2,
+      "explanation": "Sau khi tổng vượt hạn mức, các gateway chỉ biết ở lần đồng bộ sau, nên trong khoảng đó vẫn cho qua theo tốc độ client gửi: 20.000/giây × 0,1 giây ≈ 2.000 request thêm. Mô phỏng ra 2.900 mỗi giây. Phần lọt tỉ lệ với tốc độ gửi chứ không với hạn mức, nên client gửi mạnh nhất lọt nhiều nhất. Gateway vẫn chặn sau khi biết tổng, nên không lọt hết 20.000."
+    },
+    {
+      "id": "static-split-keepalive",
+      "kind": "single",
+      "prompt": "Hạn mức 1.000/giây được chia tĩnh cho 20 gateway (50 mỗi gateway). Một khách hàng gửi 600/giây qua 4 kết nối keep-alive và nhận rất nhiều `429`. Vì sao?",
+      "options": [
+        "Load balancer cân theo kết nối, 4 kết nối chỉ chạm 4 gateway",
+        "Keep-alive làm mỗi request bị tính hai lần trong token bucket",
+        "Gateway không đọc được API key trên kết nối đã mở từ trước",
+        "Token bucket không cho burst khi request đến trên cùng kết nối"
+      ],
+      "answer": 0,
+      "explanation": "Request trên một kết nối keep-alive (hay HTTP/2) đi cùng một gateway. 4 kết nối chạm 4 gateway, mỗi cái cho 50/giây, tổng 200/giây dù hạn mức là 1.000. Chia tĩnh chỉ đúng khi tải trải đều trên mọi instance. Keep-alive không làm đếm hai lần, và API key có trong mỗi request."
+    },
+    {
+      "id": "hash-tag-split",
+      "kind": "single",
+      "prompt": "Key `rl:{tenant42}` là hot key trên Redis Cluster. Team tách thành `rl:{tenant42}:0` tới `rl:{tenant42}:7`, mỗi key giữ 1/8 hạn mức. Tải trên shard nóng thay đổi thế nào?",
+      "options": [
+        "Giảm còn khoảng 1/8 vì tải chia đều tám shard",
+        "Giảm còn khoảng 1/2 vì cluster có ít nhất hai shard",
+        "Không giảm, cả tám key vẫn chung một hash slot",
+        "Tăng gấp tám vì mỗi request phải đọc cả tám key"
+      ],
+      "answer": 2,
+      "explanation": "Redis Cluster chỉ băm phần trong cặp `{}` đầu tiên. Cả tám key có cùng hash tag `tenant42`, nên rơi vào cùng một slot và cùng một shard. Muốn tách thì đưa số thứ tự vào trong ngoặc: `rl:{tenant42:0}`. Mỗi request chỉ chạm một key con do gateway chọn, không đọc cả tám."
+    },
+    {
+      "id": "where-login-limit",
+      "kind": "single",
+      "prompt": "Cần chặn quá 5 lần đăng nhập sai theo username trong 15 phút. Đặt luật này ở đâu là hợp lý nhất?",
+      "options": [
+        "Ở WAF, vì nó đứng trước mọi request và chặn rẻ",
+        "Ở gateway, đếm mọi request tới endpoint đăng nhập",
+        "Ở auth service, vì chỉ nó biết lần nào sai mật khẩu",
+        "Ở client, vì app có thể khoá nút đăng nhập ngay"
+      ],
+      "answer": 2,
+      "explanation": "Luật đếm lần sai mật khẩu, mà chỉ auth service biết kết quả. Gateway đếm mọi request thì người đăng nhập đúng cũng bị tính; WAF chỉ thấy IP, không thấy username trong body một cách đáng tin; client thì kẻ tấn công bỏ qua được. Auth service đếm theo username và theo IP, và nên làm chậm dần hoặc đòi CAPTCHA thay vì khoá cứng."
+    },
+    {
+      "id": "quota-vs-rate",
+      "kind": "single",
+      "prompt": "Gói Pro có hạn mức 200 request/giây và quota 10 triệu lời gọi mỗi tháng để tính tiền. Cách lưu bộ đếm quota nào hợp lý?",
+      "options": [
+        "Key Redis `INCR` với TTL 30 ngày, như bộ đếm rate limit",
+        "Đếm từ log hoặc Kafka, gộp theo phút vào database bền",
+        "Token bucket với capacity 10 triệu, nạp lại mỗi tháng",
+        "Bộ đếm trong bộ nhớ mỗi gateway, cộng lại cuối tháng"
+      ],
+      "answer": 1,
+      "explanation": "Quota dùng để tính tiền nên cần bền và kiểm toán được. Redis replication bất đồng bộ, failover có thể mất vài lần ghi, và key mất là mất số liệu cả tháng; bộ đếm trong gateway mất khi pod restart. Đếm từ log hoặc event, gộp theo phút vào database, chấp nhận trễ vài phút. Rate limit theo giây thì vẫn để Redis."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-rate-limiter",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế rate limiter",
+  "summary": "Đặt rate limit ở lớp nào, bộ đếm cục bộ hay Redis dùng chung, vì sao đồng bộ định kỳ lọt theo tốc độ kẻ gửi, key nóng, nhiều region, fail open, shadow mode, rate limit khác quota.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 16,
+  "prerequisites": ["rate-limiting", "sd-framework", "redis-use-cases"],
+  "terms": ["rate-limiting", "waf", "api-gateway", "token-bucket", "lua-script", "shadow-mode", "circuit-breaker", "fail-open", "api-quota", "envoy", "sidecar", "hash-slot", "hash-tag", "hot-key", "crdt", "credential-stuffing", "load-shedding", "noisy-neighbor"],
+  "references": [
+    { "title": "Envoy: Global rate limiting", "url": "https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting" },
+    { "title": "Redis: Cluster specification, hash tags", "url": "https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/" },
+    { "title": "IETF draft: RateLimit header fields for HTTP", "url": "https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gọi Redis mỗi request thì thêm latency và Redis thành điểm chết, sao không đếm cục bộ rồi đồng bộ định kỳ?\" Trả lời bằng con số: phần lọt thêm xấp xỉ tốc độ gửi × chu kỳ đồng bộ. Client gửi 20.000 request/giây vào hạn mức 1.000, đồng bộ mỗi 100 ms thì lọt khoảng 2.900. Kẻ gửi càng mạnh càng lọt nhiều, đúng loại cần chặn. Tôi giữ Redis cho hạn mức chính, giảm lời gọi bằng lô token cho key lớn, và fail open sang bucket cục bộ khi Redis lỗi." },
+    { "type": "callout", "style": "warning", "markdown": "Hash tag trong Redis Cluster là phần nằm trong `{}` đầu tiên. Tách key nóng thành `rl:{tenant}:0`, `rl:{tenant}:1` không giúp gì: mọi key con vẫn băm theo `tenant` và rơi vào cùng một slot. Đưa số thứ tự vào trong ngoặc: `rl:{tenant:0}`." },
+    { "type": "callout", "style": "tip", "markdown": "Trong buổi phỏng vấn, vẽ rate limiter như một lớp có ba câu hỏi: ở đâu, đếm ở đâu, lỗi thì sao. Thuật toán (token bucket hay sliding window) chỉ cần một câu kèm lý do, rồi dành thời gian cho phân tán và lỗi: đó là phần người phỏng vấn chấm." }
+  ]
+}

@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator"]
     },
     {
       "id": "replication-slot",
@@ -1725,7 +1725,7 @@
       "meaning": "Phiên bản UUID theo RFC 9562 (2024): 48 bit đầu là thời gian Unix tính bằng mili giây, phần còn lại là bit ngẫu nhiên (có thể dùng một phần làm bộ đếm). Id mới gần như tăng dần nên hợp làm khoá trong B-tree.",
       "example": "`0192b3a4-5c6d-7e8f-9a0b-1c2d3e4f5a6b`: chữ số đầu của nhóm thứ ba là `7`.",
       "related": ["surrogate-key", "clustered-index"],
-      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql", "event-schema-evolution", "clocks-ids"]
+      "topics": ["data-modeling", "sharding-strategies", "postgres-vs-mysql", "event-schema-evolution", "clocks-ids", "design-id-generator"]
     },
     {
       "id": "soft-delete",
@@ -2605,7 +2605,7 @@
       "meaning": "Một key cache bị đọc hoặc ghi nhiều tới mức làm quá tải shard chứa nó, trong khi các shard khác rảnh.",
       "example": "Key `home:flash-sale` 50KB bị đọc 25.000 lần mỗi giây làm nghẽn card mạng 10 Gbit/s của một node Redis.",
       "related": ["hot-partition", "local-cache"],
-      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener"]
+      "topics": ["local-cache", "redis-internals", "cache-failures", "redis-ha-cluster", "redis-use-cases", "consistent-hashing", "design-url-shortener", "design-rate-limiter"]
     },
     {
       "id": "redis-single-thread",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter"]
     },
     {
       "id": "redis-sentinel",
@@ -2877,7 +2877,7 @@
       "meaning": "Một trong 16.384 ô mà Redis Cluster chia không gian key; slot của key là `CRC16(key) mod 16384`, và mỗi slot thuộc đúng một master.",
       "example": "Key `user:7` rơi vào slot 2.780, do master giữ dải 0–5460 phục vụ.",
       "related": ["redis-cluster", "hash-tag"],
-      "topics": ["redis-ha-cluster", "consistent-hashing"]
+      "topics": ["redis-ha-cluster", "consistent-hashing", "design-rate-limiter"]
     },
     {
       "id": "hash-tag",
@@ -2885,7 +2885,7 @@
       "meaning": "Phần trong ngoặc nhọn của tên key Redis; khi có, Redis Cluster chỉ băm phần đó để chọn slot, nhờ vậy các key liên quan nằm cùng slot và dùng được lệnh nhiều key, transaction, Lua.",
       "example": "`{u42}:cart` và `{u42}:orders` cùng slot.",
       "related": ["hash-slot", "redis-cluster"],
-      "topics": ["redis-ha-cluster"]
+      "topics": ["redis-ha-cluster", "design-rate-limiter"]
     },
     {
       "id": "replication-backlog",
@@ -2901,7 +2901,7 @@
       "meaning": "Đoạn Lua chạy trên server Redis như một bước nguyên tử: không lệnh nào khác chen vào giữa. Dùng để gộp đọc rồi ghi; script chạy lâu chặn cả instance.",
       "example": "Script `INCR` rồi `EXPIRE` khi giá trị bằng 1 cho rate limiter.",
       "related": ["sorted-set"],
-      "topics": ["redis-use-cases", "rate-limiting", "distributed-locks"]
+      "topics": ["redis-use-cases", "rate-limiting", "distributed-locks", "design-rate-limiter"]
     },
     {
       "id": "sorted-set",
@@ -3453,7 +3453,7 @@
       "meaning": "Cửa vào chung cho client bên ngoài, đứng trước các service: route, xác thực, rate limit, chuyển đổi header hay giao thức.",
       "example": "Spring Cloud Gateway route `/orders/**` tới `lb://orders` và kiểm tra JWT trước khi chuyển tiếp.",
       "related": ["service-discovery", "reverse-proxy"],
-      "topics": ["spring-cloud", "api-gateway-service-mesh"]
+      "topics": ["spring-cloud", "api-gateway-service-mesh", "design-rate-limiter"]
     },
     {
       "id": "service-discovery",
@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset", "design-rate-limiter"]
     },
     {
       "id": "chunk-processing",
@@ -4805,7 +4805,7 @@
       "meaning": "Conflict-free replicated data type: kiểu dữ liệu có phép gộp được chứng minh luôn hội tụ, nên các bản sao sửa độc lập vẫn gộp được mà không mất dữ liệu.",
       "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
       "related": ["last-write-wins", "eventual-consistency"],
-      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active"]
+      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active", "design-rate-limiter"]
     },
     {
       "id": "idempotency",
@@ -4845,7 +4845,7 @@
       "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
       "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
       "related": ["backpressure", "circuit-breaker"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "capacity-planning"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "capacity-planning", "design-rate-limiter"]
     },
     {
       "id": "retry-budget",
@@ -4877,7 +4877,7 @@
       "meaning": "Container chạy cạnh container ứng dụng trong cùng pod, đảm nhận việc hạ tầng như mTLS, retry, metric, để ứng dụng không phải tự làm.",
       "example": "Envoy sidecar của service mesh mã hoá mọi kết nối giữa các pod bằng mTLS mà code không đổi.",
       "related": ["microservices"],
-      "topics": ["microservices-tradeoffs", "api-gateway-service-mesh"]
+      "topics": ["microservices-tradeoffs", "api-gateway-service-mesh", "design-rate-limiter"]
     },
     {
       "id": "metastable-failure",
@@ -4909,7 +4909,7 @@
       "meaning": "Proxy L4/L7 mã nguồn mở viết bằng C++, cấu hình động qua API (xDS); là data plane của Istio và nền của nhiều gateway.",
       "example": "Envoy sidecar áp retry `attempts: 2` và ghi metric latency cho mọi request ra khỏi pod.",
       "related": ["sidecar", "service-mesh"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "design-rate-limiter"]
     },
     {
       "id": "data-plane",
@@ -5285,7 +5285,7 @@
       "meaning": "Thuật toán rate limit: thùng chứa tối đa `capacity` token, nạp với tốc độ cố định; mỗi request lấy một token, hết thì từ chối. Cho phép burst bằng `capacity`.",
       "example": "Spring Cloud Gateway `replenishRate: 10`, `burstCapacity: 20`: trung bình 10 request mỗi giây, dồn được 20.",
       "related": ["leaky-bucket", "rate-limiting"],
-      "topics": ["rate-limiting"]
+      "topics": ["rate-limiting", "design-rate-limiter"]
     },
     {
       "id": "leaky-bucket",
@@ -5333,7 +5333,7 @@
       "meaning": "Quyền (giữ khoá, làm leader) có thời hạn: hết hạn mà không gia hạn thì tự mất, nên người giữ chết không làm hệ thống kẹt mãi.",
       "example": "Lease etcd TTL 10 giây, client gửi keepalive mỗi 3 giây; process treo thì sau 10 giây khoá tự nhả.",
       "related": ["distributed-lock", "fencing"],
-      "topics": ["distributed-locks", "clocks-ids", "consensus"]
+      "topics": ["distributed-locks", "clocks-ids", "consensus", "design-id-generator"]
     },
     {
       "id": "fencing-token",
@@ -5365,7 +5365,7 @@
       "meaning": "Độ lệch giữa đồng hồ của các máy tại cùng một thời điểm. NTP giữ nó nhỏ nhưng không bằng 0, và có thể lớn đột ngột khi NTP hỏng.",
       "example": "Máy A chỉ 10:00:05 trong khi máy B chỉ 10:00:03: skew 2 giây, đủ để last-write-wins chọn sai.",
       "related": ["ntp", "wall-clock", "last-write-wins"],
-      "topics": ["clocks-ids", "tail-latency"]
+      "topics": ["clocks-ids", "tail-latency", "design-id-generator"]
     },
     {
       "id": "wall-clock",
@@ -5381,7 +5381,7 @@
       "meaning": "Đồng hồ chỉ tăng, không bị NTP kéo lùi, dùng để đo khoảng thời gian. Giá trị không mang nghĩa giờ thực và chỉ so được trong một process.",
       "example": "`long start = System.nanoTime(); ... long elapsedMs = (System.nanoTime() - start) / 1_000_000;`",
       "related": ["wall-clock"],
-      "topics": ["clocks-ids", "time-encoding"]
+      "topics": ["clocks-ids", "time-encoding", "design-id-generator"]
     },
     {
       "id": "ntp",
@@ -5429,7 +5429,7 @@
       "meaning": "ID 64 bit gồm mili giây từ một epoch tự chọn (41 bit), id của máy sinh (10 bit) và sequence trong mili giây (12 bit). Tăng theo thời gian, vừa kiểu `bigint`.",
       "example": "Worker 7 sinh 4096 ID mỗi mili giây; 41 bit thời gian đủ khoảng 69 năm.",
       "related": ["uuid-v7", "clock-skew"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "design-id-generator"]
     },
     {
       "id": "ulid",
@@ -5453,7 +5453,7 @@
       "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
       "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
       "related": [],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "design-id-generator"]
     },
     {
       "id": "leap-second",
@@ -8661,7 +8661,7 @@
       "meaning": "Single point of failure: thành phần mà khi nó hỏng thì cả hệ thống ngừng, vì không có bản dự phòng.",
       "example": "Một database không có replica, hay một Nginx duy nhất đứng trước mọi service.",
       "related": ["failover", "vertical-scaling"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "design-id-generator"]
     },
     {
       "id": "read-replica",
@@ -8861,7 +8861,7 @@
       "meaning": "Nghịch lý ngày sinh: trong không gian N giá trị ngẫu nhiên, sau khoảng √N lần chọn đã có khả năng cao xuất hiện một cặp trùng. Tổng số cặp trùng sau n lần chọn ≈ n² / (2N).",
       "example": "Chỉ 23 người là đã có hơn 50% khả năng hai người trùng ngày sinh; 6 tỉ mã ngẫu nhiên 7 ký tự base62 gây khoảng 5 triệu lần trùng.",
       "related": ["hash-collision", "base62"],
-      "topics": ["design-url-shortener"]
+      "topics": ["design-url-shortener", "design-id-generator"]
     },
     {
       "id": "feistel-cipher",
@@ -8869,7 +8869,7 @@
       "meaning": "Cấu trúc mã hoá chia khối thành hai nửa và trộn qua nhiều vòng; luôn là một hoán vị (giải ngược được) bất kể hàm vòng là gì. Dùng để biến số thứ tự thành số trông ngẫu nhiên trên cùng không gian.",
       "example": "Counter 1, 2, 3 qua Feistel 4 vòng trên 42 bit ra `NZcwCpI`, `KMpXoFE`, `ILITSrB`; không trùng và không lộ thứ tự.",
       "related": ["base62"],
-      "topics": ["design-url-shortener"]
+      "topics": ["design-url-shortener", "design-id-generator"]
     },
     {
       "id": "phishing",
@@ -8886,6 +8886,102 @@
       "example": "`INSERT INTO links (code, ...) VALUES (...) ON CONFLICT (code) DO NOTHING` trả 0 dòng nếu mã đã có.",
       "related": ["idempotency-key"],
       "topics": ["design-url-shortener"]
+    },
+    {
+      "id": "waf",
+      "term": "WAF",
+      "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó chỉ thấy IP, header, đường dẫn, không biết khách hàng nào.",
+      "example": "Luật WAF chặn một IP gửi quá vài nghìn request trong 5 phút trước khi request chạm gateway.",
+      "related": ["rate-limiting", "cdn", "api-gateway"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "shadow-mode",
+      "term": "Shadow mode",
+      "meaning": "Chạy một luật hay một phiên bản mới song song nhưng không tác động thật: chỉ ghi lại nó sẽ làm gì, để so sánh trước khi bật.",
+      "example": "Luật rate limit mới ghi metric would_reject trong một tuần để xem khách nào sẽ bị chặn, rồi mới chuyển sang chặn thật.",
+      "related": ["rate-limiting"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "fail-open",
+      "term": "Fail open",
+      "meaning": "Khi thành phần kiểm tra (kho bộ đếm, dịch vụ phân quyền) lỗi thì cho request đi qua thay vì chặn. Ngược lại là fail closed: lỗi thì chặn.",
+      "example": "Redis của rate limiter chết: gateway fail open sang token bucket cục bộ để API vẫn chạy, kèm cảnh báo.",
+      "related": ["rate-limiting", "circuit-breaker"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "api-quota",
+      "term": "Quota",
+      "meaning": "Tổng số lời gọi được phép trong một kỳ dài (ngày, tháng), thường gắn với gói cước và tính tiền. Khác rate limit là giới hạn tốc độ trong khoảng ngắn.",
+      "example": "Gói Pro: 200 request/giây (rate limit) và 10 triệu lời gọi mỗi tháng (quota), quota đếm bền trong database.",
+      "related": ["rate-limiting"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "credential-stuffing",
+      "term": "Credential stuffing",
+      "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
+      "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
+      "related": ["rate-limiting"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "noisy-neighbor",
+      "term": "Noisy neighbor",
+      "meaning": "Một tenant hay workload dùng quá nhiều tài nguyên chung (CPU, kết nối, IOPS) làm chậm các tenant khác trên cùng hệ thống.",
+      "example": "Một khách hàng chạy job xuất dữ liệu gửi 5.000 request/giây làm p99 của mọi khách khác tăng gấp ba.",
+      "related": ["rate-limiting", "bulkhead"],
+      "topics": ["design-rate-limiter"]
+    },
+    {
+      "id": "segment-allocation",
+      "term": "Segment allocation",
+      "meaning": "Cấp ID theo khối: mỗi instance lấy một dải số liên tiếp từ database (một lần UPDATE) rồi cấp trong bộ nhớ, chỉ gọi lại database khi hết khối.",
+      "example": "Pod xin khối 100.001–200.000 bằng UPDATE id_alloc SET max_id = max_id + 100000 RETURNING max_id.",
+      "related": ["double-buffering", "snowflake-id"],
+      "topics": ["design-id-generator"]
+    },
+    {
+      "id": "worker-id",
+      "term": "Worker id",
+      "meaning": "Số định danh của mỗi máy sinh ID trong Snowflake, nằm giữa phần thời gian và sequence. Hai máy cùng worker id có thể sinh trùng ID.",
+      "example": "10 bit worker id cho 1.024 máy; cấp bằng lease trong bảng worker_lease hoặc ordinal của StatefulSet.",
+      "related": ["snowflake-id", "lease"],
+      "topics": ["design-id-generator"]
+    },
+    {
+      "id": "k-sorted",
+      "term": "K-sorted",
+      "meaning": "Gần có thứ tự: mỗi phần tử chỉ lệch khỏi vị trí đúng trong một khoảng nhỏ. ID theo thời gian từ nhiều máy là k-sorted vì đồng hồ lệch nhau.",
+      "example": "Đơn tạo sau 2 ms trên máy chậm giờ 5 ms có Snowflake ID nhỏ hơn đơn tạo trước trên máy khác.",
+      "related": ["snowflake-id", "clock-skew"],
+      "topics": ["design-id-generator"]
+    },
+    {
+      "id": "ticket-server",
+      "term": "Ticket server",
+      "meaning": "Máy database chuyên cấp ID bằng auto-increment; chạy hai máy với bước 2 và offset khác nhau (lẻ, chẵn) để một máy chết vẫn cấp được.",
+      "example": "Flickr: REPLACE INTO Tickets64 (stub) VALUES (a) rồi SELECT LAST_INSERT_ID() trên một trong hai MySQL.",
+      "related": ["segment-allocation"],
+      "topics": ["design-id-generator"]
+    },
+    {
+      "id": "double-buffering",
+      "term": "Đệm kép",
+      "meaning": "Giữ sẵn một khối dự phòng và nạp nó bằng thread nền trong khi đang dùng khối hiện tại, để việc chính không phải chờ lúc chuyển khối.",
+      "example": "Khối ID đã dùng 10% thì thread nền xin khối sau; hết khối hiện tại là chuyển ngay sang khối đã nạp.",
+      "related": ["segment-allocation"],
+      "topics": ["design-id-generator"]
+    },
+    {
+      "id": "statefulset",
+      "term": "StatefulSet",
+      "meaning": "Loại workload Kubernetes cho pod có danh tính ổn định: tên đánh số (app-0, app-1), giữ nguyên khi restart, và volume riêng cho mỗi pod.",
+      "example": "Pod order-3 của StatefulSet dùng số 3 làm worker id Snowflake, không cần kho phối hợp.",
+      "related": ["worker-id"],
+      "topics": ["design-id-generator"]
     }
   ]
 }

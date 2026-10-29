@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Rate limit cho API công khai chạy hai region",
+  "prompt": "Một nền tảng bán API công khai theo ba gói: Free 10 request/giây (burst 20), Pro 200/giây (burst 400), Enterprise tới 5.000/giây theo hợp đồng. Lưu lượng đỉnh 300.000 request/giây, chia đều hai region, mỗi region 20 pod gateway; khoảng 200.000 API key hoạt động mỗi ngày. Ràng buộc: rate limit thêm tối đa 2 ms ở p99; khách Enterprise không được lọt quá hạn mức hợp đồng hơn 10% (họ trả tiền theo hạn mức, và backend được sizing theo đó), gói Free lệch nhiều hơn cũng được; Redis lỗi không được làm API ngừng; endpoint đăng nhập của cổng quản trị phải chống dò mật khẩu; toàn công ty chỉ được gọi API thanh toán của đối tác 500 request/giây. Thiết kế lớp rate limit: đặt ở đâu, đếm ở đâu, chia hạn mức giữa hai region thế nào, và xử lý lỗi ra sao.",
+  "hints": [
+    "Lớp nào chặn theo IP, lớp nào theo API key, luật nào chỉ service mới kiểm được?",
+    "Mỗi region phải chạy bao nhiêu lần Lua script mỗi giây, cần mấy shard Redis? Key Enterprise có thành key nóng không?",
+    "Một khách Enterprise 5.000/giây gọi vào cả hai region: chia hạn mức thế nào để không lọt quá 10% mà không gọi Redis khác region?",
+    "Redis chết thì gateway làm gì, và giới hạn 500/giây với đối tác đặt ở đâu khi có hàng chục service cùng gọi?"
+  ],
+  "solution": "**Các lớp**: WAF ở edge chặn theo IP (ví dụ vài nghìn request mỗi 5 phút mỗi IP) để đỡ lũ request trước khi tới gateway. Gateway xác thực API key, đọc gói cước, áp token bucket theo key. Endpoint đắt (xuất báo cáo) tính nhiều token mỗi request. Đăng nhập do auth service tự giới hạn vì chỉ nó biết lần nào sai mật khẩu.\n\n**Bộ đếm**: mỗi region một Redis Cluster riêng. 150.000 lần chạy Lua mỗi giây mỗi region; giả định một shard chạy được khoảng 25.000 script mỗi giây mà latency vẫn thấp (phải đo bằng `redis-benchmark` với đúng script), chọn 8 primary để còn dư, mỗi primary một replica ở AZ khác. Key `rl:{api_key}`, hash hai trường, TTL bằng `capacity / rate` làm tròn lên. 200.000 key chỉ khoảng 20 MB. Timeout lời gọi Redis 3 ms.\n\n**Key Enterprise**: 5.000/giây chia hai region còn khoảng 2.500/giây mỗi region, một shard chịu được, không cần tách key. Để bớt lời gọi Redis, gateway xin lô token cho key lớn: phần của mỗi gateway khoảng 125/giây, lô 12 token, token chưa dùng hết hạn sau 1 giây. Lời gọi Redis cho key đó giảm từ 2.500 xuống khoảng 200 mỗi giây. Gói Free và Pro không dùng lô.\n\n**Chia giữa hai region**: không gọi Redis region khác trên đường request. Với Enterprise, một job mỗi 30 giây đọc lưu lượng phút trước của từng key ở mỗi region và chia hạn mức theo tỉ lệ, sàn 10% mỗi region; tổng hai phần luôn bằng hạn mức hợp đồng. Khách dồn hết sang một region thì trong tối đa 30 giây đầu chỉ được phần cũ, sau đó nhận gần đủ. Với Free và Pro, mỗi region giữ nguyên hạn mức: khách cố tình gọi cả hai region được tối đa gấp đôi, chấp nhận vì yêu cầu cho phép và tiết kiệm một job.\n\n**Redis lỗi**: circuit breaker quanh lời gọi Redis; mạch mở thì gateway fail open sang token bucket cục bộ với hạn mức bằng phần của region chia 20 gateway rồi nhân 2, và cảnh báo. Trong lúc đó Enterprise có thể lọt tới gấp đôi khi tải lệch, nên cảnh báo phải tới on-call ngay; backend còn load shedding riêng để không chết theo.\n\n**Luật và rollout**: luật nằm trong database có version, gateway nhận thay đổi qua watch. Luật mới chạy shadow mode một tuần, xem metric `would_reject` theo key, báo trước cho khách sẽ bị ảnh hưởng rồi mới bật. Trả `429` kèm `Retry-After` và header hạn mức còn lại; log `429` theo mẫu.\n\n**Đăng nhập**: auth service đếm lần sai theo username trong cửa sổ 15 phút và theo IP. Quá 5 lần sai theo username thì đòi CAPTCHA và làm chậm dần, không khoá cứng (khoá cứng cho phép kẻ xấu khoá tài khoản người khác). Theo IP để chặn một máy thử nhiều username.\n\n**Đối tác thanh toán**: một token bucket toàn công ty 500/giây trên Redis, đặt trong thư viện client dùng chung của mọi service gọi đối tác (hoặc một egress service duy nhất). Chờ token tối đa 200 ms rồi báo lỗi để gọi lại sau; nhận `429` từ đối tác thì tôn trọng `Retry-After` và hạ tạm hạn mức của bucket. Đây là bucket chung giữa hai region, nên cấp cố định 250/giây mỗi region thay vì gọi chéo.",
+  "tradeoffs": [
+    {
+      "option": "Token bucket trên Redis, gọi mỗi request (lô token cho key lớn)",
+      "pros": [
+        "Chính xác, không lọt theo tốc độ kẻ gửi",
+        "Hạn mức không phụ thuộc số gateway hay tải lệch"
+      ],
+      "cons": [
+        "Thêm một round-trip Redis, khoảng dưới 1 ms trong AZ",
+        "Phải vận hành Redis Cluster và đường fail open"
+      ]
+    },
+    {
+      "option": "Đếm cục bộ, đồng bộ lên Redis mỗi 100 ms",
+      "pros": [
+        "Gần như không thêm latency trên đường request",
+        "Redis chậm không ảnh hưởng request"
+      ],
+      "cons": [
+        "Lọt thêm khoảng tốc độ gửi × chu kỳ đồng bộ",
+        "Client gửi mạnh nhất lọt nhiều nhất, không chống lạm dụng"
+      ]
+    },
+    {
+      "option": "Chia tĩnh hạn mức cho từng gateway",
+      "pros": [
+        "Không cần kho chung, không có điểm chết",
+        "Đơn giản, rẻ, hợp với hạn mức lớn và tải trải đều"
+      ],
+      "cons": [
+        "Keep-alive và HTTP/2 làm tải lệch, chặn oan",
+        "Phải chia lại mỗi lần autoscale đổi số gateway"
+      ]
+    }
+  ]
+}
