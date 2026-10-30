@@ -70,4 +70,4 @@ Thêm boost theo trường (tên sản phẩm quan trọng hơn mô tả) và th
   - `ts_rank` không phải BM25 và phải tính trên mọi dòng khớp, nên chậm khi một từ phổ biến khớp hàng triệu dòng.
   - `pg_trgm`: `CREATE INDEX ... USING gin (name gin_trgm_ops)` cho `LIKE '%...%'` và `ILIKE`, toán tử `%` và `similarity()` cho lỗi gõ.
 - **Autocomplete**: `search_as_you_type` hoặc analyzer `edge_ngram` khi index (không dùng ở lúc tìm), hoặc completion suggester cho gợi ý rất nhanh. Bài Thiết kế autocomplete đi sâu phần hệ thống.
-- **Tìm theo nghĩa**: Elasticsearch 8 có trường `dense_vector` và tìm kNN (HNSW); PostgreSQL có `pgvector`. Kết hợp điểm từ khoá và điểm vector (hybrid search, ví dụ bằng reciprocal rank fusion) thường cho kết quả tốt hơn từng cách riêng.
+- **Tìm theo nghĩa**: Elasticsearch có trường `dense_vector` và tìm kNN (HNSW); PostgreSQL có `pgvector`. Bài Vector search & tìm theo nghĩa đi sâu phần này. Kết hợp điểm từ khoá và điểm vector (hybrid search, ví dụ bằng reciprocal rank fusion) thường cho kết quả tốt hơn từng cách riêng.

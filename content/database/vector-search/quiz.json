@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "post-filter",
+      "kind": "single",
+      "prompt": "Truy vấn Elasticsearch có `knn` với `k` 10, `num_candidates` 100, được bọc trong `bool` có `filter` theo còn hàng và vùng giao (chỉ khớp khoảng 1% sản phẩm). Kết quả thường chỉ có 0–2 sản phẩm. Vì sao?",
+      "options": [
+        "`bool.filter` lọc sau khi kNN đã chọn ứng viên, nên phần lớn bị bỏ",
+        "`num_candidates` 100 quá nhỏ, tăng lên 10.000 thì sẽ đủ kết quả",
+        "Bộ lọc dạng term làm điểm cosine của tài liệu khớp giảm về 0",
+        "HNSW không lọc được, phải chuyển sang tìm chính xác bằng script"
+      ],
+      "answer": 0,
+      "explanation": "Lọc bọc ngoài `knn` là post-filter: mỗi shard trả k = 10 tài liệu gần nhất trên cả catalog, rồi mới bỏ cái không khớp. Bộ lọc giữ 1% thì mỗi shard trung bình chỉ còn khoảng 0,1 tài liệu (lab Lucene lấy hẳn 100 gần nhất rồi lọc vẫn chỉ còn 1,1 kết quả, recall 0,106). Tăng `num_candidates` không giúp, vì số tài liệu đưa qua bộ lọc vẫn là k. Đặt bộ lọc vào `knn.filter` để lọc trong lúc đi đồ thị, luôn đủ k. HNSW lọc được, và với bộ lọc rất hẹp Lucene tự chuyển sang quét chính xác."
+    },
+    {
+      "id": "quantized-plateau",
+      "kind": "single",
+      "prompt": "Index dùng HNSW lượng tử int4, không tính lại điểm. Tăng `num_candidates` từ 100 lên 500 mà recall@10 vẫn đứng ở khoảng 0,83. Cách sửa đúng là gì?",
+      "options": [
+        "Tăng `m` lên 64 để đồ thị có nhiều đường đi tới hàng xóm thật",
+        "Lấy dư ứng viên rồi tính lại điểm bằng vector float gốc",
+        "Chuyển similarity từ dot product sang cosine để điểm ổn định",
+        "Force merge về một segment để đồ thị không bị chia nhỏ ra"
+      ],
+      "answer": 1,
+      "explanation": "Recall dừng lại vì thứ tự được chấm bằng điểm xấp xỉ int4: các vector gần nhau bị xếp sai, nhiều ứng viên hơn cũng xếp sai như vậy. Đồ thị tìm thấy hàng xóm rồi, nên tăng `m` hay gộp segment không giúp. Lấy dư ứng viên rồi chấm lại bằng vector gốc (`rescore_vector.oversample` ở Elasticsearch) thì lab Lucene lên 1,0 với 50 ứng viên cho top-10. Cosine và dot product cho cùng thứ tự khi vector đã chuẩn hoá."
+    },
+    {
+      "id": "model-mismatch",
+      "kind": "single",
+      "prompt": "Đội đổi sang model embedding mới cùng 768 chiều. Search service embed câu hỏi bằng model mới ngay, còn tài liệu sẽ được embed lại dần trong tuần. Chuyện gì xảy ra trong tuần đó?",
+      "options": [
+        "Elasticsearch báo lỗi vì vector câu hỏi khác phân bố với index",
+        "Kết quả kém đi một chút nhưng vẫn dùng được vì cùng số chiều",
+        "Kết quả gần như ngẫu nhiên cho tài liệu cũ, không có lỗi nào",
+        "Chỉ tài liệu mới được tìm thấy vì HNSW bỏ qua vector cũ"
+      ],
+      "answer": 2,
+      "explanation": "Hai model học hai không gian khác nhau, nên vị trí của vector cũ không có nghĩa gì với vector của model mới. Cùng 768 chiều thì phép tính vẫn chạy, không có lỗi, chỉ là thứ hạng gần như ngẫu nhiên. Cách đúng: dựng index mới, embed lại toàn bộ, CDC ghi cả hai index trong lúc chuyển, đo chất lượng rồi mới chuyển alias; câu hỏi luôn embed bằng model của index đang phục vụ."
+    },
+    {
+      "id": "rrf-winner",
+      "kind": "single",
+      "prompt": "Trộn BM25 và kNN bằng RRF với `rank_constant` 60. A: hạng 1 bên BM25, không có bên kNN. B: hạng 3 BM25, hạng 2 kNN. C: hạng 1 kNN, không có bên BM25. D: hạng 2 BM25, hạng 9 kNN. Tài liệu nào đứng đầu?",
+      "options": [
+        "A, vì hạng 1 ở BM25 luôn có điểm RRF cao nhất",
+        "C, vì kNN hiểu nghĩa nên được ưu tiên hơn BM25",
+        "D, vì nó đứng trên B ở danh sách BM25, hạng 2 so với 3",
+        "B, vì nó đứng khá cao ở cả hai danh sách cùng lúc"
+      ],
+      "answer": 3,
+      "explanation": "Điểm RRF là tổng 1/(60 + hạng) qua các danh sách. A và C mỗi tài liệu chỉ có 1/61 ≈ 0,0164. B được 1/63 + 1/62 ≈ 0,0320, D được 1/62 + 1/69 ≈ 0,0306. D hơn B ở bên BM25 nhưng thua nhiều hơn ở bên kNN (hạng 9 so với 2). Tài liệu khá cao ở cả hai danh sách thắng tài liệu chỉ đứng đầu một danh sách, và RRF không ưu tiên bên nào."
+    },
+    {
+      "id": "memory-sizing",
+      "kind": "single",
+      "prompt": "5 triệu vector 768 chiều, `dense_vector` kiểu `hnsw` không lượng tử, `m` 16. Mỗi bản sao cần khoảng bao nhiêu RAM ngoài heap để truy vấn nhanh?",
+      "options": [
+        "Khoảng 0,9 GB, vì chỉ đồ thị HNSW cần nằm trong RAM",
+        "Khoảng 15,7 GB, gồm vector float và đồ thị trong page cache",
+        "Khoảng 3,9 GB, vì Lucene tự nén vector float xuống int8",
+        "Khoảng 245 GB, vì mỗi cạnh của đồ thị lưu cả vector hàng xóm"
+      ],
+      "answer": 1,
+      "explanation": "Vector float là 5 triệu × 768 × 4 byte = 15,36 GB, đồ thị là 5 triệu × 4 × 16 byte = 0,32 GB. Cả hai được mmap và cần nằm trong page cache, không nằm trên heap. Kiểu `hnsw` là không lượng tử; nén int8 (khoảng 3,9 GB) chỉ có khi chọn `int8_hnsw`, và khi đó vector gốc vẫn trên đĩa. Đồ thị chỉ lưu id hàng xóm, không lưu vector."
+    }
+  ]
+}

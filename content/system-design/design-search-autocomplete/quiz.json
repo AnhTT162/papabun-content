@@ -65,6 +65,32 @@
       ],
       "answer": 1,
       "explanation": "Điểm theo lượt thì ai gửi nhiều nhất thắng. Tính điểm theo số người khác nhau mỗi ngày (HyperLogLog) thì mỗi tài khoản đóng góp tối đa 1 cho một câu mỗi ngày: 2 triệu lượt từ vài trăm tài khoản chỉ tính như vài trăm người, không thắng được câu hàng chục nghìn người thật tìm. Lọc thêm tài khoản vừa tạo trước khi đếm. Rate limit theo IP giúp nhưng bot đổi IP dễ; bot cũng bấm được kết quả; dựng nhanh hơn thì câu sai lên nhanh hơn."
+    },
+    {
+      "id": "position-bias",
+      "kind": "single",
+      "prompt": "Đội train model xếp hạng gợi ý trên log bấm của 30 ngày, nhãn là có bấm hay không. Model mới gần như giữ nguyên thứ tự cũ, A/B test không cải thiện. Nguyên nhân gốc hay gặp nhất là gì?",
+      "options": [
+        "Người dùng bấm ô đầu vì nó ở đầu, nên nhãn lặp lại thứ tự cũ",
+        "30 ngày log quá ít, cần ít nhất một năm để model học được",
+        "GBDT không học được tương tác giữa tiền tố và câu gợi ý",
+        "Log bấm có bot, phải lọc hết bot thì model mới đổi thứ tự"
+      ],
+      "answer": 0,
+      "explanation": "Đây là thiên lệch vị trí: câu đang ở trên được nhìn thấy nhiều hơn nên được bấm nhiều hơn, bất kể có liên quan hơn không. Trong mô phỏng, câu liên quan nhất (0,50) đứng thứ hai chỉ có tỉ lệ bấm thô 0,30, bằng câu đứng đầu (0,30). Sửa: xáo hoặc đổi chỗ vị trí cho một phần nhỏ lượt hiển thị để ước lượng xác suất nhìn tới từng vị trí, rồi chia lượt bấm cho xác suất đó (inverse propensity weighting). Lọc bot vẫn cần nhưng không sửa được thiên lệch này."
+    },
+    {
+      "id": "semantic-per-keystroke",
+      "kind": "single",
+      "prompt": "Đề xuất thêm gợi ý theo nghĩa: mỗi phím gõ, suggest service embed tiền tố rồi gọi kNN, trộn với kết quả FST. Ngân sách p99 là 50 ms, đỉnh 14.000 request mỗi giây. Cách nào tốt hơn?",
+      "options": [
+        "Giữ đề xuất nhưng dùng model nhỏ hơn để mỗi lần embed nhanh hơn",
+        "Tính câu gần nghĩa offline làm input phụ cho FST, online chỉ khi cần",
+        "Chuyển hẳn sang kNN cho mọi gợi ý và bỏ FST cho đơn giản hơn",
+        "Embed tiền tố ở client rồi gửi vector lên để server chỉ gọi kNN"
+      ],
+      "answer": 1,
+      "explanation": "Tiền tố dở dang cho vector kém, và một lần gọi model cho mỗi phím ở 14.000 request mỗi giây tốn hơn cả hệ tra FST. Tính sẵn câu gần nghĩa bằng kNN theo lô rồi thêm làm input phụ (trọng số thấp) cho FST thì đường đọc vẫn chỉ tra RAM. Online chỉ gọi khi FST trả ít kết quả và người dùng đã gõ xong vài từ, có cache và timeout. Bỏ FST thì mất gợi ý tiền tố nhanh; embed ở client thì phải đưa model xuống máy và vẫn embed tiền tố dở dang."
     }
   ]
 }

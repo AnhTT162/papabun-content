@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thêm tìm theo nghĩa cho 5 triệu sản phẩm",
+  "prompt": "Một sàn thương mại điện tử có 5 triệu sản phẩm đang tìm bằng BM25 trên Elasticsearch 9.5 (3 node dữ liệu, mỗi node 64 GB RAM, heap 31 GB). Người dùng hay gõ câu mô tả như \"đồ cho bé đi học\", \"quà tặng mẹ ngày 8/3\" và nhận về rỗng hoặc kết quả lạc đề. Đội đã chọn một model embedding đa ngôn ngữ 768 chiều. Ràng buộc: p99 dưới 150 ms; luôn lọc còn hàng và vùng giao (thường chỉ giữ 1–5% catalog); tìm mã như \"SM-S931B\" vẫn phải ra đúng sản phẩm; mỗi ngày khoảng 200.000 sản phẩm đổi tên hoặc mô tả; model sẽ được thay bằng bản mới vài lần mỗi năm. Bản đầu tiên đội đề xuất: thêm `dense_vector` kiểu `hnsw` không lượng tử, truy vấn `knn` với `k` 10 rồi bọc trong `bool.filter` theo còn hàng và vùng, bỏ BM25. Thiết kế lại.",
+  "hints": [
+    "5 triệu × 768 float là bao nhiêu GB? Mỗi node còn bao nhiêu RAM cho page cache sau khi trừ heap?",
+    "Bộ lọc giữ 1–5% catalog, đặt ngoài `knn` thì từ 10 ứng viên còn lại mấy kết quả?",
+    "Câu tìm \"SM-S931B\" thì vector của nó gần cái gì?",
+    "Đổi model thì vector cũ và vector mới có đặt chung một field được không?"
+  ],
+  "solution": "**Bộ nhớ**: 5 triệu × 768 × 4 byte là 15,4 GB vector float, cộng đồ thị HNSW 5 triệu × 4 × 16 byte = 0,32 GB. Với 1 primary 1 replica là khoảng 31 GB cần nằm trong page cache trên toàn cụm, tức khoảng 10 GB mỗi node, trong khi mỗi node chỉ còn khoảng 30 GB ngoài heap và phải chia cho cả index text. Bản `hnsw` không lượng tử vẫn vừa, nhưng chiếm một phần ba page cache; catalog gấp đôi hay thêm replica là bắt đầu thiếu, và khi không vừa thì mỗi bước đi trên đồ thị là một lần đọc đĩa. Chọn `hnsw` cũng là tự tắt lượng tử mặc định. Ghi rõ `index_options.type: bbq_hnsw`. Trên 9.5 với license Enterprise, mặc định là `bbq_disk` (chia cụm trên đĩa, không phải HNSW), nên không dựa vào mặc định. Bản 1 bit tốn ⌈768/64⌉ × 8 + 14 = 110 byte mỗi vector, tức 0,55 GB mỗi bản sao, cộng đồ thị. Vector gốc vẫn trên đĩa để tính lại điểm.\n\n**Recall khi lượng tử**: BBQ mặc định lấy dư 3 lần theo điểm 1 bit rồi tính lại bằng vector gốc cho chừng đó tài liệu, chỉ vài chục lần đọc mỗi shard; recall chưa đạt thì tăng `rescore_vector.oversample` lên 4–5. Đo recall@10 so với quét chính xác trên 500 câu hỏi mẫu, chỉnh `num_candidates` (mặc định 1,5 × k) tới khi recall khoảng 0,95 mà p99 vẫn trong ngân sách.\n\n**Lọc**: chuyển còn hàng và vùng giao vào `knn.filter` để lọc ngay trong lúc tìm. Bọc ngoài bằng `bool.filter` là lọc sau: mỗi shard trả 10 tài liệu gần nhất trên cả catalog rồi mới lọc, bộ lọc chỉ giữ 1–5% thì mỗi shard thường chỉ còn 0–1 kết quả. Lọc rất hẹp (ví dụ một cửa hàng nhỏ) thì Lucene tự chuyển sang quét chính xác trên tập đã lọc, vẫn nhanh.\n\n**Hybrid**: giữ BM25. Câu \"SM-S931B\" hay \"ốp lưng 256GB\" là việc của khớp từ; vector chỉ mang nghĩa chung chung. Dùng retriever `rrf` gồm một retriever `standard` (BM25 với analyzer bỏ dấu) và một retriever `knn` cùng bộ lọc, `rank_window_size` 50. Khi đã có bộ câu hỏi có đáp án thì thử retriever `linear` với `minmax` để chỉnh trọng số.\n\n**Cập nhật hằng ngày**: CDC đẩy 200.000 thay đổi mỗi ngày vào job embed theo lô (khoảng 2,3 sản phẩm mỗi giây trung bình, rất nhẹ). Ghi bulk theo lô, giữ `refresh_interval` vài giây để không sinh quá nhiều segment nhỏ, vì truy vấn kNN phải đi qua đồ thị của từng segment. Mỗi cập nhật là xoá cộng thêm mới, tài liệu đã xoá vẫn bị duyệt cho tới khi merge, nên theo dõi tỉ lệ tài liệu đã xoá trong index.\n\n**Đổi model**: không đặt chung một field. Tạo `products_v2` với vector của model mới; job backfill embed lại 5 triệu sản phẩm (ví dụ 500 câu mỗi giây là gần 3 giờ), trong lúc đó CDC ghi cả hai index. Search service resolve alias ra tên index, đọc `_meta.model_version` của index đó, embed câu hỏi bằng model tương ứng và truy vấn thẳng tên index đã resolve, để lúc chuyển alias không có request nào embed bằng model cũ mà tìm trên index mới. So nDCG@10 trên bộ câu hỏi có đáp án và chạy A/B test, rồi mới chuyển alias. Giữ index cũ vài ngày để quay lại.\n\n**Đường online**: embed câu hỏi có cache theo câu đã chuẩn hoá (câu phổ biến lặp lại nhiều) và timeout 40 ms; quá thời gian thì chỉ chạy BM25. Theo dõi tỉ lệ timeout của model, recall@10 đo định kỳ, tỉ lệ câu tìm ra rỗng, và tỉ lệ bấm kết quả theo vị trí.",
+  "tradeoffs": [
+    {
+      "option": "Elasticsearch: BM25 + kNN bbq_hnsw, trộn bằng RRF",
+      "pros": [
+        "Dùng lại cụm, analyzer và alias đã có; pre-filter có sẵn",
+        "Vector 1 bit chỉ khoảng 0,55 GB mỗi bản sao"
+      ],
+      "cons": [
+        "Phải đo và chỉnh oversample, num_candidates theo dữ liệu thật",
+        "Nhiều segment làm kNN chậm, cần để ý refresh và merge"
+      ]
+    },
+    {
+      "option": "Elasticsearch: kNN hnsw không lượng tử, bỏ BM25",
+      "pros": [
+        "Recall cao nhất, không cần tính lại điểm",
+        "Truy vấn đơn giản, một loại điểm"
+      ],
+      "cons": [
+        "Khoảng 31 GB vector phải nằm trong page cache trên toàn cụm",
+        "Tìm theo mã, con số, tên riêng hiếm ra sai"
+      ]
+    },
+    {
+      "option": "pgvector cạnh database catalog",
+      "pros": [
+        "Không thêm hệ mới, lọc bằng SQL cùng transaction",
+        "Ít phải vận hành nhất ở quy mô vài triệu"
+      ],
+      "cons": [
+        "Lọc sau theo mặc định, cần iterative scan cho bộ lọc hẹp",
+        "Không có BM25 và RRF sẵn, tải tìm kiếm đè lên database chính"
+      ]
+    },
+    {
+      "option": "Doris 4 với ANN index",
+      "pros": [
+        "Vector nằm cạnh dữ liệu phân tích, lọc nhiều cột bằng SQL",
+        "Hợp cho tính hàng loạt sản phẩm tương tự"
+      ],
+      "cons": [
+        "Không có retriever RRF, trộn phải tự viết bằng SQL và tự chỉnh relevance",
+        "HNSW phải nằm hẳn trong RAM (ivf_on_disk thì không), cần kiểm soát số segment"
+      ]
+    }
+  ]
+}

@@ -10,6 +10,9 @@
     { "id": "edge-ngram-search", "front": "Edge n-gram dùng ở lúc index hay lúc tìm?", "back": "Chỉ lúc index. Lúc tìm dùng analyzer thường, nếu không \"samsung\" sẽ khớp mọi từ bắt đầu bằng \"s\"." },
     { "id": "doris-role", "front": "Doris làm gì trong hệ autocomplete?", "back": "Đếm và lọc: nạp log tìm kiếm từ Kafka, gộp theo ngày, đếm người khác nhau bằng HLL, xuất top câu cho builder. Không phục vụ từng phím gõ." },
     { "id": "distinct-users", "front": "Vì sao điểm gợi ý dựa trên số người khác nhau mỗi ngày?", "back": "Để mỗi tài khoản chỉ đóng góp tối đa 1 cho một câu mỗi ngày, bot gửi một câu triệu lần không đẩy được nó lên, và để câu chứa dữ liệu cá nhân của một người không thành gợi ý cho người khác." },
-    { "id": "stale-response", "front": "Response của \"ip\" về sau response của \"iph\" thì sao?", "back": "Danh sách nhảy về kết quả cũ. Gắn số thứ tự cho request, bỏ response cũ, và huỷ request đang chạy khi gõ tiếp." }
+    { "id": "stale-response", "front": "Response của \"ip\" về sau response của \"iph\" thì sao?", "back": "Danh sách nhảy về kết quả cũ. Gắn số thứ tự cho request, bỏ response cũ, và huỷ request đang chạy khi gõ tiếp." },
+    { "id": "semantic-offline", "front": "Thêm gợi ý theo nghĩa cho autocomplete mà không làm chậm đường đọc thế nào?", "back": "Tính câu gần nghĩa offline bằng kNN theo lô, thêm làm input phụ cho FST. Chỉ gọi model online khi FST trả ít kết quả và đã gõ xong vài từ." },
+    { "id": "telex-decode", "front": "Người dùng gõ \"ddieenj thoaij\" vì tắt bộ gõ. Xử lý thế nào?", "back": "Giải mã Telex theo quy tắc cố định thành \"dien thoai\" rồi tra. Tra cả bản gốc, vì \"iphones\" cũng bị giải mã thành \"iphone\"." },
+    { "id": "position-bias", "front": "Vì sao không train model xếp hạng thẳng trên tỉ lệ bấm thô?", "back": "Ô đầu được bấm nhiều vì nó ở đầu, nên model học lại thứ tự cũ. Xáo vị trí cho một phần nhỏ lượt hiển thị và chia lượt bấm cho xác suất nhìn tới vị trí đó." }
   ]
 }

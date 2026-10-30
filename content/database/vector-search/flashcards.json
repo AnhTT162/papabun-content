@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "same-model", "front": "Vì sao tài liệu và câu hỏi phải embed bằng cùng một model?", "back": "Mỗi model có không gian vector riêng. Vector của hai model cùng số chiều vẫn so được về mặt tính toán nhưng kết quả vô nghĩa, và không có lỗi nào báo." },
+    { "id": "ann-tradeoff", "front": "ANN đánh đổi gì so với tìm chính xác?", "back": "Nhanh hơn nhiều lần vì chỉ xét một phần vector, đổi lại có thể sót hàng xóm thật. Đo bằng recall@k so với quét chính xác." },
+    { "id": "hnsw-search", "front": "HNSW tìm hàng xóm gần nhất thế nào?", "back": "Vào từ tầng trên thưa, đi tham lam sang điểm gần câu hỏi hơn, xuống dần tới tầng dưới cùng, giữ hàng đợi ef ứng viên tốt nhất và dừng khi không tìm được điểm tốt hơn." },
+    { "id": "num-candidates", "front": "`num_candidates` trong kNN của Elasticsearch là gì?", "back": "Số ứng viên mỗi shard giữ khi đi đồ thị, mặc định 1,5 × k, tối đa 10.000. Tăng thì recall cao hơn và chậm hơn." },
+    { "id": "vector-memory", "front": "Bộ nhớ cho HNSW với vector float tính thế nào?", "back": "4 × số chiều byte mỗi vector cộng 4 × m byte cho đồ thị. 5 triệu × 768 chiều là khoảng 15,7 GB mỗi bản sao, nằm trong page cache chứ không trên heap." },
+    { "id": "quantize-rescore", "front": "Lượng tử hoá vector cần đi kèm gì?", "back": "Lấy dư ứng viên theo điểm xấp xỉ rồi tính lại bằng vector gốc. Không tính lại thì recall dừng ở một mức dù tăng ứng viên." },
+    { "id": "pre-post-filter", "front": "Pre-filter và post-filter khác nhau thế nào trong kNN?", "back": "Pre-filter chỉ nhận tài liệu khớp trong lúc đi đồ thị nên đủ k. Post-filter lọc sau khi đã chọn ứng viên, bộ lọc hẹp thì gần như không còn gì." },
+    { "id": "rrf", "front": "RRF trộn hai danh sách kết quả thế nào?", "back": "Mỗi danh sách cho tài liệu 1/(60 + hạng), cộng lại. Chỉ dùng thứ hạng nên không cần đưa điểm BM25 và cosine về cùng thang." },
+    { "id": "why-hybrid", "front": "Vì sao vẫn cần BM25 khi đã có vector search?", "back": "Vector kém với mã sản phẩm, con số, tên riêng hiếm và phủ định. BM25 khớp đúng những thứ đó; vector bù phần đồng nghĩa và câu mô tả." },
+    { "id": "two-layer-eval", "front": "Recall của ANN cao có nghĩa là tìm kiếm tốt không?", "back": "Không. Recall chỉ đo chỉ mục xấp xỉ tốt tới đâu so với quét chính xác. Chất lượng tìm kiếm đo bằng bộ câu hỏi có đáp án (nDCG@10) và A/B test." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Hybrid search: đường ghi vector và đường tìm",
+  "nodes": [
+    { "id": "catalog", "label": "Catalog sản phẩm", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "indexer", "label": "Job embed theo lô", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "es", "label": "Elasticsearch", "kind": "database", "x": 0.1, "y": 0.5 },
+    { "id": "model", "label": "Model embedding", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "search", "label": "Search service", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "client", "label": "Người dùng", "kind": "client", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "catalog-indexer", "from": "catalog", "to": "indexer", "label": "thay đổi (CDC)" },
+    { "id": "indexer-model", "from": "indexer", "to": "model", "label": "embed theo lô" },
+    { "id": "indexer-es", "from": "indexer", "to": "es", "label": "bulk: text + vector" },
+    { "id": "client-search", "from": "client", "to": "search", "label": "câu hỏi" },
+    { "id": "search-model", "from": "search", "to": "model", "label": "embed câu hỏi" },
+    { "id": "search-es", "from": "search", "to": "es", "label": "BM25 + kNN, RRF" }
+  ],
+  "steps": [
+    {
+      "caption": "Sản phẩm mới hoặc đổi tên được đọc từ catalog qua CDC. Job gom vài trăm sản phẩm một lô để gọi model cho rẻ.",
+      "show": ["catalog", "indexer", "catalog-indexer"],
+      "highlight": ["catalog-indexer"]
+    },
+    {
+      "caption": "Model trả về mỗi sản phẩm một vector 768 chiều. Job ghi kèm phiên bản model, vì vector của model khác không so được.",
+      "show": ["model", "indexer-model"],
+      "highlight": ["indexer-model"]
+    },
+    {
+      "caption": "Mỗi tài liệu có cả text (cho BM25) và vector (cho HNSW). Vector và đồ thị nằm ngoài heap, phải vừa page cache.",
+      "show": ["es", "indexer-es"],
+      "highlight": ["indexer-es"]
+    },
+    {
+      "caption": "Lúc tìm, service embed câu hỏi bằng đúng model của index, có cache và timeout; model lỗi thì chỉ chạy BM25.",
+      "show": ["search", "client", "client-search", "search-model"],
+      "highlight": ["search-model"]
+    },
+    {
+      "caption": "Một request chạy BM25 và kNN (bộ lọc còn hàng đặt trong knn) rồi trộn hai danh sách bằng RRF theo thứ hạng.",
+      "show": ["search-es"],
+      "highlight": ["search-es"]
+    }
+  ]
+}

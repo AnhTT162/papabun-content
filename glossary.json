@@ -1605,7 +1605,7 @@
       "meaning": "Quá trình gộp các file dữ liệu của LSM-tree, bỏ bản cũ và bản đã xoá, để giảm số file phải đọc và dung lượng.",
       "example": "Compaction không theo kịp lượng ghi thì RocksDB chặn ghi (write stall).",
       "related": ["lsm-tree", "write-amplification"],
-      "topics": ["storage-engine", "tail-latency", "olap-doris"]
+      "topics": ["storage-engine", "tail-latency", "olap-doris", "vector-search"]
     },
     {
       "id": "write-amplification",
@@ -2285,7 +2285,7 @@
       "meaning": "Cấu trúc của search engine: mỗi từ (sau khi qua analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất, nên tra một từ không phải quét mọi tài liệu.",
       "example": "Từ `khoac` → tài liệu 12, 98, 1.204...",
       "related": ["analyzer", "bm25"],
-      "topics": ["search-elasticsearch", "sd-building-blocks", "olap-doris"]
+      "topics": ["search-elasticsearch", "sd-building-blocks", "olap-doris", "vector-search"]
     },
     {
       "id": "analyzer",
@@ -2301,7 +2301,7 @@
       "meaning": "Công thức xếp hạng mặc định của Elasticsearch và Lucene: điểm tăng theo số lần từ xuất hiện (có trần), cao hơn với từ hiếm trong cả tập, và ưu tiên trường ngắn.",
       "example": "Hai sản phẩm cùng có \"áo khoác\": tên ngắn \"Áo khoác gió\" được điểm cao hơn tên dài \"Áo khoác gió dáng rộng chống nước nhiều túi\".",
       "related": ["inverted-index"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "vector-search"]
     },
     {
       "id": "near-real-time",
@@ -2317,7 +2317,7 @@
       "meaning": "Phần bất biến của một index Lucene. Tài liệu mới vào segment mới; xoá và update chỉ đánh dấu tài liệu cũ, tới khi merge gộp segment mới thật sự dọn.",
       "example": "Update giá một sản phẩm 1.000 lần để lại 999 bản đã xoá chờ merge.",
       "related": ["near-real-time", "inverted-index"],
-      "topics": ["search-elasticsearch"]
+      "topics": ["search-elasticsearch", "vector-search"]
     },
     {
       "id": "index-alias",
@@ -2325,7 +2325,7 @@
       "meaning": "Tên phụ trỏ tới một hoặc nhiều index Elasticsearch. Ứng dụng đọc ghi qua alias, nên reindex sang index mới chỉ cần chuyển alias trong một lệnh nguyên tử.",
       "example": "`POST _aliases` với `remove products_v1` và `add products_v2` cho alias `products`.",
       "related": ["lucene-segment"],
-      "topics": ["search-elasticsearch", "design-search-autocomplete"]
+      "topics": ["search-elasticsearch", "design-search-autocomplete", "vector-search"]
     },
     {
       "id": "search-after",
@@ -6397,7 +6397,7 @@
       "meaning": "Phần RAM kernel dùng để cache nội dung file. Mọi lần đọc ghi file thường đều đi qua nó; kernel thu hồi khi process cần bộ nhớ.",
       "example": "`free -h` báo `buff/cache` 23 GB trên máy Kafka: dữ liệu mới được consumer đọc thẳng từ RAM, không chạm đĩa.",
       "related": ["zero-copy", "fsync"],
-      "topics": ["os-process-memory", "linux-troubleshooting", "io-models", "java-io-nio"]
+      "topics": ["os-process-memory", "linux-troubleshooting", "io-models", "java-io-nio", "vector-search"]
     },
     {
       "id": "file-descriptor",
@@ -7829,7 +7829,7 @@
       "meaning": "File được OS ánh xạ vào bộ nhớ ảo của process (mmap), đọc ghi như một mảng mà không gọi `read`/`write`; trang được nạp khi truy cập.",
       "example": "Kafka map file index của mỗi segment bằng `FileChannel.map`.",
       "related": ["zero-copy", "page-cache"],
-      "topics": ["java-io-nio"]
+      "topics": ["java-io-nio", "vector-search"]
     },
     {
       "id": "reflection",
@@ -9285,7 +9285,7 @@
       "meaning": "Đơn vị lưu trữ và nhân bản của Doris: mỗi partition chia thành các bucket theo hash, mỗi bucket là một tablet có nhiều bản sao trên các BE khác nhau.",
       "example": "Partition một ngày 55 GB chia 16 bucket thì mỗi tablet khoảng 3,5 GB, mỗi tablet 3 bản sao.",
       "related": ["partition-pruning", "compaction"],
-      "topics": ["olap-doris"]
+      "topics": ["olap-doris", "vector-search"]
     },
     {
       "id": "prefix-index",
@@ -9374,6 +9374,134 @@
       "example": "`min_gram` 1, `max_gram` 10: \"galaxy\" thành `g, ga, gal, gala, galax, galaxy`.",
       "related": ["analyzer", "inverted-index", "completion-suggester"],
       "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "embedding",
+      "term": "Embedding",
+      "meaning": "Vector số (thường 384 tới 3.072 chiều) do một model sinh ra từ văn bản hay ảnh, sao cho hai thứ gần nghĩa có hai vector gần nhau. Chỉ so được các vector sinh ra bởi cùng một model.",
+      "example": "\"Balo tiểu học\" và \"đồ cho bé đi học\" cho hai vector có cosine similarity cao dù không chung từ nào.",
+      "related": ["vector-search", "cosine-similarity", "knn"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "vector-search",
+      "term": "Vector search",
+      "meaning": "Tìm theo nghĩa: biến câu hỏi thành embedding rồi tìm các tài liệu có vector gần nó nhất, thay vì khớp từ khoá.",
+      "example": "Elasticsearch `dense_vector` với truy vấn `knn`, PostgreSQL với pgvector, Doris 4 với ANN index.",
+      "related": ["embedding", "ann", "hybrid-search"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "knn",
+      "term": "kNN",
+      "meaning": "k-nearest neighbors: tìm k điểm gần một điểm cho trước nhất. Tìm chính xác phải so với mọi điểm; ANN tìm xấp xỉ cho nhanh.",
+      "example": "`\"knn\": { \"field\": \"embedding\", \"k\": 10, \"num_candidates\": 50 }` trả 10 sản phẩm có vector gần câu hỏi nhất.",
+      "related": ["ann", "hnsw", "vector-search"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "ann",
+      "term": "ANN",
+      "meaning": "Approximate nearest neighbor: tìm hàng xóm gần nhất một cách xấp xỉ, chỉ xét một phần dữ liệu nên nhanh hơn nhiều lần, đổi lại có thể sót kết quả. Đo bằng recall so với tìm chính xác.",
+      "example": "HNSW với 50 ứng viên trả đúng 99,9% top-10 của quét chính xác trên 100.000 vector, trong khoảng 0,3 ms.",
+      "related": ["knn", "hnsw"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "hnsw",
+      "term": "HNSW",
+      "meaning": "Hierarchical Navigable Small World: chỉ mục ANN dạng đồ thị nhiều tầng, mỗi điểm nối với khoảng m hàng xóm. Truy vấn đi tham lam từ tầng trên thưa xuống tầng dưới cùng, giữ một hàng đợi ứng viên.",
+      "example": "Lucene mặc định m 16, ef_construction 100; tăng `num_candidates` thì recall cao hơn và chậm hơn.",
+      "related": ["ann", "knn", "vector-quantization"],
+      "topics": ["vector-search"]
+    },
+    {
+      "id": "cosine-similarity",
+      "term": "Cosine similarity",
+      "meaning": "Độ gần giữa hai vector đo bằng cos của góc giữa chúng, từ −1 tới 1, không phụ thuộc độ dài vector. Với vector đã chuẩn hoá về độ dài 1 thì bằng dot product.",
+      "example": "Chuẩn hoá vector lúc ghi rồi dùng `inner_product` trong Doris, vì Doris không có metric cosine.",
+      "related": ["embedding", "vector-search"],
+      "topics": ["vector-search"]
+    },
+    {
+      "id": "vector-quantization",
+      "term": "Vector quantization",
+      "meaning": "Lượng tử hoá vector: lưu thêm bản nén (int8, int4, 1 bit) của mỗi vector float để duyệt chỉ mục tốn ít RAM hơn. Thứ tự theo điểm xấp xỉ có sai lệch, nên thường lấy dư ứng viên rồi tính lại bằng vector gốc.",
+      "example": "Vector 768 chiều: float 3.072 byte, int8 784 byte, bbq 1 bit 110 byte.",
+      "related": ["hnsw", "ann"],
+      "topics": ["vector-search"]
+    },
+    {
+      "id": "hybrid-search",
+      "term": "Hybrid search",
+      "meaning": "Chạy cả tìm theo từ khoá (BM25) và tìm theo vector rồi trộn kết quả, để bù điểm yếu của nhau: vector giỏi đồng nghĩa, BM25 giỏi mã, số và tên riêng.",
+      "example": "Retriever `rrf` của Elasticsearch gồm một retriever `standard` và một retriever `knn`.",
+      "related": ["rrf", "bm25", "vector-search"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "rrf",
+      "term": "RRF",
+      "meaning": "Reciprocal rank fusion: trộn nhiều danh sách kết quả chỉ bằng thứ hạng, mỗi danh sách cho tài liệu 1/(k + hạng), thường k = 60, rồi cộng lại. Không cần đưa các loại điểm về cùng thang đo.",
+      "example": "Hạng 3 bên BM25 và hạng 2 bên kNN được 1/63 + 1/62 ≈ 0,032, cao hơn tài liệu chỉ đứng hạng 1 một bên (≈ 0,016).",
+      "related": ["hybrid-search", "bm25"],
+      "topics": ["vector-search"]
+    },
+    {
+      "id": "ndcg",
+      "term": "nDCG",
+      "meaning": "Normalized discounted cumulative gain: chỉ số chất lượng xếp hạng, cộng mức liên quan của từng kết quả có giảm dần theo vị trí, chia cho giá trị của thứ tự lý tưởng. 1 là hoàn hảo.",
+      "example": "nDCG@10 trên 500 câu hỏi có người chấm, so giữa model embedding cũ và mới trước khi chuyển alias.",
+      "related": ["mrr", "ab-testing"],
+      "topics": ["vector-search"]
+    },
+    {
+      "id": "ab-testing",
+      "term": "A/B test",
+      "meaning": "Chia người dùng ngẫu nhiên thành nhóm dùng bản cũ và nhóm dùng bản mới, so chỉ số giữa hai nhóm để biết thay đổi có thật sự tốt hơn không. Có chỉ số chính và chỉ số chặn (ví dụ p99).",
+      "example": "5% người dùng nhận xếp hạng gợi ý bằng model mới; so tỉ lệ dùng gợi ý và số phím gõ với nhóm còn lại trong hai tuần.",
+      "related": ["ndcg", "mrr", "canary-release"],
+      "topics": ["vector-search", "design-search-autocomplete"]
+    },
+    {
+      "id": "edit-distance",
+      "term": "Edit distance",
+      "meaning": "Số thao tác thêm, xoá, thay một ký tự ít nhất để biến chuỗi này thành chuỗi kia (Levenshtein distance). Tính thêm đổi chỗ hai ký tự kề nhau là một thao tác thì gọi là Damerau–Levenshtein.",
+      "example": "\"samsng\" cách \"samsung\" 1 thao tác; \"xioami\" cách \"xiaomi\" 1 thao tác nếu tính đổi chỗ.",
+      "related": ["autocomplete"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "learning-to-rank",
+      "term": "Learning to rank",
+      "meaning": "Dùng model học máy (thường cây quyết định tăng cường, GBDT) để xếp hạng lại một tập ứng viên theo nhiều đặc trưng, thay cho công thức điểm cố định. Model train từ log hành vi hoặc nhãn do người chấm.",
+      "example": "FST lấy 50 câu ứng viên, model chấm theo điểm toàn cục, tỉ lệ bấm ở tiền tố, độ tươi, vùng, rồi giữ 8 câu.",
+      "related": ["position-bias", "mrr"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "position-bias",
+      "term": "Position bias",
+      "meaning": "Thiên lệch vị trí: kết quả ở trên được bấm nhiều hơn chỉ vì được nhìn thấy nhiều hơn. Train thẳng trên tỉ lệ bấm thô thì model học lại thứ tự cũ.",
+      "example": "Câu liên quan nhất đứng thứ hai chỉ có tỉ lệ bấm 0,30, bằng câu đứng đầu kém liên quan hơn; chia cho xác suất nhìn tới vị trí thì ra lại 0,50.",
+      "related": ["learning-to-rank"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "mrr",
+      "term": "MRR",
+      "meaning": "Mean reciprocal rank: trung bình của 1/(vị trí của kết quả đúng đầu tiên) qua nhiều câu hỏi. Kết quả đúng ở vị trí 1 được 1, vị trí 2 được 0,5.",
+      "example": "Đo offline xếp hạng gợi ý: câu người dùng thật sự chọn đứng ở vị trí nào trong danh sách model trả về.",
+      "related": ["ndcg", "learning-to-rank"],
+      "topics": ["design-search-autocomplete"]
+    },
+    {
+      "id": "recall-at-k",
+      "term": "Recall@k",
+      "meaning": "Tỉ lệ trong top-k thật (tính bằng quét chính xác) mà chỉ mục ANN trả về được. Đo độ chính xác của phép xấp xỉ, không đo kết quả có đúng ý người tìm hay không.",
+      "example": "recall@10 0,95 nghĩa là trung bình 9,5 trong 10 hàng xóm thật có mặt trong kết quả.",
+      "related": ["ann", "hnsw", "ndcg"],
+      "topics": ["vector-search"]
     }
   ]
 }
