@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Crawler cho dịch vụ so sánh giá",
+  "prompt": "Một dịch vụ so sánh giá theo dõi 20.000 shop online với khoảng 200 triệu URL sản phẩm. 10 shop lớn nhất chiếm 60% số URL, shop lớn nhất có 40 triệu URL và chịu được khoảng 50 request mỗi giây từ crawler. 20 triệu sản phẩm phổ biến phải có giá mới trong 24 giờ, phần còn lại càng tươi càng tốt. Khoảng 5% shop hiện giá bằng JavaScript. Phải tôn trọng robots.txt và không làm chậm site của shop. Bản đầu tiên đội đề xuất: BFS từ trang chủ mỗi shop, 500 fetcher lấy URL từ một hàng đợi Kafka chung, Redis set lưu mọi URL đã thấy, tải lại toàn bộ 200 triệu trang mỗi ngày, chạy trình duyệt headless cho mọi trang để không phải phân biệt. Thiết kế lại.",
+  "hints": [
+    "Tải lại 200 triệu trang mỗi ngày là bao nhiêu trang mỗi giây? Shop lớn nhất chịu 50 request mỗi giây thì tải hết 40 triệu trang của nó mất bao lâu?",
+    "Với một hàng đợi chung, khi 60% URL thuộc 10 shop thì fetcher làm gì lúc phải chờ politeness?",
+    "200 triệu URL trong Redis set tốn bao nhiêu RAM? Có cần chính xác tuyệt đối không?",
+    "Bao nhiêu trang thật sự cần chạy JavaScript? Giá có nằm sẵn trong HTML không?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: 200 triệu trang mỗi ngày là khoảng 2.300 trang mỗi giây. Riêng shop lớn nhất cần 40 triệu trang mỗi ngày, tức 460 request mỗi giây, gấp 9 lần mức nó chịu được. Hàng đợi chung không biết politeness: hoặc fetcher dồn request vào shop lớn, hoặc ngồi chờ trong khi URL của shop khác nằm phía sau. Headless cho mọi trang tốn gấp hàng chục lần CPU và RAM so với tải HTML.\n\n**Ngân sách theo shop**: với shop lớn nhất, 50 request mỗi giây là 4,3 triệu trang mỗi ngày. Chia: 3 triệu sản phẩm phổ biến của shop đó tải mỗi ngày (khoảng 35 request mỗi giây), 37 triệu còn lại xoay vòng 30 ngày (khoảng 14 request mỗi giây). Tổng khoảng 49, vừa mức cho phép. Đề nghị shop cung cấp feed giá cho đối tác thì bỏ được phần lớn số lần tải này. Cả hệ thống: 20 triệu trang phổ biến mỗi ngày (230 mỗi giây) cộng phần còn lại xoay vòng 7 tới 30 ngày tuỳ ngân sách của từng shop, khoảng 300–530 trang mỗi giây, gần 500 nếu đa số shop xoay vòng 7 ngày.\n\n**Frontier**: chia shard theo hash của host bằng consistent hashing. Mỗi shard có front queue theo ưu tiên (sản phẩm phổ biến, sản phẩm hay đổi giá, URL mới từ sitemap) và một back queue cho mỗi host, cộng heap theo giờ sớm nhất được gọi host. Tốc độ mỗi host bắt đầu 1 request mỗi giây, tăng dần tới mức đã thoả thuận khi thời gian phản hồi ổn định, giảm khi chậm đi, và lùi theo `Retry-After` khi gặp 429 hay 503. Politeness tính thêm theo IP cho các shop nhỏ dùng chung hosting.\n\n**Tải lại rẻ hơn**: gửi `If-None-Match`/`If-Modified-Since`, trang không đổi trả 304 không có body. Đọc sitemap có `lastmod` mỗi ngày để tìm sản phẩm mới mà không phải BFS. Chu kỳ của từng URL theo lịch sử: đổi giá thì giảm một nửa, không đổi thì tăng gấp đôi, trong khoảng 6 giờ tới 30 ngày; sản phẩm phổ biến không bao giờ quá 24 giờ.\n\n**Chống trùng**: chuẩn hoá URL (host chữ thường, bỏ cổng mặc định và fragment, bỏ `utm_*`, sắp xếp tham số, theo `rel=canonical`). URL đã thấy: Bloom filter khoảng 240 MB cho 200 triệu URL ở 1% dương tính giả (Redis set chính xác tốn hàng chục GB), đặt trước bảng URL đã biết trong RocksDB, vì bảng này vẫn cần để lập lịch tải lại. Trang trùng: so mã sản phẩm và giá đã rút, không so văn bản cả trang.\n\n**Bẫy crawl**: không BFS qua trang danh mục có bộ lọc tổ hợp; chỉ theo link sản phẩm và phân trang, giới hạn độ sâu và số URL mới mỗi shop mỗi ngày; cảnh báo khi một shop đột nhiên sinh nhiều URL mới.\n\n**JavaScript**: trước tiên đọc JSON-LD `Product`/`offers` trong HTML và tìm API JSON mà trang gọi. Chỉ những shop vẫn không có giá mới chạy trình duyệt headless trên một nhóm máy riêng có hàng đợi riêng, để chúng không làm chậm phần còn lại.\n\n**Lưu trữ**: bản thô nén lưu S3 dạng WARC 7 ngày (khoảng 10 TB) để parse lại khi đổi parser. Giá đã rút ghi vào database cùng thời điểm tải.\n\n**Quan sát**: tuổi dữ liệu của sản phẩm phổ biến (p99 phải dưới 24 giờ), tốc độ và tỉ lệ 429 theo shop lớn, tỉ lệ 304, tỉ lệ parse lỗi theo shop (shop đổi giao diện), số URL mới mỗi shop.",
+  "tradeoffs": [
+    {
+      "option": "Frontier shard theo host, ngân sách và ưu tiên theo shop",
+      "pros": [
+        "Tôn trọng giới hạn của từng shop mà vẫn dùng hết fetcher",
+        "Sản phẩm phổ biến luôn tươi"
+      ],
+      "cons": [
+        "Frontier phức tạp: hàng đợi theo host, heap, phần tràn ra đĩa",
+        "Phần đuôi của shop lớn chỉ tươi theo tháng"
+      ]
+    },
+    {
+      "option": "Feed hoặc API do shop cung cấp",
+      "pros": [
+        "Chính xác, rẻ, không lo politeness hay đổi giao diện",
+        "Có cả tồn kho và khuyến mãi"
+      ],
+      "cons": [
+        "Chỉ có ở shop chịu hợp tác",
+        "Mỗi shop một định dạng, phải viết bộ chuyển đổi"
+      ]
+    },
+    {
+      "option": "Hàng đợi chung, tải lại mọi trang mỗi ngày",
+      "pros": [
+        "Đơn giản, dễ scale số fetcher",
+        "Không cần lịch theo URL"
+      ],
+      "cons": [
+        "Vượt giới hạn của shop lớn, dễ bị chặn",
+        "Lãng phí phần lớn lần tải cho trang không đổi"
+      ]
+    },
+    {
+      "option": "Trình duyệt headless cho mọi trang",
+      "pros": [
+        "Thấy đúng như người dùng, không bỏ sót giá do JavaScript",
+        "Một đường xử lý cho mọi shop"
+      ],
+      "cons": [
+        "Tốn tài nguyên gấp hàng chục lần",
+        "Chậm hơn nhiều, giảm số trang tươi trong 24 giờ"
+      ]
+    }
+  ]
+}

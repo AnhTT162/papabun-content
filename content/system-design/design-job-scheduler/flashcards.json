@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "no-exactly-once", "front": "Job scheduler phân tán đảm bảo chạy đúng một lần thế nào?", "back": "Không đảm bảo được. Nó cho at-least-once, mỗi lần chạy có khoá (job_id, fire_at), và tác dụng phụ dùng khoá đó để chỉ áp dụng một lần." },
+    { "id": "run-unique", "front": "Vì sao `job_run` cần unique trên `(job_id, fire_at)`?", "back": "Để việc kích hoạt idempotent: scheduler chết rồi node khác quét lại cùng đoạn, hay hai node cùng tưởng giữ một partition, cũng không tạo trùng lần chạy." },
+    { "id": "separate-roles", "front": "Vì sao tách kích hoạt khỏi thực thi?", "back": "Một đích chậm hay một job dài không được làm trễ mọi job khác. Kích hoạt chỉ tạo lần chạy; worker chạy song song và scale riêng." },
+    { "id": "lease-fencing", "front": "Lease và attempt bảo vệ gì trong job scheduler?", "back": "Lease cho phép worker khác nhận lại khi worker chết. Báo xong kèm attempt để worker cũ tỉnh dậy không ghi đè; tác dụng phụ bên ngoài vẫn cần idempotency key." },
+    { "id": "misfire-policies", "front": "Ba chính sách misfire hay gặp?", "back": "Chạy bù một lần (mặc định của cron trigger Quartz), bỏ qua chờ lượt sau, và chạy bù mọi lần lỡ. Mỗi job phải chọn rõ." },
+    { "id": "concurrency-policy", "front": "Lần chạy trước chưa xong mà tới giờ chạy lần sau thì sao?", "back": "Kubernetes: chạy chồng (Allow, mặc định), bỏ lần mới (Forbid), dừng lần cũ (Replace). Quartz `@DisallowConcurrentExecution` thì hoãn lần mới tới khi lần cũ xong." },
+    { "id": "midnight-spread", "front": "Rải 500.000 job 00:00 thế nào?", "back": "Cho job khai báo cửa sổ linh hoạt rồi lệch mỗi job `hash(job_id) mod window`, cộng rate limit theo đích ở worker." },
+    { "id": "db-clock", "front": "So giờ đến hạn bằng đồng hồ nào?", "back": "Bằng `now()` của database, không bằng đồng hồ từng node. Quartz cluster yêu cầu đồng hồ các node lệch dưới 1 giây." },
+    { "id": "cronjob-approx", "front": "Kubernetes CronJob đảm bảo gì?", "back": "Tạo Job khoảng một lần mỗi giờ hẹn, có thể hai hoặc không lần nào. Quá 100 lần lỡ thì controller v2 cảnh báo và chỉ chạy lần gần nhất; đặt `startingDeadlineSeconds` để bỏ lần quá muộn." },
+    { "id": "dead-mans-switch", "front": "Phát hiện job không chạy thế nào?", "back": "Dead man's switch: mỗi job quan trọng khai báo phải có lần chạy thành công trước giờ X; một job kiểm tra định kỳ và cảnh báo khi quá hạn." }
+  ]
+}

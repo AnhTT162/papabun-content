@@ -394,8 +394,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 9 | `design-news-feed` | Thiết kế news feed | senior | Fan-out on write và on read, người dùng nổi tiếng, xếp hạng | L D Sc | ✅ |
 | 10 | `design-chat` | Thiết kế ứng dụng chat | senior | WebSocket, presence, thứ tự tin nhắn, đồng bộ nhiều thiết bị | L D Sc | ✅ |
 | 11 | `design-search-autocomplete` | Thiết kế autocomplete | senior | Trie/FST, top-k, cập nhật bằng snapshot, cache; Elasticsearch completion suggester và search_as_you_type; Doris đếm log tìm kiếm; nâng cao: gợi ý theo nghĩa, sửa lỗi gõ (Telex), learning to rank và thiên lệch vị trí | L D Sc | ✅ |
-| 12 | `design-job-scheduler` | ✚ Thiết kế job scheduler phân tán | senior | Cron phân tán, chạy đúng một lần, retry, phân phối việc, theo dõi | L D Sc | ⬜ |
-| 13 | `design-web-crawler` | ✚ Thiết kế web crawler | senior | Frontier, politeness, dedup URL và nội dung, mở rộng | L D Sc | ⬜ |
+| 12 | `design-job-scheduler` | ✚ Thiết kế job scheduler phân tán | senior | Cron phân tán, chạy đúng một lần, retry, phân phối việc, theo dõi | L D Sc | ✅ |
+| 13 | `design-web-crawler` | ✚ Thiết kế web crawler | senior | Frontier, politeness, dedup URL và nội dung, mở rộng | L D Sc | ✅ |
 | 14 | `design-file-storage` | Thiết kế lưu trữ file / video | senior | Upload theo phần, CDN, transcoding, metadata | L D Sc | ⬜ |
 | 15 | `design-key-value-store` | ✚ Thiết kế key-value store phân tán | architect | Consistent hashing, replication, quorum, xử lý conflict, như Dynamo | L D Sc | ⬜ |
 | 16 | `design-message-queue` | ✚ Thiết kế distributed message queue | architect | Log phân vùng, replication, thứ tự, giữ dữ liệu, consumer group | L D Sc | ⬜ |

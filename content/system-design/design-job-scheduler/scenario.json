@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Nền tảng hẹn giờ chung cho 40 team",
+  "prompt": "Một công ty thương mại điện tử có 40 team, mỗi team tự chạy job bằng `@Scheduled` cộng ShedLock, cron trên một máy ảo riêng, hoặc Kubernetes CronJob. Sự cố gần nhất: máy cron khởi động lại lúc 23:50, job đối soát 00:00 không chạy và không ai biết tới 9 giờ sáng. Bạn được giao làm một nền tảng chung. Quy mô: 2 triệu job định kỳ (khoảng 25% đặt `0 0 * * *` theo giờ Việt Nam), 50 triệu job hẹn giờ một lần mỗi ngày (\"huỷ đơn chưa thanh toán sau 30 phút\", \"nhắc giỏ hàng sau 24 giờ\"), mỗi lần chạy từ vài mili giây tới 1 giờ. Ràng buộc: bắt đầu chạy trễ không quá 5 giây (p99) với job không khai báo cửa sổ linh hoạt; không được mất lần chạy nào khi một node chết; job huỷ đơn không được huỷ đơn đã thanh toán; job không chạy phải có cảnh báo trong 10 phút. Bản đầu tiên đội đề xuất: một service có `@Scheduled(fixedRate = 1000)` đọc mọi job đến hạn rồi gọi HTTP tới đích ngay trong vòng lặp, chạy 3 pod, chống trùng bằng ShedLock. Thiết kế lại.",
+  "hints": [
+    "Với ShedLock, 3 pod thì mấy pod làm việc cùng lúc? Một lần gọi HTTP mất 2 giây thì vòng lặp mỗi giây ra sao?",
+    "Lúc 00:00 giờ Việt Nam có bao nhiêu job đến hạn cùng lúc? Hệ đích chịu được bao nhiêu?",
+    "Worker gọi xong service đích nhưng chết trước khi ghi DONE. Lần chạy lại có làm sai gì không?",
+    "Đơn được thanh toán ở giây thứ 1.799 và job huỷ chạy ở giây thứ 1.800. Bảo vệ ở đâu?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: ShedLock cho đúng một pod chạy, nên 3 pod chỉ có 1 pod làm việc và không scale ngang. Kích hoạt và thực thi nằm chung một vòng lặp: một đích chậm 2 giây làm mọi job phía sau trễ theo, và job chạy 1 giờ giữ cả vòng lặp. Pod chết giữa lúc gọi thì không còn dấu vết nào là lần chạy đã bắt đầu.\n\n**Ước lượng**: 50 triệu job hẹn giờ mỗi ngày là khoảng 580 mỗi giây trung bình, đỉnh vài nghìn. 25% của 2 triệu job định kỳ là 500.000 job đến hạn đúng 00:00. Tầng kích hoạt chịu được: lab PostgreSQL 17 tạo 100.000 lần chạy trong 0,76 giây với hai scheduler và lô 1.000. Hệ đích thì không chịu được 500.000 lời gọi trong một giây.\n\n**Dữ liệu**: `job` (cron, `time_zone`, `next_fire_at`, đích, timeout, `max_attempts`, `misfire_policy`, `concurrency_policy`, `window_s`, owner), partition theo hash của `job_id`. Job hẹn giờ một lần đặt trong `delayed_job` partition theo giờ hẹn, xoá cả partition cũ. `job_run` (`job_id`, `fire_at` unique, `status`, `attempt`, `lease_until`, `started_at`, `finished_at`, lỗi), giữ 30 ngày.\n\n**Kích hoạt**: scheduler stateless, 3–4 node, mỗi node giữ lease trên một số trong 32 partition. Mỗi giây lấy job đến hạn bằng `FOR UPDATE SKIP LOCKED` theo lô 1.000; trong một transaction tạo `job_run` (`ON CONFLICT DO NOTHING`), tính `next_fire_at` theo múi giờ của job, và ghi một dòng outbox. Giờ so bằng `now()` của database. Misfire: mặc định chạy bù một lần; job đối soát chọn chạy bù mọi lần lỡ; job gửi thông báo chọn bỏ qua.\n\n**Rải giờ**: job khai báo `window_s` (ví dụ 900 cho \"lúc nào trong 15 phút đầu ngày cũng được\") được lệch một khoảng cố định bằng `hash(job_id) mod window_s`, nên mỗi job chạy cùng giờ mỗi ngày còn tải dàn đều: 500.000 job trong 900 giây là khoảng 560 mỗi giây. Job đối soát cần đúng 00:00 thì không khai báo cửa sổ. Rate limit theo đích ở worker để một team không làm sập service của team khác.\n\n**Thực thi**: relay đẩy outbox sang Kafka, mỗi tenant lớn một topic, tenant nhỏ dùng chung. Worker nhận `run_id`, đặt lease 30 giây và gia hạn mỗi 10 giây. Job dài thì service đích nhận việc, trả 202, rồi tự gọi API heartbeat và báo xong; worker không giữ kết nối một giờ. Báo xong luôn kèm `attempt`, câu `UPDATE` có `WHERE attempt = ?`. Mỗi lời gọi đích kèm header `Idempotency-Key: <job_id>:<fire_at>`. Retry lỗi tạm thời theo backoff có jitter tới `max_attempts`, quá thì `FAILED` và báo team sở hữu.\n\n**Job huỷ đơn**: thanh toán xong thì đánh dấu job `CANCELLED`, nhưng không dựa vào đó. Tác vụ huỷ tự kiểm lại: `UPDATE orders SET status = 'CANCELLED' WHERE id = ? AND status = 'UNPAID'`. Đơn đã trả tiền thì không có dòng nào bị đổi, nên vẫn đúng dù huỷ và kích hoạt chạy đua nhau.\n\n**Không ai biết job không chạy**: mỗi job quan trọng khai báo \"phải có lần chạy thành công trước giờ X\"; một job kiểm tra (dead man's switch) chạy mỗi phút, so với `job_run` và cảnh báo trong 10 phút. Theo dõi thêm độ trễ kích hoạt p99 theo tenant, số job quá hạn chưa có run, số run `RUNNING` có lease đã hết hạn, và kích thước outbox.\n\n**Không làm ở đây**: quy trình nhiều bước chạy nhiều ngày (onboarding người bán, hoàn tiền qua nhiều bên) để cho workflow engine; nền tảng này chỉ kích hoạt bước đầu tiên.",
+  "tradeoffs": [
+    {
+      "option": "Nền tảng tự viết trên PostgreSQL + Kafka",
+      "pros": [
+        "Kiểm soát chính sách misfire, rải giờ, rate limit theo tenant",
+        "Lịch sử chạy và cảnh báo chung cho mọi team"
+      ],
+      "cons": [
+        "Tự vận hành scheduler, relay, worker và database",
+        "Phải tự làm giao diện, phân quyền và quota"
+      ]
+    },
+    {
+      "option": "Quartz cluster dùng chung",
+      "pros": [
+        "Thư viện quen thuộc, có sẵn misfire và chống chạy chồng",
+        "Không cần thêm hệ nào ngoài database"
+      ],
+      "cons": [
+        "Tranh chấp lock khi quá khoảng 3 node, kém với hàng triệu job ngắn",
+        "Job chạy trong JVM của scheduler, khó cô lập theo team"
+      ]
+    },
+    {
+      "option": "Kubernetes CronJob cho từng team",
+      "pros": [
+        "Không phải viết gì, cô lập theo pod",
+        "Hợp cho job nặng chạy vài phút trở lên"
+      ],
+      "cons": [
+        "Không hợp cho 50 triệu job hẹn giờ một lần mỗi ngày",
+        "\"Khoảng một lần\" mỗi giờ hẹn, Job phải idempotent"
+      ]
+    },
+    {
+      "option": "Scheduler managed của cloud",
+      "pros": [
+        "Không vận hành, có retry, dead letter queue, cửa sổ linh hoạt",
+        "Scale tới hàng triệu lịch"
+      ],
+      "cons": [
+        "Gắn với một nhà cung cấp, chi phí theo số lần gọi",
+        "Lịch sử chạy và cảnh báo phải tự ghép từ nhiều nơi"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "hosts-not-machines", "front": "Tốc độ crawl bị chặn bởi gì?", "back": "Bởi số host còn URL, vì mỗi host chỉ nhận vài request mỗi giây. URL dồn vào vài site lớn thì thêm fetcher không nhanh hơn." },
+    { "id": "mercator-frontier", "front": "Frontier kiểu Mercator gồm những gì?", "back": "Front queue theo ưu tiên, back queue mỗi host một hàng đợi, và heap giữ giờ sớm nhất được gọi từng host." },
+    { "id": "shard-by-host", "front": "Vì sao chia shard frontier theo host?", "back": "Mỗi host chỉ do một node lo, nên politeness không cần phối hợp giữa các node. URL mới thuộc host khác được gửi sang đúng node theo lô." },
+    { "id": "robots-precedence", "front": "Quy tắc nào thắng trong robots.txt theo RFC 9309?", "back": "Quy tắc khớp dài nhất, không theo thứ tự trong file. Dài bằng nhau thì Allow thắng." },
+    { "id": "robots-errors", "front": "robots.txt trả 404 và trả 503 khác nhau thế nào?", "back": "404 (4xx): được crawl mọi thứ. 503 (5xx) hay lỗi mạng: coi như cấm toàn bộ, hoặc dùng bản cache cũ nếu có. Bình thường bản cache không dùng quá 24 giờ." },
+    { "id": "uri-normalize", "front": "`java.net.URI.normalize()` làm gì?", "back": "Chỉ bỏ các đoạn `.` và `..`. Không hạ chữ hoa host, không bỏ cổng mặc định, tham số theo dõi hay fragment; host có dấu thì `getHost()` trả null." },
+    { "id": "bloom-for-urls", "front": "Bloom filter cho URL đã thấy tốn bao nhiêu và sai thế nào?", "back": "Khoảng 9,6 bit mỗi URL ở 1% dương tính giả (12 GB cho 10 tỷ URL). Sai theo một hướng: có thể bỏ qua URL chưa tải, nhưng không bao giờ coi URL đã thêm là mới." },
+    { "id": "simhash", "front": "SimHash dùng để làm gì và bẫy với trang ngắn?", "back": "Tìm trang gần giống bằng khoảng cách Hamming giữa hai fingerprint 64 bit. Trang ngắn thì vài dòng đổi đã làm khác nhiều bit; rút nội dung chính trước khi hash." },
+    { "id": "conditional-get", "front": "Tải lại trang rẻ hơn thế nào?", "back": "Gửi If-None-Match với ETag hoặc If-Modified-Since; trang không đổi trả 304 không có body. Kết hợp sitemap lastmod và chu kỳ theo lịch sử thay đổi." },
+    { "id": "crawler-traps", "front": "Bẫy crawl hay gặp và cách chặn?", "back": "Bộ lọc tổ hợp, lịch vô hạn, session id trong URL. Giới hạn số URL và độ sâu mỗi host, phát hiện tham số có quá nhiều biến thể." }
+  ]
+}

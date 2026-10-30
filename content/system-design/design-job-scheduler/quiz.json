@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "misfire-ignore",
+      "kind": "output",
+      "prompt": "Quartz 2.5.2, `misfireThreshold` 1 giây. Scheduler chạy 2 giây, `standby()` 8,5 giây, rồi `start()` lại. Ngay lúc chạy lại, job được gọi mấy lần?",
+      "code": "Trigger trigger = TriggerBuilder.newTrigger()\n    .withSchedule(CronScheduleBuilder.cronSchedule(\"0/1 * * * * ?\")\n        .withMisfireHandlingInstructionIgnoreMisfires())\n    .build();\nscheduler.scheduleJob(job, trigger);",
+      "options": [
+        "Một lần, vì Quartz gộp các lần lỡ thành một lần chạy bù",
+        "Không lần nào, vì lần lỡ bị bỏ và chờ tới giây kế tiếp",
+        "Khoảng 8 lần liền nhau, mỗi lần ứng với một giờ hẹn đã lỡ",
+        "Không lần nào, vì trigger bị chuyển sang trạng thái lỗi"
+      ],
+      "answer": 2,
+      "explanation": "`IgnoreMisfires` nghĩa là bỏ qua chính sách misfire: mọi giờ hẹn đã lỡ đều được chạy, ngay khi có thể. Lab ra 8 lần chạy cùng lúc ngay khi chạy lại, `getScheduledFireTime()` lần lượt là các giây đã lỡ. Chạy bù một lần là hành vi mặc định (smart policy) của cron trigger; chờ giây kế tiếp là `DoNothing`. Job gửi báo cáo mà đặt chính sách này thì người nhận nhận 8 báo cáo."
+    },
+    {
+      "id": "lease-double-effect",
+      "kind": "single",
+      "prompt": "Worker A nhận lần chạy \"trừ phí tháng\" với lease 30 giây, rồi bị GC dừng 40 giây. Worker B nhận lại, trừ phí và báo xong. A tỉnh dậy và tiếp tục. Điều gì ngăn khách bị trừ phí hai lần?",
+      "options": [
+        "Câu báo xong `WHERE attempt = ?` của A không đổi dòng nào",
+        "Lease của A đã hết hạn nên database chặn mọi lệnh ghi của A",
+        "Lệnh trừ phí mang khoá `(job_id, fire_at)`, bên nhận kiểm trùng",
+        "Kafka không giao lại message cho A sau khi B đã commit offset"
+      ],
+      "answer": 2,
+      "explanation": "Fencing bằng `attempt` chỉ chặn A ghi đè trạng thái của lần chạy; lệnh trừ phí A gửi sang service khác vẫn đi tiếp. Lease là quy ước của bảng `job_run`, database không tự chặn lệnh ghi nào của A, và A đã nhận message từ trước. Chỉ khi chính tác dụng phụ mang idempotency key và bên nhận kiểm trùng (lab: insert lần hai vào bảng đích bị bỏ qua nhờ khoá chính) thì khách mới không bị trừ hai lần."
+    },
+    {
+      "id": "cronjob-100-missed",
+      "kind": "single",
+      "prompt": "Kubernetes 1.3x, CronJob chạy mỗi phút, không đặt `startingDeadlineSeconds`. kube-controller-manager ngừng từ 08:29 tới 10:21. Lúc controller chạy lại, chuyện gì xảy ra?",
+      "options": [
+        "Controller tạo bù 112 Job cho mọi phút đã lỡ, rồi chạy tiếp",
+        "Controller tạo một Job cho phút gần nhất, kèm event cảnh báo",
+        "Controller bỏ các phút đã lỡ và tạo Job ở phút kế tiếp như thường",
+        "Controller không tạo Job nào nữa cho tới khi CronJob được sửa"
+      ],
+      "answer": 1,
+      "explanation": "Docs CronJob vẫn viết quá 100 lần lỡ thì không tạo Job, nhưng đó là hành vi của controller cũ, đã bị xoá. Controller v2 (mặc định từ 1.21) đếm số lần lỡ, phát event `TooManyMissedTimes` (\"too many missed start times\"), rồi vẫn trả về giờ hẹn gần nhất và tạo một Job cho nó. Không bao giờ tạo bù cả 112 Job. Muốn bỏ hẳn lần chạy quá muộn thì đặt `startingDeadlineSeconds`. Docs cũng nói CronJob chỉ \"khoảng một lần\" mỗi giờ hẹn, nên Job phải idempotent."
+    },
+    {
+      "id": "midnight-herd",
+      "kind": "single",
+      "prompt": "500.000 job đặt `0 0 * * *`, mỗi job gọi HTTP tới service của team sở hữu. Tầng kích hoạt tạo hết lần chạy trong vài giây. Cách giảm tải cho hệ đích tốt nhất là gì?",
+      "options": [
+        "Thêm node scheduler để tạo lần chạy nhanh hơn trước 00:00",
+        "Cho job khai báo cửa sổ, lệch mỗi job theo hash của job_id",
+        "Lệch ngẫu nhiên mọi job trong 15 phút, job không cần khai báo",
+        "Đổi cron thành `@daily` để scheduler tự rải đều trong ngày"
+      ],
+      "answer": 1,
+      "explanation": "Nút cổ chai là hệ đích, không phải tầng kích hoạt, nên thêm scheduler còn làm tải dồn nhanh hơn. Lệch theo `hash(job_id) mod window_s` chỉ áp cho job đã khai báo cửa sổ, nên job đối soát cần đúng 00:00 vẫn chạy đúng giờ, và mỗi job chạy cùng giờ mỗi ngày (dễ đoán, dễ debug). 500.000 job trong cửa sổ 900 giây là khoảng 560 lời gọi mỗi giây. Lệch mọi job mà không hỏi thì phá các job cần đúng giờ. `@daily` chỉ là cách viết khác của `0 0 * * *`."
+    },
+    {
+      "id": "cancel-race",
+      "kind": "single",
+      "prompt": "Job hẹn giờ \"huỷ đơn chưa thanh toán sau 30 phút\". Khi thanh toán thành công, service đánh dấu job là `CANCELLED`. Thỉnh thoảng đơn đã trả tiền vẫn bị huỷ. Sửa đúng gốc là gì?",
+      "options": [
+        "Khoá job bằng ShedLock trong lúc xử lý thanh toán",
+        "Đặt timeout ngắn hơn cho worker chạy job huỷ đơn",
+        "Câu huỷ kiểm lại: `WHERE status = 'UNPAID'`",
+        "Dời giờ huỷ sang 31 phút để thanh toán kịp hoàn tất"
+      ],
+      "answer": 2,
+      "explanation": "Đánh dấu `CANCELLED` và việc kích hoạt chạy đua nhau: job có thể đã nằm trong queue trước khi thanh toán xong. Câu `UPDATE orders SET status = 'CANCELLED' WHERE id = ? AND status = 'UNPAID'` kiểm điều kiện ngay lúc ghi, nên đơn đã trả tiền không bị đổi, dù job vẫn chạy và dù chạy hai lần. Lock và timeout không đóng được khoảng hở giữa đọc và ghi; dời giờ chỉ làm khoảng hở ít xảy ra hơn."
+    }
+  ]
+}

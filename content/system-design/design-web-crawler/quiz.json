@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "robots-longest-match",
+      "kind": "output",
+      "prompt": "Crawler theo RFC 9309. Với robots.txt dưới đây, đường dẫn `/shop/product/123?sort=price` được phép hay không?",
+      "code": "User-agent: *\nDisallow: /shop/\nAllow: /shop/product/\nDisallow: /*?sort=",
+      "options": [
+        "Không, vì có `Disallow` khớp và `Disallow` luôn thắng `Allow`",
+        "Có, vì `Allow: /shop/product/` là quy tắc khớp dài nhất",
+        "Không, vì quy tắc cuối cùng khớp là `Disallow: /*?sort=`",
+        "Có, vì `*` trong `Disallow` không khớp được qua dấu `/`"
+      ],
+      "answer": 1,
+      "explanation": "RFC 9309: quy tắc khớp cụ thể nhất (dài nhất tính theo octet) thắng, không theo thứ tự trong file. `/shop/product/` dài 14 ký tự, `/*?sort=` dài 8, `/shop/` dài 6, nên đường dẫn được phép (lab cũng ra như vậy). `Allow` chỉ thắng `Disallow` khi hai quy tắc dài bằng nhau. `*` khớp mọi chuỗi, kể cả `/`. Muốn chặn sắp xếp ở cả trang sản phẩm thì thêm `Disallow: /shop/product/*?sort=`."
+    },
+    {
+      "id": "robots-5xx",
+      "kind": "single",
+      "prompt": "Crawler chưa từng tải được robots.txt của `shop.example` (không có bản cache). Mọi lần tải đều trả 503 trong 2 giờ liền. Theo RFC 9309, crawler nên làm gì với site này?",
+      "options": [
+        "Crawl bình thường, vì không đọc được robots.txt thì không có quy tắc nào",
+        "Coi như bị cấm toàn bộ, ngừng tải trang của site tới khi đọc lại được",
+        "Crawl với tốc độ giảm một nửa để tránh làm site quá tải thêm",
+        "Chỉ tải các URL có trong sitemap.xml, vì sitemap là danh sách được phép"
+      ],
+      "answer": 1,
+      "explanation": "RFC 9309 phân biệt hai trường hợp: 4xx là không có file, nên được crawl mọi thứ; 5xx hay lỗi mạng là không truy cập được, nên phải coi như cấm toàn bộ. Site đang trả 503 cũng là lúc nó quá tải, nên crawl tiếp là đúng lúc tệ nhất. Nếu đã có bản cache thì RFC cho dùng bản đó cả khi quá 24 giờ, vì file không truy cập được; ở đây không có. Sitemap là gợi ý URL, không phải quyền. Khi lỗi kéo dài (RFC lấy ví dụ 30 ngày), crawler được coi như không có file hoặc tiếp tục dùng bản cache."
+    },
+    {
+      "id": "more-fetchers",
+      "kind": "single",
+      "prompt": "Crawler có 1.000 fetcher, mỗi host tối đa 1 request mỗi giây. Sau 1 giờ, tốc độ tụt từ 3.333 xuống 300 trang mỗi giây dù frontier còn 44% URL. Tăng lên 3.000 fetcher thì sao?",
+      "options": [
+        "Tốc độ tăng gấp ba, vì đang thiếu fetcher để tải song song",
+        "Tốc độ gần như không đổi, vì chỉ còn khoảng 300 host có URL",
+        "Tốc độ tăng gấp ba lúc đầu, rồi giảm vì frontier bị khoá",
+        "Tốc độ giảm, vì các fetcher tranh nhau cùng một hàng đợi"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi host chỉ cho 1 request mỗi giây, nên tốc độ tối đa bằng số host còn URL. Trong mô phỏng, sau 1 giờ chỉ còn 300 host, đúng 300 trang mỗi giây; 1.000 hay 3.000 fetcher thì phần lớn vẫn ngồi chờ. Phải giảm số URL cần tải ở site lớn (ưu tiên, conditional GET, sitemap) hoặc thoả thuận tốc độ cao hơn với chính các site đó."
+    },
+    {
+      "id": "uri-normalize",
+      "kind": "output",
+      "prompt": "JDK 27. Đoạn code in ra gì?",
+      "code": "URI u = new URI(\"HTTP://Shop.Example.COM:80/a/./b/../c?utm_source=fb&id=7#reviews\");\nSystem.out.println(u.normalize());",
+      "options": [
+        "`http://shop.example.com/a/c?id=7`",
+        "`http://shop.example.com:80/a/c?id=7&utm_source=fb`",
+        "`HTTP://Shop.Example.COM:80/a/c?utm_source=fb&id=7#reviews`",
+        "`HTTP://Shop.Example.COM:80/a/b/../c?utm_source=fb&id=7`"
+      ],
+      "answer": 2,
+      "explanation": "`URI.normalize()` chỉ bỏ các đoạn `.` và `..` trong đường dẫn theo RFC 3986. Nó không đổi chữ hoa của scheme và host, không bỏ cổng mặc định, không đụng tới query hay fragment (lab in đúng dòng này). Crawler phải tự chuẩn hoá phần còn lại, và cẩn thận với host có dấu: `getHost()` trả `null` cho `https://điệnmáy.vn/`."
+    },
+    {
+      "id": "simhash-short-pages",
+      "kind": "single",
+      "prompt": "Dùng SimHash 64 bit trên cả trang sản phẩm khoảng 100 từ. Bản cùng trang chỉ thêm dòng giờ cập nhật khác 9 bit, một sản phẩm cùng dòng khác 6 thông số khác 11 bit. Nên làm gì?",
+      "options": [
+        "Đặt ngưỡng 10 bit để bắt được bản cùng trang có giờ cập nhật",
+        "Giữ ngưỡng 3 bit như bài báo gốc, bỏ qua trường hợp này",
+        "Tăng lên SimHash 128 bit để hai khoảng cách tách xa nhau hơn",
+        "Rút nội dung chính, với trang sản phẩm thì so mã và giá đã rút"
+      ],
+      "answer": 3,
+      "explanation": "Trang ngắn thì vài dòng thay đổi đã chiếm phần lớn đặc trưng, nên khoảng cách của bản gần trùng (9) và của sản phẩm khác (11) gần nhau. Ngưỡng 10 sẽ gộp nhầm hai sản phẩm; ngưỡng 3 không bắt được gì. Ngưỡng 3 bit của bài báo năm 2007 dùng cho trang web đầy đủ, nhiều nghìn đặc trưng. Bỏ menu, quảng cáo và dòng giờ trước khi hash thì bản cùng trang ra khoảng cách 0; với trang sản phẩm, dữ liệu đã rút là cách so đáng tin hơn."
+    }
+  ]
+}

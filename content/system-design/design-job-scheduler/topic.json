@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-job-scheduler",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế job scheduler phân tán",
+  "summary": "Tách định nghĩa job, tầng kích hoạt và worker; tạo lần chạy idempotent bằng unique (job_id, fire_at) và SKIP LOCKED (đo trên PostgreSQL 17), lease, heartbeat và fencing bằng attempt, tác dụng phụ có idempotency key; chính sách misfire và chạy chồng (đo bằng Quartz 2.5.2), retry, rải giờ cao điểm 00:00, đồng hồ và múi giờ, job hẹn giờ một lần ở quy mô lớn; so với Quartz cluster, Kubernetes CronJob, scheduler managed và workflow engine.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 20,
+  "prerequisites": ["sd-framework", "distributed-locks", "idempotency", "outbox-cdc", "optimistic-pessimistic-locking"],
+  "terms": ["cron", "delivery-semantics", "skip-locked", "lease", "heartbeat", "fencing-token", "idempotency-key", "misfire", "dead-letter-queue", "timing-wheel", "outbox", "retry-backoff", "jitter", "durable-execution", "dst", "consumer-group", "dual-write", "sorted-set", "rate-limiting", "dead-mans-switch"],
+  "references": [
+    { "title": "Kubernetes Documentation: CronJob", "url": "https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/" },
+    { "title": "Quartz Scheduler 2.5: Configure Clustering with JDBC-JobStore", "url": "https://www.quartz-scheduler.org/documentation/quartz-2.5.x/configuration/ConfigJDBCJobStoreClustering.html" },
+    { "title": "Amazon EventBridge Scheduler User Guide", "url": "https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đảm bảo job chạy đúng một lần?\" Tôi nói thẳng là không đảm bảo được ở tầng scheduler: node có thể chết sau khi gọi đích mà trước khi ghi kết quả, và lúc đó chạy lại là cách duy nhất để không mất việc. Cái tôi đảm bảo là at-least-once cộng mỗi lần chạy có một khoá ổn định `(job_id, fire_at)`; bên nhận dùng khoá đó để áp dụng tác dụng phụ đúng một lần. Kết quả nhìn từ ngoài giống exactly-once." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để mặc định chính sách misfire và chạy chồng. Cùng một sự cố (scheduler ngừng 3 giờ), job gửi báo cáo mỗi giờ nên bỏ qua, job tính lãi mỗi giờ phải chạy bù cả 3 lần lỡ, job đồng bộ mỗi giờ nên chạy bù một lần. Bắt mỗi job khai báo lúc đăng ký." },
+    { "type": "callout", "style": "tip", "markdown": "Lỗi đắt nhất là job không chạy mà không ai biết. Ngoài cảnh báo khi job lỗi, hãy có cảnh báo khi job quan trọng quá giờ mà chưa có lần chạy thành công." }
+  ]
+}

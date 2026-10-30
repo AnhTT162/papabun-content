@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một vòng của crawler",
+  "nodes": [
+    { "id": "frontier", "label": "URL frontier", "kind": "queue", "x": 0.1, "y": 0.05 },
+    { "id": "fetcher", "label": "Fetcher", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "s3", "label": "S3 bản thô", "kind": "external", "x": 0.1, "y": 0.5 },
+    { "id": "web", "label": "Các site", "kind": "external", "x": 0.85, "y": 0.5 },
+    { "id": "parser", "label": "Parser", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "seen", "label": "URL đã thấy", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "frontier-fetcher", "from": "frontier", "to": "fetcher", "label": "URL tới giờ" },
+    { "id": "fetcher-web", "from": "fetcher", "to": "web", "label": "robots, GET" },
+    { "id": "fetcher-s3", "from": "fetcher", "to": "s3", "label": "WARC" },
+    { "id": "s3-parser", "from": "s3", "to": "parser", "label": "trang mới" },
+    { "id": "parser-seen", "from": "parser", "to": "seen", "label": "chuẩn hoá, kiểm" },
+    { "id": "seen-frontier", "from": "seen", "to": "frontier", "label": "URL mới" }
+  ],
+  "steps": [
+    {
+      "caption": "Frontier chia shard theo host. Mỗi host một hàng đợi; heap giữ giờ sớm nhất được gọi host đó, nên không host nào bị dồn request.",
+      "show": ["frontier", "fetcher", "frontier-fetcher"],
+      "highlight": ["frontier-fetcher"]
+    },
+    {
+      "caption": "Fetcher kiểm robots.txt đã cache (tối đa 24 giờ, trừ khi không tải được), gửi If-None-Match nếu đã có ETag, dừng khi body vượt giới hạn, lùi khi gặp 429.",
+      "show": ["web", "fetcher-web"],
+      "highlight": ["fetcher-web"]
+    },
+    {
+      "caption": "Bản thô đã nén lưu lên S3 dạng WARC, để đổi parser thì parse lại được mà không phải tải lại.",
+      "show": ["s3", "fetcher-s3"],
+      "highlight": ["fetcher-s3"]
+    },
+    {
+      "caption": "Parser rút giá, tồn kho và link. Nội dung chính được hash để bỏ trang trùng.",
+      "show": ["parser", "s3-parser"],
+      "highlight": ["s3-parser"]
+    },
+    {
+      "caption": "Link được chuẩn hoá, kiểm bằng Bloom filter và bảng URL đã biết; URL mới quay về đúng shard của host nó.",
+      "show": ["seen", "parser-seen", "seen-frontier"],
+      "highlight": ["parser-seen", "seen-frontier"]
+    }
+  ]
+}

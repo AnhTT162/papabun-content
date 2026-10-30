@@ -39,7 +39,7 @@
       "meaning": "Hệ thống phân giải tên miền thành địa chỉ IP. Kết quả được cache ở nhiều tầng theo TTL của bản ghi.",
       "example": "Tra `shop.example.com` nhận về bản ghi A `203.0.113.10` với TTL 300 giây.",
       "related": ["rtt", "load-balancer"],
-      "topics": ["http-request-lifecycle", "slow-api", "network-basics", "dns-cdn"]
+      "topics": ["http-request-lifecycle", "slow-api", "network-basics", "dns-cdn", "design-web-crawler"]
     },
     {
       "id": "rtt",
@@ -294,7 +294,7 @@
       "meaning": "Thread nhẹ do JVM quản lý (chính thức từ Java 21, JEP 444), được gắn lên carrier thread khi chạy và nhả carrier khi chờ IO. Tạo được hàng triệu thread.",
       "example": "`Executors.newVirtualThreadPerTaskExecutor()` tạo một virtual thread cho mỗi task.",
       "related": ["pinning", "io-bound"],
-      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion", "os-process-memory", "io-models"]
+      "topics": ["executor-thread-pool", "thread-lifecycle", "completable-future", "connection-pool", "producer-consumer", "synchronizers", "threadlocal", "locks-aqs", "virtual-threads", "forkjoin", "reactive", "thread-pool-exhaustion", "os-process-memory", "io-models", "design-web-crawler"]
     },
     {
       "id": "pinning",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns", "design-notification"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "idempotency-key",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler"]
     },
     {
       "id": "orm",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-job-scheduler"]
     },
     {
       "id": "datasource",
@@ -1381,7 +1381,7 @@
       "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại nó trong `If-None-Match` để hỏi có đổi không (không đổi thì server trả `304`), hoặc trong `If-Match` khi sửa để server chỉ ghi nếu phiên bản còn khớp (không thì `412 Precondition Failed`).",
       "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
       "related": ["optimistic-locking", "lost-update"],
-      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency", "rest-api-design"]
+      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency", "rest-api-design", "design-web-crawler"]
     },
     {
       "id": "skip-locked",
@@ -1389,7 +1389,7 @@
       "meaning": "Tuỳ chọn của `SELECT ... FOR UPDATE`: dòng đang bị transaction khác khoá thì bỏ qua thay vì chờ. Có từ PostgreSQL 9.5, MySQL 8.0 và Oracle.",
       "example": "Nhiều worker cùng chạy `SELECT ... WHERE status = 'NEW' LIMIT 10 FOR UPDATE SKIP LOCKED`, mỗi worker nhận một nhóm job khác nhau.",
       "related": ["pessimistic-locking", "lock-timeout"],
-      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc", "distributed-locks", "design-ecommerce-order"]
+      "topics": ["optimistic-pessimistic-locking", "lld-ood-interview", "outbox-cdc", "distributed-locks", "design-ecommerce-order", "design-job-scheduler"]
     },
     {
       "id": "lock-timeout",
@@ -1621,7 +1621,7 @@
       "meaning": "Cấu trúc xác suất trả lời \"chắc chắn không có\" hoặc \"có thể có\" cho một key, tốn rất ít bộ nhớ. Không bao giờ báo thiếu nhầm, đôi khi báo có nhầm.",
       "example": "LSM-tree giữ một Bloom filter cho mỗi SSTable để bỏ qua file không chứa key cần đọc.",
       "related": ["lsm-tree"],
-      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures", "design-url-shortener", "design-news-feed"]
+      "topics": ["storage-engine", "cache-failures", "data-structures", "advanced-data-structures", "design-url-shortener", "design-news-feed", "design-web-crawler"]
     },
     {
       "id": "group-commit",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "replication-slot",
@@ -2493,7 +2493,7 @@
       "meaning": "Mức đảm bảo giao message: at-most-once (có thể mất, không trùng), at-least-once (không mất, có thể trùng), exactly-once (chỉ đạt được trong phạm vi một hệ thống).",
       "example": "Ack sau khi xử lý là at-least-once: pod chết trước khi ack thì message được xử lý lại.",
       "related": ["message-ack", "idempotent-consumer"],
-      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "idempotency", "design-notification"]
+      "topics": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "idempotency", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "idempotent-consumer",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "poison-message",
@@ -2669,7 +2669,7 @@
       "meaning": "Nhóm consumer cùng `group.id`: mỗi partition của topic được giao cho đúng một consumer trong nhóm, và nhóm lưu offset chung. Nhiều nhóm cùng đọc một topic độc lập với nhau.",
       "example": "10 pod cùng group đọc topic 6 partition: 6 pod có việc, 4 pod chờ.",
       "related": ["kafka-partition", "competing-consumers"],
-      "topics": ["kafka-architecture", "kafka-producer-consumer", "event-driven-architecture"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer", "event-driven-architecture", "design-job-scheduler"]
     },
     {
       "id": "isr",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler"]
     },
     {
       "id": "redis-sentinel",
@@ -2909,7 +2909,7 @@
       "meaning": "Kiểu dữ liệu Redis lưu member duy nhất kèm score số thực, luôn sắp theo score; lấy hạng trong O(log N), lấy khoảng M phần tử trong O(log N + M). Cùng score thì sắp theo thứ tự từ điển của member.",
       "example": "`ZINCRBY lb 50 player:9`, `ZREVRANK lb player:9`.",
       "related": ["lua-script"],
-      "topics": ["redis-use-cases", "design-news-feed"]
+      "topics": ["redis-use-cases", "design-news-feed", "design-job-scheduler"]
     },
     {
       "id": "redis-stream",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols", "design-notification"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "fallback",
@@ -5229,7 +5229,7 @@
       "meaning": "Cách phân key cho node bằng một vòng hash: key thuộc node gặp đầu tiên theo chiều kim đồng hồ, nên thêm hay bớt node chỉ chuyển khoảng 1/N số key thay vì gần hết như modulo.",
       "example": "Cụm cache 4 node thêm node thứ 5: khoảng 20% key đổi node, so với 80% khi dùng `hash % N`.",
       "related": ["virtual-node", "hash-slot", "rendezvous-hashing"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "design-web-crawler"]
     },
     {
       "id": "virtual-node",
@@ -5333,7 +5333,7 @@
       "meaning": "Quyền (giữ khoá, làm leader) có thời hạn: hết hạn mà không gia hạn thì tự mất, nên người giữ chết không làm hệ thống kẹt mãi.",
       "example": "Lease etcd TTL 10 giây, client gửi keepalive mỗi 3 giây; process treo thì sau 10 giây khoá tự nhả.",
       "related": ["distributed-lock", "fencing"],
-      "topics": ["distributed-locks", "clocks-ids", "consensus", "design-id-generator", "design-notification"]
+      "topics": ["distributed-locks", "clocks-ids", "consensus", "design-id-generator", "design-notification", "design-job-scheduler"]
     },
     {
       "id": "fencing-token",
@@ -5341,7 +5341,7 @@
       "meaning": "Số tăng dần được cấp kèm mỗi lần lấy khoá. Client gửi nó cùng mỗi lần ghi; storage nhớ token lớn nhất đã thấy và từ chối token nhỏ hơn, chặn người giữ khoá cũ đã hết hạn.",
       "example": "A giữ token 33 bị GC pause, B lấy khoá với token 34 và ghi; lần ghi muộn của A mang 33 bị storage từ chối.",
       "related": ["fencing", "distributed-lock", "lease"],
-      "topics": ["distributed-locks", "consensus"]
+      "topics": ["distributed-locks", "consensus", "design-job-scheduler"]
     },
     {
       "id": "redlock",
@@ -6509,7 +6509,7 @@
       "meaning": "Daylight Saving Time: giờ mùa hè, vặn đồng hồ sớm thêm một giờ. Ngày chuyển giờ có một giờ không tồn tại và một giờ lặp lại; ngày đó dài 23 hoặc 25 giờ.",
       "example": "Ở New York, `2026-03-08T02:30` không tồn tại; `2026-11-01T01:30` xảy ra hai lần.",
       "related": ["time-zone"],
-      "topics": ["time-encoding", "date-time-api"]
+      "topics": ["time-encoding", "date-time-api", "design-job-scheduler"]
     },
     {
       "id": "iso-8601",
@@ -6829,7 +6829,7 @@
       "meaning": "Message nhỏ gửi định kỳ trên kết nối dài để giữ nó không bị proxy, load balancer cắt vì im lặng, và để phát hiện sớm kết nối đã chết.",
       "example": "Gửi WebSocket ping hoặc dòng comment SSE `: ping` mỗi 25 giây khi idle timeout của load balancer là 60 giây.",
       "related": ["websocket", "server-sent-events", "tcp-keepalive"],
-      "topics": ["realtime-rpc-protocols", "design-chat"]
+      "topics": ["realtime-rpc-protocols", "design-chat", "design-job-scheduler"]
     },
     {
       "id": "reconnect-storm",
@@ -9502,6 +9502,118 @@
       "example": "recall@10 0,95 nghĩa là trung bình 9,5 trong 10 hàng xóm thật có mặt trong kết quả.",
       "related": ["ann", "hnsw", "ndcg"],
       "topics": ["vector-search"]
+    },
+    {
+      "id": "cron",
+      "term": "Cron",
+      "meaning": "Cú pháp lịch định kỳ gồm các trường phút, giờ, ngày trong tháng, tháng, thứ (một số thư viện như Quartz có thêm trường giây). Phải đi kèm múi giờ, vì cùng biểu thức sẽ chạy ở giờ khác nhau theo múi giờ.",
+      "example": "`0 0 * * *` theo `Asia/Ho_Chi_Minh` là 00:00 giờ Việt Nam mỗi ngày; Quartz viết `0 0 0 * * ?`.",
+      "related": ["misfire"],
+      "topics": ["design-job-scheduler"]
+    },
+    {
+      "id": "misfire",
+      "term": "Misfire",
+      "meaning": "Lần chạy theo lịch bị lỡ vì scheduler ngừng, quá tải hoặc job trước chưa xong. Chính sách misfire quyết định chạy bù một lần, bỏ qua, hay chạy bù mọi lần lỡ.",
+      "example": "Quartz ngừng 8,5 giây với trigger mỗi giây: mặc định chạy bù 1 lần, `DoNothing` không chạy bù, `IgnoreMisfires` chạy liền 8 lần.",
+      "related": ["cron"],
+      "topics": ["design-job-scheduler"]
+    },
+    {
+      "id": "timing-wheel",
+      "term": "Timing wheel",
+      "meaning": "Cấu trúc hẹn giờ dạng vòng gồm các ô, mỗi ô ứng với một khoảng thời gian và chứa các việc đến hạn trong khoảng đó; thêm và lấy việc tốn O(1). Bản nhiều tầng xử lý được hẹn giờ xa. Kafka dùng cho các thao tác có hẹn giờ.",
+      "example": "Scheduler nạp các job của 60 giây tới vào wheel 60 ô, mỗi ô 1 giây, rồi mỗi giây phát hết các job trong ô hiện tại.",
+      "related": ["cron"],
+      "topics": ["design-job-scheduler"]
+    },
+    {
+      "id": "durable-execution",
+      "term": "Durable execution",
+      "meaning": "Cách chạy quy trình nhiều bước mà engine ghi lại kết quả từng bước, nên process chết thì chạy tiếp từ bước dở chứ không làm lại từ đầu; quy trình có thể chờ nhiều ngày. Temporal là ví dụ.",
+      "example": "Quy trình hoàn tiền: gọi cổng thanh toán, chờ tối đa 3 ngày để đối soát, rồi gửi thông báo, vẫn đúng dù worker khởi động lại giữa chừng.",
+      "related": ["saga"],
+      "topics": ["design-job-scheduler"]
+    },
+    {
+      "id": "url-frontier",
+      "term": "URL frontier",
+      "meaning": "Hàng đợi của crawler quyết định tải URL nào tiếp theo, vừa theo độ ưu tiên vừa theo politeness. Kiểu Mercator có front queue theo ưu tiên, back queue theo host và heap theo giờ được gọi.",
+      "example": "Back queue của `shop-a.vn` có 30.000 URL nhưng heap chỉ cho lấy một URL mỗi giây.",
+      "related": ["crawl-politeness", "robots-txt"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "crawl-politeness",
+      "term": "Politeness (crawler)",
+      "meaning": "Quy tắc crawler không gửi quá nhiều request vào cùng một host hay một IP, thường giới hạn vài request mỗi giây và lùi lại khi site chậm hay trả 429.",
+      "example": "Mỗi host tối đa 1 request mỗi giây; 50 host trên cùng một IP shared hosting thì giới hạn chung cho IP đó.",
+      "related": ["url-frontier", "robots-txt"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "robots-txt",
+      "term": "robots.txt",
+      "meaning": "File ở gốc site cho crawler biết đường dẫn nào được tải, theo RFC 9309: quy tắc khớp dài nhất thắng, 4xx coi như không có quy tắc, 5xx coi như cấm toàn bộ. Là lời đề nghị, không phải kiểm soát truy cập.",
+      "example": "`Disallow: /shop/` cùng `Allow: /shop/product/` cho phép tải trang sản phẩm nhưng không tải giỏ hàng.",
+      "related": ["crawl-politeness"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "url-normalization",
+      "term": "URL normalization",
+      "meaning": "Đưa các cách viết khác nhau của cùng một URL về một dạng để kiểm trùng: chữ thường cho scheme và host, bỏ cổng mặc định, bỏ fragment và tham số theo dõi, sắp xếp tham số, chuẩn hoá percent-encoding.",
+      "example": "`HTTP://Shop.Example.COM:80/a/./c?utm_source=fb&id=7#top` thành `http://shop.example.com/a/c?id=7`.",
+      "related": ["url-frontier"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "crawler-trap",
+      "term": "Crawler trap",
+      "meaning": "Cấu trúc site sinh vô hạn hoặc rất nhiều URL gần như cùng nội dung, làm crawler tốn ngân sách vô ích: bộ lọc tổ hợp, lịch có nút tháng sau, session id trong URL.",
+      "example": "10 màu × 8 cỡ × 5 cách sắp xếp × 20 trang là 8.000 URL cho một danh mục.",
+      "related": ["url-frontier"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "simhash",
+      "term": "SimHash",
+      "meaning": "Fingerprint (thường 64 bit) của văn bản sao cho hai văn bản gần giống nhau có fingerprint khác nhau ít bit. Dùng để tìm trang gần trùng bằng khoảng cách Hamming.",
+      "example": "Hai bản của một trang dài chỉ khác dòng giờ cập nhật thường cách nhau vài bit; trang khác hẳn cách khoảng 32 bit.",
+      "related": ["hamming-distance", "bloom-filter"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "hamming-distance",
+      "term": "Hamming distance",
+      "meaning": "Số vị trí bit khác nhau giữa hai chuỗi bit cùng độ dài, tính bằng `Long.bitCount(a ^ b)` với hai số 64 bit.",
+      "example": "`1011` và `1001` cách nhau 1 bit.",
+      "related": ["simhash"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "conditional-get",
+      "term": "Conditional GET",
+      "meaning": "Request GET kèm điều kiện `If-None-Match` (ETag đã biết) hoặc `If-Modified-Since` (giờ lần trước). Tài nguyên không đổi thì server trả 304 Not Modified, không có body.",
+      "example": "Crawler gửi `If-None-Match: \"a1b2\"`; trang chưa đổi nên nhận 304 và chỉ tốn vài trăm byte.",
+      "related": ["etag"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "sitemap",
+      "term": "Sitemap",
+      "meaning": "File XML do site cung cấp liệt kê các URL nên được crawl, có thể kèm `<lastmod>` (lần sửa cuối). Là gợi ý cho crawler, không thay thế robots.txt.",
+      "example": "`sitemap-products-1.xml` chứa 50.000 URL sản phẩm kèm ngày cập nhật, crawler đọc mỗi ngày để tìm sản phẩm mới.",
+      "related": ["robots-txt", "url-frontier"],
+      "topics": ["design-web-crawler"]
+    },
+    {
+      "id": "dead-mans-switch",
+      "term": "Dead man's switch",
+      "meaning": "Cảnh báo bật lên khi một tín hiệu mong đợi không xuất hiện đúng hạn, thay vì khi có lỗi. Bắt được trường hợp job không chạy hoặc chết lặng lẽ.",
+      "example": "Job đối soát phải có lần chạy thành công trước 01:00; quá giờ mà chưa có thì báo on-call.",
+      "related": ["cron"],
+      "topics": ["design-job-scheduler"]
     }
   ]
 }

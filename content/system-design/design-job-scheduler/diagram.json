@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ định nghĩa job tới một lần chạy",
+  "nodes": [
+    { "id": "api", "label": "Job API", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.85, "y": 0.05 },
+    { "id": "trigger", "label": "Scheduler", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "queue", "label": "Kafka theo tenant", "kind": "queue", "x": 0.85, "y": 0.5 },
+    { "id": "worker", "label": "Worker", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "target", "label": "Service đích", "kind": "external", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "api-db", "from": "api", "to": "db", "label": "lưu next_fire_at" },
+    { "id": "trigger-db", "from": "trigger", "to": "db", "label": "SKIP LOCKED" },
+    { "id": "db-queue", "from": "db", "to": "queue", "label": "outbox relay" },
+    { "id": "queue-worker", "from": "queue", "to": "worker", "label": "run_id, attempt" },
+    { "id": "worker-target", "from": "worker", "to": "target", "label": "gọi kèm khoá" },
+    { "id": "worker-db", "from": "worker", "to": "db", "label": "lease, báo xong" }
+  ],
+  "steps": [
+    {
+      "caption": "Team đăng ký job: biểu thức cron kèm múi giờ, đích gọi, timeout, chính sách misfire và chạy chồng. API tính sẵn next_fire_at.",
+      "show": ["api", "db", "api-db"],
+      "highlight": ["api-db"]
+    },
+    {
+      "caption": "Mỗi giây, scheduler lấy job đến hạn bằng SKIP LOCKED, tạo job_run unique (job_id, fire_at) và đẩy next_fire_at đi, trong một transaction.",
+      "show": ["trigger", "trigger-db"],
+      "highlight": ["trigger-db"]
+    },
+    {
+      "caption": "Cùng transaction đó ghi một dòng outbox; relay đẩy sang topic của tenant, nên commit xong mà chết cũng không mất lần chạy.",
+      "show": ["queue", "db-queue"],
+      "highlight": ["db-queue"]
+    },
+    {
+      "caption": "Worker nhận lần chạy kèm lease ngắn và gia hạn bằng heartbeat. Worker chết thì lease hết hạn, worker khác nhận lại với attempt tăng.",
+      "show": ["worker", "queue-worker", "worker-db"],
+      "highlight": ["queue-worker", "worker-db"]
+    },
+    {
+      "caption": "Worker gọi đích với khoá (job_id, fire_at), rồi báo xong kèm attempt. Worker cũ tỉnh dậy: lệnh gọi đích bị bỏ qua vì trùng khoá, lệnh báo xong không đổi dòng nào.",
+      "show": ["target", "worker-target"],
+      "highlight": ["worker-target"]
+    }
+  ]
+}

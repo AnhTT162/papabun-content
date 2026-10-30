@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-web-crawler",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế web crawler",
+  "summary": "Frontier kiểu Mercator (hàng đợi theo ưu tiên và theo host, heap theo giờ được gọi), politeness là giới hạn thật của tốc độ (mô phỏng 10 triệu URL trên 100.000 host), shard theo host, robots.txt theo RFC 9309, chuẩn hoá URL và bẫy của java.net.URI, Bloom filter cho URL đã thấy, SimHash và bẫy với trang ngắn, conditional GET và lịch tải lại, bẫy crawl, fetcher Java và khi nào mới chạy JavaScript.",
+  "level": "senior",
+  "order": 13,
+  "minutes": 20,
+  "prerequisites": ["sd-framework", "back-of-envelope", "consistent-hashing", "advanced-data-structures", "dns-cdn"],
+  "terms": ["url-frontier", "crawl-politeness", "robots-txt", "url-normalization", "crawler-trap", "bloom-filter", "simhash", "hamming-distance", "consistent-hashing", "etag", "dns", "conditional-get", "sitemap", "virtual-thread"],
+  "references": [
+    { "title": "RFC 9309: Robots Exclusion Protocol", "url": "https://www.rfc-editor.org/rfc/rfc9309.html" },
+    { "title": "Heydon & Najork: Mercator, A Scalable, Extensible Web Crawler (1999)", "url": "https://link.springer.com/article/10.1023/A:1019213109274" },
+    { "title": "Manku, Jain, Das Sarma: Detecting Near-Duplicates for Web Crawling (WWW 2007)", "url": "https://research.google/pubs/detecting-near-duplicates-for-web-crawling/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Muốn crawl nhanh gấp đôi thì sao?\" Tôi không trả lời là thêm máy ngay. Tôi hỏi lại: đang bị chặn ở đâu? Nếu fetcher bận hết thì thêm fetcher. Nếu fetcher đang chờ politeness, thường là vậy khi URL dồn vào vài site lớn, thì phải giảm số lần tải cần thiết (conditional GET, sitemap, ưu tiên theo độ phổ biến và độ hay đổi) hoặc xin tốc độ cao hơn từ chính các site đó." },
+    { "type": "callout", "style": "warning", "markdown": "Lỗi 5xx khi tải robots.txt nghĩa là phải ngừng crawl site đó, không phải được crawl thoải mái. Site đang trả 503 thường đang quá tải, và crawler tiếp tục tải đúng lúc đó là cách nhanh nhất để bị chặn IP." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, ghi cạnh frontier hai phép chia: số URL của host lớn nhất chia tốc độ cho phép của host đó, và tổng số URL chia công suất của fetcher. Thời gian crawl tối thiểu là số lớn hơn trong hai số đó, và chỉ số thứ hai giảm được khi thêm máy." }
+  ]
+}
