@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Kho giỏ hàng luôn ghi được",
+  "prompt": "Một sàn thương mại điện tử cần kho cho giỏ hàng: 30 triệu giỏ đang hoạt động, trung bình 2 KB, tối đa 200 món mỗi giỏ. Đỉnh 150.000 thao tác mỗi giây, 70% là đọc. Chạy trên 3 AZ của một region, p99 dưới 10 ms. Mất một AZ vẫn phải thêm được vào giỏ, và món đã thêm thành công thì không được mất. Người dùng hay mở giỏ trên điện thoại và laptop cùng lúc. Giỏ không có hoạt động trong 90 ngày thì bỏ. Bản đầu tiên đội đề xuất: Cassandra replication factor 3 với `SimpleStrategy`, mỗi giỏ là một dòng chứa JSON cả giỏ, app đọc JSON, sửa rồi ghi lại cả dòng, mức nhất quán `ONE` cho cả đọc lẫn ghi, timestamp lấy từ đồng hồ máy app, đặt lại TTL 90 ngày mỗi lần ghi. Thiết kế lại.",
+  "hints": [
+    "`SimpleStrategy` đặt bản sao theo vòng, không nhìn AZ. Mất một AZ thì bao nhiêu key còn đủ 2 bản sao?",
+    "Điện thoại thêm sữa, laptop cùng lúc thêm bánh, cả hai đọc cùng một JSON rồi ghi lại cả giỏ. Với LWW, giỏ cuối cùng có gì?",
+    "Ghi `ONE` rồi đọc `ONE` ngay sau đó: người dùng vừa bấm thêm, tải lại trang có thấy món không?",
+    "Mất một AZ thì các node còn lại gánh bao nhiêu phần tải?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: `SimpleStrategy` không biết AZ; mô phỏng 9 node trên 3 AZ cho thấy 73% key không trải đủ 3 AZ, và 14% key mất quorum khi một AZ chết. JSON cả giỏ cộng LWW: hai thiết bị đọc cùng giỏ, mỗi bên thêm một món rồi ghi lại cả giỏ, lần ghi có timestamp lớn hơn đè mất món của bên kia, mà cả hai đều báo thành công; đồng hồ máy app lệch làm việc này xảy ra cả khi hai lần ghi cách nhau vài chục ms. `ONE`/`ONE` thì ngay sau khi ghi, gần một nửa lần đọc có thể thấy giỏ cũ (mô phỏng 45% ở Δ = 0).\n\n**Mô hình dữ liệu**: mỗi món một dòng, `PRIMARY KEY ((cart_id), sku)`, cột `qty`, `added_at`. Thêm món là `INSERT` một dòng, chỉnh số lượng là ghi đè giá trị tuyệt đối (idempotent, không dùng counter vì counter không retry an toàn), bỏ món là `DELETE` một dòng, đặt hàng xong thì xoá cả partition (một tombstone). Cassandra áp LWW cho từng ô, nên hai thiết bị thêm hai món khác nhau không còn đè nhau; chỉ cùng một món mới tranh, và lấy lần sửa sau là chấp nhận được với số lượng.\n\n**Nhân bản và nhất quán**: `NetworkTopologyStrategy` với 3 bản sao trong region, mỗi AZ một bản. Đọc và ghi `LOCAL_QUORUM` (R = W = 2): đọc thấy ngay món vừa thêm, và mất một AZ vẫn còn 2 bản để đọc ghi. Timestamp do coordinator gán (driver 4.x mặc định gán phía client, phải cấu hình `ServerSideTimestampGenerator`); đồng hồ các node đồng bộ NTP và có cảnh báo khi lệch quá vài ms. Driver token-aware để gửi thẳng tới replica, đánh dấu câu idempotent để driver được retry và speculative execution; phía server, `speculative_retry` của bảng để mặc định 99p.\n\n**Hết hạn**: TTL 90 ngày trên từng dòng tính từ lần thêm hay sửa món đó (xác nhận với nghiệp vụ là món cũ tự rơi khỏi giỏ được), thay vì ghi lại cả giỏ để đặt lại TTL. Giỏ đã đặt hàng xoá bằng một tombstone cho cả partition. Repair chạy xong trên toàn cụm mỗi 7 ngày, ngắn hơn `gc_grace_seconds` 10 ngày.\n\n**Ước lượng**: 30 triệu × 2 KB = 60 GB, nhân 3 bản là 180 GB, nhân 2 cho chỉ mục, compaction và dư địa là khoảng 400 GB: dung lượng không phải vấn đề. Tải mới là vấn đề: 105.000 đọc × 2 replica cộng 45.000 ghi × 3 replica là khoảng 345.000 thao tác ở mức replica mỗi giây. Giả định một node 8 vCPU chịu 30.000 thao tác replica mỗi giây ở p99 đạt yêu cầu (phải load test). Đủ ngày thường cần 12 node; nhưng mất một AZ thì 2/3 số node gánh toàn bộ, nên cần 345.000 / 30.000 / (2/3) ≈ 18 node, 6 node mỗi AZ.\n\n**Vận hành**: `phi_convict_threshold` 10–12 vì mạng cloud hay giật; `max_hint_window` 3 giờ, AZ chết lâu hơn thì chạy repair trước khi cho node về nhận đọc. Giám sát p99 theo bảng, số tombstone mỗi lần đọc, hint đang chờ, thời gian từ lần repair cuối, độ lệch đồng hồ.\n\n**Lúc đặt hàng**: service đơn hàng đọc giỏ `LOCAL_QUORUM` rồi tự kiểm giá và tồn kho (bài Thiết kế đơn hàng & tồn kho); giỏ chỉ là ý định mua, không phải nguồn sự thật về giá.",
+  "tradeoffs": [
+    {
+      "option": "Cassandra, mỗi món một dòng, LOCAL_QUORUM, 3 AZ",
+      "pros": [
+        "Mất một AZ vẫn đọc ghi được, không mất món khi hai thiết bị cùng thêm",
+        "Latency thấp, scale ngang bằng thêm node mỗi AZ"
+      ],
+      "cons": [
+        "Phải vận hành repair, theo dõi tombstone và đồng hồ",
+        "Cùng một món vẫn là LWW, không gộp được"
+      ]
+    },
+    {
+      "option": "DynamoDB, item theo (cart_id, sku)",
+      "pros": [
+        "Managed, tự trải 3 AZ, có ghi có điều kiện",
+        "Không lo repair, tombstone hay đồng hồ"
+      ],
+      "cons": [
+        "Chi phí theo request, đắt khi đọc ghi nhiều",
+        "Đọc mạnh tốn gấp đôi; liên region cần chế độ MRSC"
+      ]
+    },
+    {
+      "option": "Version vector, sibling và OR-Set cho cả giỏ",
+      "pros": [
+        "Gộp đúng cả khi cùng một món bị sửa đồng thời",
+        "Không phụ thuộc đồng hồ"
+      ],
+      "cons": [
+        "Ứng dụng phải đọc kèm context và gộp sibling",
+        "Ít hệ có sẵn hỗ trợ, khó vận hành hơn"
+      ]
+    },
+    {
+      "option": "Redis Cluster làm kho chính",
+      "pros": [
+        "Rất nhanh, mô hình hash cho giỏ rất tự nhiên",
+        "Đội đã quen dùng"
+      ],
+      "cons": [
+        "Sao chép bất đồng bộ, failover có thể mất lần ghi đã báo thành công",
+        "Toàn bộ dữ liệu phải nằm trong RAM"
+      ]
+    }
+  ]
+}

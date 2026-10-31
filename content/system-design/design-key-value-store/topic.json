@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-key-value-store",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế key-value store phân tán",
+  "summary": "Thiết kế kiểu Dynamo từ đầu tới cuối: preference list theo AZ (mô phỏng mất quorum khi đặt bản sao không biết AZ), đường ghi và đường đọc của coordinator, xác suất đọc cũ theo R và W, LWW mất ghi khi đồng hồ lệch, version vector, sibling và OR-Set cho giỏ hàng, tombstone và gc_grace, gossip và phi accrual, hinted handoff và repair, so với leader theo partition như DynamoDB, và khi nào không tự xây.",
+  "level": "architect",
+  "order": 15,
+  "minutes": 20,
+  "prerequisites": ["consistent-hashing", "consistency-cap", "clocks-ids", "storage-engine", "replication-ha"],
+  "terms": ["consistent-hashing", "quorum", "hinted-handoff", "anti-entropy", "virtual-node", "preference-list", "coordinator-node", "lsm-tree", "read-repair", "speculative-retry", "last-write-wins", "vector-clock", "sibling-version", "crdt", "tombstone", "gossip-protocol", "phi-accrual", "merkle-tree", "raft", "sloppy-quorum", "replication-factor", "memtable", "sstable"],
+  "references": [
+    { "title": "DeCandia et al.: Dynamo, Amazon's Highly Available Key-value Store (SOSP 2007)", "url": "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf" },
+    { "title": "Elhemali et al.: Amazon DynamoDB, A Scalable, Predictably Performant, and Fully Managed NoSQL Database Service (USENIX ATC 2022)", "url": "https://www.usenix.org/conference/atc22/presentation/elhemali" },
+    { "title": "Apache Cassandra: Dynamo (architecture docs)", "url": "https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html" },
+    { "title": "Bailis et al.: Probabilistically Bounded Staleness for Practical Partial Quorums (VLDB 2012)", "url": "https://vldb.org/pvldb/vol5/p776_peterbailis_vldb2012.pdf" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai người cùng sửa một key ở hai phía của mạng chia đôi thì sao?\" Tôi trả lời theo dữ liệu. Giỏ hàng: cả hai lần ghi được nhận, version vector cho thấy chúng đồng thời, lần đọc sau gộp bằng OR-Set để không làm món đã xoá sống lại. Số dư hay tên đăng nhập: không được để hai phía cùng ghi, nên key đó đi qua leader hoặc lightweight transaction, và phía thiểu số trả lỗi. Không có một cách giải xung đột đúng cho mọi loại dữ liệu." },
+    { "type": "callout", "style": "warning", "markdown": "Một node chết lâu hơn `gc_grace_seconds` (mặc định 10 ngày) mà không được repair rồi quay lại cụm có thể làm dữ liệu đã xoá sống lại: các replica khác đã dọn tombstone, còn node này vẫn giữ giá trị cũ và đem nó \"sửa\" lại cho cả nhóm. Node vắng quá thời hạn đó thì xoá dữ liệu và cho vào lại như node mới." },
+    { "type": "callout", "style": "tip", "markdown": "Khi trình bày, viết một bảng ba cột cho từng loại dữ liệu trong đề: R/W, cách giải xung đột, cách xoá. Người phỏng vấn cấp architect muốn thấy bạn không chọn một cấu hình cho mọi thứ, mà chọn theo hậu quả nghiệp vụ của việc đọc cũ và mất ghi." }
+  ]
+}

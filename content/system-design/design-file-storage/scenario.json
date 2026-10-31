@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Video cho nền tảng khoá học",
+  "prompt": "Một nền tảng khoá học online có 3.000 giảng viên và 2 triệu học viên. Mỗi ngày có khoảng 500 video mới, trung bình 15 phút và 1,5 GB, lớn nhất 20 GB. Giảng viên thường upload qua wifi ở nhà hay 4G, hay rớt mạng. Video phải xem được trong vòng 30 phút sau khi upload xong. Buổi tối có tới 200.000 học viên xem cùng lúc, nhiều người trên điện thoại. Chỉ học viên đã mua khoá được xem. Mất file gốc là không chấp nhận được. Bản đầu tiên đội đề xuất: endpoint Spring Boot nhận `MultipartFile`, ghi file vào ổ mạng dùng chung, chạy ffmpeg ngay trong pod đó ra một file MP4 1080p, đặt file lên S3 ở chế độ public, đánh dấu video `READY` ngay khi ghi xong file gốc. Thiết kế lại.",
+  "hints": [
+    "Upload 20 GB qua 4G mà rớt mạng ở 90% thì bản đầu làm gì? Trong lúc đó pod của app giữ gì?",
+    "Một file MP4 1080p cho người xem trên 4G yếu thì sao? 200.000 người xem cùng lúc là bao nhiêu Gbps?",
+    "Link S3 public: ai giữ link thì xem được, kể cả người chưa mua. HLS có hàng nghìn file đoạn, ký từng URL có tiện không?",
+    "Video đánh dấu READY trước khi transcode xong thì học viên thấy gì? Pod chạy ffmpeg chết giữa chừng thì sao?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: file đi qua pod nên mỗi upload 20 GB chiếm một kết nối và băng thông của pod hàng chục phút, rớt mạng là gửi lại từ đầu (mô phỏng: rớt trung bình mỗi 500 MiB thì một file 2 GiB phải gửi khoảng 29 GiB). ffmpeg trong pod tranh CPU với request, pod chết là mất việc. Một mức 1080p làm người xem 4G bị dừng hình liên tục. Link public không kiểm được quyền. `READY` trước khi transcode xong nghĩa là học viên bấm vào video chưa có.\n\n**Upload**: API tạo dòng `files` trạng thái `PENDING`, sinh key UUID, gọi `CreateMultipartUpload`, chọn part 16 MiB cho file dưới 150 GiB (file 20 GB khoảng 1.200 part, xa trần 10.000) và trả URL đã ký cho từng lô part, hạn 30 phút. App gửi 4–6 part song song, part lỗi gửi lại riêng, lưu `uploadId` để mở lại app thì `ListParts` rồi gửi tiếp; trên iOS dùng upload nền của `URLSession`. App báo xong, API cộng kích thước bằng `ListParts` (vượt kích thước khai báo hay vượt 20 GB thì `Abort`), gọi `CompleteMultipartUpload`, chuyển `UPLOADED`, ghi job vào outbox cùng transaction. Lifecycle `AbortIncompleteMultipartUpload` sau 7 ngày; job đối soát dọn upload `PENDING` quá 24 giờ.\n\n**Xử lý**: worker riêng (không phải pod API) đọc job, chạy `ffprobe` để chắc là video và lấy thời lượng, cắt tại keyframe thành đoạn một phút, mỗi đoạn một job con, transcode ra 5 mức (1080p 5 Mbps tới 240p 0,4 Mbps), HLS đoạn 6 giây dạng CMAF, keyframe mỗi 2 giây ở mọi mức. Giả định một worker 8 vCPU transcode cả ladder bằng thời gian thực (phải đo bằng file thật): 125 giờ video mỗi ngày là 125 worker-giờ, dồn vào giờ làm việc thì trung bình khoảng 16 worker, autoscale theo độ dài hàng đợi, chạy trên máy spot vì job retry được. Video 15 phút chia cho 15 worker xong trong vài phút, đủ mục tiêu 30 phút cả khi hàng đợi đang dài. Job idempotent theo `(video_id, profile_version)`, ghi vào `videos/{id}/p{version}/`; đủ cả 5 mức mới chuyển `READY` và trỏ metadata sang prefix đó.\n\n**Phát**: 200.000 người × trung bình 3 Mbps là khoảng 600 Gbps, chỉ CDN chịu được. Bucket private, CDN đọc qua Origin Access Control. Học viên đã mua nhận signed cookie cho đường dẫn của khoá học, hạn ngắn, gia hạn khi đang xem. Đoạn video `Cache-Control: immutable`, một năm. Bật origin shield vì khoá cũ ít người xem, miss rải rác ở nhiều edge. Muốn chặn tải về chia sẻ thì thêm DRM cho khoá cao cấp.\n\n**Lưu trữ**: file gốc khoảng 270 TB mỗi năm, chuyển sang Glacier Flexible Retrieval sau 30 ngày (chỉ cần khi transcode lại, chờ vài giờ chấp nhận được). Bản HLS khoảng 220 TB mỗi năm để Intelligent-Tiering. Bật versioning và replication sang region khác cho bucket file gốc, vì mất file gốc là không chấp nhận được.\n\n**Bảo mật file**: không tin `Content-Type`; phục vụ file đính kèm của bài học (PDF, ảnh) từ tên miền riêng với `nosniff` và quét mã độc trước khi cho tải.\n\n**Quan sát**: số file kẹt ở mỗi trạng thái quá ngưỡng, thời gian từ `UPLOADED` tới `READY` (p95 dưới 30 phút), tỉ lệ part phải gửi lại theo loại mạng, số upload dở, tỉ lệ hit của CDN và băng thông ra từ origin, tỉ lệ người xem bị dừng hình (rebuffer) theo mức chất lượng.",
+  "tradeoffs": [
+    {
+      "option": "Upload multipart thẳng lên S3, worker transcode riêng, CDN với signed cookie",
+      "pros": [
+        "File không đi qua app, resume được từng part",
+        "Transcode song song, chạy lại an toàn, người xem 4G vẫn xem được"
+      ],
+      "cons": [
+        "Nhiều thành phần: máy trạng thái, outbox, đối soát, worker",
+        "Phải tự chọn ladder, tự vận hành ffmpeg"
+      ]
+    },
+    {
+      "option": "Dịch vụ video có sẵn (managed) cho transcode và phát",
+      "pros": [
+        "Không vận hành ffmpeg, có sẵn ladder, DRM, player",
+        "Lên nhanh khi đội nhỏ"
+      ],
+      "cons": [
+        "Tính tiền theo phút encode và phút xem, đắt dần khi lớn",
+        "Khó đổi nhà cung cấp, ít quyền chỉnh ladder"
+      ]
+    },
+    {
+      "option": "Upload qua app server",
+      "pros": [
+        "Đơn giản, kiểm được file ngay khi nhận",
+        "Không cần presigned URL"
+      ],
+      "cons": [
+        "Pod giữ kết nối và băng thông hàng chục phút",
+        "Không resume được, scale theo băng thông upload"
+      ]
+    },
+    {
+      "option": "Một file MP4 mỗi video, phát bằng range request",
+      "pros": [
+        "Rẻ, transcode một lần, dễ hiểu",
+        "Player nào cũng phát được"
+      ],
+      "cons": [
+        "Không đổi chất lượng theo mạng, 4G yếu bị dừng hình",
+        "Khó cấp quyền theo khoá ở mức từng đoạn"
+      ]
+    }
+  ]
+}

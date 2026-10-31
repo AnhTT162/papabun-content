@@ -1381,7 +1381,7 @@
       "meaning": "ETag là header HTTP mang \"phiên bản\" của tài nguyên. Client gửi lại nó trong `If-None-Match` để hỏi có đổi không (không đổi thì server trả `304`), hoặc trong `If-Match` khi sửa để server chỉ ghi nếu phiên bản còn khớp (không thì `412 Precondition Failed`).",
       "example": "`GET /products/42` trả `ETag: \"3\"`; `PUT` kèm `If-Match: \"3\"` sau khi người khác đã lưu thành version 4 nhận 412.",
       "related": ["optimistic-locking", "lost-update"],
-      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency", "rest-api-design", "design-web-crawler"]
+      "topics": ["optimistic-pessimistic-locking", "caching-basics", "idempotency", "rest-api-design", "design-web-crawler", "design-file-storage"]
     },
     {
       "id": "skip-locked",
@@ -1597,7 +1597,7 @@
       "meaning": "Log-Structured Merge-tree: cấu trúc lưu trữ ghi vào bảng trong RAM rồi đổ ra các file đã sắp xếp không sửa được, gộp dần ở nền. Tối ưu cho ghi.",
       "example": "RocksDB, Cassandra, ScyllaDB, LevelDB dùng LSM-tree.",
       "related": ["compaction", "bloom-filter", "b-tree"],
-      "topics": ["storage-engine", "nosql-overview", "advanced-data-structures"]
+      "topics": ["storage-engine", "nosql-overview", "advanced-data-structures", "design-key-value-store"]
     },
     {
       "id": "compaction",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage"]
     },
     {
       "id": "replication-slot",
@@ -2421,7 +2421,7 @@
       "meaning": "Content Delivery Network: mạng máy chủ đặt gần người dùng, giữ bản sao nội dung (ảnh, file tĩnh, response public) để trả nhanh và giảm tải cho server gốc.",
       "example": "Ảnh sản phẩm được trả từ máy chủ CDN ở Hà Nội thay vì server gốc ở Singapore.",
       "related": ["http-caching", "cache"],
-      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope", "design-rate-limiter", "design-search-autocomplete"]
+      "topics": ["caching-basics", "client-performance", "dns-cdn", "sd-building-blocks", "back-of-envelope", "design-rate-limiter", "design-search-autocomplete", "design-file-storage"]
     },
     {
       "id": "local-cache",
@@ -4733,7 +4733,7 @@
       "meaning": "Số bản sao tối thiểu phải tham gia một lần đọc (R) hoặc ghi (W) trong N bản sao; R + W > N thì tập đọc và tập ghi luôn giao nhau.",
       "example": "N = 3, W = 2, R = 2: lần đọc luôn hỏi ít nhất một node đã nhận lần ghi gần nhất.",
       "related": ["tunable-consistency", "linearizability"],
-      "topics": ["consistency-cap", "consistent-hashing", "consensus"]
+      "topics": ["consistency-cap", "consistent-hashing", "consensus", "design-key-value-store"]
     },
     {
       "id": "round-robin",
@@ -4789,7 +4789,7 @@
       "meaning": "Khi node chính của một key không liên lạc được, lần ghi tạm được nhận bởi node khác ngoài danh sách bản sao (rồi chuyển lại sau, gọi là hinted handoff); tăng khả dụng nhưng R + W > N không còn đảm bảo đọc thấy lần ghi.",
       "example": "Riak: node B của key đang mất kết nối, node D nhận lần ghi thay B và được tính vào W, rồi trả lại cho B khi B quay về. Cassandra chỉ có hinted handoff, không tính hint vào QUORUM.",
       "related": ["quorum"],
-      "topics": ["consistency-cap", "consistent-hashing"]
+      "topics": ["consistency-cap", "consistent-hashing", "design-key-value-store"]
     },
     {
       "id": "last-write-wins",
@@ -4797,7 +4797,7 @@
       "meaning": "Cách giải quyết xung đột giữ bản ghi có timestamp lớn nhất và bỏ các bản còn lại. Luôn âm thầm bỏ các lần ghi đồng thời thua cuộc; đồng hồ lệch còn có thể làm bản thật sự mới hơn bị bỏ.",
       "example": "Hai region cùng sửa địa chỉ giao hàng; bản có timestamp lớn hơn thắng, bản kia biến mất không báo lỗi.",
       "related": ["crdt", "eventual-consistency"],
-      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active"]
+      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active", "design-key-value-store"]
     },
     {
       "id": "crdt",
@@ -4805,7 +4805,7 @@
       "meaning": "Conflict-free replicated data type: kiểu dữ liệu có phép gộp được chứng minh luôn hội tụ, nên các bản sao sửa độc lập vẫn gộp được mà không mất dữ liệu.",
       "example": "G-Counter: mỗi node đếm phần của mình, giá trị là tổng; gộp hai bản lấy max từng phần.",
       "related": ["last-write-wins", "eventual-consistency"],
-      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active", "design-rate-limiter"]
+      "topics": ["consistency-cap", "clocks-ids", "multi-region-active-active", "design-rate-limiter", "design-key-value-store"]
     },
     {
       "id": "idempotency",
@@ -5229,7 +5229,7 @@
       "meaning": "Cách phân key cho node bằng một vòng hash: key thuộc node gặp đầu tiên theo chiều kim đồng hồ, nên thêm hay bớt node chỉ chuyển khoảng 1/N số key thay vì gần hết như modulo.",
       "example": "Cụm cache 4 node thêm node thứ 5: khoảng 20% key đổi node, so với 80% khi dùng `hash % N`.",
       "related": ["virtual-node", "hash-slot", "rendezvous-hashing"],
-      "topics": ["consistent-hashing", "design-web-crawler"]
+      "topics": ["consistent-hashing", "design-web-crawler", "design-key-value-store"]
     },
     {
       "id": "virtual-node",
@@ -5237,7 +5237,7 @@
       "meaning": "Mỗi node vật lý được đặt nhiều điểm trên vòng hash (vnode, token) để tải chia đều và node mới lấy tải từ mọi node.",
       "example": "Node A có 100 điểm `A#0` tới `A#99`; với 4 node, mỗi node nhận 24–26% số key thay vì 1–55%.",
       "related": ["consistent-hashing"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "design-key-value-store"]
     },
     {
       "id": "rendezvous-hashing",
@@ -5253,7 +5253,7 @@
       "meaning": "Khi bản sao chủ tạm thời không nhận được ghi, node khác giữ hộ bản ghi kèm gợi ý và trả lại khi node chủ quay về.",
       "example": "Node C bảo trì 10 phút; node D giữ các lần ghi dành cho C rồi đẩy sang C khi C sống lại.",
       "related": ["sloppy-quorum", "read-repair"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "design-key-value-store"]
     },
     {
       "id": "read-repair",
@@ -5261,7 +5261,7 @@
       "meaning": "Khi một lần đọc thấy các bản sao trả giá trị khác nhau, coordinator ghi giá trị mới nhất đè lên bản sao cũ.",
       "example": "Đọc QUORUM thấy A có v2, B có v1: trả v2 cho client và ghi v2 sang B.",
       "related": ["anti-entropy", "quorum"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "design-key-value-store"]
     },
     {
       "id": "anti-entropy",
@@ -5269,7 +5269,7 @@
       "meaning": "Tiến trình định kỳ so dữ liệu giữa các bản sao và chép phần lệch, để sửa cả những key không ai đọc tới.",
       "example": "Chạy `nodetool repair` hằng tuần trên cụm Cassandra, trong khoảng `gc_grace_seconds`.",
       "related": ["merkle-tree", "read-repair"],
-      "topics": ["consistent-hashing"]
+      "topics": ["consistent-hashing", "design-key-value-store"]
     },
     {
       "id": "merkle-tree",
@@ -5277,7 +5277,7 @@
       "meaning": "Cây băm: lá là hash của từng khoảng dữ liệu, nút cha là hash của các con. Hai bản sao so gốc trước, chỉ đi xuống nhánh có hash khác, nên tìm phần lệch mà không chuyển toàn bộ dữ liệu.",
       "example": "Hai node có cùng hash gốc thì khớp hoàn toàn; khác thì so hai nhánh con, lặp lại tới khoảng dữ liệu cần chép.",
       "related": ["anti-entropy"],
-      "topics": ["consistent-hashing", "advanced-data-structures"]
+      "topics": ["consistent-hashing", "advanced-data-structures", "design-key-value-store"]
     },
     {
       "id": "token-bucket",
@@ -5405,7 +5405,7 @@
       "meaning": "Mỗi node giữ một mảng bộ đếm, một phần tử cho mỗi node. So hai vector cho biết một phiên bản kế thừa phiên bản kia hay hai phiên bản đồng thời (xung đột).",
       "example": "[A:2, B:1] và [A:1, B:2]: không vector nào lớn hơn hoặc bằng vector kia ở mọi phần tử, nên hai lần ghi đồng thời, cần gộp.",
       "related": ["lamport-clock", "crdt"],
-      "topics": ["clocks-ids"]
+      "topics": ["clocks-ids", "design-key-value-store"]
     },
     {
       "id": "hybrid-logical-clock",
@@ -5469,7 +5469,7 @@
       "meaning": "Thuật toán consensus thiết kế để dễ hiểu: một leader mỗi term, bầu bằng đa số phiếu, leader sao chép log lên follower và entry được commit khi đa số đã lưu.",
       "example": "etcd, Consul, KRaft của Kafka và CockroachDB đều dùng Raft (hoặc biến thể).",
       "related": ["consensus", "raft-term", "leader-election", "quorum"],
-      "topics": ["consensus"]
+      "topics": ["consensus", "design-key-value-store"]
     },
     {
       "id": "paxos",
@@ -6677,7 +6677,7 @@
       "meaning": "Tầng cache trung gian của CDN đứng giữa các edge và origin. Nhiều edge cùng miss một nội dung chỉ tạo một request tới origin.",
       "example": "Bật origin shield ở vùng gần origin: 400 edge miss cùng một ảnh mới chỉ còn một request tới origin.",
       "related": ["edge-location", "cache-stampede"],
-      "topics": ["dns-cdn"]
+      "topics": ["dns-cdn", "design-file-storage"]
     },
     {
       "id": "cache-purge",
@@ -8621,7 +8621,7 @@
       "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
       "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
       "related": ["presigned-url", "multipart-upload", "cdn"],
-      "topics": ["sd-building-blocks", "back-of-envelope"]
+      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage"]
     },
     {
       "id": "source-of-truth",
@@ -8677,7 +8677,7 @@
       "meaning": "URL tới một object trong object storage, đã được ký sẵn bằng quyền của server và có thời hạn, cho phép client tải lên hay tải về thẳng mà không cần credential và không đi qua app server.",
       "example": "App trả về URL PUT hết hạn sau 15 phút; trình duyệt upload ảnh thẳng lên S3 bằng URL đó.",
       "related": ["object-storage", "multipart-upload"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "design-file-storage"]
     },
     {
       "id": "multipart-upload",
@@ -8685,7 +8685,7 @@
       "meaning": "Upload một object lớn thành nhiều phần độc lập, song song và gửi lại được từng phần, rồi ghép lại ở bước hoàn tất. Phần dở dang vẫn tốn tiền tới khi bị huỷ.",
       "example": "S3: một PUT tối đa 5 GB; video 20 GB chia thành các phần 100 MB, mỗi phần lỗi thì chỉ gửi lại phần đó.",
       "related": ["object-storage", "presigned-url"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "design-file-storage"]
     },
     {
       "id": "time-series-database",
@@ -8805,7 +8805,7 @@
       "meaning": "Số bản sao của mỗi phần dữ liệu trong hệ thống phân tán. Dung lượng đĩa thật bằng dữ liệu logic nhân hệ số này.",
       "example": "Topic Kafka với replication factor 3: 700 GB dữ liệu logic chiếm 2,1 TB đĩa trên cả cụm.",
       "related": ["back-of-envelope-estimation"],
-      "topics": ["back-of-envelope"]
+      "topics": ["back-of-envelope", "design-key-value-store"]
     },
     {
       "id": "hot-data",
@@ -9614,6 +9614,142 @@
       "example": "Job đối soát phải có lần chạy thành công trước 01:00; quá giờ mà chưa có thì báo on-call.",
       "related": ["cron"],
       "topics": ["design-job-scheduler"]
+    },
+    {
+      "id": "transcoding",
+      "term": "Transcoding",
+      "meaning": "Giải mã video gốc rồi mã hoá lại ra định dạng, codec, độ phân giải và bitrate khác. Thường sinh nhiều bản cho nhiều mức chất lượng.",
+      "example": "File MP4 4K của giảng viên được transcode ra 5 mức H.264 từ 240p tới 1080p để phát bằng HLS.",
+      "related": ["adaptive-bitrate", "hls"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "adaptive-bitrate",
+      "term": "Adaptive bitrate (ABR)",
+      "meaning": "Cách phát video có nhiều bản cùng nội dung ở các bitrate khác nhau, chia thành đoạn ngắn; player đo băng thông và đổi mức chất lượng giữa các đoạn.",
+      "example": "Người xem đi vào vùng 4G yếu: player chuyển từ đoạn 1080p 5 Mbps xuống 480p 1,5 Mbps thay vì dừng hình.",
+      "related": ["hls", "transcoding"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "hls",
+      "term": "HLS",
+      "meaning": "HTTP Live Streaming (RFC 8216): video chia thành các đoạn vài giây, kèm playlist `.m3u8` liệt kê đoạn và các mức chất lượng; player tải bằng HTTP thường nên CDN cache được.",
+      "example": "Playlist chính trỏ tới 5 playlist con, mỗi playlist con liệt kê các đoạn 6 giây của một mức.",
+      "related": ["adaptive-bitrate", "cdn"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "signed-cookie",
+      "term": "Signed cookie",
+      "meaning": "Cookie chứa chính sách truy cập (đường dẫn, thời hạn) được ký bằng khoá riêng; CDN kiểm chữ ký rồi mới trả mọi file dưới đường dẫn đó.",
+      "example": "Học viên đã mua khoá nhận cookie CloudFront cho `/courses/42/*` hạn 1 giờ, xem được playlist và mọi đoạn video của khoá.",
+      "related": ["presigned-url", "cdn"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "resumable-upload",
+      "term": "Resumable upload",
+      "meaning": "Upload có thể tiếp tục từ chỗ đã gửi được sau khi rớt mạng, thay vì gửi lại từ đầu: theo từng part (S3 multipart) hoặc theo vị trí byte (GCS, tus).",
+      "example": "App rớt mạng ở 1,8 GB của file 2 GB, mở lại thì hỏi server phần nào đã có rồi gửi tiếp 200 MB còn lại.",
+      "related": ["multipart-upload"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "range-request",
+      "term": "Range request",
+      "meaning": "Request HTTP có header `Range: bytes=...` để lấy một phần file; server hỗ trợ thì trả 206 Partial Content.",
+      "example": "Player tua tới phút 30 của file MP4 bằng cách xin đúng khoảng byte chứa phút đó.",
+      "related": ["cdn"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "storage-class",
+      "term": "Storage class",
+      "meaning": "Lớp lưu trữ của object storage với giá lưu, giá đọc, thời gian lấy lại và thời gian lưu tối thiểu khác nhau; lifecycle rule tự chuyển object giữa các lớp.",
+      "example": "File video gốc chuyển từ S3 Standard sang Glacier Flexible Retrieval sau 30 ngày; lấy lại mất vài giờ.",
+      "related": ["object-storage"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "content-defined-chunking",
+      "term": "Content-defined chunking",
+      "meaning": "Chia file thành block tại vị trí do nội dung quyết định (hash cuộn trên vài chục byte thoả điều kiện), nên chèn hay xoá byte chỉ đổi block quanh chỗ sửa.",
+      "example": "Chèn 1 byte vào file 64 MiB: block cố định 4 MiB phải gửi lại 56 MiB, chia theo nội dung chỉ 0,83 MiB.",
+      "related": ["hash-table"],
+      "topics": ["design-file-storage"]
+    },
+    {
+      "id": "preference-list",
+      "term": "Preference list",
+      "meaning": "Danh sách N node giữ bản sao của một key trong hệ kiểu Dynamo: các node vật lý khác nhau tiếp theo trên vòng hash, thường mỗi node một AZ hay rack.",
+      "example": "Key `cart:42` có preference list A (AZ a), B (AZ b), C (AZ c); coordinator gửi lần ghi cho cả ba.",
+      "related": ["consistent-hashing", "quorum"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "coordinator-node",
+      "term": "Coordinator",
+      "meaning": "Node nhận request của client trong hệ không leader, chuyển nó tới các bản sao của key, chờ đủ R hoặc W phản hồi rồi trả kết quả. Node nào cũng làm coordinator được.",
+      "example": "Client gửi tới node D; D băm key, gửi tới A, B, C và trả thành công khi A và B xác nhận.",
+      "related": ["quorum", "preference-list"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "speculative-retry",
+      "term": "Speculative retry",
+      "meaning": "Khi một replica trả lời chậm quá ngưỡng (ví dụ p99), coordinator hỏi thêm một replica khác và dùng câu trả lời nào về trước. Chỉ an toàn với thao tác idempotent.",
+      "example": "Cassandra mặc định `speculative_retry = 99p`: replica chưa trả lời sau p99 latency của bảng thì gửi thêm cho replica khác.",
+      "related": ["hedged-request", "tail-latency"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "sibling-version",
+      "term": "Sibling",
+      "meaning": "Các phiên bản đồng thời của cùng một key mà version vector không xếp được trước sau; hệ giữ cả hai và trả cả hai khi đọc để ứng dụng gộp.",
+      "example": "Giỏ `{A:2} [sách, bút]` và `{A:1, B:1} []` là hai sibling; lần đọc sau nhận cả hai.",
+      "related": ["vector-clock", "crdt"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "tombstone",
+      "term": "Tombstone",
+      "meaning": "Bản ghi đánh dấu một giá trị đã bị xoá, có timestamp, được nhân bản như lần ghi thường; chỉ được dọn sau một thời hạn để mọi bản sao kịp nhận.",
+      "example": "Cassandra giữ tombstone `gc_grace_seconds` (mặc định 10 ngày) rồi mới dọn khi compaction.",
+      "related": ["anti-entropy", "lsm-tree"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "gossip-protocol",
+      "term": "Gossip",
+      "meaning": "Cách lan thông tin trong cụm: định kỳ mỗi node trao đổi trạng thái với một vài node ngẫu nhiên, tin lan ra cả cụm sau số vòng cỡ log của số node.",
+      "example": "Cassandra gossip mỗi giây; mô phỏng kiểu đẩy và kéo, 1.000 node biết một tin sau khoảng 9 vòng.",
+      "related": ["phi-accrual"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "phi-accrual",
+      "term": "Phi accrual failure detector",
+      "meaning": "Bộ phát hiện node chết không dùng timeout cố định mà tính mức nghi ngờ φ theo phân phối khoảng cách heartbeat đã thấy; vượt ngưỡng thì coi là chết.",
+      "example": "Cassandra `phi_convict_threshold` 8: heartbeat trung bình 1 giây thì im lặng khoảng 18 giây mới bị coi là chết.",
+      "related": ["gossip-protocol"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "memtable",
+      "term": "Memtable",
+      "meaning": "Bảng đã sắp xếp trong RAM của LSM-tree, nhận mọi lần ghi (sau commit log); đầy thì được xả ra đĩa thành SSTable.",
+      "example": "Memtable của bảng `cart_items` đầy 128 MB thì được flush thành một SSTable mới.",
+      "related": ["lsm-tree", "sstable"],
+      "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "sstable",
+      "term": "SSTable",
+      "meaning": "Sorted String Table: file trên đĩa chứa key đã sắp xếp, ghi một lần và không bao giờ sửa; compaction gộp nhiều SSTable thành file mới.",
+      "example": "Đọc một key có thể phải xem vài SSTable; Bloom filter của từng file giúp bỏ qua file chắc chắn không chứa key.",
+      "related": ["lsm-tree", "memtable", "compaction"],
+      "topics": ["design-key-value-store"]
     }
   ]
 }

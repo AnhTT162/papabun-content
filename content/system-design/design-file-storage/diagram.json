@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một video từ lúc upload tới lúc phát",
+  "nodes": [
+    { "id": "app", "label": "App", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "api", "label": "API + metadata", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "cdn", "label": "CDN", "kind": "external", "x": 0.1, "y": 0.5 },
+    { "id": "raw", "label": "S3 file gốc", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "hls", "label": "S3 bản HLS", "kind": "database", "x": 0.1, "y": 0.95 },
+    { "id": "worker", "label": "Transcoder", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "app-api", "from": "app", "to": "api", "label": "tạo upload" },
+    { "id": "app-raw", "from": "app", "to": "raw", "label": "PUT từng part" },
+    { "id": "api-raw", "from": "api", "to": "raw", "label": "Complete" },
+    { "id": "raw-worker", "from": "raw", "to": "worker", "label": "đọc file gốc" },
+    { "id": "worker-hls", "from": "worker", "to": "hls", "label": "HLS 5 mức" },
+    { "id": "hls-cdn", "from": "hls", "to": "cdn", "label": "qua OAC" },
+    { "id": "cdn-app", "from": "cdn", "to": "app", "label": "đoạn 6 giây" }
+  ],
+  "steps": [
+    {
+      "caption": "App xin tạo upload. API ghi dòng PENDING, tự sinh key, gọi CreateMultipartUpload, chọn cỡ part theo cỡ file và ký URL cho từng part.",
+      "show": ["app", "api", "app-api"],
+      "highlight": ["app-api"]
+    },
+    {
+      "caption": "App gửi các part song song thẳng lên S3. Part nào lỗi thì gửi lại riêng part đó; app khởi động lại thì hỏi ListParts rồi gửi tiếp.",
+      "show": ["raw", "app-raw"],
+      "highlight": ["app-raw"]
+    },
+    {
+      "caption": "App báo xong, API kiểm tổng kích thước bằng ListParts, gọi CompleteMultipartUpload, chuyển UPLOADED và ghi job vào outbox trong cùng transaction.",
+      "show": ["api-raw"],
+      "highlight": ["api-raw"]
+    },
+    {
+      "caption": "Transcoder nhận job từ outbox qua hàng đợi, đọc file gốc, kiểm bằng ffprobe, cắt thành đoạn một phút và transcode song song; job idempotent theo video và phiên bản ladder.",
+      "show": ["worker", "raw-worker"],
+      "highlight": ["raw-worker"]
+    },
+    {
+      "caption": "Kết quả ghi vào prefix có phiên bản. Đủ cả 5 mức thì metadata mới chuyển READY và trỏ sang prefix mới.",
+      "show": ["hls", "worker-hls"],
+      "highlight": ["worker-hls"]
+    },
+    {
+      "caption": "Bucket private, chỉ CDN đọc được. Học viên đã mua nhận signed cookie; đoạn video không bao giờ đổi nên edge cache rất lâu.",
+      "show": ["cdn", "hls-cdn", "cdn-app"],
+      "highlight": ["hls-cdn", "cdn-app"]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "version-vector-compare",
+      "kind": "output",
+      "prompt": "Giỏ hàng có phiên bản `{A:1}`. Người 1 thêm bút, ghi qua node A; người 2 cùng lúc xoá sách, ghi qua node B, cả hai đều từ phiên bản `{A:1}`. Đoạn code in ra gì?",
+      "code": "record VV(Map<String, Integer> c) {\n    boolean descends(VV o) {\n        return o.c().entrySet().stream()\n            .allMatch(e -> c.getOrDefault(e.getKey(), 0) >= e.getValue());\n    }\n}\nvar v1 = new VV(Map.of(\"A\", 2));\nvar v2 = new VV(Map.of(\"A\", 1, \"B\", 1));\nSystem.out.println(v1.descends(v2) + \" \" + v2.descends(v1));",
+      "options": [
+        "false false",
+        "true false",
+        "false true",
+        "true true"
+      ],
+      "answer": 0,
+      "explanation": "`v1` thiếu phần tử B nên không lớn hơn hoặc bằng `v2`; `v2` có A = 1 < 2 nên không lớn hơn hoặc bằng `v1`. Không bên nào kế thừa bên nào: hai phiên bản đồng thời, hệ giữ cả hai làm sibling. Nhầm thành `true false` là nghĩ A:2 \"mới hơn\" vì số lớn hơn, đúng kiểu LWW, và sẽ làm mất lần xoá sách của người 2."
+    },
+    {
+      "id": "simple-strategy-az",
+      "kind": "single",
+      "prompt": "Cụm 9 node, 3 node mỗi AZ, replication factor 3 với `SimpleStrategy` (đặt bản sao lên 3 node kế tiếp trên vòng, không nhìn AZ). Đọc ghi `QUORUM`. Một AZ mất điện. Chuyện gì xảy ra?",
+      "options": [
+        "Một phần key có từ 2 bản sao trong AZ đó và báo lỗi khi đọc ghi",
+        "Mọi key vẫn chạy được vì mỗi key có 3 bản sao trên 3 node khác nhau",
+        "Mọi key đều lỗi vì quorum được tính trên toàn cụm 9 node",
+        "Không key nào lỗi vì hinted handoff được tính vào quorum"
+      ],
+      "answer": 0,
+      "explanation": "3 node khác nhau chưa chắc là 3 AZ khác nhau. Mô phỏng: 73% key không trải đủ 3 AZ, và 14% key có từ 2 bản sao trong AZ bị mất nên không còn đủ 2 bản cho `QUORUM`. Quorum tính trên N bản sao của key, không trên cả cụm. Cassandra không tính hint vào mức nhất quán (trừ `ANY`). Sửa: `NetworkTopologyStrategy` với snitch biết AZ."
+    },
+    {
+      "id": "one-one-stale",
+      "kind": "single",
+      "prompt": "N = 3, ghi `ONE` và đọc `ONE`. Người dùng thêm món vào giỏ, request trả thành công, app tải lại giỏ ngay. Mô tả nào đúng nhất?",
+      "options": [
+        "Có thể thấy giỏ cũ; cửa sổ này dài theo đuôi của replica chậm nhất",
+        "Luôn thấy món mới vì coordinator đọc từ đúng replica vừa ghi",
+        "Có thể thấy giỏ cũ, nhưng chỉ trong vài micro giây sau khi ghi",
+        "Chỉ thấy giỏ cũ khi có node chết, lúc bình thường luôn thấy mới"
+      ],
+      "answer": 0,
+      "explanation": "Ghi `ONE` trả về khi một replica xác nhận; lần đọc `ONE` có thể đi tới replica khác chưa áp bản ghi. Mô phỏng (trung bình 1 ms, 1% replica chậm thêm 50 ms): 45% đọc cũ ngay sau khi ghi, 1,3% sau 5 ms, vẫn khoảng 1% sau 20 ms vì phần đuôi chậm. Replica được đọc chọn theo độ nhanh hay ngẫu nhiên, không theo lần ghi trước. Cần đọc thấy ngay thì dùng `R + W > N`, ví dụ `LOCAL_QUORUM` cả hai."
+    },
+    {
+      "id": "gc-grace-zombie",
+      "kind": "single",
+      "prompt": "Một node Cassandra chết 14 ngày, cụm không chạy repair trong thời gian đó, `gc_grace_seconds` mặc định. Node được bật lại và vào cụm như cũ. Rủi ro chính là gì?",
+      "options": [
+        "Dữ liệu đã xoá trong lúc nó vắng có thể sống lại trên cả nhóm bản sao",
+        "Node đó nhận lại mọi lần ghi đã lỡ qua hint nên chỉ chậm vài giờ",
+        "Node đó bị gossip từ chối vì token đã được cấp lại cho node khác",
+        "Các lần ghi mới vào node đó bị bỏ vì timestamp của nó đã quá cũ"
+      ],
+      "answer": 0,
+      "explanation": "Sau 10 ngày, các replica khác đã dọn tombstone của những lần xoá. Node quay lại vẫn giữ giá trị cũ và không có tombstone nào đè lên, nên read repair hay repair sẽ chép giá trị cũ ngược lại. Hint chỉ giữ 3 giờ theo mặc định. Token không tự cấp lại cho node khác khi node chỉ bị coi là chết. Cách đúng: node vắng quá `gc_grace_seconds` thì xoá dữ liệu và cho vào lại như node mới (replace)."
+    },
+    {
+      "id": "leader-for-unique",
+      "kind": "single",
+      "prompt": "Cùng một kho key-value không leader (Dynamo kiểu cũ) đang chứa giỏ hàng, đội muốn lưu thêm `username → user_id` và bảo đảm mỗi username chỉ thuộc một người. Cách nào đúng?",
+      "options": [
+        "Ghi qua thao tác có điều kiện chạy consensus, như lightweight transaction",
+        "Ghi `QUORUM` và đọc `QUORUM` để R + W > N thì không thể trùng username",
+        "Dùng version vector, gặp sibling thì giữ bản có user_id nhỏ hơn",
+        "Đọc trước xem đã có chưa, chưa có thì ghi với mức `ALL`"
+      ],
+      "answer": 0,
+      "explanation": "Unique cần một thao tác \"ghi nếu chưa có\" nguyên tử giữa các bên tranh nhau, tức consensus (Cassandra lightweight transaction dùng Paxos, DynamoDB `attribute_not_exists`). Quorum chỉ bảo đảm đọc thấy lần ghi đã xong, không chặn hai lần đọc-rồi-ghi xen nhau. Sibling phát hiện xung đột sau khi cả hai người đã được báo thành công. Đọc rồi ghi `ALL` vẫn có khe giữa hai bước, và một node chết là không ghi được."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-file-storage",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế lưu trữ file / video",
+  "summary": "Upload thẳng lên object storage theo từng phần (cỡ part, resume, ETag không phải MD5, dọn upload dở, giới hạn dung lượng khi dùng presigned), trạng thái file trong metadata, kiểm tra và transcode bất đồng bộ ra ladder HLS, transcode song song, phát qua CDN bằng signed cookie, đuôi dài của lượt xem, storage class, và chia block theo nội dung cho đồng bộ file.",
+  "level": "senior",
+  "order": 14,
+  "minutes": 20,
+  "prerequisites": ["sd-building-blocks", "back-of-envelope", "dns-cdn", "idempotency"],
+  "terms": ["object-storage", "multipart-upload", "presigned-url", "outbox", "transcoding", "adaptive-bitrate", "hls", "signed-cookie", "cdn", "resumable-upload", "range-request", "storage-class", "content-defined-chunking", "etag", "origin-shield"],
+  "references": [
+    { "title": "Amazon S3: Uploading and copying objects using multipart upload", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html" },
+    { "title": "Apple: HLS Authoring Specification for Apple Devices", "url": "https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices" },
+    { "title": "RFC 8216: HTTP Live Streaming", "url": "https://www.rfc-editor.org/rfc/rfc8216.html" },
+    { "title": "Amazon S3: Checking object integrity in Amazon S3", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity-upload.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Người dùng upload xong mà video mãi không hiện thì sao?\" Tôi trả lời bằng máy trạng thái: mỗi file có `status` và thời điểm vào trạng thái đó. Cảnh báo khi file nằm ở `UPLOADED` hay `PROCESSING` quá ngưỡng (ví dụ gấp ba thời gian transcode thường lệ), job đối soát đưa lại vào hàng đợi các file kẹt, và job transcode idempotent nên chạy lại không sinh bản thừa. Client hiện \"đang xử lý\" thay vì báo lỗi." },
+    { "type": "callout", "style": "warning", "markdown": "Upload multipart dở dang không hiện khi liệt kê object, nhưng S3 vẫn tính tiền mọi part đã gửi cho tới khi upload được `Abort` hoặc `Complete`. Bucket nhận upload từ client phải có lifecycle rule `AbortIncompleteMultipartUpload` ngay từ ngày đầu." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, tách ba đường bằng ba màu: upload (client → object storage), xử lý (hàng đợi → worker → object storage), phát (CDN → client). App server chỉ nằm trên đường điều khiển: cấp quyền, ghi metadata, đổi trạng thái. Người phỏng vấn thấy ngay là file không đi qua server." }
+  ]
+}

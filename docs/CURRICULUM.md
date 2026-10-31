@@ -396,8 +396,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 11 | `design-search-autocomplete` | Thiết kế autocomplete | senior | Trie/FST, top-k, cập nhật bằng snapshot, cache; Elasticsearch completion suggester và search_as_you_type; Doris đếm log tìm kiếm; nâng cao: gợi ý theo nghĩa, sửa lỗi gõ (Telex), learning to rank và thiên lệch vị trí | L D Sc | ✅ |
 | 12 | `design-job-scheduler` | ✚ Thiết kế job scheduler phân tán | senior | Cron phân tán, chạy đúng một lần, retry, phân phối việc, theo dõi | L D Sc | ✅ |
 | 13 | `design-web-crawler` | ✚ Thiết kế web crawler | senior | Frontier, politeness, dedup URL và nội dung, mở rộng | L D Sc | ✅ |
-| 14 | `design-file-storage` | Thiết kế lưu trữ file / video | senior | Upload theo phần, CDN, transcoding, metadata | L D Sc | ⬜ |
-| 15 | `design-key-value-store` | ✚ Thiết kế key-value store phân tán | architect | Consistent hashing, replication, quorum, xử lý conflict, như Dynamo | L D Sc | ⬜ |
+| 14 | `design-file-storage` | Thiết kế lưu trữ file / video | senior | Upload theo phần, CDN, transcoding, metadata | L D Sc | ✅ |
+| 15 | `design-key-value-store` | ✚ Thiết kế key-value store phân tán | architect | Consistent hashing, replication, quorum, xử lý conflict, như Dynamo | L D Sc | ✅ |
 | 16 | `design-message-queue` | ✚ Thiết kế distributed message queue | architect | Log phân vùng, replication, thứ tự, giữ dữ liệu, consumer group | L D Sc | ⬜ |
 | 17 | `design-payment` | Thiết kế hệ thống thanh toán | architect | Idempotency, sổ cái kép, đối soát, trạng thái | L D Sc | ⬜ |
 | 18 | `design-flash-sale` | Thiết kế flash sale / bán vé | architect | Chống bán vượt tồn kho, hàng đợi, giữ chỗ có thời hạn | L D Sc | ⬜ |

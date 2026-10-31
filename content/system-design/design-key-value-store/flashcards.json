@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "root-decision", "front": "Quyết định gốc khi thiết kế KV store phân tán?", "back": "Có leader cho mỗi partition hay không. Không leader thì luôn ghi được nhưng phải giải xung đột; có leader thì không xung đột nhưng mất leader là ngừng ghi vài giây." },
+    { "id": "preference-list-az", "front": "Preference list nên chọn bản sao thế nào?", "back": "N node khác máy vật lý tiếp theo trên vòng, mỗi node một AZ. Không biết AZ thì mô phỏng 9 node cho 14% key mất quorum khi một AZ chết." },
+    { "id": "stale-window", "front": "Cửa sổ đọc cũ với R = W = 1 dài bao lâu?", "back": "Theo đuôi của replica chậm nhất, không theo trung bình. Mô phỏng: 45% ngay sau ghi, 1,3% sau 5 ms, còn 1% sau 20 ms vì 1% replica chậm 50 ms." },
+    { "id": "digest-read", "front": "Cassandra đọc QUORUM thế nào?", "back": "Xin dữ liệu đầy đủ từ một replica và digest từ replica khác. Digest lệch thì đọc đủ, lấy bản mới nhất và ghi đè bản cũ trước khi trả lời." },
+    { "id": "lww-loss", "front": "LWW mất ghi khi nào?", "back": "Khi lần ghi sau mang timestamp nhỏ hơn vì đồng hồ lệch. Mô phỏng lệch tới 35 ms, ghi cách 0–100 ms: mất 8%, mà lần nào cũng báo thành công." },
+    { "id": "sibling", "front": "Sibling là gì?", "back": "Các phiên bản đồng thời của một key mà version vector không xếp được trước sau. Lần đọc nhận cả hai, ứng dụng gộp rồi ghi lại với context của cả hai." },
+    { "id": "union-resurrect", "front": "Vì sao gộp giỏ hàng bằng phép hợp là sai?", "back": "Món bị xoá ở một sibling vẫn còn ở sibling kia nên sống lại. OR-Set gắn tag cho mỗi lần thêm và chỉ xoá tag đã thấy." },
+    { "id": "tombstone-gc", "front": "Vì sao xoá phải ghi tombstone và giữ nó 10 ngày?", "back": "Xoá vật lý thì replica đang vắng quay về sẽ chép giá trị cũ lại. Tombstone giữ tới gc_grace_seconds, và repair phải xong trong khoảng đó." },
+    { "id": "phi-accrual", "front": "Phi accrual với ngưỡng 8 nghĩa là gì?", "back": "Mức nghi ngờ tính theo khoảng cách heartbeat đã thấy. Heartbeat trung bình 1 giây thì im lặng khoảng 18 giây mới bị coi là chết." },
+    { "id": "hint-vs-repair", "front": "Hinted handoff và repair khác nhau thế nào?", "back": "Hint chuyển lại các lần ghi đã lỡ khi node vắng ngắn (Cassandra tối đa 3 giờ). Vắng lâu hơn hay hint mất thì repair bằng cây Merkle." }
+  ]
+}

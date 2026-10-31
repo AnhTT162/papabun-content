@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần ghi khi có node chết",
+  "nodes": [
+    { "id": "client", "label": "Client", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "coord", "label": "Coordinator", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "a", "label": "Replica A (AZ a)", "kind": "database", "x": 0.1, "y": 0.5 },
+    { "id": "b", "label": "Replica B (AZ b)", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "d", "label": "Node D giữ hint", "kind": "database", "x": 0.1, "y": 0.95 },
+    { "id": "c", "label": "Replica C (chết)", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-coord", "from": "client", "to": "coord", "label": "put(k, ctx, v)" },
+    { "id": "coord-a", "from": "coord", "to": "a", "label": "ghi / đọc" },
+    { "id": "coord-b", "from": "coord", "to": "b", "label": "ghi / digest" },
+    { "id": "coord-d", "from": "coord", "to": "d", "label": "hint cho C" },
+    { "id": "d-c", "from": "d", "to": "c", "label": "trả hint" },
+    { "id": "b-c", "from": "b", "to": "c", "label": "so cây Merkle" }
+  ],
+  "steps": [
+    {
+      "caption": "Client gửi put kèm context (version vector đã đọc). Coordinator băm key, lấy preference list N = 3: A, B, C, mỗi node một AZ.",
+      "show": ["client", "coord", "client-coord"],
+      "highlight": ["client-coord"]
+    },
+    {
+      "caption": "Coordinator gửi cho cả ba bản sao. A và B ghi commit log và memtable rồi xác nhận: đủ W = 2, trả thành công cho client.",
+      "show": ["a", "b", "coord-a", "coord-b"],
+      "highlight": ["coord-a", "coord-b"]
+    },
+    {
+      "caption": "C không trả lời vì phi accrual đã coi nó là chết. Bản dành cho C được giữ làm hint (Cassandra giữ ở coordinator, Dynamo gửi cho node kế tiếp D trên vòng).",
+      "show": ["c", "d", "coord-d"],
+      "highlight": ["coord-d"]
+    },
+    {
+      "caption": "C quay lại trong cửa sổ hint (Cassandra mặc định 3 giờ): D đẩy các lần ghi C đã lỡ.",
+      "show": ["d-c"],
+      "highlight": ["d-c"]
+    },
+    {
+      "caption": "Phần hint không phủ được (C chết quá cửa sổ, hint mất) được repair: so cây Merkle theo khoảng token, chỉ chuyển khoảng lệch. Phải xong trước gc_grace_seconds.",
+      "show": ["b-c"],
+      "highlight": ["b-c"]
+    },
+    {
+      "caption": "Đọc với R = 2: một replica trả dữ liệu, replica kia trả digest. Lệch thì đọc đầy đủ, lấy bản mới nhất và ghi đè lên bản cũ trước khi trả lời.",
+      "show": [],
+      "highlight": ["coord-a", "coord-b"]
+    }
+  ]
+}

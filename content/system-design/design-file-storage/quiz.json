@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "part-count-limit",
+      "kind": "output",
+      "prompt": "Client chọn cỡ part cố định 8 MiB cho mọi file. Với file 100 GiB, đoạn code in ra gì? (S3 cho tối đa 10.000 part.)",
+      "code": "long fileSize = 100L * 1024 * 1024 * 1024; // 100 GiB\nlong partSize = 8L * 1024 * 1024;           // 8 MiB\nlong parts = (fileSize + partSize - 1) / partSize;\nSystem.out.println(parts + \" part, \" + (parts <= 10_000 ? \"OK\" : \"vượt trần\"));",
+      "options": [
+        "12800 part, vượt trần",
+        "12800 part, OK",
+        "1280 part, OK",
+        "12500 part, vượt trần"
+      ],
+      "answer": 0,
+      "explanation": "100 GiB chia 8 MiB là 102.400 / 8 = 12.800 part, vượt trần 10.000 nên `CompleteMultipartUpload` sẽ không bao giờ tới được. 12.500 là kết quả nếu tính cả hai số theo thập phân (100 GB / 8 MB). Client phải chọn cỡ part theo cỡ file: ít nhất cỡ file chia 10.000, tức khoảng 10,2 MiB cho 100 GiB, và không dưới 5 MiB."
+    },
+    {
+      "id": "etag-not-md5",
+      "kind": "single",
+      "prompt": "Sau khi upload multipart một file 12 MiB (part 5 MiB), service so ETag mà S3 trả về với MD5 của file đã tính ở client để kiểm toàn vẹn, và lần nào cũng báo lệch. Vì sao?",
+      "options": [
+        "ETag của multipart là MD5 của các MD5 từng part, kèm số part",
+        "ETag của multipart là SHA-256 của cả file, không phải MD5",
+        "S3 nén file trước khi lưu nên ETag tính trên bản đã nén",
+        "ETag chỉ đúng sau vài giây vì S3 nhất quán cuối cùng"
+      ],
+      "answer": 0,
+      "explanation": "Với multipart, ETag là MD5 của chuỗi ghép các MD5 nhị phân của từng part, thêm `-` và số part (lab: `704ec3a5...-3` so với MD5 cả file `78875d13...`). Cùng file mà đổi cỡ part thì ETag đổi. S3 không nén object và đã nhất quán mạnh từ 12/2020. Kiểm toàn vẹn bằng checksum kiểu full-object (CRC64NVME, CRC32C); SHA-256 với multipart chỉ có dạng composite."
+    },
+    {
+      "id": "hls-signed-cookie",
+      "kind": "single",
+      "prompt": "Video bài học phát bằng HLS qua CloudFront, mỗi video 5 mức chất lượng, đoạn 6 giây, video 1 giờ có khoảng 3.000 file đoạn. Chỉ học viên đã mua được xem. Cách cấp quyền nào hợp nhất?",
+      "options": [
+        "Signed cookie cho đường dẫn của khoá học, hạn ngắn và gia hạn khi xem",
+        "Signed URL cho từng file đoạn, ký sẵn khi tạo playlist rồi lưu lại",
+        "Đặt bucket public, đổi tên prefix ngẫu nhiên để khó đoán đường dẫn",
+        "Signed URL cho playlist chính, các file đoạn để công khai trên CDN"
+      ],
+      "answer": 0,
+      "explanation": "Signed cookie áp cho mọi file dưới một đường dẫn, nên playlist và hàng nghìn đoạn đều được kiểm mà không phải ký từng URL. Ký sẵn URL rồi lưu thì URL hết hạn hoặc bị chia sẻ nguyên playlist. Prefix khó đoán vẫn là public: lộ một link là lộ cả video. Ký riêng playlist mà để đoạn công khai thì ai có đường dẫn đoạn vẫn tải được."
+    },
+    {
+      "id": "fixed-vs-cdc",
+      "kind": "single",
+      "prompt": "App đồng bộ file chia file thành block cố định 4 MiB, chỉ gửi block server chưa có. Người dùng chèn một dòng vào tài liệu 64 MiB, ở khoảng vị trí 10 MiB. Chuyện gì xảy ra, và cách sửa nào đúng?",
+      "options": [
+        "Gần như mọi block đều đổi vì ranh giới bị lệch; chia block theo nội dung",
+        "Chỉ block đầu đổi vì các block sau giữ nguyên nội dung; không cần sửa",
+        "Mọi block đều đổi vì SHA-256 nhạy với độ dài file; đổi sang hash MD5",
+        "Chỉ block đầu đổi nhưng phải gửi lại cả file; giảm block xuống 1 MiB"
+      ],
+      "answer": 0,
+      "explanation": "Chèn byte làm mọi ranh giới phía sau lệch đi, nên nội dung từng block sau chỗ chèn đều khác. Lab: chèn 1 byte ở 10 MiB làm 15/17 block đổi (56 MiB phải gửi); chèn ở đầu file thì cả 17 block. Block 1 MiB cũng không đỡ (55/65 block đổi). Chia theo nội dung đặt ranh giới tại vị trí mà hash cuộn của vài chục byte gần đó thoả điều kiện, nên ranh giới đi theo nội dung: lab chỉ đổi 1 block, gửi 0,83 MiB."
+    },
+    {
+      "id": "s3-event-duplicate",
+      "kind": "single",
+      "prompt": "Pipeline dựa vào S3 event notification `ObjectCreated` để bắt đầu transcode. Thỉnh thoảng một video bị transcode hai lần, và có lần một video không bao giờ được transcode. Hướng sửa nào đúng?",
+      "options": [
+        "Job idempotent theo video và phiên bản, kèm job đối soát tìm file kẹt",
+        "Bật FIFO cho hàng đợi nhận event để S3 gửi đúng một lần theo thứ tự",
+        "Tăng retention của hàng đợi để không event nào bị xoá trước khi xử lý",
+        "Chuyển sang polling ListObjects mỗi phút để không phụ thuộc vào event"
+      ],
+      "answer": 0,
+      "explanation": "Event của S3 là at-least-once: có thể trùng, trễ, không theo thứ tự, và cấu hình sai thì mất hẳn. Hàng đợi FIFO không làm S3 hết gửi trùng, và S3 event notification cũng không gửi thẳng vào SQS FIFO được (phải đi qua EventBridge). Job idempotent làm bản trùng vô hại; job đối soát tìm file ở `UPLOADED` quá lâu để đưa lại vào hàng đợi. Tốt hơn nữa là API gọi `Complete` rồi ghi job vào outbox. Polling ListObjects trên bucket lớn chậm và tốn tiền."
+    }
+  ]
+}

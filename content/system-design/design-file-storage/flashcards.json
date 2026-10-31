@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-paths", "front": "Hệ lưu trữ video có ba đường nào?", "back": "Upload thẳng từ client lên object storage, xử lý bất đồng bộ (kiểm tra, transcode), và phát qua CDN. App server chỉ cấp quyền và giữ metadata." },
+    { "id": "multipart-limits", "front": "Giới hạn multipart upload của S3?", "back": "Part từ 5 MiB tới 5 GiB, part cuối được nhỏ hơn, tối đa 10.000 part. Part 5 MiB chỉ tới 48,8 GiB, nên cỡ part phải theo cỡ file." },
+    { "id": "why-parts", "front": "Vì sao upload theo part trên mạng chập chờn?", "back": "Rớt mạng chỉ mất part đang gửi. Mô phỏng 2 GiB rớt trung bình mỗi 500 MiB: một lần PUT gửi gấp 14 lần, part 16 MiB chỉ gấp 1,02." },
+    { "id": "incomplete-upload", "front": "Upload multipart dở dang tốn gì?", "back": "Các part vẫn bị tính tiền dù không hiện khi liệt kê object, tới khi Abort hoặc Complete. Cần lifecycle rule AbortIncompleteMultipartUpload." },
+    { "id": "etag-multipart", "front": "ETag của object multipart là gì?", "back": "MD5 của chuỗi ghép các MD5 từng part, thêm `-số part`. Không phải MD5 của file; kiểm toàn vẹn bằng checksum CRC kiểu full-object." },
+    { "id": "ready-state", "front": "Khi nào video được chuyển READY?", "back": "Khi mọi mức chất lượng đã transcode xong và metadata đã trỏ sang prefix kết quả, không phải khi upload xong." },
+    { "id": "hls-keyframes", "front": "Vì sao keyframe phải thẳng hàng giữa các mức HLS?", "back": "Player đổi mức ở ranh giới đoạn. Keyframe cố định (ví dụ mỗi 2 giây) ở mọi mức làm ranh giới đoạn trùng nhau, đổi mức không bị giật." },
+    { "id": "signed-cookie-hls", "front": "Vì sao HLS dùng signed cookie thay vì signed URL?", "back": "Một video có playlist và hàng nghìn file đoạn. Signed cookie áp cho cả đường dẫn, khỏi ký từng URL." },
+    { "id": "separate-domain", "front": "Vì sao phục vụ file người dùng từ tên miền riêng?", "back": "File HTML hay SVG có script chạy dưới tên miền chính là stored XSS. Tên miền riêng cộng `nosniff` cô lập rủi ro đó." },
+    { "id": "cdc", "front": "Chia block theo nội dung giúp gì cho đồng bộ file?", "back": "Ranh giới đi theo nội dung nên chèn byte chỉ đổi block quanh chỗ chèn. Lab 64 MiB: block cố định 4 MiB phải gửi 56 MiB, chia theo nội dung 0,83 MiB." }
+  ]
+}
