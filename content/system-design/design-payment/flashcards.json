@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-parts", "front": "Hệ thống thanh toán gồm những phần cốt lõi nào?", "back": "Máy trạng thái cho mỗi attempt, gọi PSP idempotent, sổ cái kép làm nguồn sự thật về tiền, và đối soát hằng ngày với PSP và ngân hàng." },
+    { "id": "timeout-unknown", "front": "PSP timeout thì trạng thái là gì?", "back": "UNKNOWN, không phải FAILED. Tra lại theo id attempt gửi kèm làm mã tham chiếu, chờ webhook, để đối soát chốt; không gọi lại bằng khoá mới hay PSP khác." },
+    { "id": "write-before-call", "front": "Vì sao ghi attempt trước khi gọi PSP?", "back": "Process chết giữa chừng vẫn còn dòng PENDING để tra lại. Gọi PSP trong transaction thì rollback xoá mất dấu vết của tiền đã trừ." },
+    { "id": "psp-key-24h", "front": "Retry với PSP sau 24 giờ có an toàn không?", "back": "Không. Stripe có thể xoá idempotency key sau 24 giờ; gửi lại sẽ tạo giao dịch mới. Quá hạn đó chỉ tra trạng thái." },
+    { "id": "webhook-rules", "front": "Bốn việc phải làm với webhook thanh toán?", "back": "Kiểm HMAC trên body thô kèm hạn timestamp, lưu event_id unique, trả 2xx ngay rồi xử lý nền, chuyển trạng thái chỉ đi tới vì event không theo thứ tự." },
+    { "id": "double-entry", "front": "Quy tắc của sổ cái kép?", "back": "Mỗi bút toán có nhiều dòng, tổng nợ bằng tổng có cho từng loại tiền. Không sửa, không xoá; sai thì ghi bút toán đảo." },
+    { "id": "deferred-check", "front": "Vì sao kiểm cân bằng bút toán lúc commit?", "back": "Giữa transaction bút toán luôn lệch tạm thời khi mới chèn một phần dòng. Constraint trigger hoãn tới commit kiểm sum = 0 khi đã đủ." },
+    { "id": "hot-account", "front": "Tài khoản người bán nóng thì làm gì?", "back": "Không cập nhật một dòng số dư cho mọi giao dịch: chia dòng con hoặc tính từ entry. Lab: một dòng 6.100 journal/s, 16 dòng con 25.400/s." },
+    { "id": "recon-breaks", "front": "Đối soát tìm những loại lệch nào?", "back": "Có ở PSP mà sổ FAILED/UNKNOWN, có ở sổ mà PSP không có, lệch số tiền (phí, tỉ giá, hoàn một phần), lệch ngày do mốc chốt sổ." },
+    { "id": "no-failover-timeout", "front": "Khi nào được chuyển sang PSP dự phòng?", "back": "Chỉ khi chắc PSP đầu chưa xử lý: không kết nối được hoặc trả mã từ chối cho phép thử lại. Timeout thì không, vì có thể đã trừ tiền." }
+  ]
+}

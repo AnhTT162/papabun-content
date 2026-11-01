@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-message-queue",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế distributed message queue",
+  "summary": "Thiết kế kiểu Kafka từ đầu: queue lưu trạng thái từng message hay log chỉ lưu offset, segment và index thưa, follower kéo dữ liệu, ISR so với quorum đa số, ca mất message đã báo thành công và leader epoch, offset trong topic compacted, 12 lên 16 partition làm 75% key đổi chỗ, retry có hẹn bằng topic độ trễ cố định, tiered storage, chi phí chéo AZ và đọc follower, so với Pulsar và kiến trúc ghi thẳng object storage.",
+  "level": "architect",
+  "order": 16,
+  "minutes": 20,
+  "prerequisites": ["messaging-fundamentals", "kafka-architecture", "kafka-producer-consumer", "consensus", "back-of-envelope"],
+  "terms": ["kafka-partition", "kafka-offset", "log-segment", "sparse-index", "tiered-storage", "isr", "high-watermark", "leader-epoch", "consumer-group", "visibility-timeout", "head-of-line-blocking", "share-group", "idempotent-producer", "kraft", "follower-fetching", "delay-queue", "raft", "availability-zone", "replication-factor"],
+  "references": [
+    { "title": "Apache Kafka Documentation: Design (Replication, ISR, log)", "url": "https://kafka.apache.org/documentation/#design" },
+    { "title": "KIP-101: Alter Replication Protocol to use Leader Epoch rather than High Watermark for Truncation", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-101+-+Alter+Replication+Protocol+to+use+Leader+Epoch+rather+than+High+Watermark+for+Truncation" },
+    { "title": "KIP-392: Allow consumers to fetch from closest replica", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-392%3A+Allow+consumers+to+fetch+from+closest+replica" },
+    { "title": "KIP-932: Queues for Kafka", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-932%3A+Queues+for+Kafka" },
+    { "title": "KIP-405: Kafka Tiered Storage", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-405%3A+Kafka+Tiered+Storage" },
+    { "title": "KIP-1150: Diskless Topics", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-1150%3A+Diskless+Topics" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đảm bảo không mất message?\" Tôi tách ba chặng. Producer: `acks=all`, idempotence, retry tới `delivery.timeout.ms` rồi mới báo lỗi cho nghiệp vụ. Broker: RF 3 trên 3 AZ, `min.insync.replicas=2`, tắt unclean leader election; độ bền đến từ nhiều bản ở nhiều AZ, không từ fsync mỗi message. Consumer: commit offset sau khi xử lý xong và xử lý idempotent. Rồi nói rõ phần còn lại: mất điện cả ba AZ cùng lúc trước khi page cache xuống đĩa vẫn có thể mất dữ liệu gần nhất." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng dùng consumer group thường cho việc chạy nhiều phút. Một việc vượt `max.poll.interval.ms` (mặc định 5 phút) làm consumer bị đá khỏi group, partition chuyển sang người khác chạy lại từ offset chưa commit, rồi người đó cũng quá hạn: rebalance vòng tròn và việc chạy lặp. Dùng queue cổ điển, bảng job có lease, hoặc share group có gia hạn khoá." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, ghi rõ trên sơ đồ ba con số: số partition (tính từ throughput một consumer, nhân tăng trưởng vài năm), RF cùng `min.insync.replicas`, và thời gian giữ local so với object storage. Người phỏng vấn sẽ hỏi vì sao từng số, và đó là chỗ bạn ghi điểm." }
+  ]
+}

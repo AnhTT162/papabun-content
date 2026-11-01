@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "ledger-balances",
+      "kind": "output",
+      "prompt": "Ba journal: capture 100.000 (hoa hồng 2.200), PSP settle sau khi trừ phí 1.500, rồi hoàn 30.000 do người bán chịu. Quy ước nợ dương, có âm. Đoạn code in ra gì?",
+      "code": "record Line(String account, long amount) {}\nMap<String, Long> balance = new TreeMap<>();\nList<List<Line>> journals = List.of(\n    List.of(new Line(\"psp_receivable\", 100_000), new Line(\"merchant_payable\", -97_800), new Line(\"commission_revenue\", -2_200)),\n    List.of(new Line(\"bank\", 98_500), new Line(\"psp_fee_expense\", 1_500), new Line(\"psp_receivable\", -100_000)),\n    List.of(new Line(\"merchant_payable\", 30_000), new Line(\"psp_receivable\", -30_000)));\nfor (var j : journals)\n    for (var l : j) balance.merge(l.account(), l.amount(), Long::sum);\nSystem.out.println(balance.get(\"merchant_payable\") + \" \" + balance.get(\"psp_receivable\"));",
+      "options": [
+        "-67800 -30000",
+        "-97800 0",
+        "67800 30000",
+        "-67800 0"
+      ],
+      "answer": 0,
+      "explanation": "`merchant_payable`: -97.800 + 30.000 = -67.800, tức platform còn nợ người bán 67.800 (số dư bên có). `psp_receivable`: +100.000 - 100.000 - 30.000 = -30.000: khoản hoàn chưa được PSP trừ vào lần settle sau, nên sổ chỉ ra đúng chỗ còn treo. Ra `-97800 0` là quên journal hoàn. Đổi dấu thành số dương là nhầm quy ước; còn `0` cho `psp_receivable` là coi hoàn như chưa từng xảy ra ở phía PSP."
+    },
+    {
+      "id": "timeout-unknown",
+      "kind": "single",
+      "prompt": "Gọi capture tới PSP, ba lần retry cùng idempotency key đều timeout. Service nên làm gì?",
+      "options": [
+        "Đánh dấu UNKNOWN, tra theo mã tham chiếu, chờ webhook và đối soát",
+        "Đánh dấu FAILED và cho người dùng thanh toán lại bằng khoá mới",
+        "Gửi lại với khoá mới vì khoá cũ đã bị PSP ghi nhận là lỗi",
+        "Chuyển sang PSP dự phòng để người dùng không phải chờ"
+      ],
+      "answer": 0,
+      "explanation": "Timeout chỉ nói là không biết kết quả: PSP có thể đã capture. Khoá mới hay PSP khác đều có thể trừ tiền lần hai, đúng kiểu sự cố \"khách bị trừ hai lần\". Đúng là để `UNKNOWN`, tra theo id attempt đã gửi kèm làm mã tham chiếu (trong 24 giờ, gửi lại đúng khoá và tham số cũng trả về kết quả đã lưu), nhận webhook, và để đối soát chốt nếu vẫn chưa rõ. Lưu ý PSP có thể xoá khoá sau 24 giờ, nên sau đó chỉ tra, không gửi lại."
+    },
+    {
+      "id": "write-before-call",
+      "kind": "single",
+      "prompt": "Code cũ: mở transaction, insert payment, gọi PSP (2 giây), cập nhật kết quả, commit. Process bị kill ngay sau khi PSP trả thành công, trước commit. Hậu quả chính là gì?",
+      "options": [
+        "Khách đã bị trừ tiền mà database không còn dấu vết để tra lại",
+        "PSP tự huỷ giao dịch vì không nhận được xác nhận của service",
+        "Database giữ dòng payment ở trạng thái PENDING cho job phục hồi",
+        "Không có hậu quả vì webhook sẽ tạo lại dòng payment đã mất"
+      ],
+      "answer": 0,
+      "explanation": "Rollback xoá cả dòng payment, nên không còn gì để job phục hồi tra. Webhook tới sau cũng không khớp được với payment nào. PSP không huỷ chỉ vì client không đọc được response. Cách đúng: insert attempt `PENDING` và commit trước, gọi PSP ngoài transaction, rồi cập nhật trong transaction mới. Gọi trong transaction còn giữ kết nối database suốt thời gian chờ PSP."
+    },
+    {
+      "id": "webhook-order",
+      "kind": "single",
+      "prompt": "Attempt đang `CAPTURED`. Webhook `payment.authorized` của chính giao dịch đó đến sau (PSP không bảo đảm thứ tự). Handler nên làm gì?",
+      "options": [
+        "Lưu event_id, trả 2xx, không đổi trạng thái vì không được lùi",
+        "Đổi về AUTHORIZED vì event mới nhất luôn là trạng thái đúng",
+        "Trả 4xx để PSP gửi lại sau, khi thứ tự đã đúng",
+        "Bỏ qua mà không lưu event_id vì event này không có tác dụng"
+      ],
+      "answer": 0,
+      "explanation": "Webhook không có thứ tự, và thứ tự đến không phải thứ tự xảy ra. Chuyển trạng thái chỉ đi tới theo máy trạng thái (`UPDATE ... WHERE status IN (...)` trả 0 dòng thì bỏ qua). Trả 4xx làm PSP retry tới vài ngày mà không bao giờ \"đúng thứ tự\" hơn. Vẫn lưu `event_id` để lần gửi lại bị nhận ra là trùng và để có dấu vết."
+    },
+    {
+      "id": "hot-merchant",
+      "kind": "single",
+      "prompt": "Một người bán nhận 30% giao dịch; ngày sale lớn cần khoảng 15.000 journal/s cho riêng người bán đó. Mỗi journal đều `UPDATE merchant_balance SET amount = amount + :x WHERE merchant_id = :id`. Lab 32 kết nối: chỉ chèn entry khoảng 30.700 journal/s, có dòng số dư khoảng 6.100/s. Cách nào hợp lý nhất?",
+      "options": [
+        "Chia số dư ra nhiều dòng con hoặc tính từ entry theo kỳ",
+        "Tăng pool lên 200 kết nối để nhiều transaction chạy song song",
+        "Đổi sang SERIALIZABLE để PostgreSQL tự xếp thứ tự các lần cộng",
+        "Bỏ transaction, cộng số dư bằng câu lệnh riêng sau khi ghi entry"
+      ],
+      "answer": 0,
+      "explanation": "Nút thắt là khoá trên một dòng: thêm kết nối chỉ thêm người xếp hàng. SERIALIZABLE không bỏ được khoá ghi trên dòng đó, còn sinh thêm lỗi serialize (40001) phải retry. Cộng ngoài transaction làm số dư lệch với entry khi lỗi giữa chừng. Tài khoản chỉ nhận tiền thì chia dòng con (lab 16 dòng: khoảng 25.400/s) hoặc không giữ cột số dư mà tính từ entry cộng ảnh chụp theo kỳ."
+    }
+  ]
+}

@@ -127,7 +127,7 @@
       "meaning": "Phần tử đầu hàng bị chậm làm mọi phần tử phía sau phải chờ dù chúng không liên quan.",
       "example": "Mất một gói TCP làm mọi stream HTTP/2 trên kết nối đó dừng cho tới khi gói được gửi lại.",
       "related": ["multiplexing", "quic"],
-      "topics": ["http-request-lifecycle", "rabbitmq", "http2-http3"]
+      "topics": ["http-request-lifecycle", "rabbitmq", "http2-http3", "design-message-queue"]
     },
     {
       "id": "thread-dump",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment"]
     },
     {
       "id": "orm",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment"]
     },
     {
       "id": "replication-slot",
@@ -1717,7 +1717,7 @@
       "meaning": "Một dòng bị rất nhiều transaction cùng cập nhật, nên mọi transaction phải lần lượt chờ khoá của nó; throughput bị giới hạn bởi thời gian giữ khoá.",
       "example": "Dòng tổng doanh thu của một merchant lớn được cộng trong mọi transaction đặt đơn.",
       "related": ["pessimistic-locking", "trigger"],
-      "topics": ["views-procedures-triggers", "design-ecommerce-order"]
+      "topics": ["views-procedures-triggers", "design-ecommerce-order", "design-payment"]
     },
     {
       "id": "uuid-v7",
@@ -2485,7 +2485,7 @@
       "meaning": "Khoảng thời gian SQS ẩn một message khỏi các consumer khác sau khi nó được nhận; hết thời gian mà chưa bị xoá thì message hiện lại.",
       "example": "Mặc định 30 giây, tối đa 12 giờ; gia hạn bằng `ChangeMessageVisibility`.",
       "related": ["message-ack", "message-queue"],
-      "topics": ["messaging-fundamentals"]
+      "topics": ["messaging-fundamentals", "design-message-queue"]
     },
     {
       "id": "delivery-semantics",
@@ -2653,7 +2653,7 @@
       "meaning": "Một phần của topic Kafka: log chỉ ghi nối có thứ tự, nằm trên một broker leader và được sao chép sang các follower. Đơn vị song song và đơn vị giữ thứ tự.",
       "example": "Topic `orders` có 12 partition; message key `order-42` luôn vào cùng một partition.",
       "related": ["kafka-offset", "consumer-group"],
-      "topics": ["kafka-architecture", "service-communication", "event-driven-architecture", "capacity-planning"]
+      "topics": ["kafka-architecture", "service-communication", "event-driven-architecture", "capacity-planning", "design-message-queue"]
     },
     {
       "id": "kafka-offset",
@@ -2661,7 +2661,7 @@
       "meaning": "Số thứ tự tăng dần của message trong một partition. Consumer lưu offset đã xử lý để biết đọc tiếp từ đâu.",
       "example": "Group `billing` đã commit offset 18.204 cho partition 3.",
       "related": ["kafka-partition", "consumer-group"],
-      "topics": ["kafka-architecture", "kafka-producer-consumer"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer", "design-message-queue"]
     },
     {
       "id": "consumer-group",
@@ -2669,7 +2669,7 @@
       "meaning": "Nhóm consumer cùng `group.id`: mỗi partition của topic được giao cho đúng một consumer trong nhóm, và nhóm lưu offset chung. Nhiều nhóm cùng đọc một topic độc lập với nhau.",
       "example": "10 pod cùng group đọc topic 6 partition: 6 pod có việc, 4 pod chờ.",
       "related": ["kafka-partition", "competing-consumers"],
-      "topics": ["kafka-architecture", "kafka-producer-consumer", "event-driven-architecture", "design-job-scheduler"]
+      "topics": ["kafka-architecture", "kafka-producer-consumer", "event-driven-architecture", "design-job-scheduler", "design-message-queue"]
     },
     {
       "id": "isr",
@@ -2677,7 +2677,7 @@
       "meaning": "In-sync replicas: tập replica của một partition đang theo kịp leader. Chỉ replica trong ISR mới được bầu làm leader khi tắt unclean election.",
       "example": "Follower tụt quá 30 giây (`replica.lag.time.max.ms`) bị loại khỏi ISR.",
       "related": ["kafka-acks", "min-insync-replicas"],
-      "topics": ["kafka-architecture", "kafka-troubleshooting"]
+      "topics": ["kafka-architecture", "kafka-troubleshooting", "design-message-queue"]
     },
     {
       "id": "kafka-acks",
@@ -2701,7 +2701,7 @@
       "meaning": "Bằng log end offset nhỏ nhất trong ISR, tức offset của message kế tiếp mà mọi replica ISR đều sẽ có. Consumer chỉ đọc được các offset nhỏ hơn nó, nên (khi tắt unclean election) không thấy message có thể bị mất khi đổi leader.",
       "example": "Leader có log end offset 1.050 nhưng follower chậm nhất mới tới 1.040: high watermark là 1.040, consumer đọc được tới offset 1.039.",
       "related": ["isr", "kafka-offset"],
-      "topics": ["kafka-architecture"]
+      "topics": ["kafka-architecture", "design-message-queue"]
     },
     {
       "id": "log-compaction",
@@ -2717,7 +2717,7 @@
       "meaning": "Chế độ Kafka tự quản lý metadata bằng các controller chạy giao thức đồng thuận kiểu Raft, thay cho ZooKeeper. Kafka 4.0 chỉ còn KRaft.",
       "example": "3 controller KRaft lưu danh sách topic, partition và leader.",
       "related": ["unclean-leader-election"],
-      "topics": ["kafka-architecture", "consensus"]
+      "topics": ["kafka-architecture", "consensus", "design-message-queue"]
     },
     {
       "id": "unclean-leader-election",
@@ -2925,7 +2925,7 @@
       "meaning": "Producer Kafka có ID và số thứ tự cho mỗi partition, để broker bỏ bản gửi lại trùng và giữ thứ tự khi client tự retry. Bật mặc định từ client 3.0.",
       "example": "Retry sau khi mất phản hồi không tạo bản ghi thứ hai trong partition.",
       "related": ["kafka-transaction", "kafka-acks"],
-      "topics": ["kafka-producer-consumer", "idempotency"]
+      "topics": ["kafka-producer-consumer", "idempotency", "design-message-queue"]
     },
     {
       "id": "kafka-transaction",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment"]
     },
     {
       "id": "jitter",
@@ -5469,7 +5469,7 @@
       "meaning": "Thuật toán consensus thiết kế để dễ hiểu: một leader mỗi term, bầu bằng đa số phiếu, leader sao chép log lên follower và entry được commit khi đa số đã lưu.",
       "example": "etcd, Consul, KRaft của Kafka và CockroachDB đều dùng Raft (hoặc biến thể).",
       "related": ["consensus", "raft-term", "leader-election", "quorum"],
-      "topics": ["consensus", "design-key-value-store"]
+      "topics": ["consensus", "design-key-value-store", "design-message-queue"]
     },
     {
       "id": "paxos",
@@ -7437,7 +7437,7 @@
       "meaning": "Đơn vị tiền nhỏ nhất của một loại tiền (cent của USD, đồng của VND). Lưu tiền bằng số nguyên theo đơn vị này tránh được sai số thập phân.",
       "example": "12,50 USD lưu thành `long` 1250 cent.",
       "related": ["bigdecimal-scale"],
-      "topics": ["bigdecimal-money"]
+      "topics": ["bigdecimal-money", "design-payment"]
     },
     {
       "id": "transitive-dependency",
@@ -8765,7 +8765,7 @@
       "meaning": "Một hay nhiều data center tách biệt về điện, mạng và làm mát trong cùng một region của cloud. Chạy qua nhiều AZ để một data center hỏng không làm ngừng hệ thống.",
       "example": "Ba instance app đặt ở ba AZ `ap-southeast-1a/b/c`; mất một AZ vẫn còn hai.",
       "related": ["single-point-of-failure", "availability"],
-      "topics": ["sd-building-blocks", "sd-framework"]
+      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue"]
     },
     {
       "id": "oltp",
@@ -8805,7 +8805,7 @@
       "meaning": "Số bản sao của mỗi phần dữ liệu trong hệ thống phân tán. Dung lượng đĩa thật bằng dữ liệu logic nhân hệ số này.",
       "example": "Topic Kafka với replication factor 3: 700 GB dữ liệu logic chiếm 2,1 TB đĩa trên cả cụm.",
       "related": ["back-of-envelope-estimation"],
-      "topics": ["back-of-envelope", "design-key-value-store"]
+      "topics": ["back-of-envelope", "design-key-value-store", "design-message-queue"]
     },
     {
       "id": "hot-data",
@@ -9077,7 +9077,7 @@
       "meaning": "Mô hình gồm tập trạng thái hữu hạn và các chuyển trạng thái hợp lệ giữa chúng; mọi thay đổi phải đi theo một mũi tên đã khai báo.",
       "example": "Đơn hàng chỉ đi PENDING_PAYMENT → PAID hoặc → EXPIRED; event muốn đưa đơn EXPIRED sang PAID phải qua nhánh xử lý riêng.",
       "related": ["state-pattern", "saga"],
-      "topics": ["design-ecommerce-order"]
+      "topics": ["design-ecommerce-order", "design-payment"]
     },
     {
       "id": "inventory-reservation",
@@ -9101,7 +9101,7 @@
       "meaning": "Câu UPDATE đặt điều kiện nghiệp vụ ngay trong WHERE và dựa vào số dòng bị ảnh hưởng để biết thành công, thay cho đọc rồi kiểm rồi ghi.",
       "example": "UPDATE stock SET reserved = reserved + 1 WHERE sku = ? AND on_hand - reserved >= 1 trả 0 dòng nghĩa là hết hàng.",
       "related": ["optimistic-locking", "lost-update", "oversell"],
-      "topics": ["design-ecommerce-order"]
+      "topics": ["design-ecommerce-order", "design-payment"]
     },
     {
       "id": "webhook",
@@ -9109,7 +9109,7 @@
       "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
       "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
       "related": ["idempotency", "idempotent-consumer"],
-      "topics": ["design-ecommerce-order", "design-notification"]
+      "topics": ["design-ecommerce-order", "design-notification", "design-payment"]
     },
     {
       "id": "payment-authorization",
@@ -9117,7 +9117,7 @@
       "meaning": "Bước giữ tiền trên thẻ mà chưa thu; sau đó capture để thu thật hoặc void để huỷ. Authorization chỉ có hiệu lực vài ngày tới khoảng một tuần tuỳ mạng thẻ.",
       "example": "Đặt hàng giữ 500.000 đ trên thẻ, capture khi kho xuất hàng; huỷ trước đó chỉ là void, không phát sinh hoàn tiền.",
       "related": ["tcc", "saga"],
-      "topics": ["design-ecommerce-order"]
+      "topics": ["design-ecommerce-order", "design-payment"]
     },
     {
       "id": "proration",
@@ -9750,6 +9750,134 @@
       "example": "Đọc một key có thể phải xem vài SSTable; Bloom filter của từng file giúp bỏ qua file chắc chắn không chứa key.",
       "related": ["lsm-tree", "memtable", "compaction"],
       "topics": ["design-key-value-store"]
+    },
+    {
+      "id": "log-segment",
+      "term": "Log segment",
+      "meaning": "Một file trong chuỗi file tạo nên log của một partition. Chỉ segment cuối (active) được ghi nối; segment cũ không bao giờ bị sửa và bị xoá nguyên file khi hết hạn giữ.",
+      "example": "Kafka mặc định cắt segment ở 1 GiB (`segment.bytes`); retention 7 ngày xoá các segment có message mới nhất cũ hơn 7 ngày.",
+      "related": ["kafka-partition", "sparse-index", "tiered-storage"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "sparse-index",
+      "term": "Index thưa",
+      "meaning": "Index không ghi mọi bản ghi mà cứ một khoảng dữ liệu mới ghi một mục. Tìm kiếm là tìm nhị phân trong index rồi quét tuần tự đoạn ngắn còn lại.",
+      "example": "Kafka ghi một mục 8 byte mỗi khoảng 4.096 byte dữ liệu: segment 1 GiB có index khoảng 2 MiB.",
+      "related": ["log-segment", "kafka-offset"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "tiered-storage",
+      "term": "Tiered storage",
+      "meaning": "Giữ phần dữ liệu gần đây trên đĩa của broker và đẩy phần cũ sang object storage, nhưng vẫn đọc được qua cùng một API. Kafka không áp dụng nó cho topic compacted.",
+      "example": "Giữ 1 ngày trên đĩa local và 7 ngày trên S3: thay một broker chỉ phải chép lại vài TB thay vì hàng chục TB.",
+      "related": ["log-segment", "object-storage"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "leader-epoch",
+      "term": "Leader epoch",
+      "meaning": "Số tăng mỗi lần một partition đổi leader, kèm offset bắt đầu của từng epoch. Follower dùng nó để biết chính xác phần log nào lệch với leader mới mà cắt.",
+      "example": "Follower khởi động lại hỏi leader \"epoch 5 kết thúc ở offset nào\" rồi chỉ cắt phần sau đó, thay vì cắt về high watermark cũ và xoá message đã báo thành công (KIP-101).",
+      "related": ["high-watermark", "isr", "fencing-token"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "share-group",
+      "term": "Share group",
+      "meaning": "Kiểu consumer group của Kafka (KIP-932) cho nhiều consumer đọc chung một partition, khoá và ack từng message, giao lại message khi khoá hết hạn. Đổi lại không giữ thứ tự.",
+      "example": "Mỗi message bị khoá mặc định 30 giây; consumer không ack hay gia hạn kịp thì message được giao cho consumer khác.",
+      "related": ["consumer-group", "competing-consumers", "visibility-timeout"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "follower-fetching",
+      "term": "Fetch from follower",
+      "meaning": "Consumer đọc từ replica cùng rack hay AZ thay vì từ leader (Kafka KIP-392, `client.rack` ở consumer và `replica.selector.class` ở broker), để giảm lưu lượng và chi phí chéo AZ.",
+      "example": "Cụm 3 AZ, 4 consumer group đọc leader tốn thêm 2,67 GB chéo AZ cho mỗi GB ghi vào; đọc follower cùng AZ thì gần 0.",
+      "related": ["availability-zone", "kafka-partition"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "delay-queue",
+      "term": "Delay queue",
+      "meaning": "Hàng đợi chỉ giao message sau một khoảng trễ. Dùng cho retry có hẹn hay việc hẹn giờ ngắn.",
+      "example": "SQS cho trễ tối đa 15 phút. Trên Kafka làm bằng các topic có độ trễ cố định như `retry-1m`, `retry-10m`, consumer pause partition tới khi message đầu tới hạn.",
+      "related": ["retry-topic", "timing-wheel"],
+      "topics": ["design-message-queue"]
+    },
+    {
+      "id": "psp",
+      "term": "PSP (Payment Service Provider)",
+      "meaning": "Cổng thanh toán: bên trung gian nhận yêu cầu thanh toán của merchant, nói chuyện với ngân hàng và mạng thẻ hay ví, rồi trả kết quả qua API và webhook.",
+      "example": "Service Payment gọi PSP để authorize thẻ, nhận webhook `payment.succeeded`, và hằng ngày tải file settlement của PSP để đối soát.",
+      "related": ["payment-authorization", "settlement", "webhook"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "double-entry-ledger",
+      "term": "Sổ cái kép (double-entry ledger)",
+      "meaning": "Cách ghi sổ mà mỗi lần tiền di chuyển ghi ít nhất hai dòng, một bên nợ một bên có, tổng bằng 0. Sổ chỉ ghi nối; số dư suy ra từ các dòng.",
+      "example": "Capture 100.000: nợ `psp_receivable` 100.000, có `merchant_payable` 97.800, có `commission_revenue` 2.200.",
+      "related": ["journal-entry", "reconciliation"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "journal-entry",
+      "term": "Bút toán (journal entry)",
+      "meaning": "Một sự kiện tiền trong sổ cái, gồm nhiều dòng trên nhiều tài khoản và cân bằng nợ có cho từng loại tiền. Đã ghi thì không sửa; sai thì ghi bút toán đảo.",
+      "example": "PSP settle 98.500 sau khi trừ phí 1.500: một bút toán ba dòng nợ `bank` 98.500, nợ `psp_fee_expense` 1.500, có `psp_receivable` 100.000.",
+      "related": ["double-entry-ledger"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "settlement",
+      "term": "Settlement",
+      "meaning": "Bước tiền thật được chuyển từ PSP hay acquirer về tài khoản ngân hàng của merchant, thường sau vài ngày làm việc và đã trừ phí, kèm báo cáo chi tiết từng giao dịch.",
+      "example": "File settlement T+1 liệt kê từng giao dịch, phí và số ròng; job đối soát khớp nó với sổ cái theo mã tham chiếu.",
+      "related": ["psp", "reconciliation", "payout"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "payout",
+      "term": "Payout",
+      "meaning": "Khoản platform chuyển trả cho người bán phần tiền đã thu hộ, sau khi trừ hoa hồng, hoàn tiền và dự phòng tranh chấp.",
+      "example": "Payout chạy theo kỳ, idempotent theo `(merchant, kỳ)`, số tiền lấy từ số dư `merchant_payable` trên sổ cái tại mốc chốt.",
+      "related": ["settlement", "double-entry-ledger"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "chargeback",
+      "term": "Chargeback",
+      "meaning": "Chủ thẻ khiếu nại với ngân hàng phát hành và tiền bị kéo ngược khỏi merchant, thường hàng tuần tới vài tháng sau giao dịch.",
+      "example": "Một đơn đã payout cho người bán bị chargeback: platform ghi bút toán tranh chấp, số dư người bán âm và được trừ vào kỳ payout sau.",
+      "related": ["payout", "settlement"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "card-tokenization",
+      "term": "Tokenization (thẻ)",
+      "meaning": "Thay số thẻ bằng một token vô nghĩa với bên ngoài; chỉ PSP giữ số thật. Server của merchant chỉ thấy token nên phạm vi PCI DSS nhỏ đi nhiều.",
+      "example": "Form nhập thẻ do PSP host trả về `pm_...`; service Payment lưu và gửi token đó, không bao giờ thấy số thẻ.",
+      "related": ["pci-dss", "psp"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "pci-dss",
+      "term": "PCI DSS",
+      "meaning": "Bộ tiêu chuẩn bảo mật bắt buộc với hệ thống lưu, xử lý hay truyền dữ liệu thẻ thanh toán. Phạm vi càng ít hệ chạm số thẻ thì càng ít yêu cầu phải đáp ứng.",
+      "example": "Dùng trang thanh toán do PSP host thì server không chạm số thẻ, phạm vi đánh giá thu nhỏ đáng kể so với tự nhận số thẻ qua API của mình.",
+      "related": ["card-tokenization"],
+      "topics": ["design-payment"]
+    },
+    {
+      "id": "three-d-secure",
+      "term": "3-D Secure",
+      "meaning": "Bước xác thực thêm của ngân hàng phát hành (OTP, app ngân hàng) khi thanh toán thẻ online. Thanh toán phải chờ người dùng xác nhận nên kết quả đến bất đồng bộ.",
+      "example": "Attempt sang `REQUIRES_ACTION`, trình duyệt chuyển tới trang ngân hàng, kết quả cuối về qua webhook.",
+      "related": ["payment-authorization", "psp"],
+      "topics": ["design-payment"]
     }
   ]
 }

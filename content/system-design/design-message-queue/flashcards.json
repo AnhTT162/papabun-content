@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "queue-vs-log", "front": "Quyết định gốc khi thiết kế message queue?", "back": "Lưu trạng thái từng message (ack, retry từng cái) hay chỉ lưu một offset mỗi partition (rẻ, đọc lại được, nhưng một message chậm chặn cả partition)." },
+    { "id": "sparse-index", "front": "Broker tìm một offset trong segment thế nào?", "back": "Tìm nhị phân trong index thưa (một mục 8 byte mỗi khoảng 4 KB dữ liệu) rồi quét tuần tự khoảng 4 KB cộng một lô. Segment 1 GiB có index khoảng 2 MiB." },
+    { "id": "pull-replication", "front": "Vì sao follower kéo thay vì leader đẩy?", "back": "Follower tự điều tốc và gom lô; offset trong request kéo tiếp theo chính là xác nhận đã có mọi thứ trước nó, leader không cần theo dõi ack riêng." },
+    { "id": "isr-vs-majority", "front": "ISR khác quorum đa số ở đâu?", "back": "ISR chờ mọi replica đang đồng bộ nên cần ít bản hơn đa số (f + 1 so với 2f + 1), nhưng bảo đảm thật chỉ là chịu min.insync.replicas − 1 lỗi vì ISR được phép co lại." },
+    { "id": "leader-epoch", "front": "Leader epoch sửa lỗi gì?", "back": "Follower restart cắt log theo high watermark cũ có thể xoá message đã báo thành công. Với epoch, nó hỏi leader epoch cũ kết thúc ở offset nào và chỉ cắt phần lệch (KIP-101)." },
+    { "id": "repartition", "front": "Tăng từ 12 lên 16 partition thì bao nhiêu key đổi chỗ?", "back": "75%: key chỉ ở lại khi h mod 48 < 12. Message mới và cũ của cùng key có thể bị xử lý lệch thứ tự, nên chọn đủ partition từ đầu." },
+    { "id": "offsets-topic", "front": "Group coordinator là broker nào?", "back": "Leader của partition abs(hash(group.id)) % 50 (mặc định offsets.topic.num.partitions) trong __consumer_offsets. Offset lưu trong topic compacted đó, nhân bản như dữ liệu thường." },
+    { "id": "delay-topic", "front": "Làm retry có hẹn trên Kafka thế nào?", "back": "Mỗi topic một độ trễ cố định nên message tới hạn theo thứ tự vào. Consumer seek() về message đầu chưa tới hạn, pause() partition tới hạn đó, không ngủ trong vòng poll." },
+    { "id": "cross-az", "front": "Mỗi GB ghi vào tốn bao nhiêu GB chéo AZ (3 AZ, RF 3)?", "back": "2/3 từ producer tới leader, 2 cho replication, thêm 2/3 mỗi consumer group đọc leader. Đọc follower cùng AZ bỏ được phần consumer." },
+    { "id": "tiered-storage", "front": "Tiered storage giúp gì ngoài giữ dữ liệu rẻ?", "back": "Broker chỉ giữ phần gần trên đĩa local, nên thay một broker chỉ phải chép vài TB thay vì hàng chục TB." }
+  ]
+}

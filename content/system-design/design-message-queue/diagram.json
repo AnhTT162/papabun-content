@@ -1,0 +1,148 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một message đi qua partition có 3 replica",
+  "nodes": [
+    {
+      "id": "producer",
+      "label": "Producer",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "leader",
+      "label": "Leader (AZ a)",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "fb",
+      "label": "Follower (AZ b)",
+      "kind": "queue",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "fc",
+      "label": "Follower (AZ c)",
+      "kind": "queue",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "consumer",
+      "label": "Consumer (AZ b)",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "controller",
+      "label": "Controller KRaft",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "producer-leader",
+      "from": "producer",
+      "to": "leader",
+      "label": "lô, acks=all"
+    },
+    {
+      "id": "fb-leader",
+      "from": "fb",
+      "to": "leader",
+      "label": "fetch(offset)"
+    },
+    {
+      "id": "fc-leader",
+      "from": "fc",
+      "to": "leader",
+      "label": "fetch(offset)"
+    },
+    {
+      "id": "consumer-fb",
+      "from": "consumer",
+      "to": "fb",
+      "label": "fetch cùng AZ"
+    },
+    {
+      "id": "controller-fb",
+      "from": "controller",
+      "to": "fb",
+      "label": "leader mới, epoch+1"
+    },
+    {
+      "id": "fc-fb",
+      "from": "fc",
+      "to": "fb",
+      "label": "epoch cũ hết ở đâu?"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Producer băm key ra partition, gom lô (linger.ms mặc định 5 ms ở client 4.x) và gửi tới leader. Leader nối lô vào cuối segment đang mở, cấp offset.",
+      "show": [
+        "producer",
+        "leader",
+        "producer-leader"
+      ],
+      "highlight": [
+        "producer-leader"
+      ]
+    },
+    {
+      "caption": "Hai follower kéo dữ liệu. Offset trong request kéo tiếp theo là lời xác nhận đã có mọi thứ trước nó, leader không cần ack riêng.",
+      "show": [
+        "fb",
+        "fc",
+        "fb-leader",
+        "fc-leader"
+      ],
+      "highlight": [
+        "fb-leader",
+        "fc-leader"
+      ]
+    },
+    {
+      "caption": "Cả ISR đã có message: leader tăng high watermark và trả thành công cho producer. Follower chỉ biết high watermark mới ở lần kéo sau.",
+      "show": [],
+      "highlight": [
+        "producer-leader"
+      ]
+    },
+    {
+      "caption": "Consumer ở AZ b đặt client.rack và đọc từ follower cùng AZ, chỉ tới high watermark. Offset đã xử lý được commit vào __consumer_offsets.",
+      "show": [
+        "consumer",
+        "consumer-fb"
+      ],
+      "highlight": [
+        "consumer-fb"
+      ]
+    },
+    {
+      "caption": "Leader chết. Controller chọn một replica trong ISR làm leader mới và tăng leader epoch.",
+      "show": [
+        "controller",
+        "controller-fb"
+      ],
+      "highlight": [
+        "controller-fb"
+      ]
+    },
+    {
+      "caption": "Follower còn lại hỏi leader mới epoch cũ kết thúc ở offset nào rồi chỉ cắt phần lệch. Cắt theo high watermark nó biết sẽ xoá cả message đã báo thành công.",
+      "show": [
+        "fc-fb"
+      ],
+      "highlight": [
+        "fc-fb"
+      ]
+    }
+  ]
+}

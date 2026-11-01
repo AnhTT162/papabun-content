@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-payment",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế hệ thống thanh toán",
+  "summary": "Payment và attempt, máy trạng thái, ghi trước rồi gọi PSP ngoài transaction, idempotency key với PSP và hạn 24 giờ, timeout là UNKNOWN chứ không phải FAILED, không failover khi timeout, webhook ký HMAC không theo thứ tự, sổ cái kép với bút toán cân bằng kiểm lúc commit (lab PostgreSQL), tài khoản người bán nóng (6.100 so với 25.400 journal/s), đối soát ba nguồn, hoàn tiền, chargeback, payout và PCI DSS.",
+  "level": "architect",
+  "order": 17,
+  "minutes": 20,
+  "prerequisites": ["idempotency", "design-ecommerce-order", "outbox-cdc", "bigdecimal-money", "transaction-isolation"],
+  "terms": ["psp", "double-entry-ledger", "journal-entry", "reconciliation", "settlement", "idempotency-key", "webhook", "payment-authorization", "payout", "chargeback", "card-tokenization", "pci-dss", "state-machine", "conditional-update", "hot-row", "outbox", "minor-unit", "three-d-secure"],
+  "references": [
+    { "title": "Stripe API: Idempotent requests", "url": "https://docs.stripe.com/api/idempotent_requests" },
+    { "title": "Stripe Docs: Receive events in your webhook endpoint", "url": "https://docs.stripe.com/webhooks" },
+    { "title": "PostgreSQL 17 Documentation: CREATE TRIGGER (constraint triggers)", "url": "https://www.postgresql.org/docs/17/sql-createtrigger.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao đảm bảo không bao giờ trừ tiền hai lần?\" Tôi không hứa \"không bao giờ\" bằng một cơ chế, mà xếp lớp: idempotency key từ checkout, mỗi attempt một khoá gửi PSP và retry đúng khoá đó, timeout thành `UNKNOWN` chứ không cho trả lại, không failover khi chưa rõ kết quả, và đối soát hằng ngày bắt nốt phần lọt qua rồi hoàn tự động. Câu trả lời tốt nói rõ lớp nào chặn trường hợp nào." },
+    { "type": "callout", "style": "warning", "markdown": "Đặt timeout gọi PSP thấp hơn p99 của PSP là tự tạo ra giao dịch `UNKNOWN`. Nếu code lại coi timeout là `FAILED` và mở nút \"Thanh toán lại\", mỗi phần trăm vượt timeout thành một phần trăm nguy cơ trừ tiền hai lần. Đo latency của PSP theo phương thức, và đặt timeout trên p99.9 của nó." },
+    { "type": "callout", "style": "tip", "markdown": "Khi trình bày sổ cái, viết bút toán của một luồng cụ thể lên bảng (capture, settle, payout, hoàn) với số tiền thật. Người phỏng vấn thấy ngay bạn hiểu tiền đi đâu, và tài khoản nào khác 0 thì đó là tiền đang treo." }
+  ]
+}

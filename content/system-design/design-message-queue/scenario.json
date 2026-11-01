@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Event bus chung cho cả công ty",
+  "prompt": "Đội platform dựng một cụm Kafka dùng chung trên một region có 3 AZ. Lưu lượng sau nén trung bình 200 MB/s, đỉnh 600 MB/s; trung bình 4 consumer group đọc mỗi topic; giữ 7 ngày. Ba nhu cầu đầu tiên: (1) `payment-events` cần đúng thứ tự theo `account_id`, đỉnh 20.000 message/s, mỗi consumer xử lý được khoảng 500 message/s vì ghi database; (2) đội báo cáo muốn đẩy việc xuất file, mỗi việc chạy 1–20 phút; (3) gọi đối tác lỗi thì thử lại sau 1 phút, 10 phút, 1 giờ. Bản đề xuất đầu: replication factor 2 và `acks=1` cho nhanh; mỗi topic 6 partition, \"khi nào chậm thì tăng\"; việc xuất file đi qua một topic với consumer group thường; retry bằng cách consumer `Thread.sleep` tới hạn rồi xử lý lại; giữ 7 ngày trên đĩa local; consumer đọc từ leader. Thiết kế lại và ước lượng.",
+  "hints": [
+    "`acks=1` báo thành công khi chỉ leader có message. Leader chết ngay sau đó thì sao? RF 2 thì mất một AZ còn lại mấy bản?",
+    "`payment-events` cần bao nhiêu consumer song song lúc đỉnh? Tăng từ 6 lên 48 partition thì thứ tự của một tài khoản còn giữ không?",
+    "Việc 20 phút trong vòng `poll()` với `max.poll.interval.ms` mặc định 5 phút thì sao? Một việc treo thì các việc sau nó trong partition ra sao?",
+    "Mỗi GB ghi vào đi chéo AZ bao nhiêu lần, giá 0,02 USD/GB?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: `acks=1` báo thành công khi chỉ leader có message; leader chết trước khi follower kéo về thì message mất dù producer đã nhận OK. RF 2 trên 3 AZ thì mất một AZ là khoảng 2/3 số partition chỉ còn một bản: hoặc ngừng ghi (`min.insync.replicas=2`), hoặc chạy không có dư thừa. 6 partition cho `payment-events` chỉ cho 6 consumer, tức 3.000 message/s, trong khi đỉnh là 20.000; tăng lên sau làm phần lớn tài khoản đổi partition (lab: 12 → 16 đổi 75% key), message mới của một tài khoản có thể được xử lý trước message cũ. Việc 20 phút giữ consumer quá `max.poll.interval.ms` nên nó bị đá khỏi group, partition chuyển sang người khác làm lại từ offset chưa commit: rebalance vòng tròn và việc chạy lặp. `Thread.sleep` 1 giờ để chờ retry gặp đúng lỗi đó, và chặn mọi message sau nó.\n\n**Cụm**: RF 3, mỗi replica một AZ (`broker.rack`), `acks=all` (mặc định ở client 3.0+), `min.insync.replicas=2`, tắt unclean leader election. Mất một AZ vẫn ghi đọc được.\n\n**Số broker**: giả định một broker chịu được 100 MB/s ghi vào leader lúc đỉnh (tức khoảng 300 MB/s ghi đĩa kể cả replica và vài trăm MB/s ra consumer; phải load test). Đỉnh 600 MB/s cần 6 broker; mất một AZ thì chỉ còn 2/3 số broker, nên cần 9, mỗi AZ 3.\n\n**Lưu trữ**: 200 MB/s × 7 ngày = 121 TB, nhân 3 là 363 TB, khoảng 40 TB mỗi broker; thay một broker phải chép lại 40 TB, ở 200 MB/s là hơn 2 ngày. Dùng tiered storage: giữ 1 ngày local (17,3 TB × 3 = 52 TB, khoảng 6 TB mỗi broker, cấp 10–12 TB để dư), 7 ngày đầy đủ ở object storage một bản (121 TB). Thay broker giờ chép khoảng 6 TB, chừng 8 giờ.\n\n**`payment-events`**: key `account_id`. Cần 20.000 / 500 = 40 consumer lúc đỉnh; tính tăng trưởng gấp đôi trong 2 năm thì 80, chọn 96 partition ngay từ đầu để không phải tăng. Consumer idempotent theo event id (bài Idempotency), vì at-least-once vẫn có trùng khi rebalance.\n\n**Xuất file**: không chạy trong consumer group thường. Đưa vào queue cổ điển (SQS, RabbitMQ) với visibility timeout dài hơn việc lâu nhất (hoặc gia hạn khi đang chạy), hoặc bảng job có lease (bài Thiết kế job scheduler). Share group (Kafka 4.2+) cũng giao và ack từng việc, nhưng khoá mỗi message mặc định chỉ 30 giây; việc 20 phút phải kiểm cách gia hạn trước khi chọn. Kết quả file để ở object storage, message chỉ chứa đường dẫn.\n\n**Retry có hẹn**: ba topic `partner-retry-1m`, `-10m`, `-1h`, mỗi message mang `due_at`. Trong mỗi topic, message đến hạn theo đúng thứ tự vào, nên consumer xem message đầu: chưa tới hạn thì `seek()` về offset của nó, `pause()` partition, `resume()` khi tới hạn, vẫn gọi `poll()` đều và không commit vượt qua nó. Hết bậc thì vào topic DLQ có công cụ xem và đẩy lại.\n\n**Chi phí chéo AZ**: 518.400 GB ghi mỗi tháng. Đọc từ leader: mỗi GB tốn 2/3 (producer) + 2 (replication) + 4 × 2/3 (consumer) = 5,33 GB chéo AZ, khoảng 55.300 USD/tháng. Bật fetch from follower (`replica.selector.class` trên broker, `client.rack` ở consumer): còn 2,67, khoảng 27.600 USD. 20.700 USD của replication là sàn khi còn giữ replica trên broker tự vận hành (một số dịch vụ managed như MSK không tính phí này).\n\n**Vận hành**: quota theo client, giới hạn partition mỗi đội, cảnh báo under-replicated partition, lag tính bằng giây so với 1 ngày local và 7 ngày tổng, đĩa trên 70%.",
+  "tradeoffs": [
+    {
+      "option": "Kafka RF 3 trên 3 AZ, tiered storage, đọc follower",
+      "pros": [
+        "Không mất message đã báo thành công khi mất một AZ",
+        "Thay broker nhanh, giữ lâu rẻ nhờ object storage"
+      ],
+      "cons": [
+        "Replication chéo AZ vẫn tốn khoảng 20.700 USD/tháng",
+        "Đọc follower có thêm độ trễ nhỏ tới khi follower bắt kịp"
+      ]
+    },
+    {
+      "option": "Kafka tương thích ghi thẳng object storage",
+      "pros": [
+        "Gần như không có chi phí chéo AZ",
+        "Broker không giữ trạng thái, thêm bớt dễ"
+      ],
+      "cons": [
+        "Latency đầu cuối cỡ vài trăm ms",
+        "Phụ thuộc nhà cung cấp, Kafka gốc chưa có bản phát hành"
+      ]
+    },
+    {
+      "option": "Queue cổ điển (SQS, RabbitMQ) cho việc chạy lâu",
+      "pros": [
+        "Ack và retry từng việc, DLQ có sẵn",
+        "Việc treo không chặn việc khác"
+      ],
+      "cons": [
+        "Không đọc lại được sau khi xoá",
+        "Thêm một hệ thống phải vận hành và giám sát"
+      ]
+    },
+    {
+      "option": "Managed Kafka thay vì tự vận hành",
+      "pros": [
+        "Không lo nâng cấp, thay broker, KRaft",
+        "Có sẵn tiered storage; MSK không tính phí replication chéo AZ trong cụm"
+      ],
+      "cons": [
+        "Đắt hơn ở lưu lượng lớn",
+        "Ít quyền chỉnh cấu hình broker"
+      ]
+    }
+  ]
+}

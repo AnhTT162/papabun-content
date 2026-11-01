@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "repartition-keys",
+      "kind": "output",
+      "prompt": "Partition của một key là `hash mod N`. Topic đang có 12 partition, đội tăng lên 16. Đoạn code đếm trong 48.000 giá trị hash liên tiếp có bao nhiêu phần trăm vẫn ở nguyên partition. In ra gì?",
+      "code": "int stay = 0;\nfor (int h = 0; h < 48_000; h++) {\n    if (h % 12 == h % 16) stay++;\n}\nSystem.out.println(stay * 100 / 48_000 + \"%\");",
+      "options": [
+        "25%",
+        "75%",
+        "50%",
+        "100%"
+      ],
+      "answer": 0,
+      "explanation": "`h % 12 == h % 16` chỉ khi `h mod 48 < 12`, tức 12 trên mỗi 48 giá trị: 25% ở lại, 75% đổi partition. Lab với partitioner murmur2 thật của kafka-clients và 1 triệu key ra đúng 75,0% đổi chỗ. 75% là số key **đổi chỗ**, không phải ở lại. Nghĩ \"chỉ thêm 4 partition nên ít key bị ảnh hưởng\" là nhầm với consistent hashing; hash mod N không có tính chất đó."
+    },
+    {
+      "id": "hw-truncation",
+      "kind": "single",
+      "prompt": "Leader A, follower B, `acks=all`. B đã kéo message m2, A tăng high watermark và báo thành công cho producer. B khởi động lại trước lần fetch kế tiếp, rồi A chết và B lên làm leader. Nếu follower cắt log theo high watermark nó biết khi khởi động, chuyện gì xảy ra?",
+      "options": [
+        "m2 mất dù producer đã nhận thành công",
+        "m2 còn vì B đã có m2 trên đĩa trước khi restart",
+        "Producer nhận lỗi vì A chết trước khi gửi ack",
+        "m2 còn vì controller chỉ bầu replica có m2"
+      ],
+      "answer": 0,
+      "explanation": "B chỉ biết high watermark mới ở lần fetch sau, nên khi restart nó cắt log về high watermark cũ và xoá m2. A chết thì B, giờ không có m2, lên làm leader. Đây là ca KIP-101: sửa bằng leader epoch, follower hỏi leader epoch của nó kết thúc ở offset nào rồi chỉ cắt phần lệch. Producer đã nhận ack từ trước khi A chết. Controller chọn theo ISR, và B vẫn trong ISR."
+    },
+    {
+      "id": "cross-az-floor",
+      "kind": "single",
+      "prompt": "Cụm 3 AZ, RF 3, 4 consumer group, giá chéo AZ 0,02 USD/GB. Đội đã bật fetch from follower. Phần chi phí chéo AZ nào vẫn còn và lớn nhất?",
+      "options": [
+        "Replication: 2 GB chéo AZ cho mỗi GB ghi vào",
+        "Consumer: 4 × 2/3 GB chéo AZ cho mỗi GB ghi vào",
+        "Producer tới leader: 2/3 GB cho mỗi GB ghi vào",
+        "Không còn gì vì mọi lưu lượng đã ở trong một AZ"
+      ],
+      "answer": 0,
+      "explanation": "Fetch from follower bỏ được phần consumer (4 × 2/3 = 2,67 GB). Còn lại producer tới leader 2/3 GB và replication 2 GB, vì mỗi partition có hai follower ở hai AZ khác leader. Với 518.400 GB/tháng, replication là khoảng 20.700 USD. Muốn bỏ phần đó phải thôi giữ replica trên đĩa broker, ví dụ ghi thẳng lên object storage và chịu latency cao hơn."
+    },
+    {
+      "id": "delay-topic-pause",
+      "kind": "single",
+      "prompt": "Topic `retry-10m`: mọi message phải xử lý lại đúng 10 phút sau khi được ghi vào. Consumer nên chờ thế nào?",
+      "options": [
+        "Seek về message đầu, pause() partition, resume() khi tới hạn",
+        "Thread.sleep tới hạn của message đầu rồi xử lý tiếp trong vòng poll",
+        "Quét cả partition tìm message tới hạn sớm nhất rồi xử lý nó trước",
+        "Không commit offset để broker tự giao lại sau 10 phút"
+      ],
+      "answer": 0,
+      "explanation": "Độ trễ cố định nên message vào trước tới hạn trước: chỉ cần nhìn message đầu. `poll()` đã đọc qua message đó nên phải `seek()` về offset của nó và không commit vượt qua, rồi `pause()`: consumer vẫn gọi `poll()` đều nên ở lại group. Ngủ trong vòng `poll()` quá `max.poll.interval.ms` (mặc định 5 phút) thì consumer bị đá khỏi group. Quét cả partition là thừa khi độ trễ cố định. Consumer group thường không có cơ chế tự giao lại theo thời gian; không commit chỉ có nghĩa là đọc lại khi rebalance."
+    },
+    {
+      "id": "offset-storage",
+      "kind": "single",
+      "prompt": "Vì sao Kafka lưu offset của consumer group trong topic compacted `__consumer_offsets` thay vì ghi trạng thái \"đã xử lý\" cho từng message?",
+      "options": [
+        "Mỗi partition chỉ cần một số, commit định kỳ, dùng chung cơ chế nhân bản",
+        "Topic compacted cho phép ack từng message mà không tốn thêm lần ghi",
+        "Trạng thái từng message không nhân bản được giữa các broker",
+        "Để consumer không bao giờ nhận trùng message sau khi rebalance"
+      ],
+      "answer": 0,
+      "explanation": "Log cho phép consumer chỉ nhớ một vị trí cho mỗi partition, nên chi phí theo dõi không tăng theo số message, và nhiều group đọc cùng dữ liệu mà không ghi gì vào chính log. Lưu trong topic compacted thì nhân bản và failover của offset dùng lại cơ chế có sẵn. Đổi lại không có ack từng message, và commit định kỳ nghĩa là vẫn có trùng sau rebalance (at-least-once). Trạng thái từng message vẫn nhân bản được: queue cổ điển và share group làm vậy."
+    }
+  ]
+}

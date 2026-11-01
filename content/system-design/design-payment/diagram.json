@@ -1,0 +1,157 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một lần thanh toán từ checkout tới đối soát",
+  "nodes": [
+    {
+      "id": "order",
+      "label": "Order",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "pay",
+      "label": "Payment",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "db",
+      "label": "Payment DB + sổ cái",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "psp",
+      "label": "PSP",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "recon",
+      "label": "Job đối soát",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "report",
+      "label": "File settlement",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "order-pay",
+      "from": "order",
+      "to": "pay",
+      "label": "pay(order, key)"
+    },
+    {
+      "id": "pay-db",
+      "from": "pay",
+      "to": "db",
+      "label": "attempt PENDING"
+    },
+    {
+      "id": "pay-psp",
+      "from": "pay",
+      "to": "psp",
+      "label": "charge(attempt_id)"
+    },
+    {
+      "id": "psp-pay",
+      "from": "psp",
+      "to": "pay",
+      "label": "webhook ký HMAC"
+    },
+    {
+      "id": "recon-report",
+      "from": "recon",
+      "to": "report",
+      "label": "file T+1"
+    },
+    {
+      "id": "recon-db",
+      "from": "recon",
+      "to": "db",
+      "label": "so với bút toán"
+    },
+    {
+      "id": "pay-order",
+      "from": "pay",
+      "to": "order",
+      "label": "event qua outbox"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Order gọi Payment kèm idempotency key của lần checkout. Request trùng trả lại payment đã có.",
+      "show": [
+        "order",
+        "pay",
+        "order-pay"
+      ],
+      "highlight": [
+        "order-pay"
+      ]
+    },
+    {
+      "caption": "Payment ghi attempt PENDING và commit trước khi gọi ra ngoài, để process chết giữa chừng vẫn biết đã gọi gì.",
+      "show": [
+        "db",
+        "pay-db"
+      ],
+      "highlight": [
+        "pay-db"
+      ]
+    },
+    {
+      "caption": "Gọi PSP ngoài transaction, id attempt làm idempotency key. Timeout thì retry đúng khoá đó; hết retry thì UNKNOWN, không phải FAILED.",
+      "show": [
+        "psp",
+        "pay-psp"
+      ],
+      "highlight": [
+        "pay-psp"
+      ]
+    },
+    {
+      "caption": "Kết quả cuối về qua webhook: kiểm chữ ký trên body thô, lưu event_id unique, trả 2xx ngay. Xử lý xong thì chuyển trạng thái có điều kiện và ghi bút toán.",
+      "show": [
+        "psp-pay"
+      ],
+      "highlight": [
+        "psp-pay"
+      ]
+    },
+    {
+      "caption": "Mỗi bút toán cân nợ có, ghi idempotent theo nguồn. Kết quả báo sang Order qua outbox trong cùng transaction.",
+      "show": [
+        "pay-order"
+      ],
+      "highlight": [
+        "pay-db",
+        "pay-order"
+      ]
+    },
+    {
+      "caption": "Hôm sau, job đối soát đọc file settlement của PSP và so với sổ cái theo mã tham chiếu. Giao dịch PSP có mà sổ ghi UNKNOWN được chốt ở đây.",
+      "show": [
+        "recon",
+        "report",
+        "recon-report",
+        "recon-db"
+      ],
+      "highlight": [
+        "recon-report",
+        "recon-db"
+      ]
+    }
+  ]
+}

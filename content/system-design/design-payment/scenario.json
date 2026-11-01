@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thanh toán cho sàn thương mại điện tử ngày sale",
+  "prompt": "Một sàn thương mại điện tử thu tiền hộ người bán và trả lại sau khi trừ hoa hồng. Hai PSP: PSP A cho thẻ (authorize lúc đặt, capture lúc xuất kho), PSP B cho ví và QR (kết quả về qua webhook, có khi sau vài phút). Ngày sale đỉnh 800 thanh toán/s; PSP trả lời trung bình 2 giây, p99 6 giây. Một người bán lớn chiếm 30% giao dịch ngày sale. Bản hiện tại: service Payment mở transaction, insert payment, gọi PSP, rồi commit; timeout 5 giây thì đánh dấu `FAILED` và hiện nút \"Thanh toán lại\" (tạo lần gọi mới); khi PSP A timeout thì tự chuyển sang PSP B; webhook handler parse JSON, cập nhật trạng thái rồi trả 200, không kiểm chữ ký; bảng `merchant` có cột `balance` (kiểu `double`) cộng dồn mỗi giao dịch; cuối tháng kế toán đối chiếu bằng Excel. Tuần trước có 37 khách bị trừ tiền hai lần. Thiết kế lại.",
+  "hints": [
+    "Timeout 5 giây trong khi p99 của PSP là 6 giây. Những lần \"FAILED\" đó, PSP thật sự đã làm gì?",
+    "Process chết sau khi PSP trừ tiền nhưng trước khi commit thì database còn lại gì?",
+    "Ai cũng gửi được POST tới URL webhook. Hai event của cùng một giao dịch đến ngược thứ tự thì sao?",
+    "30% của 800 giao dịch/s cùng cập nhật một dòng `balance`: lab đo được bao nhiêu journal/s khi có một dòng số dư nóng?"
+  ],
+  "solution": "**Vì sao bị trừ tiền hai lần**: timeout 5 giây nhỏ hơn p99 6 giây, nên hơn 1% lần gọi bị đánh dấu `FAILED` trong khi PSP vẫn xử lý xong. Khách bấm \"Thanh toán lại\" tạo lần gọi mới với khoá mới: thành công lần hai. Chuyển sang PSP B khi A timeout cũng vậy, chỉ là ở hai PSP. Thêm nữa, gọi PSP trong transaction: process chết sau khi PSP trừ tiền thì rollback xoá payment, không còn gì để tra lại.\n\n**Attempt và trạng thái**: `payment` theo đơn, `payment_attempt` theo mỗi lần gọi, id attempt là idempotency key gửi PSP. Insert attempt `PENDING` và commit, gọi PSP ngoài transaction, cập nhật kết quả bằng `UPDATE ... WHERE status IN (...)`. Mất kết nối hay timeout trước khi có response: retry với **cùng** khoá và cùng tham số, timeout mỗi lần 10 giây; 409 (request đầu còn chạy) thì chờ rồi thử lại; đã nhận 5xx hoặc hết retry thì `UNKNOWN`. Màn hình hiện \"đang xử lý\", không có nút trả lại; id attempt cũng gửi kèm làm mã tham chiếu của merchant, job phục hồi tra PSP theo mã đó mỗi phút; quá 24 giờ chỉ tra, không gửi lại vì khoá có thể đã bị PSP xoá. Không failover sang PSP B khi timeout; chỉ chuyển khi A từ chối kết nối hoặc trả mã chắc chắn chưa xử lý.\n\n**Webhook**: kiểm HMAC trên body thô, so sánh thời gian hằng, bỏ event có timestamp cũ hơn 5 phút. Lưu vào inbox với `event_id` unique, trả 2xx ngay; worker xử lý theo máy trạng thái (không lùi từ `CAPTURED`), và gọi API tra trạng thái khi event thiếu thông tin. Thêm danh sách IP của PSP nếu PSP công bố.\n\n**Sổ cái**: journal và entry chỉ ghi nối, số nguyên VND, mỗi journal cân theo từng loại tiền (constraint trigger hoãn tới commit), `UNIQUE (source, source_id, kind)` để webhook lặp hay job chạy lại không ghi hai lần. Capture: nợ `psp_receivable`, có `merchant_payable` và `commission_revenue`; settle: nợ `bank` và `psp_fee_expense`, có `psp_receivable`; payout: nợ `merchant_payable`, có `bank`. Bỏ cột `balance` kiểu `double`.\n\n**Người bán lớn**: 30% × 800 = 240 journal/s vào một tài khoản. Lab có một dòng số dư nóng đạt khoảng 6.100 journal/s, tức chưa phải nút cổ chai ở tải này, nhưng mỗi transaction phải xếp hàng trên một khoá. Vì tài khoản người bán chỉ nhận tiền ngày sale, không cần chặn số dư âm từng giao dịch: hoặc không giữ cột số dư (tính từ entry, chụp số dư theo giờ), hoặc chia 16 dòng con (lab khoảng 25.400/s).\n\n**Đối soát**: mỗi ngày đọc file settlement của từng PSP, chuẩn hoá về một định dạng, khớp theo mã tham chiếu. Có ở PSP mà sổ là `UNKNOWN`/`FAILED`: ghi nhận thành công nếu đơn còn hợp lệ, không thì hoàn tiền tự động. Có ở sổ mà không có ở PSP: hàng chờ cho người xử lý. So tổng tiền về ngân hàng với tổng ròng settlement. Mục tiêu: không có lệch nào quá 3 ngày.\n\n**Tải**: 800/s × 2 giây = 1.600 lời gọi đang chờ (Little's law), lúc PSP chậm tới p99 thì nhiều hơn; dùng virtual thread hay client bất đồng bộ và pool kết nối tới PSP đủ lớn, có circuit breaker riêng cho mỗi PSP. Kết quả báo sang Order qua outbox.\n\n**Giám sát**: số attempt `UNKNOWN` theo tuổi, tỉ lệ thành công theo PSP và phương thức, webhook bị từ chối chữ ký, lệch đối soát chưa đóng và tổng tiền lệch, phần `psp_receivable` của mỗi kỳ settle chưa về 0.",
+  "tradeoffs": [
+    {
+      "option": "Chặn attempt mới khi đơn đang UNKNOWN",
+      "pros": [
+        "Không thể trừ tiền hai lần cho một đơn",
+        "Đơn giản, không cần hoàn tự động"
+      ],
+      "cons": [
+        "Khách phải chờ tới khi tra được kết quả",
+        "Mất đơn nếu PSP chậm tra trạng thái"
+      ]
+    },
+    {
+      "option": "Cho trả bằng cách khác, hoàn tự động khi trùng",
+      "pros": [
+        "Khách không bị kẹt, giữ được đơn",
+        "Hợp với ví và QR có thể chậm vài phút"
+      ],
+      "cons": [
+        "Khách thấy bị trừ hai lần trước khi được hoàn",
+        "Thêm luồng hoàn, phí giao dịch và khiếu nại"
+      ]
+    },
+    {
+      "option": "Số dư tính từ entry, không cột số dư",
+      "pros": [
+        "Không có dòng nóng, ghi song song tối đa",
+        "Không bao giờ lệch giữa số dư và lịch sử"
+      ],
+      "cons": [
+        "Đọc số dư phải cộng hay dùng ảnh chụp theo kỳ",
+        "Không chặn được số dư âm theo từng giao dịch"
+      ]
+    },
+    {
+      "option": "Dùng sổ cái có sẵn thay vì tự xây",
+      "pros": [
+        "Có sẵn cân bằng, bất biến, truy vấn số dư",
+        "Ít mã tự viết ở chỗ rủi ro nhất"
+      ],
+      "cons": [
+        "Thêm một hệ thống và một mô hình dữ liệu phải học",
+        "Khó ghi cùng transaction với dữ liệu nghiệp vụ"
+      ]
+    }
+  ]
+}
