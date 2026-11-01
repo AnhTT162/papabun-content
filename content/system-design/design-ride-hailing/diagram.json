@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ vị trí tài xế tới một chuyến được ghép",
+  "nodes": [
+    { "id": "driver", "label": "App tài xế", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "loc", "label": "Location service", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "geo", "label": "Kho vị trí (GEO)", "kind": "cache", "x": 0.1, "y": 0.5 },
+    { "id": "match", "label": "Matching", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "rider", "label": "App khách", "kind": "client", "x": 0.1, "y": 0.95 },
+    { "id": "trip", "label": "Trip DB", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "driver-loc", "from": "driver", "to": "loc", "label": "vị trí mỗi 4 s" },
+    { "id": "loc-geo", "from": "loc", "to": "geo", "label": "GEOADD, last_seen" },
+    { "id": "rider-trip", "from": "rider", "to": "trip", "label": "đặt xe, idem key" },
+    { "id": "match-geo", "from": "match", "to": "geo", "label": "tìm 500 m → 2 km" },
+    { "id": "match-driver", "from": "match", "to": "driver", "label": "đề nghị, hạn 15 s" },
+    { "id": "match-trip", "from": "match", "to": "trip", "label": "MATCHED có điều kiện" }
+  ],
+  "steps": [
+    {
+      "caption": "Tài xế gửi vị trí mỗi 4 giây; 300.000 tài xế là 75.000 lần ghi mỗi giây. Location service gom lại, lịch sử đi qua Kafka.",
+      "show": ["driver", "loc", "driver-loc"],
+      "highlight": ["driver-loc"]
+    },
+    {
+      "caption": "Kho vị trí theo thành phố chỉ giữ bản mới nhất và thời điểm thấy cuối. Mất kho thì sau 4 giây đã đầy lại.",
+      "show": ["geo", "loc-geo"],
+      "highlight": ["loc-geo"]
+    },
+    {
+      "caption": "Khách đặt xe kèm idempotency key; chuyến đi được ghi REQUESTED trong database bền.",
+      "show": ["rider", "trip", "rider-trip"],
+      "highlight": ["rider-trip"]
+    },
+    {
+      "caption": "Matching tìm ứng viên theo bán kính tăng dần, bỏ tài xế im lặng quá lâu, tính ETA theo đường thật và ghép theo lô vài giây một lần.",
+      "show": ["match", "match-geo"],
+      "highlight": ["match-geo"]
+    },
+    {
+      "caption": "Tài xế được chọn chuyển AVAILABLE → OFFERED có điều kiện, nhận đề nghị có hạn 15 giây. Từ chối hay quá hạn thì thử người kế.",
+      "show": ["match-driver"],
+      "highlight": ["match-driver"]
+    },
+    {
+      "caption": "Tài xế chấp nhận: chuyến sang MATCHED bằng cập nhật có điều kiện, chỉ một tài xế thắng. Event báo khách qua outbox, vị trí xe đẩy qua WebSocket.",
+      "show": ["match-trip"],
+      "highlight": ["match-trip"]
+    }
+  ]
+}

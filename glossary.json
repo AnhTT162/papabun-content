@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale"]
     },
     {
       "id": "hash-spreading",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing"]
     },
     {
       "id": "orm",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing"]
     },
     {
       "id": "replication-slot",
@@ -1717,7 +1717,7 @@
       "meaning": "Một dòng bị rất nhiều transaction cùng cập nhật, nên mọi transaction phải lần lượt chờ khoá của nó; throughput bị giới hạn bởi thời gian giữ khoá.",
       "example": "Dòng tổng doanh thu của một merchant lớn được cộng trong mọi transaction đặt đơn.",
       "related": ["pessimistic-locking", "trigger"],
-      "topics": ["views-procedures-triggers", "design-ecommerce-order", "design-payment"]
+      "topics": ["views-procedures-triggers", "design-ecommerce-order", "design-payment", "design-flash-sale"]
     },
     {
       "id": "uuid-v7",
@@ -2901,7 +2901,7 @@
       "meaning": "Đoạn Lua chạy trên server Redis như một bước nguyên tử: không lệnh nào khác chen vào giữa. Dùng để gộp đọc rồi ghi; script chạy lâu chặn cả instance.",
       "example": "Script `INCR` rồi `EXPIRE` khi giá trị bằng 1 cho rate limiter.",
       "related": ["sorted-set"],
-      "topics": ["redis-use-cases", "rate-limiting", "distributed-locks", "design-rate-limiter"]
+      "topics": ["redis-use-cases", "rate-limiting", "distributed-locks", "design-rate-limiter", "design-flash-sale"]
     },
     {
       "id": "sorted-set",
@@ -2909,7 +2909,7 @@
       "meaning": "Kiểu dữ liệu Redis lưu member duy nhất kèm score số thực, luôn sắp theo score; lấy hạng trong O(log N), lấy khoảng M phần tử trong O(log N + M). Cùng score thì sắp theo thứ tự từ điển của member.",
       "example": "`ZINCRBY lb 50 player:9`, `ZREVRANK lb player:9`.",
       "related": ["lua-script"],
-      "topics": ["redis-use-cases", "design-news-feed", "design-job-scheduler"]
+      "topics": ["redis-use-cases", "design-news-feed", "design-job-scheduler", "design-ride-hailing"]
     },
     {
       "id": "redis-stream",
@@ -3549,7 +3549,7 @@
       "meaning": "Kiểm tra một điều kiện rồi hành động dựa trên nó, trong khi thread khác có thể đổi state ở giữa hai bước. Dạng race condition hay gặp nhất cùng với đọc-sửa-ghi.",
       "example": "`if (!map.containsKey(k)) map.put(k, create())` trên `ConcurrentHashMap`; sửa bằng `computeIfAbsent`.",
       "related": ["race-condition", "atomicity"],
-      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview", "idempotency", "distributed-locks"]
+      "topics": ["concurrency-basics", "atomic-cas", "concurrent-hashmap", "lld-ood-interview", "idempotency", "distributed-locks", "design-flash-sale"]
     },
     {
       "id": "critical-section",
@@ -6805,7 +6805,7 @@
       "meaning": "Giao thức hai chiều (RFC 6455) bắt đầu bằng request HTTP có `Upgrade: websocket`; server trả `101 Switching Protocols`, sau đó hai bên gửi frame text hoặc nhị phân tuỳ ý trên cùng kết nối TCP.",
       "example": "Chat: client gửi frame `{\"type\":\"message\",\"text\":\"Tới chưa?\"}`, server đẩy tin nhắn của shipper xuống cùng kết nối.",
       "related": ["server-sent-events", "heartbeat", "stomp"],
-      "topics": ["realtime-rpc-protocols", "design-chat"]
+      "topics": ["realtime-rpc-protocols", "design-chat", "design-ride-hailing"]
     },
     {
       "id": "grpc-streaming",
@@ -9077,7 +9077,7 @@
       "meaning": "Mô hình gồm tập trạng thái hữu hạn và các chuyển trạng thái hợp lệ giữa chúng; mọi thay đổi phải đi theo một mũi tên đã khai báo.",
       "example": "Đơn hàng chỉ đi PENDING_PAYMENT → PAID hoặc → EXPIRED; event muốn đưa đơn EXPIRED sang PAID phải qua nhánh xử lý riêng.",
       "related": ["state-pattern", "saga"],
-      "topics": ["design-ecommerce-order", "design-payment"]
+      "topics": ["design-ecommerce-order", "design-payment", "design-ride-hailing"]
     },
     {
       "id": "inventory-reservation",
@@ -9085,7 +9085,7 @@
       "meaning": "Giữ một lượng hàng cho một đơn: tăng reserved và ghi một bản ghi reservation. Đơn chưa thanh toán thì reservation có hạn và bị nhả khi đơn hết hạn; đơn đã thanh toán thì reservation được xác nhận và giữ tới khi xuất kho.",
       "example": "Bấm đặt hàng giữ 2 cái áo; quá 15 phút chưa trả tiền, Order chuyển đơn sang EXPIRED và gửi lệnh nhả, Inventory trừ reserved đi 2.",
       "related": ["oversell", "available-to-promise"],
-      "topics": ["design-ecommerce-order"]
+      "topics": ["design-ecommerce-order", "design-flash-sale"]
     },
     {
       "id": "oversell",
@@ -9093,7 +9093,7 @@
       "meaning": "Bán vượt: hệ thống nhận nhiều đơn hơn số hàng có thật, thường do kiểm tồn kho và ghi tồn kho là hai bước rời.",
       "example": "100 món nhưng 130 người được báo đặt thành công vì cùng đọc reserved = 99 rồi cùng cộng thêm.",
       "related": ["race-condition", "conditional-update"],
-      "topics": ["design-ecommerce-order"]
+      "topics": ["design-ecommerce-order", "design-flash-sale"]
     },
     {
       "id": "conditional-update",
@@ -9101,7 +9101,7 @@
       "meaning": "Câu UPDATE đặt điều kiện nghiệp vụ ngay trong WHERE và dựa vào số dòng bị ảnh hưởng để biết thành công, thay cho đọc rồi kiểm rồi ghi.",
       "example": "UPDATE stock SET reserved = reserved + 1 WHERE sku = ? AND on_hand - reserved >= 1 trả 0 dòng nghĩa là hết hàng.",
       "related": ["optimistic-locking", "lost-update", "oversell"],
-      "topics": ["design-ecommerce-order", "design-payment"]
+      "topics": ["design-ecommerce-order", "design-payment", "design-ride-hailing"]
     },
     {
       "id": "webhook",
@@ -9878,6 +9878,118 @@
       "example": "Attempt sang `REQUIRES_ACTION`, trình duyệt chuyển tới trang ngân hàng, kết quả cuối về qua webhook.",
       "related": ["payment-authorization", "psp"],
       "topics": ["design-payment"]
+    },
+    {
+      "id": "flash-sale",
+      "term": "Flash sale",
+      "meaning": "Đợt bán số lượng rất ít với giá hấp dẫn trong khung giờ ngắn, làm lượng truy cập tăng hàng trăm lần trong vài giây đầu.",
+      "example": "1.000 điện thoại mở bán lúc 12:00 cho 2 triệu người: 99,9% request phải bị từ chối thật rẻ.",
+      "related": ["waiting-room", "oversell", "hot-row"],
+      "topics": ["design-flash-sale"]
+    },
+    {
+      "id": "waiting-room",
+      "term": "Phòng chờ (virtual waiting room)",
+      "meaning": "Lớp đứng trước hệ thống, giữ người dùng trong hàng và chỉ cho vào theo tốc độ phần phía sau chịu được, thay vì để mọi người cùng đập vào backend.",
+      "example": "Checkout chịu 3.000 phiên, mỗi phiên 3 phút: phòng chờ cho vào khoảng 1.000 người mỗi phút và cấp token vào cửa.",
+      "related": ["admission-token", "load-shedding", "littles-law"],
+      "topics": ["design-flash-sale"]
+    },
+    {
+      "id": "admission-token",
+      "term": "Token vào cửa",
+      "meaning": "Token có chữ ký (HMAC) do phòng chờ cấp, chứa người dùng, sự kiện và hạn dùng, để gateway kiểm quyền vào mà không cần tra database.",
+      "example": "Token `{user: 42, sale: 7, exp: 12:05}` ký HMAC; gateway chỉ kiểm chữ ký và hạn rồi cho gọi API mua.",
+      "related": ["waiting-room"],
+      "topics": ["design-flash-sale"]
+    },
+    {
+      "id": "sharded-counter",
+      "term": "Bộ đếm chia nhỏ (sharded counter)",
+      "meaning": "Tách một giá trị đếm nóng thành nhiều dòng hay key con để các lần cập nhật không cùng tranh một khoá; giá trị thật là tổng các phần.",
+      "example": "Kho 20.000 chia 16 dòng con: lab PostgreSQL từ khoảng 4.000 lên 29.000 lượt trừ mỗi giây, nhưng phải thử dòng khác khi một dòng hết.",
+      "related": ["hot-row"],
+      "topics": ["design-flash-sale"]
+    },
+    {
+      "id": "geospatial-index",
+      "term": "Chỉ mục không gian (geospatial index)",
+      "meaning": "Cấu trúc giúp tìm nhanh các điểm gần một vị trí mà không phải tính khoảng cách tới mọi điểm, bằng cách chia mặt đất thành ô.",
+      "example": "Geohash, quadtree, H3, R-tree (GiST của PostGIS) và Redis GEO đều là chỉ mục không gian.",
+      "related": ["geohash", "quadtree", "h3-index"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "geohash",
+      "term": "Geohash",
+      "meaning": "Mã hoá vĩ độ và kinh độ thành chuỗi base32 bằng cách xen kẽ bit của hai trục. Mã chung tiền tố thì nằm cùng ô, nhưng hai điểm sát nhau ở hai bên mép ô có thể khác mã từ sớm.",
+      "example": "Ở vĩ độ 10: ô 6 ký tự cao khoảng 607 m, rộng 1,2 km. Hai điểm cách 10 m `w3gv7fp` và `w3gvk40` chỉ chung 4 ký tự.",
+      "related": ["geospatial-index", "quadtree"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "quadtree",
+      "term": "Quadtree",
+      "meaning": "Cây chia một vùng thành bốn ô con mỗi khi ô có quá nhiều điểm, nên ô nhỏ ở nơi đông và lớn ở nơi thưa.",
+      "example": "50.000 tài xế, tối đa 64 điểm mỗi lá: 1.858 lá, sâu nhất 8 tầng ở trung tâm.",
+      "related": ["geohash", "geospatial-index"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "h3-index",
+      "term": "H3",
+      "meaning": "Hệ chỉ mục không gian của Uber chia mặt đất thành lục giác theo nhiều cấp độ. Sáu ô kề có tâm cách đều nhau, hợp để gom số liệu theo vùng.",
+      "example": "Ô cấp 8 rộng trung bình 0,74 km², cạnh 531 m; dùng để đếm cung cầu cho giá động.",
+      "related": ["geospatial-index", "surge-pricing"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "haversine",
+      "term": "Haversine",
+      "meaning": "Công thức tính khoảng cách đường tròn lớn giữa hai điểm theo vĩ độ, kinh độ trên mặt cầu. Chỉ là đường chim bay, không phải đường đi.",
+      "example": "Tài xế cách 300 m theo haversine ở bên kia sông có thể phải đi 4 km đường thật.",
+      "related": ["eta"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "eta",
+      "term": "ETA (Estimated Time of Arrival)",
+      "meaning": "Thời gian dự kiến tới nơi, tính theo mạng đường thật và tình trạng giao thông bởi routing engine, khác với khoảng cách đường chim bay.",
+      "example": "Matching lọc ứng viên theo haversine rồi xếp hạng theo ETA tới điểm đón.",
+      "related": ["haversine", "map-matching"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "map-matching",
+      "term": "Map matching",
+      "meaning": "Gắn chuỗi điểm GPS nhiễu vào các đoạn đường hợp lý trên bản đồ, để vị trí và quãng đường không bị lệch sang đường bên cạnh.",
+      "example": "GPS giữa phố cao tầng lệch 30 m sang đường song song; map matching kéo lại về đúng đường xe đang chạy.",
+      "related": ["eta"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "batch-matching",
+      "term": "Ghép theo lô (batch matching)",
+      "meaning": "Gom các yêu cầu trong một cửa sổ ngắn rồi giải bài toán gán tối ưu cho cả nhóm, thay vì ai đến trước lấy tài nguyên tốt nhất còn lại.",
+      "example": "Mô phỏng 40 khách: quãng đón trung bình 785 m với tham lam, 632 m khi ghép theo lô bằng thuật toán Hungarian (xe khan).",
+      "related": ["driver-dispatch"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "driver-dispatch",
+      "term": "Dispatch",
+      "meaning": "Bước gửi đề nghị chuyến cho tài xế, chờ chấp nhận có hạn và khoá tài xế để không bị ghép hai chuyến cùng lúc.",
+      "example": "Tài xế chuyển `AVAILABLE → OFFERED` bằng `SET offer:{driver} <ride> NX EX 15`; quá 15 giây không nhận thì về `AVAILABLE`.",
+      "related": ["batch-matching", "conditional-update"],
+      "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "surge-pricing",
+      "term": "Giá động (surge pricing)",
+      "meaning": "Tăng giá theo tỉ lệ cầu trên cung trong từng vùng nhỏ, để kéo thêm tài xế tới và giảm bớt yêu cầu khi thiếu xe.",
+      "example": "Đếm yêu cầu và tài xế rảnh theo ô H3 mỗi phút, làm mượt theo thời gian và ô kề để giá không nhảy giữa hai con phố.",
+      "related": ["h3-index"],
+      "topics": ["design-ride-hailing"]
     }
   ]
 }

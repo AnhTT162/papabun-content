@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-flash-sale",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế flash sale / bán vé",
+  "summary": "Phễu từ CDN, phòng chờ có token ký HMAC, rate limit tới cổng trừ kho bằng Lua trong Redis (lab: GET rồi DECR bán 1.023–1.033 trên 1.000 suất), tạo đơn bất đồng bộ, database chốt bằng cập nhật có điều kiện (một dòng 4.000 lượt/s, 16 dòng con 29.000, SKIP LOCKED 13.000), giữ hàng có thời hạn, bán vé chọn ghế, cô lập, scale trước, bot và phương án bốc thăm.",
+  "level": "architect",
+  "order": 18,
+  "minutes": 20,
+  "prerequisites": ["design-ecommerce-order", "redis-use-cases", "rate-limiting", "capacity-planning", "design-payment"],
+  "terms": ["flash-sale", "waiting-room", "admission-token", "oversell", "lua-script", "check-then-act", "inventory-reservation", "hot-row", "sharded-counter", "bulkhead"],
+  "references": [
+    { "title": "Redis Documentation: Scripting with Lua", "url": "https://redis.io/docs/latest/develop/interact/programmability/eval-intro/" },
+    { "title": "PostgreSQL 17 Documentation: SELECT, The Locking Clause (SKIP LOCKED)", "url": "https://www.postgresql.org/docs/17/sql-select.html#SQL-FOR-UPDATE-SHARE" },
+    { "title": "Redis Documentation: Replication (asynchronous replication)", "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/replication/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Redis chết giữa đợt sale thì sao?\" Tôi tách hai việc. Không bán vượt: database vẫn trừ có điều kiện, nên replica thiếu vài lần trừ chỉ làm thêm vài người qua cổng rồi bị database từ chối. Không để người mua treo: stream và tập người mua cũng có thể mất phần cuối, nên client chỉ được báo \"đang xử lý\", hỏi trạng thái, và quá 30 giây không có đơn thì báo thất bại và cho bấm lại; muốn chắc hơn thì `WAIT` một replica trước khi trả lời, đổi lại thêm độ trễ. Rồi nói rõ trải nghiệm xấu nhất: vài người thấy \"đã giữ suất\" rồi nhận \"hết hàng\"." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng gọi thanh toán, khuyến mãi hay bất kỳ dịch vụ nào trong transaction đang giữ khoá dòng kho. Một lời gọi 1–2 giây biến dòng đó thành hàng đợi vài lượt mỗi giây, request dồn lại, pool kết nối của database cạn, và mọi luồng khác dùng chung database chết theo." },
+    { "type": "callout", "style": "tip", "markdown": "Mở đầu bằng con số phễu: bao nhiêu request ở mỗi tầng và bao nhiêu thành công. Khi người phỏng vấn thấy 600.000 request/s chỉ để bán 1.000 món, mọi quyết định sau (CDN, phòng chờ, cổng Redis) đều có lý do rõ ràng." }
+  ]
+}

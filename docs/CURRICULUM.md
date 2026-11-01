@@ -400,8 +400,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 15 | `design-key-value-store` | ✚ Thiết kế key-value store phân tán | architect | Consistent hashing, replication, quorum, xử lý conflict, như Dynamo | L D Sc | ✅ |
 | 16 | `design-message-queue` | ✚ Thiết kế distributed message queue | architect | Log phân vùng, replication, thứ tự, giữ dữ liệu, consumer group | L D Sc | ✅ |
 | 17 | `design-payment` | Thiết kế hệ thống thanh toán | architect | Idempotency, sổ cái kép, đối soát, trạng thái | L D Sc | ✅ |
-| 18 | `design-flash-sale` | Thiết kế flash sale / bán vé | architect | Chống bán vượt tồn kho, hàng đợi, giữ chỗ có thời hạn | L D Sc | ⬜ |
-| 19 | `design-ride-hailing` | Thiết kế ứng dụng gọi xe | architect | Geo index (geohash, quadtree), ghép cặp, cập nhật vị trí | L D Sc | ⬜ |
+| 18 | `design-flash-sale` | Thiết kế flash sale / bán vé | architect | Chống bán vượt tồn kho, hàng đợi, giữ chỗ có thời hạn | L D Sc | ✅ |
+| 19 | `design-ride-hailing` | Thiết kế ứng dụng gọi xe | architect | Geo index (geohash, quadtree), ghép cặp, cập nhật vị trí | L D Sc | ✅ |
 | 20 | `design-metrics-logging` | Thiết kế hệ thống metric/log | architect | Time-series, ingestion, downsampling, chi phí lưu trữ | L D Sc | ⬜ |
 
 ### 15. Solution Architect (`solution-architect`)

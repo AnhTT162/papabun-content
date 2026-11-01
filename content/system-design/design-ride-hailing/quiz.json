@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "geohash-prefix",
+      "kind": "output",
+      "prompt": "Hai tài xế cách nhau 10 m ở hai bên mép một ô geohash. Đoạn code đếm số ký tự chung ở đầu hai mã 7 ký tự. In ra gì?",
+      "code": "String a = \"w3gv7fp\";\nString b = \"w3gvk40\";\nint common = 0;\nwhile (common < a.length() && a.charAt(common) == b.charAt(common)) common++;\nSystem.out.println(common);",
+      "options": [
+        "4",
+        "6",
+        "7",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "`w3gv` chung, ký tự thứ năm `7` và `k` khác nhau. Hai mã này lấy từ lab: hai điểm thật cách 10 m. Chung tiền tố dài thì chắc chắn gần, nhưng gần thì chưa chắc chung tiền tố dài, vì mép ô cắt ngang. Tìm theo tiền tố 5 hay 6 ký tự mà không lấy ô lân cận sẽ bỏ sót tài xế ngay bên kia mép."
+    },
+    {
+      "id": "geosearch-asc",
+      "kind": "single",
+      "prompt": "`GEOSEARCH drivers FROMLONLAT ... BYRADIUS 2 km ASC COUNT 10` ở điểm có khoảng 5.000 tài xế trong bán kính chỉ chạy được khoảng 1.800 lần/s. Vì sao, và nên làm gì?",
+      "options": [
+        "Redis gom mọi tài xế trong khung rồi mới sắp; tìm bán kính tăng dần từ 500 m",
+        "COUNT 10 làm Redis quét toàn bộ sorted set; bỏ COUNT để Redis dùng index",
+        "ASC làm Redis tính khoảng cách hai lần; bỏ ASC và tự sắp ở phía ứng dụng",
+        "Sorted set bị khoá khi đọc; chuyển đọc sang replica để tăng song song"
+      ],
+      "answer": 0,
+      "explanation": "Khi có `COUNT` mà không có `ANY`, Redis duyệt mọi phần tử trong các ô geohash bao quanh vùng tìm, giữ khoảng 5.000 phần tử trong bán kính, sắp xếp rồi mới cắt 10. Lab: 500 m khoảng 11.000 lần/s, `ANY` (dừng khi đủ 10, không bảo đảm gần nhất) khoảng 67.000/s. Bỏ `COUNT` thì trả về cả 5.000 phần tử, tệ hơn. Tự sắp ở ứng dụng vẫn phải kéo 5.000 phần tử qua mạng. Replica giúp chia tải đọc nhưng không giảm chi phí mỗi lần tìm."
+    },
+    {
+      "id": "offer-lock",
+      "kind": "single",
+      "prompt": "Matching chọn tài xế D cho chuyến R1; cùng lúc một tiến trình matching khác chọn D cho chuyến R2. Cách nào chặn được việc D nhận hai đề nghị?",
+      "options": [
+        "Chuyển D sang OFFERED bằng một thao tác có điều kiện trước khi gửi",
+        "Gửi cả hai đề nghị và để app tài xế chỉ hiện đề nghị đến trước",
+        "Đọc trạng thái D từ Redis, thấy AVAILABLE thì gửi đề nghị luôn",
+        "Đặt hạn đề nghị ngắn lại còn 5 giây để hai đề nghị ít khi trùng"
+      ],
+      "answer": 0,
+      "explanation": "Chỉ một thao tác nguyên tử có điều kiện (`SET offer:{D} R1 NX EX 15` hoặc `UPDATE ... WHERE status = 'AVAILABLE'`) bảo đảm một bên thắng; bên thua lấy ứng viên kế. Đọc rồi gửi là check-then-act: cả hai cùng thấy `AVAILABLE`. Để app lọc thì server vẫn nghĩ D đang giữ hai chuyến. Rút ngắn hạn chỉ thu hẹp cửa sổ, không đóng nó."
+    },
+    {
+      "id": "location-vs-trip",
+      "kind": "single",
+      "prompt": "Redis failover mất vài giây dữ liệu cuối. Với thiết kế đúng, dữ liệu nào được phép nằm chỉ trong Redis?",
+      "options": [
+        "Vị trí mới nhất của tài xế, vì sau một chu kỳ gửi đã tự đầy lại",
+        "Trạng thái chuyến đi, vì chuyến ngắn và có thể hỏi lại tài xế",
+        "Lịch sử vị trí của chuyến, vì chỉ dùng để vẽ đường trên bản đồ",
+        "Đề nghị đã được tài xế chấp nhận, vì app tài xế vẫn giữ một bản"
+      ],
+      "answer": 0,
+      "explanation": "Vị trí mới nhất bị ghi đè mỗi 4 giây, mất thì tài xế tự điền lại. Trạng thái chuyến và đề nghị đã chấp nhận là căn cứ tính tiền và xử lý tranh chấp: phải ở database bền, chuyển trạng thái có điều kiện. Lịch sử vị trí dùng để tính quãng đường và giải quyết khiếu nại, nên đi qua Kafka vào kho bền."
+    },
+    {
+      "id": "batch-matching",
+      "kind": "single",
+      "prompt": "Mô phỏng 40 khách trong vùng 5 × 5 km. Ghép theo lô (gán tối ưu mỗi vài giây) so với tham lam (mỗi khách đến lấy xe gần nhất). Phát biểu nào khớp kết quả?",
+      "options": [
+        "Lô cho quãng đón ngắn hơn, lợi lớn hơn khi xe khan (19% so với 13%)",
+        "Lô cho quãng đón ngắn hơn, lợi lớn hơn khi xe dư (19% so với 13%)",
+        "Hai cách cho cùng tổng quãng đón vì đều chọn xe gần nhất cho mỗi khách",
+        "Tham lam tốt hơn vì không bắt khách chờ cửa sổ lô vài giây"
+      ],
+      "answer": 0,
+      "explanation": "60 xe: 498 m so với 434 m (12,8%); 44 xe: 785 m so với 632 m (19,4%). Khi xe khan, khách đến trước lấy mất xe mà khách sau cần hơn, nên gán tối ưu sửa được nhiều hơn. Tham lam chọn gần nhất cho từng khách lần lượt, không phải cho cả nhóm. Thời gian chờ cửa sổ là giá thật của ghép theo lô, nhưng không làm quãng đón ngắn hơn."
+    }
+  ]
+}

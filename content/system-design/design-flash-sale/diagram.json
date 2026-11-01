@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Phễu của một đợt flash sale",
+  "nodes": [
+    { "id": "client", "label": "Người mua", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "room", "label": "CDN + phòng chờ", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "gw", "label": "Gateway", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "redis", "label": "Redis (Lua)", "kind": "cache", "x": 0.85, "y": 0.5 },
+    { "id": "order", "label": "Order consumer", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "db", "label": "Database kho, đơn", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "client-room", "from": "client", "to": "room", "label": "trang tĩnh, xếp hàng" },
+    { "id": "room-gw", "from": "room", "to": "gw", "label": "token có chữ ký" },
+    { "id": "gw-redis", "from": "gw", "to": "redis", "label": "EVALSHA mua" },
+    { "id": "redis-order", "from": "redis", "to": "order", "label": "stream người mua" },
+    { "id": "order-db", "from": "order", "to": "db", "label": "UPDATE có điều kiện" }
+  ],
+  "steps": [
+    {
+      "caption": "Trang, ảnh và đồng hồ đếm ngược nằm ở CDN; giờ mở bán lấy từ server. Hàng triệu người vào phòng chờ, không chạm tới origin.",
+      "show": ["client", "room", "client-room"],
+      "highlight": ["client-room"]
+    },
+    {
+      "caption": "Phòng chờ cho vào theo tốc độ checkout chịu được và cấp token ký HMAC có hạn. Gateway kiểm chữ ký, rate limit theo tài khoản, không cần gọi database.",
+      "show": ["gw", "room-gw"],
+      "highlight": ["room-gw"]
+    },
+    {
+      "caption": "Một Lua script kiểm còn hàng, kiểm người này chưa mua, trừ kho và ghi stream trong một bước nguyên tử. Hết hàng thì trả lời ngay.",
+      "show": ["redis", "gw-redis"],
+      "highlight": ["gw-redis"]
+    },
+    {
+      "caption": "Consumer đọc stream, tạo đơn PENDING_PAYMENT idempotent theo (sale_id, user_id). Người mua nhận \"đã giữ suất\" rồi theo dõi trạng thái.",
+      "show": ["order", "redis-order"],
+      "highlight": ["redis-order"]
+    },
+    {
+      "caption": "Database chốt: trừ kho chỉ khi còn, giữ hàng có thời hạn. Redis failover mất lần trừ cuối thì database vẫn chặn được bán vượt.",
+      "show": ["db", "order-db"],
+      "highlight": ["order-db"]
+    },
+    {
+      "caption": "Quá hạn thanh toán thì job nhả hàng, cộng lại vào Redis, phòng chờ mở thêm người. Hết hẳn thì báo cho cả hàng chờ ngay.",
+      "show": [],
+      "highlight": ["gw-redis", "client-room"]
+    }
+  ]
+}

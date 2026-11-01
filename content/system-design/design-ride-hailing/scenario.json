@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Gọi xe cho ba thành phố lớn",
+  "prompt": "Một ứng dụng gọi xe mở ở ba thành phố. Thành phố lớn nhất lúc đỉnh có 120.000 tài xế online, mỗi tài xế gửi vị trí mỗi 4 giây, và 20.000 yêu cầu đặt xe mỗi phút; trung tâm có những điểm 5.000 tài xế trong bán kính 2 km. Mục tiêu: từ lúc đặt tới lúc có tài xế nhận chuyến dưới 10 giây ở p95, khách thấy xe chạy trên bản đồ. Bản đề xuất đầu: mỗi lần gửi vị trí `INSERT` một dòng vào bảng `driver_location` trên PostgreSQL; tìm xe bằng `SELECT ... ORDER BY haversine(...) LIMIT 10` trên dòng mới nhất của mỗi tài xế; nếu muốn nhanh thì đổi sang Redis `GEOSEARCH` bán kính 5 km `ASC COUNT 10`; gửi đề nghị cùng lúc cho 5 tài xế gần nhất, ai bấm nhận trước thì được; trạng thái chuyến đi chỉ lưu trong Redis cho nhanh. Thiết kế lại.",
+  "hints": [
+    "Mỗi giây có bao nhiêu `INSERT` vị trí? Bảng lớn thêm bao nhiêu dòng mỗi ngày, và dòng cũ dùng làm gì?",
+    "`GEOSEARCH ... ASC COUNT 10` có dừng sau 10 kết quả không? Ở điểm có 5.000 tài xế trong bán kính thì sao?",
+    "Gửi đề nghị cho 5 tài xế không khoá: một tài xế cùng lúc nằm trong danh sách của bao nhiêu chuyến?",
+    "Redis failover mất vài giây dữ liệu: mất vị trí và mất trạng thái chuyến đi, cái nào chấp nhận được?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: 120.000 tài xế gửi mỗi 4 giây là 30.000 `INSERT`/s, 2,6 tỉ dòng mỗi ngày chỉ để đọc dòng mới nhất; `ORDER BY haversine` tính khoảng cách cho mọi tài xế ở mỗi lần tìm. `GEOSEARCH ... ASC` gom mọi tài xế trong khung bao rồi mới sắp xếp: lab 2 km ở điểm nóng chỉ khoảng 1.800 lần/s mỗi instance, 5 km còn tệ hơn. Gửi cho 5 tài xế không khoá: một tài xế nằm trong danh sách của nhiều chuyến, có thể nhận hai chuyến cùng lúc, và 4 tài xế thua thấy đề nghị biến mất. Trạng thái chuyến chỉ ở Redis: failover mất trạng thái của chuyến đã ghép, tiền và tranh chấp không có căn cứ.\n\n**Vị trí**: app tài xế gửi qua kết nối lâu dài tới location service; mỗi thành phố một Redis cho vị trí mới nhất (`GEOADD drivers:{city}` và `ZADD last_seen:{city}`). 120.000 tài xế khoảng 13 MB, 30.000 lần ghi/s (lab một instance khoảng 210.000/s). Lịch sử đi Kafka vào kho rẻ, chỉ giữ chi tiết cho các chuyến. Mất Redis thì 4 giây sau tự đầy lại; không cần persistence.\n\n**Tìm ứng viên**: bán kính tăng dần 500 m, 1 km, 2 km, dừng khi đủ khoảng 20 ứng viên; lab 500 m ở điểm nóng khoảng 11.000 lần/s. 20.000 yêu cầu/phút là 333/s, mỗi yêu cầu 1–3 lần tìm: dư sức. Lọc tài xế có `last_seen` quá 30 giây, sai loại xe, đang có đề nghị. Gọi routing engine lấy ETA cho các ứng viên còn lại.\n\n**Ghép**: theo lô mỗi 2 giây cho mỗi vùng (ô H3 cấp 7 cộng vòng kề), giải bài gán tối ưu theo ETA. Mô phỏng: quãng đón ngắn hơn 13% khi xe dư, 19% khi xe khan; đổi lại khách chờ thêm tối đa 2 giây.\n\n**Đề nghị**: mỗi tài xế chỉ một đề nghị tại một lúc: Lua kiểm tài xế rảnh rồi `SET offer:{driver} <ride> NX EX 8`, không được thì lấy người kế. Hạn 8 giây chứ không 15, vì SLA 10 giây tính tới lúc tài xế nhận. Tài xế nhận thì so `offer:{driver}` vẫn là chuyến này, rồi trong một transaction: `UPDATE trip SET status = 'MATCHED', driver_id = :d WHERE id = :t AND status = 'REQUESTED'` và `UPDATE driver SET status = 'ON_TRIP' WHERE id = :d AND status <> 'ON_TRIP'`; một câu trả 0 dòng thì rollback. Khoá trong Redis có thể mất khi failover, nên chốt \"mỗi tài xế một chuyến\" phải nằm ở database. Từ chối hay quá hạn thì gửi người kế; quá SLA thì nới bán kính hay báo khách.\n\n**Chuyến đi**: PostgreSQL theo thành phố, máy trạng thái có điều kiện, yêu cầu đặt xe có idempotency key, event qua outbox sang thông báo và thanh toán. Khách xem xe qua WebSocket, vị trí tài xế của chuyến đẩy mỗi 2 giây.\n\n**Giá động**: đếm yêu cầu và tài xế rảnh theo ô H3 cấp 8 mỗi phút, làm mượt theo thời gian và ô kề; báo giá giữ cố định vài phút cho khách đặt.\n\n**Giám sát**: thời gian ghép p95 theo vùng, tỉ lệ đề nghị bị từ chối hay quá hạn, số tài xế `last_seen` cũ, quãng đón trung bình, số chuyến kẹt ở `REQUESTED`.",
+  "tradeoffs": [
+    {
+      "option": "Redis GEO theo thành phố cho vị trí mới nhất",
+      "pros": [
+        "Ghi rất nhanh, bộ nhớ nhỏ (khoảng 112 byte mỗi tài xế)",
+        "Mất dữ liệu thì tự đầy lại sau một chu kỳ"
+      ],
+      "cons": [
+        "Không có TTL theo member, phải dọn tài xế im lặng",
+        "Tìm bán kính lớn ở nơi đông rất chậm"
+      ]
+    },
+    {
+      "option": "Quadtree hay lưới H3 trong bộ nhớ của matching",
+      "pros": [
+        "Không qua mạng, ô theo mật độ hoặc lục giác đều",
+        "Dễ gắn thêm thuộc tính để lọc"
+      ],
+      "cons": [
+        "Phải tự chia shard và tự phục hồi khi service khởi động lại",
+        "Điểm di chuyển liên tục nên cập nhật cây tốn công"
+      ]
+    },
+    {
+      "option": "Ghép theo lô mỗi vài giây",
+      "pros": [
+        "Quãng đón ngắn hơn 13–19% trong mô phỏng",
+        "Công bằng hơn khi xe khan"
+      ],
+      "cons": [
+        "Khách chờ thêm cửa sổ lô",
+        "Phải chia vùng, xử lý khách ở mép vùng"
+      ]
+    },
+    {
+      "option": "Gửi đề nghị cho nhiều tài xế, ai nhận trước thắng",
+      "pros": [
+        "Ghép nhanh hơn khi tài xế hay từ chối",
+        "Đơn giản cho khu vực thưa xe"
+      ],
+      "cons": [
+        "Tài xế thua thấy đề nghị biến mất",
+        "Phải khoá cẩn thận để một tài xế không nhận hai chuyến"
+      ]
+    }
+  ]
+}

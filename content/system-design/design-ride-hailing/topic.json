@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-ride-hailing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế ứng dụng gọi xe",
+  "summary": "Tách vị trí (dữ liệu tạm trong bộ nhớ, 75.000 lần ghi/s) khỏi chuyến đi (máy trạng thái bền); geohash và bẫy mép ô (cách 10 m chỉ chung 4 ký tự), quadtree, H3; Redis GEO đo thật (2 km ở điểm nóng 1.800 lần/s, 500 m 11.000, ANY 67.000); ETA theo đường thật, map matching; ghép theo lô ngắn hơn 13–19% quãng đón; khoá tài xế khi gửi đề nghị; giá động theo ô H3.",
+  "level": "architect",
+  "order": 19,
+  "minutes": 20,
+  "prerequisites": ["sd-building-blocks", "redis-use-cases", "realtime-rpc-protocols", "design-chat", "outbox-cdc"],
+  "terms": ["geospatial-index", "geohash", "quadtree", "h3-index", "eta", "haversine", "map-matching", "batch-matching", "driver-dispatch", "surge-pricing", "sorted-set", "websocket", "state-machine", "conditional-update", "idempotency-key", "outbox"],
+  "references": [
+    { "title": "Redis Documentation: GEOSEARCH", "url": "https://redis.io/docs/latest/commands/geosearch/" },
+    { "title": "H3: Uber's Hexagonal Hierarchical Spatial Index (documentation)", "url": "https://h3geo.org/docs/" },
+    { "title": "Uber Engineering: H3, Uber's Hexagonal Hierarchical Spatial Index", "url": "https://www.uber.com/blog/h3/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hai khách cùng được ghép một tài xế thì sao?\" Tôi chỉ ra hai chỗ khoá. Khi gửi đề nghị: tài xế chuyển `AVAILABLE → OFFERED` bằng một thao tác có điều kiện, nên mỗi lúc chỉ có một đề nghị. Khi chấp nhận: trong một transaction database, chuyến chuyển `REQUESTED → MATCHED` và tài xế sang `ON_TRIP`, cả hai có điều kiện; chuyến đã có người hay tài xế đã chở khách thì trả 0 dòng và rollback. Khoá trong Redis chỉ để giảm tranh chấp, chốt cuối phải ở database vì Redis có thể mất khoá khi failover. Rồi nói rõ phần còn lại: đề nghị quá hạn trả tài xế về `AVAILABLE`, và tài xế mất mạng giữa chừng được dọn theo `last_seen`." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng ghi mỗi lần gửi vị trí vào bảng SQL rồi tìm bằng `ORDER BY` khoảng cách. 100.000 tài xế mỗi 4 giây là 25.000 lần ghi mỗi giây và hơn 2 tỉ dòng mỗi ngày, chỉ để đọc dòng mới nhất, và mỗi lần tìm phải tính khoảng cách cho mọi tài xế. Vị trí mới nhất thuộc về bộ nhớ có chỉ mục không gian; lịch sử thuộc về log." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, tách rõ hai màu: dữ liệu tạm (vị trí, đề nghị đang chờ) và dữ liệu bền (chuyến đi, thanh toán). Người phỏng vấn sẽ hỏi \"cái này mất thì sao\" cho từng hộp, và câu trả lời khác hẳn nhau giữa hai loại." }
+  ]
+}

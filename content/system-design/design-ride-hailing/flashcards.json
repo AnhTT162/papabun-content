@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "two-paths", "front": "Hai đường nóng của ứng dụng gọi xe?", "back": "Cập nhật vị trí (ghi nhiều, dữ liệu tạm, trong bộ nhớ) và ghép cặp (tìm gần, xếp theo ETA, gửi đề nghị và khoá tài xế)." },
+    { "id": "location-ephemeral", "front": "Vì sao kho vị trí không cần backup?", "back": "Chỉ giữ vị trí mới nhất, bị ghi đè mỗi vài giây. Mất thì sau một chu kỳ gửi mọi tài xế đã tự điền lại." },
+    { "id": "geohash-edge", "front": "Bẫy của tìm theo tiền tố geohash?", "back": "Hai điểm sát nhau ở hai bên mép ô có thể khác mã sớm (lab: cách 10 m chỉ chung 4 ký tự). Luôn tìm cả các ô lân cận." },
+    { "id": "geohash-sizes", "front": "Ô geohash 5, 6, 7 ký tự lớn cỡ nào ở vĩ độ 10?", "back": "Cao × rộng khoảng 4,9 × 4,8 km; 607 m × 1,2 km; 150 × 150 m." },
+    { "id": "quadtree", "front": "Quadtree hơn lưới cố định ở đâu?", "back": "Chia ô theo mật độ: ô nhỏ nơi đông, ô lớn nơi thưa. Giá là phải cập nhật cây khi điểm di chuyển." },
+    { "id": "h3", "front": "Vì sao H3 dùng lục giác?", "back": "Sáu ô kề có tâm cách đều nhau, không có ô chéo xa hơn như lưới vuông; hợp để gom cung cầu theo vùng cho giá động." },
+    { "id": "geosearch-cost", "front": "Vì sao GEOSEARCH bán kính lớn ở nơi đông chậm?", "back": "Có COUNT mà không ANY thì Redis duyệt mọi điểm trong các ô bao quanh, sắp xếp rồi mới cắt. Lab điểm nóng: 2 km 1.800/s, 500 m 11.000/s. Tìm bán kính tăng dần." },
+    { "id": "geo-no-ttl", "front": "Tài xế tắt app thì Redis GEO xử lý thế nào?", "back": "Member trong sorted set không có TTL. Giữ last_seen riêng và dọn hay lọc tài xế im lặng quá vài chục giây." },
+    { "id": "offer-lock", "front": "Làm sao một tài xế không nhận hai đề nghị?", "back": "Chuyển AVAILABLE → OFFERED bằng thao tác có điều kiện (SET NX EX hay UPDATE ... WHERE) trước khi gửi; thua thì lấy ứng viên kế." },
+    { "id": "batch-matching", "front": "Ghép theo lô lợi gì so với tham lam?", "back": "Mô phỏng: quãng đón ngắn hơn 13% khi xe dư, 19% khi xe khan. Giá là khách chờ thêm cửa sổ lô vài giây." }
+  ]
+}

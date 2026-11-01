@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "funnel", "front": "Ý tưởng chính khi thiết kế flash sale?", "back": "Một cái phễu: từ chối càng sớm càng rẻ (CDN, phòng chờ, rate limit), trừ kho nguyên tử ở một chỗ nhanh, tạo đơn bất đồng bộ, database chốt." },
+    { "id": "get-decr", "front": "Vì sao GET rồi DECR trên Redis vẫn bán vượt?", "back": "Mỗi lệnh nguyên tử nhưng hai lệnh liên tiếp thì không: nhiều request cùng đọc còn hàng rồi cùng trừ. Lab: 1.023–1.033 trên 1.000 suất." },
+    { "id": "lua-gate", "front": "Lua script ở cổng Redis làm gì?", "back": "Trong một bước: kiểm còn hàng, kiểm người này chưa mua, trừ kho, ghi vào tập người mua và XADD vào stream để tạo đơn." },
+    { "id": "redis-not-truth", "front": "Vì sao database vẫn phải chốt sau cổng Redis?", "back": "Redis sao chép bất đồng bộ, failover có thể mất lần trừ cuối. UPDATE có điều kiện ở database chặn bán vượt." },
+    { "id": "hot-row-numbers", "front": "Một dòng đếm kho chịu bao nhiêu lượt/s?", "back": "Lab PostgreSQL 64 kết nối: khoảng 4.000. Chia 16 dòng con khoảng 29.000; mỗi suất một dòng với SKIP LOCKED khoảng 13.000." },
+    { "id": "bucket-fallback", "front": "Bẫy khi chia kho ra dòng con?", "back": "Dòng được chọn hết thì phải thử dòng khác. Không thử thì lab có 887–1.768 lượt bị từ chối khi kho còn hàng." },
+    { "id": "waiting-room-rate", "front": "Phòng chờ cho vào theo tốc độ nào?", "back": "Theo Little's law: số phiên checkout chịu được chia thời gian mỗi phiên. 3.000 phiên, 3 phút: khoảng 1.000 người/phút." },
+    { "id": "server-time", "front": "Vì sao không bật nút mua theo đồng hồ máy khách?", "back": "Người chỉnh giờ máy bấm sớm. Lấy giờ server, API mua kiểm giờ ở server, chỉ phát URL mua khi tới giờ." },
+    { "id": "pre-scale", "front": "Vì sao không dựa vào autoscale cho giờ mở bán?", "back": "Đỉnh tới trong một giây, HPA thêm pod sau vài chục giây tới vài phút. Scale theo lịch trước giờ mở." },
+    { "id": "lottery", "front": "Phương án đổi luật nghiệp vụ cho flash sale?", "back": "Đăng ký trước rồi bốc thăm, hoặc bán theo nhiều đợt nhỏ: xoá đỉnh tải và cuộc đua bot, đổi lại mất cảm giác săn hàng." }
+  ]
+}

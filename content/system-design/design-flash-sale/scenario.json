@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "1.000 điện thoại lúc 12:00",
+  "prompt": "Sàn thương mại điện tử mở bán 1.000 điện thoại giá sốc lúc 12:00, mỗi người tối đa 1 chiếc, giữ hàng 10 phút chờ thanh toán. Marketing dự kiến 2 triệu người vào trong phút đầu, mỗi người bấm vài lần. Luồng mua hàng thường cùng lúc vẫn có khoảng 3.000 đơn/phút. Bản hiện tại: trang sản phẩm render ở origin, nút \"Mua\" bật khi đồng hồ máy khách tới 12:00; API mua chạy `SELECT left_qty` rồi `UPDATE stock SET left_qty = left_qty - 1` trên PostgreSQL chính, gọi PSP tạo phiên thanh toán ngay trong transaction đó; không giới hạn mỗi người; dựa vào HPA để scale. Lần sale thử trước: bán 1.041 chiếc, API mua p99 40 giây, và luồng mua hàng thường bị lỗi suốt 15 phút. Thiết kế lại.",
+  "hints": [
+    "`SELECT` rồi `UPDATE` không điều kiện: hai request cùng đọc còn 1 thì sao?",
+    "Gọi PSP mất 1–2 giây trong lúc giữ khoá dòng kho: mỗi giây dòng đó cho qua được bao nhiêu lượt?",
+    "Vì sao luồng mua hàng thường lỗi theo? Chúng dùng chung gì với API sale?",
+    "Từ 2 triệu người còn lại 1.000 người mua: từ chối ở tầng nào thì rẻ nhất?"
+  ],
+  "solution": "**Vì sao hỏng**: `SELECT` rồi `UPDATE` không điều kiện là check-then-act: nhiều request cùng đọc \"còn hàng\" rồi cùng trừ, nên bán 1.041. Gọi PSP 1–2 giây trong transaction giữ khoá dòng kho suốt thời gian đó, mỗi giây chỉ vài lượt qua được, request dồn lại tới p99 40 giây và chiếm hết pool kết nối của database chính, nên luồng mua thường chết theo. Nút bật theo đồng hồ máy khách cho người chỉnh giờ bấm sớm. HPA thêm pod sau khi tải đã tới, quá muộn cho đợt tăng một giây.\n\n**Trước giờ mở**: trang, ảnh, đồng hồ ở CDN; giờ lấy từ server. Xác minh số điện thoại cho tài khoản tham gia, chặn tài khoản mới tạo. Scale theo lịch lúc 11:40 (pod sale, Redis, consumer), báo trước cho đội vận hành load balancer. Sale chạy deployment, pool kết nối và Redis riêng (bulkhead).\n\n**Phòng chờ**: người vào trước 12:00 nhận vị trí ngẫu nhiên trong nhóm đầu, sau đó theo thứ tự đến. Cho vào theo sức checkout: giả định phần checkout giữ được 3.000 phiên, mỗi phiên 3 phút, tức khoảng 1.000 người mỗi phút. Thực tế 1.000 suất thường hết trong phút đầu: lúc đó báo hết hàng cho cả hàng chờ, và chỉ mở lại cho nhóm nhỏ khi có hàng nhả ra. Token vào cửa ký HMAC gồm user id, sale id, hạn 5 phút.\n\n**Cổng Redis**: Lua kiểm `sold_out`, kiểm user chưa có trong tập người mua, trừ kho, thêm vào tập và `XADD` vào stream, tất cả trong một bước. Lab: `GET` rồi `DECR` bán 1.023–1.033 trên 1.000; Lua đúng 1.000. Khi về 0, app server giữ cờ hết hàng trong bộ nhớ.\n\n**Tạo đơn**: consumer đọc stream, tạo đơn `PENDING_PAYMENT` với unique `(sale_id, user_id)`, và trừ kho bằng `UPDATE ... WHERE left_qty > 0` trong cùng transaction. Ở 1.000 đơn một dòng đếm là đủ (lab khoảng 4.000 lượt/s); không cần chia dòng con. Database từ chối thì người đó nhận \"hết hàng\". Phiên thanh toán tạo sau commit, ngoài transaction (bài Thiết kế hệ thống thanh toán).\n\n**Hết hạn**: 10 phút không trả tiền thì job nhả hàng, cộng lại Redis, đơn sang `EXPIRED`; người đó không mua lại được trong đợt này (đúng với unique `(sale_id, user_id)`), mở lại phòng chờ.\n\n**Kiểm tra trước ngày sale**: load test mô hình mở vào phòng chờ với 2 triệu người trong phút đầu, phần lớn dồn vào 10 giây (vài trăm nghìn request/s); cổng Redis test ở 20.000 lượt/s dù phòng chờ chỉ cho vào khoảng 17 người/s, vì nó còn phải chịu lượt bấm lại, request đi vòng qua phòng chờ bằng token giả hay hết hạn (bị gateway chặn nhưng vẫn tốn), và cấu hình phòng chờ sai; diễn tập Redis failover giữa sale và kiểm database không bán quá 1.000.\n\n**Giám sát**: đã bán ở Redis và database, độ dài hàng chờ, tốc độ cho vào, tỉ lệ từ chối theo lý do, p99 API mua, lỗi của luồng mua thường.",
+  "tradeoffs": [
+    {
+      "option": "Phòng chờ + cổng Redis + database chốt",
+      "pros": [
+        "Database chỉ thấy vài nghìn lượt, không bán vượt",
+        "Luồng mua thường không bị ảnh hưởng"
+      ],
+      "cons": [
+        "Thêm phòng chờ, token, consumer và đối soát Redis với database",
+        "Người mua thấy \"đang tạo đơn\" thay vì kết quả ngay"
+      ]
+    },
+    {
+      "option": "Chỉ database, chia kho ra nhiều dòng con",
+      "pros": [
+        "Ít thành phần, đúng ngay trong transaction",
+        "Lab 16 dòng con khoảng 29.000 lượt/s"
+      ],
+      "cons": [
+        "Mọi request vẫn chạm database chính",
+        "Phải thử dòng khác khi một dòng hết, không thì từ chối oan"
+      ]
+    },
+    {
+      "option": "Đăng ký trước rồi bốc thăm",
+      "pros": [
+        "Không có đỉnh tải, không có cuộc đua bot",
+        "Công bằng, dễ giải thích"
+      ],
+      "cons": [
+        "Mất cảm giác \"săn\" mà marketing muốn",
+        "Thêm bước đăng ký và thông báo kết quả"
+      ]
+    },
+    {
+      "option": "Dịch vụ phòng chờ có sẵn ở CDN",
+      "pros": [
+        "Chịu đỉnh ở edge, không phải tự xây",
+        "Có sẵn chống bot cơ bản"
+      ],
+      "cons": [
+        "Chi phí theo lượt, phụ thuộc nhà cung cấp",
+        "Ít quyền chỉnh luật xếp hàng và cho vào"
+      ]
+    }
+  ]
+}

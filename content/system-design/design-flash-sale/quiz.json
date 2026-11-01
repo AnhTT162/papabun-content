@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "check-then-act-oversell",
+      "kind": "output",
+      "prompt": "Hai request A và B chạy xen kẽ đúng theo thứ tự trong code (Redis thật cũng vậy khi hai kết nối gửi lệnh cùng lúc). Kho còn 1. In ra gì?",
+      "code": "long stock = 1;\n// A: GET\nlong seenA = stock;\n// B: GET\nlong seenB = stock;\nint sold = 0;\nif (seenA > 0) { stock--; sold++; } // A: DECR\nif (seenB > 0) { stock--; sold++; } // B: DECR\nSystem.out.println(sold + \" \" + stock);",
+      "options": [
+        "2 -1",
+        "1 0",
+        "2 0",
+        "1 -1"
+      ],
+      "answer": 0,
+      "explanation": "Cả hai đọc `1` trước khi ai trừ, nên cả hai qua điều kiện và cùng `DECR`: bán 2, kho -1. Mỗi lệnh Redis nguyên tử nhưng hai lệnh liên tiếp thì không. Lab 1.000 suất, 64 kết nối: bán 1.023–1.033. Sửa: gộp kiểm và trừ vào một Lua script, hoặc `DECR` rồi xem giá trị trả về."
+    },
+    {
+      "id": "redis-not-truth",
+      "kind": "single",
+      "prompt": "Cổng Redis đã trừ kho đúng bằng Lua. Vì sao consumer tạo đơn vẫn phải trừ kho có điều kiện trong database?",
+      "options": [
+        "Redis sao chép bất đồng bộ, failover có thể mất lần trừ cuối",
+        "Lua script không nguyên tử khi Redis có nhiều kết nối đồng thời",
+        "Database cần đếm lại để tính phí vận chuyển cho từng đơn",
+        "Redis không lưu được số âm nên kho có thể bị đặt lại về 0"
+      ],
+      "answer": 0,
+      "explanation": "Replica được lên làm primary có thể chưa nhận các lần trừ cuối, nên kho trong Redis cao hơn thực tế và có thêm người qua cổng. `UPDATE ... WHERE left_qty > 0` trong database chặn bán vượt ở đó. Lua chạy nguyên tử bất kể số kết nối. Redis lưu số âm bình thường."
+    },
+    {
+      "id": "bucket-fallback",
+      "kind": "single",
+      "prompt": "Kho 20.000 chia thành 16 dòng con, mỗi lượt chọn một dòng ngẫu nhiên và `UPDATE ... WHERE left_qty > 0`. Gần cuối đợt, chuyện gì xảy ra nếu dòng được chọn trả 0 dòng mà code báo \"hết hàng\" luôn?",
+      "options": [
+        "Người mua bị từ chối trong khi các dòng khác vẫn còn hàng",
+        "Bán vượt vì 16 dòng con được cập nhật song song",
+        "Deadlock vì nhiều transaction khoá các dòng khác nhau",
+        "Không sao, các dòng con luôn hết cùng một lúc"
+      ],
+      "answer": 0,
+      "explanation": "Các dòng hết vào thời điểm khác nhau. Lab 64 kết nối: 887–1.768 lượt bị từ chối khi kho còn hàng. Thử lần lượt các dòng còn lại thì về 0 mà tốc độ gần như không đổi (khoảng 29.000/s). Mỗi `UPDATE` có điều kiện riêng nên không bán vượt; mỗi transaction chỉ khoá một dòng tại một lúc nên không deadlock."
+    },
+    {
+      "id": "waiting-room-rate",
+      "kind": "single",
+      "prompt": "Phần checkout chịu được 3.000 phiên cùng lúc, mỗi phiên trung bình 3 phút. Phòng chờ nên cho vào khoảng bao nhiêu người?",
+      "options": [
+        "Khoảng 1.000 người mỗi phút",
+        "Khoảng 3.000 người mỗi phút",
+        "Khoảng 9.000 người mỗi phút",
+        "Khoảng 3.000 người mỗi giây"
+      ],
+      "answer": 0,
+      "explanation": "Little's law: số phiên đồng thời = tốc độ vào × thời gian mỗi phiên, nên tốc độ = 3.000 / 3 phút = 1.000 người/phút. 3.000/phút là quên chia cho thời gian phiên; 9.000 là nhân thay vì chia. Thực tế còn trừ thêm phần dư cho luồng mua thường và người bỏ dở."
+    },
+    {
+      "id": "pre-scale",
+      "kind": "single",
+      "prompt": "Đội định dựa vào HPA (CPU 70%) để chịu đợt mở bán 12:00. Vấn đề chính là gì?",
+      "options": [
+        "Đỉnh tới trong 1 giây, HPA thêm pod sau vài chục giây",
+        "HPA không đọc được CPU của pod Java nên sẽ không bao giờ scale",
+        "HPA chỉ scale theo bộ nhớ, không theo CPU, trên Kubernetes mới",
+        "HPA scale quá nhiều pod làm database bị quá tải kết nối ngay"
+      ],
+      "answer": 0,
+      "explanation": "HPA phản ứng sau khi metric đã tăng, cộng thời gian lên pod và khởi động JVM: quá muộn cho đỉnh một giây. Scale theo lịch trước giờ mở (bài Capacity planning). HPA đọc CPU của container Java bình thường và scale theo CPU được. Ngân sách kết nối khi scale là vấn đề thật, nhưng là chuyện thứ yếu so với scale quá muộn."
+    }
+  ]
+}
