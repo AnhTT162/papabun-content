@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "cost-drivers", "front": "Metric và log tốn theo cái gì?", "back": "Metric tốn theo số series đang hoạt động (bộ nhớ) và sample mỗi giây; log tốn theo lưu lượng request, tức byte mỗi giây." },
+    { "id": "disk-formula", "front": "Công thức dung lượng đĩa của Prometheus?", "back": "Thời gian giữ × sample mỗi giây × byte mỗi sample. 600.000 sample/s ở 1,5 byte là gần 80 GB mỗi ngày." },
+    { "id": "xor-bytes", "front": "Vì sao \"1–2 byte mỗi sample\" không phải lúc nào cũng đúng?", "back": "Nén XOR rẻ khi giá trị ít đổi và scrape đều. Lab: counter nguyên 2,2 byte, gauge số thực 7,2 byte; thời điểm lệch ±20 ms thêm khoảng 1,8 byte." },
+    { "id": "cardinality-multiply", "front": "Số series của một metric tính thế nào?", "back": "Tích số giá trị của mọi nhãn, nhân thêm số bucket nếu là histogram cổ điển. Một nhãn có 5.000 giá trị nhân tất cả lên 5.000 lần." },
+    { "id": "remote-write-wal", "front": "Remote write chịu được kho trung tâm sập bao lâu?", "back": "Khoảng 2 giờ ở chế độ server: lâu hơn thì WAL bị compact và phần chưa gửi mất. Chế độ agent chỉ cắt WAL khi đã gửi xong nên chịu lâu hơn." },
+    { "id": "ha-dedup", "front": "Chạy cặp Prometheus HA thì kho trung tâm làm gì với dữ liệu trùng?", "back": "Mimir chọn một replica cho mỗi cluster theo nhãn cluster và replica lúc ghi, bỏ bản kia, replica đó ngừng gửi thì chuyển bản còn lại. Thanos lưu cả hai và ghép lúc đọc." },
+    { "id": "downsampling-cost", "front": "Downsampling của Thanos có giảm chi phí lưu trữ không?", "back": "Không tự giảm: nó thêm block 5 phút và 1 giờ để query dài nhanh. Tiết kiệm đến từ rút retention dữ liệu gốc và recording rule." },
+    { "id": "avg-hides-spike", "front": "Vì sao không xem p99 đã downsample bằng trung bình?", "back": "Spike ngắn bị san phẳng: lab spike 2.400 ms trong 3 phút còn 234 ms ở trung bình 1 giờ. Xem `max`, hoặc tính percentile từ histogram." },
+    { "id": "loki-label", "front": "Nhãn nào được đặt cho log trên Loki?", "back": "Nhãn ít giá trị và cố định: cluster, namespace, service, level. `trace_id`, `user_id` để trong nội dung hay structured metadata." },
+    { "id": "deadman", "front": "Dead man's switch trong giám sát là gì?", "back": "Một alert luôn bật gửi đều đặn tới dịch vụ bên ngoài; ngừng nhận nghĩa là đường alert đã hỏng và phải gọi người." }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "counter-reset",
+      "kind": "output",
+      "prompt": "Counter số request của một pod được lấy mẫu 5 lần; pod restart giữa mẫu thứ ba và thứ tư nên counter về 0 rồi tăng lại. Đoạn code so hai cách tính số request tăng thêm. In ra gì?",
+      "code": "double[] counter = {1000, 2500, 4000, 500, 2000};\ndouble inc = 0;\nfor (int i = 1; i < counter.length; i++) {\n    double d = counter[i] - counter[i - 1];\n    inc += d >= 0 ? d : counter[i];\n}\nSystem.out.println((counter[4] - counter[0]) + \" \" + inc);",
+      "options": [
+        "1000.0 5000.0",
+        "1000.0 4500.0",
+        "1000.0 1000.0",
+        "5000.0 5000.0"
+      ],
+      "answer": 0,
+      "explanation": "Cuối trừ đầu chỉ ra 1000, mất phần trước khi restart. Cách thứ hai coi giá trị giảm là reset và cộng nguyên giá trị mới (500, vì counter bắt đầu lại từ 0): 1500 + 1500 + 500 + 1500 = 5000. `rate()` và `increase()` của Prometheus xử lý reset kiểu này. Vì vậy downsampling không được lưu counter bằng trung bình hay giá trị cuối; Thanos giữ riêng aggregate `counter` (lab: một giờ có restart, cuối trừ đầu ra 178.500 thay vì 360.000)."
+    },
+    {
+      "id": "downsampling-purpose",
+      "kind": "single",
+      "prompt": "Bật downsampling 5 phút và 1 giờ trên Thanos compactor, giữ nguyên retention của dữ liệu gốc. Dung lượng trên object storage thay đổi thế nào?",
+      "options": [
+        "Tăng lên, vì có thêm block 5 phút và 1 giờ",
+        "Giảm khoảng 20 lần, vì 5 phút gộp 20 mẫu 15 giây",
+        "Giữ nguyên, vì block gốc bị thay bằng block gộp",
+        "Giảm một nửa, vì chỉ giữ min và max mỗi khoảng"
+      ],
+      "answer": 0,
+      "explanation": "Downsampling của Thanos thêm block mới cho mỗi block gốc chứ không thay nó; tài liệu nói giữ cả ba độ phân giải có thể tốn tới khoảng 3 lần. Mục tiêu là query khoảng dài (vài tháng) chạy nhanh. Muốn giảm chi phí thì rút retention của dữ liệu gốc (`--retention.resolution-raw`) và dùng recording rule để gộp bỏ nhãn `pod` cho dữ liệu giữ lâu."
+    },
+    {
+      "id": "loki-labels",
+      "kind": "single",
+      "prompt": "Team muốn tìm log theo `trace_id` nhanh trên Loki nên đề xuất thêm `trace_id` làm nhãn. Nên trả lời thế nào?",
+      "options": [
+        "Không: mỗi trace thành một stream; để trong structured metadata",
+        "Được: nhãn được index nên tìm nhanh và không tốn thêm",
+        "Được, nếu đặt retention của stream đó ngắn hơn 7 ngày",
+        "Không: Loki chỉ cho tối đa 5 nhãn trên mỗi stream log"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi tổ hợp nhãn của Loki là một stream có chunk riêng. `trace_id` có giá trị mới ở mỗi request, nên hàng triệu stream, mỗi stream chỉ vài dòng: chunk tí hon, index phình, ingester tốn bộ nhớ. Nhãn chỉ nên có ít giá trị (cluster, namespace, service). Giá trị có số lượng không giới hạn để trong nội dung dòng log hay structured metadata, rồi lọc bằng `|=` hay theo metadata sau khi chọn stream."
+    },
+    {
+      "id": "cardinality-math",
+      "kind": "single",
+      "prompt": "Histogram latency có nhãn `uri` (20 giá trị), `status` (4 giá trị) và khoảng 70 series cho bucket, `_sum`, `_count` mỗi tổ hợp nhãn. Thêm nhãn `customer_id` với 5.000 khách, mỗi pod gặp mọi khách. Mỗi pod có bao nhiêu series của metric này?",
+      "options": [
+        "28 triệu: các nhãn nhân với nhau",
+        "5.600: customer_id không phải nhãn của bucket",
+        "10.600: thêm 5.000 series cho customer_id",
+        "350.000: chỉ nhân 70 bucket với số khách"
+      ],
+      "answer": 0,
+      "explanation": "Số series là tích số giá trị của mọi nhãn: 20 × 4 × 5.000 × 70 = 28 triệu, so với 5.600 khi chưa có `customer_id`. Cardinality không cộng, nó nhân. SLA theo khách nên đếm hai counter `good`/`bad` theo khách ở gateway, còn chi tiết đọc từ access log trong kho theo cột."
+    },
+    {
+      "id": "remote-write-outage",
+      "kind": "single",
+      "prompt": "Kho metric trung tâm sập 6 giờ. Prometheus mỗi cluster dùng remote write với cấu hình mặc định. Khi kho trung tâm sống lại, chuyện gì xảy ra với dữ liệu?",
+      "options": [
+        "Gửi bù phần còn trong WAL; phần cũ hơn WAL bị mất ở trung tâm",
+        "Gửi bù đủ 6 giờ, vì remote write lưu hàng đợi riêng trên đĩa",
+        "Mất cả 6 giờ, vì remote write không bao giờ retry lỗi 5xx",
+        "Prometheus ngừng scrape khi remote write lỗi nên không có gì"
+      ],
+      "answer": 0,
+      "explanation": "Remote write đọc sample từ WAL rồi gửi, và retry khi gặp lỗi tạm thời. Tài liệu Prometheus nói rõ: đứt quá khoảng 2 giờ thì WAL bị compact và phần chưa gửi mất (chế độ agent chỉ cắt WAL khi đã gửi xong nên chịu lâu hơn). Prometheus vẫn scrape và có dữ liệu cục bộ theo retention của nó. Vì vậy kho trung tâm cần HA theo zone, và cần alert khi remote write tụt hậu (so thời điểm sample mới nhất đã gửi với thời điểm hiện tại)."
+    }
+  ]
+}

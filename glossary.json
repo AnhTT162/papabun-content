@@ -1269,7 +1269,7 @@
       "meaning": "Write-Ahead Log: database ghi thay đổi vào log tuần tự và fsync trước khi báo commit, rồi mới cập nhật file dữ liệu; sập máy thì phát lại log. InnoDB gọi là redo log.",
       "example": "PostgreSQL phát lại WAL khi khởi động sau sự cố.",
       "related": ["acid", "transaction"],
-      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns", "consistency-cap", "outbox-cdc"]
+      "topics": ["acid-transactions-basics", "storage-engine", "views-procedures-triggers", "backup-restore", "replication-ha", "cache-patterns", "consistency-cap", "outbox-cdc", "design-metrics-logging"]
     },
     {
       "id": "savepoint",
@@ -2285,7 +2285,7 @@
       "meaning": "Cấu trúc của search engine: mỗi từ (sau khi qua analyzer) trỏ tới danh sách tài liệu chứa nó, kèm vị trí và tần suất, nên tra một từ không phải quét mọi tài liệu.",
       "example": "Từ `khoac` → tài liệu 12, 98, 1.204...",
       "related": ["analyzer", "bm25"],
-      "topics": ["search-elasticsearch", "sd-building-blocks", "olap-doris", "vector-search"]
+      "topics": ["search-elasticsearch", "sd-building-blocks", "olap-doris", "vector-search", "design-metrics-logging"]
     },
     {
       "id": "analyzer",
@@ -3341,7 +3341,7 @@
       "meaning": "Số time series mà một metric sinh ra, bằng số tổ hợp giá trị tag. Tag có giá trị không giới hạn (id, URL thô) làm phình bộ nhớ ứng dụng và hệ thống giám sát.",
       "example": "Timer có tag `userId` với 16.000 người dùng và 70 bucket histogram sinh hơn một triệu series.",
       "related": ["micrometer"],
-      "topics": ["spring-observability", "memory-growth-oom"]
+      "topics": ["spring-observability", "memory-growth-oom", "design-metrics-logging"]
     },
     {
       "id": "propagation",
@@ -4733,7 +4733,7 @@
       "meaning": "Số bản sao tối thiểu phải tham gia một lần đọc (R) hoặc ghi (W) trong N bản sao; R + W > N thì tập đọc và tập ghi luôn giao nhau.",
       "example": "N = 3, W = 2, R = 2: lần đọc luôn hỏi ít nhất một node đã nhận lần ghi gần nhất.",
       "related": ["tunable-consistency", "linearizability"],
-      "topics": ["consistency-cap", "consistent-hashing", "consensus", "design-key-value-store"]
+      "topics": ["consistency-cap", "consistent-hashing", "consensus", "design-key-value-store", "design-metrics-logging"]
     },
     {
       "id": "round-robin",
@@ -5229,7 +5229,7 @@
       "meaning": "Cách phân key cho node bằng một vòng hash: key thuộc node gặp đầu tiên theo chiều kim đồng hồ, nên thêm hay bớt node chỉ chuyển khoảng 1/N số key thay vì gần hết như modulo.",
       "example": "Cụm cache 4 node thêm node thứ 5: khoảng 20% key đổi node, so với 80% khi dùng `hash % N`.",
       "related": ["virtual-node", "hash-slot", "rendezvous-hashing"],
-      "topics": ["consistent-hashing", "design-web-crawler", "design-key-value-store"]
+      "topics": ["consistent-hashing", "design-web-crawler", "design-key-value-store", "design-metrics-logging"]
     },
     {
       "id": "virtual-node",
@@ -5733,7 +5733,7 @@
       "meaning": "Trace id mẫu gắn vào một bucket của histogram metric, để nhảy từ điểm trên biểu đồ latency sang trace của một request cụ thể.",
       "example": "Bấm vào điểm p99 trên Grafana, mở trace của request 1,3 giây.",
       "related": ["distributed-tracing", "percentile"],
-      "topics": ["observability"]
+      "topics": ["observability", "design-metrics-logging"]
     },
     {
       "id": "sli",
@@ -5789,7 +5789,7 @@
       "meaning": "Hệ thống lưu log của Grafana Labs, chỉ đánh index nhãn (service, namespace, level) và quét nội dung khi truy vấn, nên rẻ hơn Elasticsearch; nhãn phải có ít giá trị.",
       "example": "`{service=\"order-api\", level=\"error\"} | json | trace_id=\"4bf9...\"`",
       "related": ["structured-logging"],
-      "topics": ["production-logging"]
+      "topics": ["production-logging", "design-metrics-logging"]
     },
     {
       "id": "accept-count",
@@ -8621,7 +8621,7 @@
       "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
       "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
       "related": ["presigned-url", "multipart-upload", "cdn"],
-      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage"]
+      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage", "design-metrics-logging"]
     },
     {
       "id": "source-of-truth",
@@ -8693,7 +8693,7 @@
       "meaning": "Database tối ưu cho chuỗi điểm dữ liệu theo thời gian: ghi nối tiếp rất nhiều, nén theo từng chuỗi (lưu chênh lệch giữa các điểm liền nhau), truy vấn theo khoảng thời gian và gộp, tự xoá dữ liệu cũ.",
       "example": "Prometheus, InfluxDB, TimescaleDB lưu CPU của mỗi pod mỗi 15 giây.",
       "related": ["wide-column-store"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "design-metrics-logging"]
     },
     {
       "id": "data-warehouse",
@@ -8805,7 +8805,7 @@
       "meaning": "Số bản sao của mỗi phần dữ liệu trong hệ thống phân tán. Dung lượng đĩa thật bằng dữ liệu logic nhân hệ số này.",
       "example": "Topic Kafka với replication factor 3: 700 GB dữ liệu logic chiếm 2,1 TB đĩa trên cả cụm.",
       "related": ["back-of-envelope-estimation"],
-      "topics": ["back-of-envelope", "design-key-value-store", "design-message-queue"]
+      "topics": ["back-of-envelope", "design-key-value-store", "design-message-queue", "design-metrics-logging"]
     },
     {
       "id": "hot-data",
@@ -8933,7 +8933,7 @@
       "meaning": "Một tenant hay workload dùng quá nhiều tài nguyên chung (CPU, kết nối, IOPS) làm chậm các tenant khác trên cùng hệ thống.",
       "example": "Một khách hàng chạy job xuất dữ liệu gửi 5.000 request/giây làm p99 của mọi khách khác tăng gấp ba.",
       "related": ["rate-limiting", "bulkhead"],
-      "topics": ["design-rate-limiter"]
+      "topics": ["design-rate-limiter", "design-metrics-logging"]
     },
     {
       "id": "segment-allocation",
@@ -9990,6 +9990,86 @@
       "example": "Đếm yêu cầu và tài xế rảnh theo ô H3 mỗi phút, làm mượt theo thời gian và ô kề để giá không nhảy giữa hai con phố.",
       "related": ["h3-index"],
       "topics": ["design-ride-hailing"]
+    },
+    {
+      "id": "active-series",
+      "term": "Active series",
+      "meaning": "Time series đang nhận sample trong khoảng gần đây (ở Prometheus là các series trong head block). Số này quyết định bộ nhớ của hệ lưu metric, không phải số sample.",
+      "example": "6.000 pod × 1.500 series là 9 triệu active series; deploy đổi nhãn `pod` làm series cũ ngừng và series mới xuất hiện (churn).",
+      "related": ["metric-cardinality", "time-series-database"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "gorilla-compression",
+      "term": "Nén Gorilla (XOR)",
+      "meaning": "Cách nén time series từ bài báo Gorilla của Facebook mà Prometheus dùng: thời điểm lưu chênh lệch của chênh lệch, giá trị lưu XOR với giá trị trước. Scrape đều và giá trị ít đổi thì chỉ tốn vài bit mỗi sample.",
+      "example": "Lab: counter tăng theo số nguyên khoảng 2,2 byte mỗi sample, gauge số thực đủ độ chính xác khoảng 7,2 byte.",
+      "related": ["time-series-database"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "remote-write",
+      "term": "Remote write",
+      "meaning": "Giao thức Prometheus đẩy sample sang kho khác qua HTTP (protobuf nén snappy). Prometheus đọc từ WAL, gửi theo lô qua nhiều shard và retry khi lỗi tạm thời.",
+      "example": "Prometheus mỗi cluster `remote_write` về Mimir trung tâm; kho trung tâm sập quá khoảng 2 giờ thì WAL bị compact và phần chưa gửi mất.",
+      "related": ["wal", "time-series-database"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "replica-dedup",
+      "term": "Khử trùng lặp cặp HA",
+      "meaning": "Hai Prometheus scrape cùng target để dự phòng sẽ có dữ liệu trùng. Mimir khử lúc ghi: HA tracker chỉ nhận một replica cho mỗi cluster theo nhãn cluster và replica, chuyển sang bản kia khi bản đang nhận ngừng gửi quá thời gian failover. Thanos lưu cả hai và Querier ghép lúc đọc theo nhãn replica.",
+      "example": "Cặp `prometheus-0`/`prometheus-1` cùng `cluster=\"prod-a\"`, nhãn `__replica__` khác nhau; distributor chỉ giữ dữ liệu của một con.",
+      "related": ["remote-write"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "downsampling",
+      "term": "Downsampling",
+      "meaning": "Tạo bản dữ liệu có độ phân giải thấp hơn (5 phút, 1 giờ) từ dữ liệu gốc, lưu các tổng hợp như count, sum, min, max, để query khoảng dài nhanh. Lấy trung bình sẽ che mất spike ngắn.",
+      "example": "Thanos compactor tạo bản 5 phút cho dữ liệu cũ hơn 40 giờ và bản 1 giờ cho dữ liệu cũ hơn 10 ngày.",
+      "related": ["time-series-database", "recording-rule"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "recording-rule",
+      "term": "Recording rule",
+      "meaning": "Quy tắc Prometheus tính sẵn một biểu thức theo chu kỳ và lưu kết quả thành series mới. Dùng để dashboard nhanh hơn và để giữ lâu dữ liệu đã gộp, bỏ các nhãn chi tiết như `pod`.",
+      "example": "`record: service:http_requests:rate5m` với `expr: sum by (service) (rate(http_requests_total[5m]))`.",
+      "related": ["downsampling", "metric-cardinality"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "native-histogram",
+      "term": "Native histogram",
+      "meaning": "Kiểu histogram của Prometheus (stable từ 3.8) lưu cả phân bố trong một series, bucket theo hàm mũ do hệ thống chọn, thay cho mỗi bucket một series như histogram cổ điển. Phải bật `scrape_native_histograms` và client phải xuất kiểu này.",
+      "example": "Timer cổ điển khoảng 70 series mỗi tổ hợp nhãn; native histogram chỉ một series, vẫn tính được `histogram_quantile`.",
+      "related": ["metric-cardinality"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "relabeling",
+      "term": "Relabeling",
+      "meaning": "Bước sửa nhãn của Prometheus trước khi scrape (`relabel_configs`) hoặc trước khi lưu (`metric_relabel_configs`): đổi tên, bỏ nhãn, bỏ cả metric. Bỏ một nhãn đang phân biệt series làm các series trùng nhau và sample bị loại, nên gộp thật thì dùng recording rule.",
+      "example": "`metric_relabel_configs` với `action: drop` và `regex: jvm_buffer_.*` trên `__name__` bỏ cả nhóm metric không ai dùng trước khi ghi.",
+      "related": ["metric-cardinality"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "log-sampling",
+      "term": "Log sampling",
+      "meaning": "Chỉ giữ một phần log của loại sự kiện lặp lại nhiều (ví dụ 10% log INFO của request thành công), trong khi giữ mọi WARN và ERROR. Giảm chi phí mà vẫn đủ để điều tra.",
+      "example": "Agent giữ 1/10 dòng `request completed` có status 2xx, giữ mọi dòng status 5xx.",
+      "related": ["structured-logging"],
+      "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "deadman-switch",
+      "term": "Dead man's switch",
+      "meaning": "Alert luôn ở trạng thái bật, gửi đều đặn tới một dịch vụ bên ngoài. Dịch vụ đó gọi người khi ngừng nhận, nghĩa là Prometheus, Alertmanager hay đường gửi alert đã hỏng.",
+      "example": "Alert `Watchdog` với `expr: vector(1)` đi qua route có `repeat_interval` ngắn (ví dụ 1 phút) tới dịch vụ heartbeat; mặc định `repeat_interval` là 4 giờ, quá thưa cho việc này.",
+      "related": ["runbook"],
+      "topics": ["design-metrics-logging"]
     }
   ]
 }

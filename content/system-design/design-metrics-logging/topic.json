@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-metrics-logging",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế hệ thống metric/log",
+  "summary": "Định cỡ theo series đang hoạt động, sample mỗi giây và byte log; TSDB của Prometheus (head block, WAL, block 2 giờ) và nén XOR đo thật (counter nguyên 2,2 byte, gauge số thực 7,2 byte mỗi sample); cardinality nhân lên thế nào; remote write, Mimir (hash ring, 3 bản, khử trùng lặp cặp HA); downsampling không tự giảm chi phí, trung bình che spike; recording rule; đường log qua Kafka vào Loki, nén 7 lần; giám sát hệ giám sát.",
+  "level": "architect",
+  "order": 20,
+  "minutes": 20,
+  "prerequisites": ["observability", "production-logging", "spring-observability", "sd-building-blocks", "consistent-hashing", "kafka-architecture"],
+  "terms": ["active-series", "metric-cardinality", "time-series-database", "gorilla-compression", "remote-write", "replica-dedup", "downsampling", "recording-rule", "native-histogram", "relabeling", "log-sampling", "deadman-switch", "loki", "object-storage", "wal", "inverted-index", "consistent-hashing", "replication-factor", "quorum", "noisy-neighbor", "exemplar"],
+  "references": [
+    { "title": "Prometheus Documentation: Storage", "url": "https://prometheus.io/docs/prometheus/latest/storage/" },
+    { "title": "Thanos Documentation: Compactor (downsampling)", "url": "https://thanos.io/tip/components/compact.md/" },
+    { "title": "Grafana Mimir Documentation: Ingester", "url": "https://grafana.com/docs/mimir/latest/references/architecture/components/ingester/" },
+    { "title": "Grafana Loki Documentation: Label best practices", "url": "https://grafana.com/docs/loki/latest/get-started/labels/bp-labels/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Một team deploy bản mới làm số series tăng gấp mười, bạn chặn thế nào?\" Tôi trả lời theo tầng. Ở nguồn: `sample_limit` cho từng target, vượt thì lần scrape đó bị bỏ và `up` về 0, nên team đó thấy ngay chứ không âm thầm làm phình kho. Ở kho trung tâm: giới hạn series theo tenant, vượt thì series mới của chính tenant đó bị từ chối. Phát hiện: alert theo tốc độ tăng series của từng tenant, và trang `/api/v1/status/tsdb` chỉ ra metric và nhãn nhiều series nhất. Sửa: đổi URL thô thành route template ở code; relabel bỏ nhãn chỉ an toàn khi nhãn đó không phân biệt series, nếu không các series trùng nhau và sample bị loại. Ngăn tái diễn: kiểm số series ở CI hay staging trước khi deploy." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng gộp p99 bằng cách lấy trung bình, dù theo thời gian (downsampling) hay theo pod. Lab: spike 2.400 ms trong 3 phút còn 234 ms ở trung bình 1 giờ. Percentile tính sẵn ở mỗi pod cũng không cộng được; giữ histogram rồi tính percentile ở phía query, hoặc xem `max` khi cần biết có spike hay không. Ngược lại, p99 tính từ histogram của cả giờ vẫn lộ spike: 3 phút là 5% số request (lưu lượng đều), nhiều hơn 1%, nên p99 cả giờ vẫn ở mức spike." },
+    { "type": "callout", "style": "tip", "markdown": "Khi vẽ, ghi số lên từng mũi tên: sample mỗi giây, MB log mỗi giây, số bản sao, thời gian giữ. Người phỏng vấn bài này chủ yếu chấm phần ước lượng và chỗ chặn cardinality, ít khi chấm bạn chọn Mimir hay Thanos." }
+  ]
+}

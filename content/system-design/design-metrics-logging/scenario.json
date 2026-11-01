@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Nền tảng giám sát cho 400 service",
+  "prompt": "Một công ty có 400 service chạy trên 6.000 pod ở 4 cluster Kubernetes. Mỗi pod xuất khoảng 1.500 series, scrape 15 giây. Lưu lượng trung bình 30.000 request/s, đỉnh 50.000; mỗi request ghi trung bình 6 dòng log JSON khoảng 260 byte. Yêu cầu: metric giữ 13 tháng để so sánh theo mùa, log tìm được trong 90 ngày, báo cáo SLA theo từng khách trong 5.000 khách doanh nghiệp. Bản đề xuất đầu: một Prometheus thật lớn ở cluster chính scrape cả 4 cluster, retention 13 tháng; thêm nhãn `customer_id` vào histogram `http_server_requests_seconds` để tính SLA từng khách; mọi log vào Elasticsearch, giữ 90 ngày trên SSD với 1 replica; agent gửi thẳng vào Elasticsearch; bật downsampling để giảm chi phí; Prometheus và Alertmanager chạy ngay trong cluster chính. Thiết kế lại.",
+  "hints": [
+    "Mỗi giây bao nhiêu sample, 13 tháng là bao nhiêu byte? Một tiến trình có giữ nổi 9 triệu series trong bộ nhớ không, và nó chết thì sao?",
+    "Histogram khoảng 70 series mỗi tổ hợp nhãn. Nhân thêm 5.000 giá trị `customer_id` thì được bao nhiêu series mỗi pod?",
+    "4 TB log mỗi ngày, 90 ngày, thêm replica: bao nhiêu TB SSD? Có cần index mọi từ của mọi dòng không?",
+    "Cluster chính sập thì ai gửi alert báo cluster chính sập?"
+  ],
+  "solution": "**Vì sao bản đầu không được**: 6.000 × 1.500 là 9 triệu series, 600.000 sample/s. Ở 1,5–3 byte mỗi sample là 80–160 GB mỗi ngày, 13 tháng 30–60 TB trên đĩa của một máy. Bộ nhớ theo số series, cỡ vài KB mỗi series: 9 triệu series là hàng chục GB RAM, restart phải phát lại WAL nhiều phút, và một tiến trình là điểm lỗi duy nhất: nó chết là mất cả giám sát lẫn dữ liệu. Scrape từ xa qua cluster khác thêm độ trễ và lỗi mạng thành lỗ hổng dữ liệu. Nhãn `customer_id`: 20 URI × 4 mã trạng thái × 70 series bucket × 5.000 khách là 28 triệu series mỗi pod. Elasticsearch: 4 TB/ngày × 90 ngày × 2 bản là khoảng 720 TB SSD nếu index cỡ bằng dữ liệu thô. Agent gửi thẳng: Elasticsearch chậm thì buffer của agent đầy, agent tụt sau tốc độ kubelet xoay file log của container (mặc định 10 MiB × 5 file) và log mất. Downsampling của Thanos không giảm chỗ (thêm block 5 phút và 1 giờ). Hệ giám sát trong cluster chính chết cùng với nó.\n\n**Metric**: mỗi cluster một cặp Prometheus HA ở chế độ server (cần chạy recording rule tại chỗ; chế độ agent nhẹ hơn nhưng không chạy rule) scrape tại chỗ, `sample_limit` cho từng target, relabel bỏ metric thừa; remote write về Mimir trung tâm ở một cụm riêng. Distributor khử trùng lặp cặp HA theo nhãn cluster và replica, chia series theo hash ring, 3 bản theo 3 zone, giới hạn series theo tenant (mỗi team một tenant). 9 triệu series × 3 bản là 27 triệu series trong bộ nhớ ingester; theo tài liệu định cỡ của Mimir (1 core, 2,5 GB RAM mỗi 300.000 series) là khoảng 90 core và 225 GB RAM, chia cho nhiều ingester. Distributor nhận gấp đôi vì cặp HA: 1,2 triệu sample/s. Block 2 giờ lên object storage; query frontend chia theo ngày và cache.\n\n**Giữ lâu mà rẻ**: retention của Mimir đặt theo tenant, không theo series. Chọn vài chục metric cần so theo mùa (lưu lượng, lỗi, latency, dung lượng); recording rule ở Prometheus mỗi cluster gộp bỏ `pod` và `instance` (`sum by (service, route, status)`), remote write thứ hai với `write_relabel_configs` chỉ gửi series `service:...` sang tenant `longterm` giữ 13 tháng; các tenant gốc giữ 30 ngày. Bỏ `pod` chỉ giảm khoảng 15 lần (15 pod mỗi service); chỉ giữ vài chục metric thay vì 1.500 series mỗi pod mới giảm hàng trăm lần. Nếu dùng Thanos thì retention theo độ phân giải chứ không theo metric, và downsampling chỉ để xem 13 tháng cho nhanh, đừng tính nó vào tiết kiệm.\n\n**SLA từng khách**: không nhân histogram theo khách. Gateway đếm request theo `customer_id` và `slo` = `good`/`bad` (nhanh hơn 300 ms và không lỗi 5xx): 20 pod gateway × 5.000 khách × 2 là 200.000 series, recording rule bỏ `pod` còn 10.000. Báo cáo chi tiết (khách nào chậm ở URI nào) đọc từ access log trong kho theo cột (ClickHouse, Doris), không từ metric.\n\n**Log**: agent trên node tail file log của container, buffer đĩa vài GB, gửi vào Kafka (partition theo tenant cộng hash, giữ 24 giờ: đỉnh 78 MB/s, 24 giờ × 3 bản khoảng 12 TB nếu chưa nén, nén ở producer thì ít hơn nhiều). Consumer (Alloy hay Vector) đọc Kafka rồi đẩy vào Loki; nhãn chỉ gồm cluster, namespace, service, level; `trace_id` và `customer_id` nằm trong structured metadata. Giảm từ nguồn: bỏ log health check, tắt DEBUG trên production, lấy mẫu 10% INFO của request thành công, giữ mọi WARN và ERROR. Kể cả không giảm: gzip nén khoảng 7 lần còn khoảng 580 GB mỗi ngày, 90 ngày khoảng 52 TB trên object storage, cỡ 1.200 USD mỗi tháng ở giá S3 Standard niêm yết khoảng 0,023 USD/GB-tháng; dùng snappy cho nhanh thì có thể gấp đôi. Log audit và bảo mật cần tìm nhanh theo mọi trường thì đi nhánh riêng vào Elasticsearch, 30 ngày nóng rồi snapshot sang object storage.\n\n**Giám sát hệ giám sát**: Prometheus nhỏ ở tài khoản khác theo dõi Mimir, Loki, lag Kafka, tỉ lệ remote write thất bại, số series theo tenant. Alert dead man's switch luôn bật gửi tới dịch vụ ngoài; ngừng nhận là gọi người. Alertmanager chạy 3 bản thành cụm, Prometheus gửi alert tới cả 3 chứ không qua load balancer.\n\n**Theo dõi chi phí**: series theo tenant, byte log theo service mỗi ngày, gửi báo cáo cho từng team; team vượt tốc độ ghi bị 429 (Prometheus retry), vượt số series thì series mới bị từ chối; cả hai chỉ ở tenant của team đó, không ảnh hưởng team khác.",
+  "tradeoffs": [
+    {
+      "option": "Prometheus mỗi cluster + Mimir trung tâm qua remote write",
+      "pros": [
+        "Dữ liệu mới có ở trung tâm sau vài giây, query toàn cục một chỗ",
+        "Giới hạn và cô lập theo tenant"
+      ],
+      "cons": [
+        "Thêm một hệ phân tán phải vận hành (ring, ingester, compactor)",
+        "Lưu lượng mạng liên cluster liên tục"
+      ]
+    },
+    {
+      "option": "Thanos sidecar tải block lên object storage",
+      "pros": [
+        "Không cần remote write, Prometheus vẫn như cũ",
+        "Có downsampling cho khoảng dài"
+      ],
+      "cons": [
+        "2 giờ gần nhất chỉ nằm ở Prometheus, query phải hỏi từng nơi",
+        "Mỗi Prometheus vẫn phải giữ nổi series của cluster mình"
+      ]
+    },
+    {
+      "option": "Loki: chỉ index nhãn, chunk nén trên object storage",
+      "pros": [
+        "Rẻ, lưu lâu được, ít vận hành hơn",
+        "Lọc theo nhãn rồi quét nhanh trong khoảng thời gian hẹp"
+      ],
+      "cons": [
+        "Tìm một id trong 90 ngày mà không có nhãn hẹp thì phải quét nhiều",
+        "Nhãn sai là nổ stream"
+      ]
+    },
+    {
+      "option": "Elasticsearch: index mọi trường",
+      "pros": [
+        "Tìm theo bất kỳ trường hay từ nào gần như tức thì",
+        "Mạnh cho điều tra bảo mật và audit"
+      ],
+      "cons": [
+        "Tốn đĩa và bộ nhớ gấp nhiều lần, thêm replica",
+        "Vận hành shard, mapping, ILM phức tạp"
+      ]
+    }
+  ]
+}

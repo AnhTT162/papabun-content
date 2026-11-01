@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường đi của metric và log",
+  "nodes": [
+    { "id": "pod", "label": "Pod ứng dụng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "agent", "label": "Prometheus, log agent", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "kafka", "label": "Kafka", "kind": "queue", "x": 0.1, "y": 0.5 },
+    { "id": "ingester", "label": "Ingester", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "query", "label": "Query + Grafana", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "s3", "label": "Object storage", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "pod-agent", "from": "pod", "to": "agent", "label": "scrape, stdout" },
+    { "id": "agent-ingester", "from": "agent", "to": "ingester", "label": "remote write" },
+    { "id": "agent-kafka", "from": "agent", "to": "kafka", "label": "log, buffer đĩa" },
+    { "id": "kafka-ingester", "from": "kafka", "to": "ingester", "label": "consumer đẩy vào" },
+    { "id": "ingester-s3", "from": "ingester", "to": "s3", "label": "block 2 giờ" },
+    { "id": "query-ingester", "from": "query", "to": "ingester", "label": "dữ liệu mới" },
+    { "id": "query-s3", "from": "query", "to": "s3", "label": "dữ liệu cũ" }
+  ],
+  "steps": [
+    {
+      "caption": "Prometheus mỗi cluster scrape /metrics mỗi 15 giây; log agent trên mỗi node tail file log mà container runtime ghi từ stdout. Cardinality bị chặn ngay ở đây bằng sample_limit và relabel.",
+      "show": ["pod", "agent", "pod-agent"],
+      "highlight": ["pod-agent"]
+    },
+    {
+      "caption": "Metric đi remote write: đọc từ WAL, gửi theo lô, retry khi kho trung tâm lỗi. Distributor chia series theo hash ring, ghi 3 bản, đủ 2 là xong.",
+      "show": ["ingester", "agent-ingester"],
+      "highlight": ["agent-ingester"]
+    },
+    {
+      "caption": "Log đi qua Kafka để chịu đỉnh và sự cố của kho log. Agent có buffer đĩa; agent tụt sau tốc độ xoay file log thì mất log. Consumer đọc Kafka rồi đẩy vào kho log.",
+      "show": ["kafka", "agent-kafka", "kafka-ingester"],
+      "highlight": ["agent-kafka", "kafka-ingester"]
+    },
+    {
+      "caption": "Ingester giữ dữ liệu gần nhất trong bộ nhớ và WAL, mỗi 2 giờ ghi block hay chunk nén lên object storage. Compactor gộp block và bỏ bản trùng.",
+      "show": ["s3", "ingester-s3"],
+      "highlight": ["ingester-s3"]
+    },
+    {
+      "caption": "Query đọc vài giờ gần nhất từ ingester, phần cũ từ object storage. Query dài được chia theo ngày và cache; series đã gộp bằng recording rule giữ lâu hơn series gốc.",
+      "show": ["query", "query-ingester", "query-s3"],
+      "highlight": ["query-ingester", "query-s3"]
+    }
+  ]
+}

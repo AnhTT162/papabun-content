@@ -402,7 +402,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 17 | `design-payment` | Thiết kế hệ thống thanh toán | architect | Idempotency, sổ cái kép, đối soát, trạng thái | L D Sc | ✅ |
 | 18 | `design-flash-sale` | Thiết kế flash sale / bán vé | architect | Chống bán vượt tồn kho, hàng đợi, giữ chỗ có thời hạn | L D Sc | ✅ |
 | 19 | `design-ride-hailing` | Thiết kế ứng dụng gọi xe | architect | Geo index (geohash, quadtree), ghép cặp, cập nhật vị trí | L D Sc | ✅ |
-| 20 | `design-metrics-logging` | Thiết kế hệ thống metric/log | architect | Time-series, ingestion, downsampling, chi phí lưu trữ | L D Sc | ⬜ |
+| 20 | `design-metrics-logging` | Thiết kế hệ thống metric/log | architect | Time-series, ingestion, downsampling, chi phí lưu trữ | L D Sc | ✅ |
 
 ### 15. Solution Architect (`solution-architect`)
 
