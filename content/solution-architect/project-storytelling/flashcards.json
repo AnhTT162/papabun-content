@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "project-five-parts", "front": "Năm phần của câu trả lời \"kể về dự án\" là gì?", "back": "Bối cảnh (bài toán, quy mô), vai trò của bạn, kiến trúc trong một câu, một hai quyết định khó có phương án bị loại, kết quả có số và bài học." },
+    { "id": "star", "front": "STAR là gì và phần nào dài nhất?", "back": "Situation, Task, Action, Result. Action (bạn làm gì, vì sao) chiếm khoảng một nửa thời gian; Situation nên ngắn." },
+    { "id": "i-vs-we", "front": "Khi nào dùng \"tôi\", khi nào dùng \"chúng tôi\"?", "back": "\"Chúng tôi\" cho bối cảnh và kết quả của team, \"tôi\" cho việc chính bạn làm. Người phỏng vấn chấm phần \"tôi\"." },
+    { "id": "three-levels", "front": "Đào sâu ba tầng là gì và chuẩn bị thế nào?", "back": "Chuỗi câu hỏi: vì sao chọn X, X hỏng thì sao, đã kiểm tra thế nào. Với mỗi quyết định trong câu chuyện, tự trả lời trước đủ ba tầng." },
+    { "id": "story-bank", "front": "Kho câu chuyện gồm gì?", "back": "Sáu tới tám câu chuyện thật, mỗi câu đánh dấu dùng được cho loại câu hỏi nào: xung đột, thất bại, thời hạn gấp, sự cố, thuyết phục stakeholder." },
+    { "id": "conflict-goal", "front": "Câu hỏi về xung đột muốn thấy điều gì?", "back": "Bạn tìm hiểu lý do của bên kia, đưa bất đồng về dữ liệu, chấp nhận kết quả kể cả khi không thắng. Không biến đồng nghiệp thành người xấu." },
+    { "id": "failure-goal", "front": "Câu chuyện thất bại tốt cần có gì?", "back": "Một sai lầm thật do bạn gây ra hoặc góp phần, cách phát hiện và khắc phục, và thay đổi cụ thể (test, cảnh báo, quy trình) để không lặp lại." },
+    { "id": "confidential", "front": "Giữ bí mật công ty khi kể dự án thế nào?", "back": "Không nêu tên khách hàng, doanh thu, chi tiết bảo mật. Mô tả domain chung, dùng bậc độ lớn, và nói thẳng phần nào không chia sẻ được." }
+  ]
+}

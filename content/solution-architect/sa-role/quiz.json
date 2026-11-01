@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "who-decides",
+      "kind": "single",
+      "prompt": "Dự án mới gồm ba team. Quyết định nào SA nên trực tiếp dẫn dắt, thay vì để từng team tự quyết?",
+      "options": [
+        "Các service chia sẻ hay tách database",
+        "Thư viện log dùng trong từng service",
+        "Cấu trúc package bên trong mỗi service",
+        "Quy ước đặt tên test của từng team"
+      ],
+      "answer": 0,
+      "explanation": "Chia sẻ hay tách database ảnh hưởng tới nhiều team và rất tốn để đổi sau khi đã có dữ liệu production: đó là quyết định một chiều, cần so phương án và ghi ADR. Thư viện log, cấu trúc package, quy ước test là quyết định hai chiều trong phạm vi một team, đổi rẻ; SA quyết thay sẽ làm chậm team và thành nút cổ chai."
+    },
+    {
+      "id": "role-scope",
+      "kind": "single",
+      "prompt": "Công ty muốn chuẩn hoá: mọi hệ thống mới dùng một nền tảng message chung và một nhà cung cấp danh tính, theo lộ trình ba năm. Vai nào thường sở hữu việc này?",
+      "options": [
+        "Enterprise architect của tổ chức",
+        "Solution architect của dự án gần nhất",
+        "Tech lead của team nền tảng hiện tại",
+        "Product owner của sản phẩm chính"
+      ],
+      "answer": 0,
+      "explanation": "Chuẩn công nghệ áp cho mọi hệ thống, tầm nhiều năm, là phạm vi của enterprise architect (thường qua review board và tech radar). SA của một dự án áp dụng chuẩn đó cho giải pháp của mình và phản hồi khi chuẩn không phù hợp. Tech lead team nền tảng có thể xây nền tảng, nhưng không tự quyết chuẩn cho cả tổ chức. Product owner lo giá trị sản phẩm, không lo chuẩn kỹ thuật."
+    },
+    {
+      "id": "ivory-tower-symptom",
+      "kind": "single",
+      "prompt": "Sau ba tháng, sơ đồ kiến trúc trên wiki ghi các service gọi nhau qua Kafka, nhưng code thật gọi REST đồng bộ ở nhiều chỗ. Nguyên nhân gốc hay gặp nhất là gì?",
+      "options": [
+        "SA không theo sát khi team xây và không cập nhật",
+        "Team chưa đủ kỹ năng để làm theo bản vẽ Kafka",
+        "Wiki không đủ tốt, cần công cụ vẽ chuyên dụng",
+        "Chưa có quy ước đặt tên chuẩn cho các topic Kafka"
+      ],
+      "answer": 0,
+      "explanation": "Đây là triệu chứng kinh điển của kiến trúc sư tháp ngà: bản vẽ giao xuống, team gặp vướng (cần trả lời ngay, khó xử lý lỗi bất đồng bộ) và tự đổi, không ai cập nhật quyết định. Kỹ năng team có thể góp phần, nhưng nguyên nhân gốc là không có vòng phản hồi giữa kiến trúc và code thật. Công cụ vẽ hay quy ước đặt tên topic không giải thích vì sao không ai phát hiện sớm. Cách đúng là ngồi cùng team giai đoạn đầu, nhận phản hồi từ code thật, và ghi ADR mới khi quyết định đổi."
+    },
+    {
+      "id": "sa-success-metric",
+      "kind": "single",
+      "prompt": "Dấu hiệu nào nói SA của một chương trình đang làm tốt việc?",
+      "options": [
+        "Yêu cầu phi chức năng đạt khi đo thật, chi phí đúng dự toán",
+        "Có sơ đồ chi tiết cho mọi service, mọi bảng và mọi luồng",
+        "Mọi pull request của các team đều chờ SA duyệt rồi mới merge",
+        "Dùng công nghệ mới nhất ở mọi lớp của toàn bộ hệ thống"
+      ],
+      "answer": 0,
+      "explanation": "Hiệu quả của SA đo bằng kết quả của giải pháp: yêu cầu phi chức năng đạt, chi phí chạy đúng dự toán, các team giao song song. Sơ đồ chi tiết không đảm bảo hệ thống đúng. SA duyệt mọi pull request là nút cổ chai. Công nghệ mới nhất không phải mục tiêu và thường thêm chi phí vận hành."
+    }
+  ]
+}

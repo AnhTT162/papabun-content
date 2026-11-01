@@ -408,8 +408,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `sa-role` | Vai trò Solution Architect | foundation | Khác tech lead và enterprise architect, công việc hằng ngày, làm việc với stakeholder | A L | ⬜ |
-| 2 | `project-storytelling` | ✚ Kể về dự án & câu hỏi hành vi | junior | Kể dự án theo bối cảnh → vai trò → quyết định → kết quả, STAR, câu hỏi về xung đột và thất bại | L Sc | ⬜ |
+| 1 | `sa-role` | Vai trò Solution Architect | foundation | Khác tech lead và enterprise architect, công việc hằng ngày, làm việc với stakeholder | A L | ✅ |
+| 2 | `project-storytelling` | ✚ Kể về dự án & câu hỏi hành vi | junior | Kể dự án theo bối cảnh → vai trò → quyết định → kết quả, STAR, câu hỏi về xung đột và thất bại | L Sc | ✅ |
 | 3 | `tech-lead-role` | ✚ Vai trò Tech Lead | mid | Code review, mentoring, ước lượng, giao việc, dẫn dắt sự cố, ưu tiên nợ kỹ thuật | A L Sc | ⬜ |
 | 4 | `adr-c4` | ADR, C4 model & tài liệu kiến trúc | mid | Viết ADR, các mức C4, arc42, sequence diagram | L D B | ⬜ |
 | 5 | `nfr-quality-attributes` | NFR & quality attribute | mid | Định lượng NFR, quality attribute scenario, utility tree | L Sc | ⬜ |

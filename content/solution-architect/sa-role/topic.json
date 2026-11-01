@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sa-role",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Vai trò Solution Architect",
+  "summary": "Solution architect khác enterprise architect và tech lead ở phạm vi và tầm thời gian; việc chính là các quyết định khó đảo ngược, làm việc với nhiều stakeholder, và những bẫy như kiến trúc sư tháp ngà hay ôm code đường găng.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 10,
+  "prerequisites": ["sd-framework"],
+  "terms": ["solution-architect", "enterprise-architect", "tech-lead", "stakeholder", "non-functional-requirement", "adr", "proof-of-concept", "rfp", "raci"],
+  "references": [
+    { "title": "Martin Fowler: Who Needs an Architect? (IEEE Software)", "url": "https://martinfowler.com/ieeeSoftware/whoNeedsArchitect.pdf" },
+    { "title": "Gregor Hohpe: The Software Architect Elevator", "url": "https://architectelevator.com/" },
+    { "title": "StaffEng: Staff engineer archetypes", "url": "https://staffeng.com/guides/staff-archetypes/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team không đồng ý với kiến trúc anh đề xuất thì anh làm gì?\" Đừng trả lời \"tôi là architect nên tôi quyết\". Hỏi lý do của họ trước: thường họ thấy một giới hạn trong code mà bạn chưa thấy. Đưa bất đồng về dữ liệu (một PoC có thời hạn, một phép đo, một bảng so phương án), thống nhất ai có quyền quyết cuối cùng, rồi ghi ADR có cả phương án bị loại và lý do. Đã quyết thì mọi người cùng làm theo, kể cả người không đồng ý, và hẹn điều kiện để xem lại." },
+    { "type": "callout", "style": "warning", "markdown": "Chức danh không nói lên phạm vi. Có nơi \"Solution Architect\" là pre-sales viết đề xuất cho khách, có nơi là senior developer kiêm thiết kế cho một team, có nơi là người chịu cả một chương trình nhiều team. Trước khi nhận việc hay vào phỏng vấn, hỏi: quyết định nào thuộc quyền của vị trí này, làm việc với những ai, và thành công được đo bằng gì." },
+    { "type": "callout", "style": "tip", "markdown": "Tuần đầu của một giải pháp mới, viết một trang: danh sách stakeholder, mỗi người quan tâm điều gì, ai có quyền quyết điều gì. Trang này rẻ hơn rất nhiều so với việc phát hiện ra bộ phận bảo mật hay pháp lý lần đầu ở tuần trước go-live." }
+  ]
+}

@@ -5341,7 +5341,7 @@
       "meaning": "Số tăng dần được cấp kèm mỗi lần lấy khoá. Client gửi nó cùng mỗi lần ghi; storage nhớ token lớn nhất đã thấy và từ chối token nhỏ hơn, chặn người giữ khoá cũ đã hết hạn.",
       "example": "A giữ token 33 bị GC pause, B lấy khoá với token 34 và ghi; lần ghi muộn của A mang 33 bị storage từ chối.",
       "related": ["fencing", "distributed-lock", "lease"],
-      "topics": ["distributed-locks", "consensus", "design-job-scheduler"]
+      "topics": ["distributed-locks", "consensus", "design-job-scheduler", "project-storytelling"]
     },
     {
       "id": "redlock",
@@ -8717,7 +8717,7 @@
       "meaning": "Yêu cầu phi chức năng: hệ thống phải tốt tới mức nào, như quy mô, latency, availability, độ nhất quán, bảo mật, chi phí. Phải có số đo được.",
       "example": "p99 đọc dưới 200 ms, availability 99,9%, chịu 1 triệu ghi mỗi ngày.",
       "related": ["functional-requirement", "availability", "slo"],
-      "topics": ["sd-framework"]
+      "topics": ["sd-framework", "sa-role"]
     },
     {
       "id": "back-of-envelope-estimation",
@@ -8885,7 +8885,7 @@
       "meaning": "Ràng buộc của database bắt một cột hay một nhóm cột không được trùng giữa các dòng. Kiểm tra nằm trong lúc ghi nên không có race như \"SELECT rồi INSERT\".",
       "example": "`INSERT INTO links (code, ...) VALUES (...) ON CONFLICT (code) DO NOTHING` trả 0 dòng nếu mã đã có.",
       "related": ["idempotency-key"],
-      "topics": ["design-url-shortener"]
+      "topics": ["design-url-shortener", "project-storytelling"]
     },
     {
       "id": "waf",
@@ -10070,6 +10070,102 @@
       "example": "Alert `Watchdog` với `expr: vector(1)` đi qua route có `repeat_interval` ngắn (ví dụ 1 phút) tới dịch vụ heartbeat; mặc định `repeat_interval` là 4 giờ, quá thưa cho việc này.",
       "related": ["runbook"],
       "topics": ["design-metrics-logging"]
+    },
+    {
+      "id": "solution-architect",
+      "term": "Solution architect",
+      "meaning": "Người chịu trách nhiệm giải pháp kỹ thuật cho một bài toán nghiệp vụ cụ thể, thường xuyên nhiều team và hệ thống: biến yêu cầu và ràng buộc thành kiến trúc làm được, ghi lý do các quyết định và theo tới khi chạy.",
+      "example": "Dẫn thiết kế hệ thống đặt lịch mới: chốt yêu cầu phi chức năng, chọn database, viết ADR, ước lượng chi phí cloud, làm việc với ba team xây.",
+      "related": ["enterprise-architect", "tech-lead", "stakeholder"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "enterprise-architect",
+      "term": "Enterprise architect",
+      "meaning": "Kiến trúc sư ở mức cả tổ chức, tầm nhiều năm: danh mục hệ thống, chuẩn công nghệ, lộ trình, governance qua review board.",
+      "example": "Quyết định mọi hệ thống mới dùng chung một nhà cung cấp danh tính và một nền tảng message theo lộ trình ba năm.",
+      "related": ["solution-architect"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "tech-lead",
+      "term": "Tech lead",
+      "meaning": "Người dẫn dắt kỹ thuật của một team, theo nhịp sprint tới vài quý: thiết kế chi tiết, chia việc, review code, gỡ vướng, chịu trách nhiệm chất lượng phần team giao.",
+      "example": "Tech lead team Booking chia story cho năm người, review PR thay đổi schema và tự làm PoC phần khoá slot.",
+      "related": ["solution-architect"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "stakeholder",
+      "term": "Stakeholder",
+      "meaning": "Người hoặc nhóm có quyền lợi hay ảnh hưởng tới một hệ thống: business, người dùng, team dev, vận hành, bảo mật, pháp lý, tài chính. Mỗi nhóm quan tâm một điều khác nhau.",
+      "example": "Tài chính hỏi chi phí mỗi tháng, bộ phận bảo mật hỏi dữ liệu nằm ở vùng nào, team vận hành hỏi ai trực sự cố.",
+      "related": ["solution-architect", "raci"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "adr",
+      "term": "ADR",
+      "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
+      "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
+      "related": ["solution-architect"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "proof-of-concept",
+      "term": "PoC",
+      "meaning": "Proof of concept: bản thử nhỏ, có thời hạn, để kiểm chứng một giả định kỹ thuật rủi ro trước khi cam kết vào thiết kế.",
+      "example": "Hai ngày dựng thử luồng CDC từ PostgreSQL sang kho báo cáo để đo độ trễ trước khi chọn kiến trúc.",
+      "related": ["adr"],
+      "topics": ["sa-role", "project-storytelling"]
+    },
+    {
+      "id": "rfp",
+      "term": "RFP",
+      "meaning": "Request for Proposal: hồ sơ mời thầu khách hàng gửi các nhà cung cấp, nêu yêu cầu để họ gửi đề xuất giải pháp, ước lượng và giá.",
+      "example": "Ngân hàng gửi RFP xây cổng thanh toán; SA pre-sales đọc yêu cầu, viết kiến trúc đề xuất và ước lượng công sức.",
+      "related": ["solution-architect"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "raci",
+      "term": "RACI",
+      "meaning": "Bảng phân vai cho từng quyết định hay công việc: Responsible (người làm), Accountable (người chịu trách nhiệm cuối, chỉ một), Consulted (người được hỏi ý kiến), Informed (người được báo).",
+      "example": "Chọn database chính: SA là A, tech lead các team là C, bộ phận vận hành là C, product owner là I.",
+      "related": ["stakeholder"],
+      "topics": ["sa-role"]
+    },
+    {
+      "id": "behavioral-interview",
+      "term": "Behavioral interview",
+      "meaning": "Phỏng vấn hành vi: hỏi về việc bạn đã thật sự làm trong quá khứ để dự đoán cách bạn làm việc sau này, chấm theo bảng tiêu chí.",
+      "example": "\"Kể một lần bạn phải ra quyết định khi thiếu dữ liệu. Bạn đã làm gì và kết quả ra sao?\"",
+      "related": ["star-method"],
+      "topics": ["project-storytelling"]
+    },
+    {
+      "id": "star-method",
+      "term": "STAR",
+      "meaning": "Khung kể câu chuyện hành vi: Situation (bối cảnh), Task (trách nhiệm của bạn), Action (bạn làm gì, vì sao), Result (kết quả có số). Action chiếm phần lớn thời gian.",
+      "example": "S: slot bị đặt trùng mỗi tuần. T: tôi chọn cách sửa. A: đo ba phương án trên staging. R: mười hai tuần không còn trùng.",
+      "related": ["behavioral-interview"],
+      "topics": ["project-storytelling"]
+    },
+    {
+      "id": "ownership",
+      "term": "Ownership",
+      "meaning": "Tinh thần tự chịu trách nhiệm về kết quả, kể cả phần ngoài nhiệm vụ được giao, thay vì đẩy cho người khác. Không có nghĩa là tự làm hết mọi việc.",
+      "example": "Thấy cảnh báo của service khác kêu suốt đêm, bạn báo team đó và theo tới khi sửa xong thay vì tắt cảnh báo.",
+      "related": ["behavioral-interview"],
+      "topics": ["project-storytelling"]
+    },
+    {
+      "id": "disagree-and-commit",
+      "term": "Disagree and commit",
+      "meaning": "Nói rõ bất đồng khi đang bàn, nhưng khi đã quyết thì cam kết làm theo hết sức, kể cả khi không đồng ý.",
+      "example": "Anh B muốn dùng Redis lock, team chọn ràng buộc database; anh B ghi lý do vào ADR rồi vẫn viết phần cache thật tốt và hẹn điều kiện xem lại.",
+      "related": ["behavioral-interview"],
+      "topics": ["project-storytelling"]
     }
   ]
 }

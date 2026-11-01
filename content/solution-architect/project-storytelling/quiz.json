@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "best-opening",
+      "kind": "single",
+      "prompt": "Câu mở đầu nào tốt nhất cho câu trả lời \"Kể về dự án gần nhất của bạn\"?",
+      "options": [
+        "Hệ thống bán vé cho vài triệu khách, khó nhất là giờ mở bán",
+        "Dự án dùng Spring Boot, Kafka, Redis, Kubernetes và Istio",
+        "Team có 30 người chia 5 nhóm, tôi ở nhóm thứ ba trong đó",
+        "Dự án kéo dài ba năm, trải qua bốn đợt thay đổi kiến trúc"
+      ],
+      "answer": 0,
+      "explanation": "Câu mở đầu tốt cho người nghe biết bài toán, cho ai, quy mô cỡ nào và chỗ khó, để mọi chi tiết sau có chỗ bám vào. Danh sách công nghệ không nói hệ thống giải bài toán gì. Cơ cấu team và thời gian dự án là bối cảnh phụ, nên đến sau, khi nói vai trò của bạn."
+    },
+    {
+      "id": "conflict-answer",
+      "kind": "single",
+      "prompt": "Câu hỏi: \"Kể một lần bạn bất đồng với đồng nghiệp về kỹ thuật.\" Kết thúc nào cho thấy rõ nhất điều người phỏng vấn muốn chấm?",
+      "options": [
+        "Đo cả hai cách, chọn theo số đo, giữ phần đúng của đồng nghiệp",
+        "Giải thích nhiều lần đến khi đồng nghiệp đồng ý làm theo tôi",
+        "Báo lên manager để manager quyết định, tránh mất thời gian",
+        "Làm theo cách của đồng nghiệp để giữ hoà khí trong cả team"
+      ],
+      "answer": 0,
+      "explanation": "Người phỏng vấn muốn thấy bạn hiểu lý do của bên kia, đưa bất đồng về dữ liệu và đi tới quyết định mà cả hai chấp nhận. Thuyết phục đến khi người kia chịu cho thấy bạn không nghe. Đẩy ngay lên manager bỏ qua phần tự giải quyết. Nhượng bộ để giữ hoà khí mà không có lý do kỹ thuật cho thấy bạn né tránh vấn đề, chưa phải disagree and commit."
+    },
+    {
+      "id": "failure-story",
+      "kind": "single",
+      "prompt": "Câu chuyện nào phù hợp nhất cho câu hỏi \"Kể về một thất bại của bạn\"?",
+      "options": [
+        "Migration tôi viết khoá bảng 20 phút; tôi thêm review và test",
+        "Tôi quá cầu toàn nên đôi khi review code của team hơi lâu",
+        "Team khác đổi API không báo trước nên service của tôi lỗi",
+        "Dự án bị huỷ vì business đổi hướng dù team đã làm rất tốt"
+      ],
+      "answer": 0,
+      "explanation": "Câu chuyện tốt là sai lầm thật của chính bạn, có hậu quả thật, kèm thay đổi cụ thể để không lặp lại. \"Quá cầu toàn\" là thất bại giả, người phỏng vấn nhận ra ngay. Lỗi của team khác và dự án bị huỷ không phải thất bại của bạn, nên không cho thấy bạn nhận trách nhiệm và học được gì."
+    },
+    {
+      "id": "deep-probe",
+      "kind": "single",
+      "prompt": "Bạn kể đã sửa lỗi đặt trùng bằng Redis lock. Câu hỏi tầng ba nào người phỏng vấn hay hỏi nhất?",
+      "options": [
+        "Lock hết hạn khi request chậm thì anh kiểm tra thế nào?",
+        "Vì sao anh chọn Redis thay vì Memcached cho việc này?",
+        "Anh dùng client Redis nào, Lettuce hay Jedis, vì sao?",
+        "Anh đặt thời hạn lock là bao nhiêu giây cho mỗi slot?"
+      ],
+      "answer": 0,
+      "explanation": "Đào sâu đi từ quyết định (vì sao Redis lock) tới cách nó hỏng (lock hết hạn, Redis failover) rồi tới cách bạn kiểm chứng. Câu này phân biệt người thật sự làm với người chỉ biết tên công nghệ. So Redis với Memcached là câu tầng một về chọn công cụ; client nào hay thời hạn bao nhiêu giây là chi tiết cấu hình, chưa chạm tới việc lock có thể hỏng và bạn đã kiểm chứng ra sao."
+    }
+  ]
+}

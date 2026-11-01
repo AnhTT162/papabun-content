@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "project-storytelling",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Kể về dự án & câu hỏi hành vi",
+  "summary": "Kể dự án theo bối cảnh, vai trò, kiến trúc, quyết định khó, kết quả; trả lời câu hỏi hành vi theo STAR; chuẩn bị cho câu hỏi đào sâu ba tầng, câu hỏi về xung đột và thất bại, và giữ bí mật của công ty.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["sa-role"],
+  "terms": ["behavioral-interview", "star-method", "ownership", "disagree-and-commit", "unique-constraint", "fencing-token", "proof-of-concept"],
+  "references": [
+    { "title": "AWS Careers: How we hire (behavior-based questions, STAR)", "url": "https://aws.amazon.com/careers/how-we-hire/" },
+    { "title": "Amazon Leadership Principles", "url": "https://www.amazon.jobs/content/en/our-workplace/leadership-principles" },
+    { "title": "Google re:Work: Use structured interviewing", "url": "https://rework.withgoogle.com/en/guides/hiring-use-structured-interviewing" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp sau khi bạn kể xong: \"Nếu làm lại từ đầu, anh sẽ làm khác điều gì?\" Đừng nói \"không có gì\" hay một câu chung chung. Chỉ ra một quyết định cụ thể, nói lúc đó bạn thiếu thông tin gì, và bây giờ bạn quyết khác ra sao. Ví dụ: \"Tôi sẽ đặt ràng buộc một slot một lịch hẹn ngay khi thiết kế bảng và có test đồng thời trong CI, vì lúc đầu tôi nghĩ tải thấp nên kiểm tra trong code là đủ.\"" },
+    { "type": "callout", "style": "warning", "markdown": "Đừng nói quá vai trò. Người phỏng vấn kỹ thuật hỏi sâu ba tầng (\"vì sao chọn X?\", \"X hỏng thì sao?\", \"anh đã kiểm tra thế nào?\") và nhận ra rất nhanh khi bạn kể việc người khác làm. Nói \"phần đó do team nền tảng làm, tôi chỉ dùng\" làm bạn đáng tin hơn, không kém đi." },
+    { "type": "callout", "style": "tip", "markdown": "Lập một bảng: hàng là sáu tới tám câu chuyện thật, cột là loại câu hỏi (xung đột, thất bại, thời hạn gấp, sự cố production, thuyết phục stakeholder, quyết định khi thiếu dữ liệu). Đánh dấu ô nào câu chuyện dùng được. Khi bị hỏi, bạn chọn trong bảng thay vì nghĩ từ đầu. Số liệu thật của dự án giữ trong tính năng \"Dự án của tôi\" của app, không đưa vào ghi chú công khai." }
+  ]
+}

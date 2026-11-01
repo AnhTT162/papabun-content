@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-roles", "front": "Enterprise architect, solution architect, tech lead khác nhau ở đâu?", "back": "Ở phạm vi và tầm thời gian: EA lo cả tổ chức trong nhiều năm, SA lo một giải pháp xuyên team trong vài tháng tới một năm, tech lead lo một team theo nhịp sprint tới vài quý." },
+    { "id": "sa-focus", "front": "SA nên dành thời gian cho loại quyết định nào?", "back": "Quyết định khó đảo ngược (một chiều): ranh giới service, database chính, mô hình dữ liệu, mô hình tenant, vendor. Quyết định dễ đổi thì để team tự quyết." },
+    { "id": "sa-outputs", "front": "Đầu ra điển hình của SA cho một giải pháp là gì?", "back": "Kiến trúc có sơ đồ theo người nghe, yêu cầu phi chức năng có số, ADR cho các quyết định chính, ước lượng chi phí, danh sách rủi ro và PoC cho phần chưa chắc." },
+    { "id": "ivory-tower", "front": "Kiến trúc sư tháp ngà là gì và triệu chứng ra sao?", "back": "Vẽ xong giao xuống rồi rời đi. Triệu chứng: team âm thầm làm khác bản vẽ, sơ đồ lỗi thời, sự cố lặp lại ở cùng một ranh giới." },
+    { "id": "sa-code", "front": "SA có nên còn code không?", "back": "Nên đọc code và viết PoC để quyết định sát thực tế, nhưng không nhận task trên đường găng của sprint vì sẽ thành nút cổ chai." },
+    { "id": "stakeholder-map", "front": "Vì sao phải lập danh sách stakeholder ngay từ đầu?", "back": "Mỗi nhóm hỏi một điều khác (giá trị, chi phí, vận hành, bảo mật). Nhóm bị quên thường xuất hiện sát go-live với yêu cầu chặn cả dự án." },
+    { "id": "presales-sa", "front": "SA pre-sales làm gì khác SA giao hàng?", "back": "Đọc RFP, viết đề xuất, ước lượng công sức và chi phí, làm PoC để thắng hợp đồng, rồi bàn giao cho team giao hàng. Ước lượng sai thành lỗ của cả dự án." },
+    { "id": "sa-success", "front": "Đo hiệu quả của SA bằng gì?", "back": "Bằng kết quả: yêu cầu phi chức năng đạt khi đo thật, chi phí trong dự toán, các team ít chặn nhau, quyết định có ADR, sự cố không lặp vì cùng một lỗi kiến trúc." }
+  ]
+}
