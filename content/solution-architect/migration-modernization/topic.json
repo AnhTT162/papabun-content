@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "migration-modernization",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Migration & hiện đại hoá",
+  "summary": "Đánh giá danh mục theo 7 R, chuyển trước rồi hiện đại hoá sau khi có hạn chót, move group và bẫy hybrid, strangler fig và các pattern thay thế hệ thống cũ (divert the flow, event interception, legacy mimic, transitional architecture), parallel run, nguồn sự thật và đồng bộ ngược, full load + CDC, đối soát, bẫy Oracle sang PostgreSQL, cutover và điểm không quay lại.",
+  "level": "architect",
+  "order": 14,
+  "minutes": 18,
+  "prerequisites": ["refactoring-tech-debt", "modular-monolith", "outbox-cdc", "schema-migration", "integration-patterns"],
+  "terms": ["seven-rs", "rehost", "replatform", "repurchase", "move-group", "strangler-fig", "branch-by-abstraction", "event-interception", "legacy-mimic", "transitional-architecture", "feature-parity", "parallel-run", "reverse-replication", "point-of-no-return", "cdc", "dual-write", "outbox", "feature-flag", "reconciliation", "cutover", "savepoint", "anti-corruption-layer"],
+  "references": [
+    { "title": "AWS Prescriptive Guidance: About the migration strategies (7 Rs)", "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/large-migration-guide/migration-strategies.html" },
+    { "title": "Martin Fowler: Strangler Fig Application", "url": "https://martinfowler.com/bliki/StranglerFigApplication.html" },
+    { "title": "Ian Cartwright, Rob Horn, James Lewis: Patterns of Legacy Displacement", "url": "https://martinfowler.com/articles/patterns-legacy-displacement/" },
+    { "title": "AWS DMS: Best practices", "url": "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html" },
+    { "title": "Amazon RDS: Importing data into Oracle on Amazon RDS", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào thì viết lại từ đầu là đúng?\" Khi hệ thống nhỏ, dữ liệu ít, có thể dừng dịch vụ để chuyển, và quy tắc nghiệp vụ đã được hiểu rõ (có test hoặc tài liệu đúng). Ngoài ra, nền tảng cũ không còn chạy được (phần cứng hết hỗ trợ, ngôn ngữ không còn người biết) cũng là lý do; nhưng kể cả khi đó, vẫn chuyển từng phần theo strangler được thì nên chuyển từng phần." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để hai hệ thống cùng nhận ghi một loại dữ liệu rồi định \"merge sau\". Ở mỗi thời điểm, mỗi loại dữ liệu chỉ có một nguồn sự thật; bên kia nhận bản sao qua CDC hoặc outbox. Ghi hai nơi từ ứng dụng thì một bên lỗi là lệch vĩnh viễn, và đối soát sẽ chỉ báo lệch chứ không biết bên nào đúng." },
+    { "type": "callout", "style": "tip", "markdown": "Chọn lát cắt strangler đầu tiên theo ba tiêu chí: có giá trị nghiệp vụ thấy được, ít dữ liệu dùng chung với phần còn lại, và chuyển dần được (theo chi nhánh, theo loại sản phẩm, theo ngày tạo). Chia theo ngày tạo, như hồ sơ mới vào hệ thống mới còn hồ sơ đang mở ở lại hệ thống cũ, giúp khỏi phải migrate dữ liệu dở dang." }
+  ]
+}

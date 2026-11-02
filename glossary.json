@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns", "reliability-sre"]
     },
     {
       "id": "hash-spreading",
@@ -1277,7 +1277,7 @@
       "meaning": "Điểm đánh dấu trong transaction để rollback một phần mà không huỷ cả transaction.",
       "example": "`SAVEPOINT s1; ... ROLLBACK TO s1;`",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "mvcc-vacuum"]
+      "topics": ["acid-transactions-basics", "mvcc-vacuum", "migration-modernization"]
     },
     {
       "id": "jdbc",
@@ -1365,7 +1365,7 @@
       "meaning": "Ghi cùng một thay đổi vào hai hệ thống (database và message broker, hai database) mà không có transaction chung; một bên thành công, bên kia lỗi thì dữ liệu lệch.",
       "example": "Commit đơn hàng xong nhưng gửi event lên Kafka lỗi: hệ thống khác không biết có đơn mới.",
       "related": ["transaction"],
-      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-job-scheduler"]
+      "topics": ["acid-transactions-basics", "views-procedures-triggers", "search-elasticsearch", "messaging-fundamentals", "cache-patterns", "rabbitmq", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "sd-building-blocks", "design-job-scheduler", "migration-modernization"]
     },
     {
       "id": "datasource",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns", "data-architecture"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns", "data-architecture", "migration-modernization"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization"]
     },
     {
       "id": "replication-slot",
@@ -4293,7 +4293,7 @@
       "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
       "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
       "related": ["adapter-pattern"],
-      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs", "integration-patterns"]
+      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs", "integration-patterns", "migration-modernization"]
     },
     {
       "id": "strategy-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns", "migration-modernization"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4421,7 +4421,7 @@
       "meaning": "Kỹ thuật thay một phần lớn trên nhánh chính: đặt interface trước cài đặt cũ, viết cài đặt mới, chuyển dần bằng feature flag rồi xoá bản cũ.",
       "example": "Interface `PriceEngine` có `LegacyPriceEngine` và `NewPriceEngine`; flag bật bản mới cho 5% đơn.",
       "related": ["strangler-fig"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "migration-modernization"]
     },
     {
       "id": "hotspot",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization"]
     },
     {
       "id": "dora-metrics",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment", "integration-patterns", "data-architecture"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment", "integration-patterns", "data-architecture", "migration-modernization"]
     },
     {
       "id": "jitter",
@@ -4845,7 +4845,7 @@
       "meaning": "Server tự từ chối sớm một phần request (thường `503` kèm `Retry-After`) khi quá tải, ưu tiên request quan trọng, để phần còn lại vẫn được phục vụ nhanh.",
       "example": "Đang xử lý quá 200 request thì trả `503` cho gợi ý sản phẩm nhưng vẫn nhận thanh toán.",
       "related": ["backpressure", "circuit-breaker"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "capacity-planning", "design-rate-limiter"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "capacity-planning", "design-rate-limiter", "reliability-sre"]
     },
     {
       "id": "retry-budget",
@@ -4853,7 +4853,7 @@
       "meaning": "Giới hạn tổng số retry theo tỉ lệ với số request (ví dụ không quá 10%), để retry không nhân tải lên một dependency đang quá tải.",
       "example": "Trong 10 giây có 1.000 request thì cho tối đa 100 lần retry; vượt thì trả lỗi ngay.",
       "related": ["retry-backoff", "jitter"],
-      "topics": ["resilience-patterns", "tail-latency"]
+      "topics": ["resilience-patterns", "tail-latency", "reliability-sre"]
     },
     {
       "id": "microservices",
@@ -4885,7 +4885,7 @@
       "meaning": "Trạng thái hỏng tự duy trì: sau khi nguyên nhân ban đầu đã hết, tải phát sinh (retry, timeout, hàng đợi dồn) vẫn giữ hệ thống quá tải cho tới khi có can thiệp.",
       "example": "Database hồi phục sau 30 giây, nhưng retry ở ba tầng giữ tải gấp 45 lần nên hệ thống vẫn sập thêm 40 phút.",
       "related": ["retry-budget", "load-shedding"],
-      "topics": ["resilience-patterns", "tail-latency"]
+      "topics": ["resilience-patterns", "tail-latency", "reliability-sre"]
     },
     {
       "id": "service-mesh",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre"]
     },
     {
       "id": "compensating-transaction",
@@ -5573,7 +5573,7 @@
       "meaning": "Chia hệ thống thành nhiều cell độc lập, mỗi cell đủ service và database cho một nhóm người dùng, để lỗi hay đợt triển khai hỏng chỉ ảnh hưởng một cell.",
       "example": "20 cell, mỗi cell phục vụ 5% tenant; bản deploy lỗi chỉ ra cell đầu tiên rồi bị dừng.",
       "related": ["active-active", "home-region"],
-      "topics": ["multi-region-active-active"]
+      "topics": ["multi-region-active-active", "reliability-sre"]
     },
     {
       "id": "latency",
@@ -5669,7 +5669,7 @@
       "meaning": "Phạm vi ảnh hưởng của một sự cố hay một thay đổi: bao nhiêu người dùng, endpoint, service, region bị ảnh hưởng.",
       "example": "Lỗi chỉ ở thanh toán thẻ của một provider, ví vẫn chạy.",
       "related": ["mitigation"],
-      "topics": ["troubleshooting-mindset", "security-architecture"]
+      "topics": ["troubleshooting-mindset", "security-architecture", "reliability-sre"]
     },
     {
       "id": "heap-dump",
@@ -5685,7 +5685,7 @@
       "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
       "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
       "related": ["mitigation", "postmortem"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre"]
     },
     {
       "id": "postmortem",
@@ -5693,7 +5693,7 @@
       "meaning": "Bản phân tích sau sự cố: dòng thời gian, ảnh hưởng, nguyên nhân và các yếu tố góp phần, hành động phòng ngừa có người phụ trách. Viết theo tinh thần không đổ lỗi cho cá nhân.",
       "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
       "related": ["runbook"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre"]
     },
     {
       "id": "distributed-tracing",
@@ -5741,7 +5741,7 @@
       "meaning": "Service Level Indicator: chỉ số đo chất lượng dịch vụ từ góc người dùng, thường là tỉ lệ sự kiện tốt trên tổng sự kiện.",
       "example": "Tỉ lệ `POST /checkout` không lỗi 5xx và nhanh hơn 1,5 giây, đo ở gateway.",
       "related": ["slo", "error-budget"],
-      "topics": ["observability", "nfr-quality-attributes"]
+      "topics": ["observability", "nfr-quality-attributes", "reliability-sre"]
     },
     {
       "id": "error-budget",
@@ -5749,7 +5749,7 @@
       "meaning": "Phần được phép hỏng theo SLO: 1 trừ mục tiêu SLO, tính trên cửa sổ thời gian. Dùng để alert và để quyết định nên đẩy tính năng hay ưu tiên độ ổn định.",
       "example": "SLO 99,9% trong 30 ngày: được hỏng 0,1% request, tương đương khoảng 43 phút.",
       "related": ["slo", "burn-rate"],
-      "topics": ["observability", "nfr-quality-attributes"]
+      "topics": ["observability", "nfr-quality-attributes", "reliability-sre"]
     },
     {
       "id": "burn-rate",
@@ -5757,7 +5757,7 @@
       "meaning": "Tốc độ tiêu error budget so với mức tiêu đều vừa hết budget đúng cuối cửa sổ SLO. Burn rate 1 là vừa đủ, 10 là cạn sau một phần mười thời gian.",
       "example": "SLO 99,9%, tỉ lệ lỗi 1%: burn rate 10, budget 30 ngày cạn sau 3 ngày.",
       "related": ["error-budget", "slo"],
-      "topics": ["observability"]
+      "topics": ["observability", "reliability-sre"]
     },
     {
       "id": "structured-logging",
@@ -10405,7 +10405,7 @@
       "meaning": "Service Level Agreement: cam kết về mức dịch vụ ghi trong hợp đồng, kèm hậu quả (thường là hoàn tiền) khi vi phạm. Thường lỏng hơn SLO nội bộ.",
       "example": "Cổng thanh toán cam kết 99,9% mỗi tháng, dưới mức đó hoàn 10% phí.",
       "related": ["slo", "sli", "error-budget"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "reliability-sre"]
     },
     {
       "id": "fitness-function",
@@ -10653,7 +10653,7 @@
       "meaning": "Giai đoạn chuyển từ hệ thống hoặc quy trình cũ sang mới khi go-live: chốt dữ liệu, migrate lần cuối, bật hệ thống mới, có kế hoạch quay lui.",
       "example": "Đêm go-live: dừng nhập điểm thủ công lúc 22 giờ, chạy migrate thành viên, mở app lúc 6 giờ, giữ quy trình cũ làm dự phòng một tuần.",
       "related": ["uat"],
-      "topics": ["requirements-estimation"]
+      "topics": ["requirements-estimation", "migration-modernization"]
     },
     {
       "id": "burn-up-chart",
@@ -11174,6 +11174,190 @@
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
       "topics": ["security-architecture"]
+    },
+    {
+      "id": "sre",
+      "term": "SRE",
+      "meaning": "Site reliability engineering: cách vận hành hệ thống bằng tư duy kỹ sư phần mềm, quản độ tin cậy bằng SLO và error budget, giới hạn việc vận hành thủ công để dành thời gian tự động hoá.",
+      "example": "Đội SRE nhận trực cho service checkout, nhưng trả lại việc trực cho team phát triển khi service liên tục vượt error budget.",
+      "related": ["slo", "error-budget", "toil"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "error-budget-policy",
+      "term": "Error budget policy",
+      "meaning": "Thoả thuận viết sẵn giữa product, phát triển và vận hành: còn budget thì release bình thường, hết budget thì dừng release tính năng, sự cố ăn nhiều budget thì bắt buộc postmortem.",
+      "example": "Hết budget của 28 ngày: chỉ cho bản vá P0 và bảo mật lên production cho tới khi tỉ lệ thành công trở lại trong SLO.",
+      "related": ["error-budget", "slo", "postmortem"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "toil",
+      "term": "Toil",
+      "meaning": "Việc vận hành thủ công, lặp lại, tự động hoá được, không để lại giá trị lâu dài và tăng tuyến tính theo quy mô hệ thống.",
+      "example": "Mỗi tuần một người chạy tay script dọn đơn treo và restart consumer bị kẹt.",
+      "related": ["sre", "runbook"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "production-readiness-review",
+      "term": "Production readiness review",
+      "meaning": "Buổi kiểm tra trước khi service lên production hoặc được đội SRE nhận trực: SLO, alert, runbook, capacity, cách rollout/rollback, backup đã restore thử, danh sách dependency.",
+      "example": "Service mới chưa có runbook và chưa restore thử backup nên chưa được nhận vào vòng trực chung.",
+      "related": ["sre", "runbook", "slo"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "static-stability",
+      "term": "Static stability",
+      "meaning": "Thiết kế để data plane tiếp tục chạy với trạng thái và capacity đang có khi một phần hệ thống hỏng, không cần gọi control plane (tạo máy, sửa cấu hình) để hồi phục.",
+      "example": "Chạy 3 AZ, mỗi AZ có sẵn 50% tải đỉnh; mất một AZ thì không cần chờ autoscaling.",
+      "related": ["availability-zone", "blast-radius"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "shuffle-sharding",
+      "term": "Shuffle sharding",
+      "meaning": "Gán mỗi khách một tổ hợp ngẫu nhiên vài node trong nhóm, để lỗi do một khách gây ra chỉ ảnh hưởng toàn bộ tới những khách có đúng tổ hợp đó.",
+      "example": "8 worker, mỗi khách 2 worker: có 28 tổ hợp, một khách độc chỉ làm khoảng 3,6% khách mất hẳn dịch vụ.",
+      "related": ["blast-radius", "cell-based-architecture", "bulkhead"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "graceful-degradation",
+      "term": "Graceful degradation",
+      "meaning": "Khi một phần không bắt buộc hỏng, hệ thống bỏ bớt chức năng đó và vẫn phục vụ phần chính, thay vì trả lỗi cho cả request.",
+      "example": "Service gợi ý món timeout thì trang checkout ẩn khối gợi ý, khách vẫn đặt được đơn.",
+      "related": ["load-shedding", "circuit-breaker"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "chaos-engineering",
+      "term": "Chaos engineering",
+      "meaning": "Thí nghiệm có kiểm soát: đặt giả thuyết về trạng thái ổn định, gây lỗi thật (chết máy, mạng chậm, dependency lỗi) trong phạm vi nhỏ, có điều kiện dừng, để tìm điểm yếu trước khi sự cố tìm ra.",
+      "example": "Tắt một node Redis ở 5% lưu lượng production với giả thuyết tỉ lệ checkout thành công vẫn trên 99,5%.",
+      "related": ["steady-state-hypothesis", "fault-injection", "game-day"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "steady-state-hypothesis",
+      "term": "Steady state hypothesis",
+      "meaning": "Giả thuyết trong chaos engineering rằng một chỉ số đầu ra đo được (throughput, tỉ lệ lỗi, latency) giữ nguyên khi đưa lỗi vào.",
+      "example": "p99 checkout dưới 1,5 giây và tỉ lệ thành công trên 99,5% trong 10 phút sau khi restart node Redis chính.",
+      "related": ["chaos-engineering", "sli"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "fault-injection",
+      "term": "Fault injection",
+      "meaning": "Cố ý đưa lỗi vào hệ thống (tắt instance, thêm latency, mất gói, trả 5xx, đầy đĩa) để quan sát cách hệ thống phản ứng.",
+      "example": "Dùng Toxiproxy thêm 3 giây latency vào kết nối tới cổng thanh toán trong test tích hợp.",
+      "related": ["chaos-engineering"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "game-day",
+      "term": "Game day",
+      "meaning": "Buổi diễn tập có kịch bản, gây lỗi thật với đội trực thật tham gia, để kiểm alert, runbook, quyền truy cập và cách phối hợp.",
+      "example": "Tắt cổng thanh toán chính lúc 14 giờ, đo thời gian người trực chuyển sang cổng dự phòng theo runbook.",
+      "related": ["chaos-engineering", "runbook", "incident-commander"],
+      "topics": ["reliability-sre"]
+    },
+    {
+      "id": "seven-rs",
+      "term": "7 R",
+      "meaning": "Bảy chiến lược cho từng ứng dụng khi chuyển lên cloud: retire (tắt), retain (giữ), rehost, relocate (chuyển cả nền ảo hoá), repurchase, replatform, refactor (thiết kế lại).",
+      "example": "Trong 42 ứng dụng: 7 retire, 3 repurchase sang SaaS, 22 rehost, 9 replatform, monolith lõi replatform trước rồi refactor dần.",
+      "related": ["rehost", "replatform", "repurchase", "strangler-fig"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "rehost",
+      "term": "Rehost",
+      "meaning": "Lift and shift: chuyển máy ảo hay ứng dụng sang hạ tầng mới nguyên trạng, không sửa code.",
+      "example": "Chuyển máy ảo chạy ứng dụng chấm công nội bộ sang EC2 bằng công cụ sao chép máy.",
+      "related": ["seven-rs", "replatform"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "replatform",
+      "term": "Replatform",
+      "meaning": "Đổi một phần nền tảng sang dịch vụ managed mà không đổi kiến trúc ứng dụng (lift, tinker and shift).",
+      "example": "Giữ nguyên monolith nhưng chuyển Oracle tự quản sang RDS for Oracle và file share sang S3.",
+      "related": ["seven-rs", "rehost"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "repurchase",
+      "term": "Repurchase",
+      "meaning": "Thay ứng dụng tự cài bằng sản phẩm SaaS; phần việc chính là chuyển dữ liệu và làm lại tích hợp.",
+      "example": "Bỏ hệ thống ticketing tự cài, chuyển sang một dịch vụ helpdesk SaaS kèm dữ liệu ticket 3 năm.",
+      "related": ["seven-rs"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "move-group",
+      "term": "Move group",
+      "meaning": "Nhóm ứng dụng và database phụ thuộc chặt vào nhau, được chuyển trong cùng một đợt để không phải gọi qua đường mạng hybrid chậm.",
+      "example": "Monolith, Oracle của nó và job báo cáo đọc thẳng bảng Oracle chuyển cùng một cuối tuần.",
+      "related": ["seven-rs", "cutover"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "event-interception",
+      "term": "Event interception",
+      "meaning": "Bắt các thay đổi trạng thái của hệ thống cũ (từ message, CDC hay lớp định tuyến) và phát thành event cho hệ thống mới, khi hệ thống cũ không tự phát event.",
+      "example": "CDC đọc bảng hợp đồng của monolith và phát PolicyChanged cho service bồi thường mới.",
+      "related": ["cdc", "strangler-fig", "legacy-mimic"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "legacy-mimic",
+      "term": "Legacy mimic",
+      "meaning": "Hệ thống mới giả làm giao diện mà hệ thống cũ mong đợi (ghi bảng cũ, gửi file cũ) để phần còn lại của hệ thống cũ không phải sửa trong lúc chuyển.",
+      "example": "Consumer đọc outbox của service bồi thường mới và ghi hồ sơ vào đúng bảng cũ mà báo cáo tài chính đang đọc.",
+      "related": ["transitional-architecture", "event-interception", "anti-corruption-layer"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "transitional-architecture",
+      "term": "Transitional architecture",
+      "meaning": "Phần code và hạ tầng chỉ tồn tại trong giai đoạn chuyển từ hệ thống cũ sang mới (facade, adapter, đồng bộ ngược), được lên kế hoạch tắt từ đầu.",
+      "example": "Luồng ghi ngược hồ sơ mới vào Oracle có người phụ trách và mốc tắt khi báo cáo chuyển sang warehouse.",
+      "related": ["legacy-mimic", "strangler-fig", "reverse-replication"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "feature-parity",
+      "term": "Feature parity",
+      "meaning": "Yêu cầu hệ thống mới có đủ mọi tính năng của hệ thống cũ trước khi chuyển; thường là bẫy vì nhiều tính năng cũ không còn ai dùng.",
+      "example": "Log cho thấy 12 trong 40 màn hình cũ không ai mở trong 6 tháng, nên không làm lại.",
+      "related": ["strangler-fig"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "parallel-run",
+      "term": "Parallel run",
+      "meaning": "Chạy cùng đầu vào qua cả hệ thống cũ và mới, dùng kết quả của hệ thống cũ, ghi và phân loại khác biệt trước khi chuyển hẳn.",
+      "example": "Bốn tuần tính số tiền bồi thường bằng cả công thức cũ và mới; khác biệt chưa giải thích phải dưới 0,1%.",
+      "related": ["strangler-fig", "canary-release"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "reverse-replication",
+      "term": "Reverse replication",
+      "meaning": "Đồng bộ ngược dữ liệu từ hệ thống mới về hệ thống cũ sau khi chuyển quyền ghi, để các phần chưa chuyển vẫn chạy và còn đường rollback.",
+      "example": "Sau cutover sang PostgreSQL, CDC đẩy thay đổi ngược về Oracle trong 4 tuần để có thể quay lại.",
+      "related": ["cdc", "point-of-no-return", "cutover"],
+      "topics": ["migration-modernization"]
+    },
+    {
+      "id": "point-of-no-return",
+      "term": "Point of no return",
+      "meaning": "Thời điểm trong cutover mà sau đó quay lại hệ thống cũ sẽ mất dữ liệu hoặc phải nhập tay, thường khi hệ thống mới nhận ghi mà không còn đồng bộ ngược.",
+      "example": "Runbook ghi: sau khi mở ghi ở hệ thống mới lúc 02:00, rollback chỉ còn khả thi nhờ đồng bộ ngược.",
+      "related": ["cutover", "reverse-replication"],
+      "topics": ["migration-modernization"]
     }
   ]
 }

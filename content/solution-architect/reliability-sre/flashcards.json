@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "budget-by-requests", "front": "Vì sao nên tính error budget theo số request thay vì theo phút?", "back": "Vì lưu lượng không đều: cùng 25 phút ngừng ăn số lượt lỗi khác hẳn giữa 15 giờ và giờ cao điểm. Budget theo request phản ánh số người dùng thật sự bị ảnh hưởng." },
+    { "id": "budget-policy", "front": "Chính sách error budget cần có những gì?", "back": "Làm gì khi còn và khi hết budget, ngưỡng một sự cố bắt buộc postmortem, các ngoại lệ ghi trước, và một người được nêu tên giải quyết tranh chấp. Product, phát triển và vận hành ký trước." },
+    { "id": "external-dependency", "front": "Cổng thanh toán bên ngoài lỗi có được loại khỏi SLO không?", "back": "Không, nếu SLO đo theo người dùng: họ vẫn không thanh toán được. Loại ra thì không ai làm việc thật sự cần là biến dependency đó thành mềm (nhà cung cấp thứ hai, nhận đơn rồi thanh toán sau)." },
+    { "id": "toil", "front": "Toil là gì, và cái gì không phải toil?", "back": "Việc vận hành thủ công, lặp lại, tự động hoá được, không để lại giá trị lâu dài và tăng theo quy mô. Họp và viết thiết kế không phải toil; SRE giữ việc vận hành dưới 50% thời gian." },
+    { "id": "static-stability", "front": "Static stability khi mất một AZ nghĩa là gì?", "back": "Hệ thống vẫn chạy mà không cần gọi control plane để tạo máy. Với 3 AZ, mỗi AZ phải có sẵn khoảng 50% tải đỉnh (tổng 150%), vì lúc mất AZ thì API tạo máy có thể cũng đang hỏng." },
+    { "id": "shuffle-sharding", "front": "8 worker, mỗi khách 2 worker ngẫu nhiên. Một khách độc làm chết 2 worker của nó thì bao nhiêu khách mất hẳn dịch vụ?", "back": "Chỉ khách có đúng cặp đó: 1 trên C(8,2) = 28 tổ hợp, khoảng 3,6%, với điều kiện client retry sang worker còn lại. Chia cứng 4 nhóm thì mất 25%." },
+    { "id": "metastable-exit", "front": "Thoát khỏi metastable failure bằng cách nào?", "back": "Giảm tải xuống dưới ngưỡng: shed bớt, tắt retry, mở lưu lượng lại từ từ. Sửa nguyên nhân ban đầu hay thêm máy cho database thường không đủ, vì vòng retry vẫn giữ tải cao." },
+    { "id": "chaos-vs-gameday", "front": "Chaos engineering khác game day thế nào?", "back": "Chaos là thí nghiệm có giả thuyết về steady state, gây lỗi thật và nên tự động hoá chạy liên tục. Game day là buổi diễn tập có người: kiểm alert, runbook, quyền và phối hợp của đội trực." },
+    { "id": "rare-fallback", "front": "Vì sao fallback hiếm khi chạy lại nguy hiểm?", "back": "Nó chưa được kiểm chứng ở tải thật nên dễ hỏng đúng lúc cần, và đổi hệ thống sang chế độ khác hẳn giữa sự cố. Ưu tiên thiết kế mà đường bình thường và đường lỗi là một." }
+  ]
+}

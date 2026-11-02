@@ -420,8 +420,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 10 | `integration-patterns` | Integration patterns | architect | EIP, API-led, ESB, file và event, tích hợp hệ thống cũ | L D Sc | ✅ |
 | 11 | `data-architecture` | ✚ Kiến trúc dữ liệu | architect | OLTP và OLAP, data warehouse/lake/lakehouse, ETL/ELT, CDC, báo cáo không đè lên DB chính | L D Sc | ✅ |
 | 12 | `security-architecture` | ✚ Kiến trúc bảo mật | architect | Defense in depth, zero trust, phân vùng mạng, quản lý danh tính tập trung | L D Sc | ✅ |
-| 13 | `reliability-sre` | ✚ Độ tin cậy & SRE | architect | SLO và error budget, chaos engineering, game day, thiết kế cho lỗi | L Sc | ⬜ |
-| 14 | `migration-modernization` | Migration & hiện đại hoá | architect | Strangler fig, 6R khi lên cloud, migrate dữ liệu | L D Sc | ⬜ |
+| 13 | `reliability-sre` | ✚ Độ tin cậy & SRE | architect | SLO và error budget, chaos engineering, game day, thiết kế cho lỗi | L Sc | ✅ |
+| 14 | `migration-modernization` | Migration & hiện đại hoá | architect | Strangler fig, 7R khi lên cloud, migrate dữ liệu | L D Sc | ✅ |
 | 15 | `cost-finops` | Ước tính chi phí & FinOps | architect | Mô hình chi phí cloud, tối ưu, đánh đổi chi phí và độ tin cậy | L Sc | ⬜ |
 | 16 | `multi-tenancy` | Kiến trúc multi-tenant | architect | Mức cô lập, noisy neighbor, dữ liệu theo tenant | L D Sc | ⬜ |
 | 17 | `build-vs-buy` | Build hay buy & chọn vendor | architect | Tiêu chí, PoC, lock-in, tổng chi phí sở hữu (TCO) | L Sc | ⬜ |

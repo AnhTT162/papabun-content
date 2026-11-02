@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Rời datacenter trong 14 tháng và thay dần hệ thống bồi thường của một công ty bảo hiểm",
+  "prompt": "Bạn là solution architect của một công ty bảo hiểm phi nhân thọ. Hợp đồng thuê datacenter hết sau 14 tháng và không gia hạn. Danh mục có 42 ứng dụng. Lõi là một monolith Java EE trên WebLogic với Oracle 19c (3,5 TB), gồm hợp đồng, bồi thường, tài chính và báo cáo; khoảng 2.000 nhân viên và đại lý dùng.\n\nĐo được từ log và luồng mạng:\n\n- 7 ứng dụng không ai đăng nhập trong 90 ngày qua; 3 ứng dụng là HR, ticketing và email marketing tự cài.\n- Màn hình hồ sơ bồi thường chạy trung bình 900 câu SQL tuần tự, RTT tới Oracle trong datacenter 0,3 ms. Đường Direct Connect đã đo: RTT 10 ms.\n- Mỗi tháng khoảng 40.000 hồ sơ bồi thường mới, mỗi hồ sơ mở trung bình 25 ngày. Bồi thường xe cơ giới chiếm 70%.\n- Báo cáo tài chính cuối tháng và file gửi cơ quan quản lý đọc thẳng bảng bồi thường trong Oracle.\n\nCIO muốn nhân dịp này viết lại toàn bộ thành microservices trên AWS với PostgreSQL, xong trước khi rời datacenter. Trưởng nhóm hạ tầng muốn chuyển nguyên trạng mọi thứ trước. Nghiệp vụ bồi thường than hệ thống cũ không cho tự động duyệt hồ sơ nhỏ, đối thủ đã duyệt trong vài phút.\n\nĐề xuất kế hoạch: chiến lược cho danh mục, có viết lại trước hạn chót không, thay phần bồi thường thế nào khi tài chính và báo cáo vẫn đọc bảng cũ, và chuyển dữ liệu, cutover, rollback ra sao.",
+  "hints": [
+    "Gắn mỗi nhóm ứng dụng một trong 7 R. Bao nhiêu ứng dụng có thể tắt hoặc thay bằng SaaS ngay?",
+    "Nếu app lên AWS mà Oracle còn ở datacenter vài tuần, màn hình bồi thường mất bao lâu?",
+    "Hồ sơ đang mở trung bình 25 ngày. Có cần migrate hồ sơ đang dở dang sang hệ thống mới không?",
+    "Sau khi hệ thống mới nhận ghi hồ sơ xe, báo cáo tài chính lấy dữ liệu ở đâu, và nếu phải rollback thì dữ liệu mới đi đâu?"
+  ],
+  "solution": "**1. Danh mục theo 7 R**\n\n| Nhóm | Số ứng dụng | R | Lý do |\n|---|---|---|---|\n| Không ai dùng 90 ngày | 7 | Retire | Xác nhận với chủ sở hữu, lưu trữ dữ liệu theo quy định rồi tắt |\n| HR, ticketing, email marketing | 3 | Repurchase | Đã có SaaS tốt; việc chính là chuyển dữ liệu và tích hợp |\n| Ứng dụng nội bộ ổn định, ít đổi | khoảng 22 | Rehost | Nhanh, không sửa code |\n| Ứng dụng có database riêng, cron, file share | khoảng 9 | Replatform | Database sang RDS, file sang S3, cron sang dịch vụ lập lịch |\n| Monolith lõi | 1 | Replatform trước, refactor sau | Xem mục 2 |\n\nPhần retire và repurchase (10 trên 42, 24%) bớt đi trước khi bắt đầu chuyển.\n\n**2. Không viết lại trước hạn chót**\n\nViết lại toàn bộ monolith trong 14 tháng biến rủi ro của dự án lớn nhất thành rủi ro không dời được của hợp đồng datacenter. Làm hai bước:\n\n- Bước 1 (tháng 1–10): chuyển monolith sang EC2 hoặc container, Oracle sang RDS for Oracle cùng version. Không đổi logic.\n- Bước 2 (từ tháng 6, chạy tiếp sau khi rời datacenter): hiện đại hoá phần bồi thường theo strangler fig, bắt đầu từ bồi thường xe, nơi có giá trị nghiệp vụ rõ nhất.\n\nCái giá: trả giấy phép Oracle thêm một thời gian và chạy hai bước chuyển. Đổi lại, ngày rời datacenter chỉ phụ thuộc vào việc chuyển, thứ đo và diễn tập được.\n\n**3. Move group: app và Oracle đi cùng nhau**\n\nNếu monolith lên AWS trước mà Oracle còn ở datacenter: 900 câu × 10 ms = 9 giây mỗi màn hình bồi thường, so với 0,27 giây hiện tại. Monolith, Oracle và các ứng dụng đọc thẳng bảng của nó (báo cáo, file cho cơ quan quản lý) là một move group, chuyển trong cùng một cửa sổ. Oracle sang RDS bằng Data Pump hoặc transportable tablespaces cho schema và dữ liệu, rồi DMS CDC từ SCN của bản export (hoặc GoldenGate) để đuổi theo thay đổi; Data Guard từ datacenter chỉ dùng được nếu Oracle chạy trên EC2. Cutover cuối tuần, diễn tập hai lần trên bản sao để đo thời gian.\n\n**4. Strangler cho bồi thường xe**\n\n- Lớp định tuyến: đặt API gateway trước monolith, ban đầu chuyển hết vào monolith.\n- Lát cắt đầu: hồ sơ bồi thường xe **mới** vào service mới (PostgreSQL riêng); hồ sơ đang mở chạy hết vòng đời trong monolith. Không phải migrate dữ liệu dở dang; phần lớn hồ sơ xe cũ đóng trong vài tuần, số còn lại đóng dần ngay trong monolith.\n- Chuyển dần theo nhóm: một chi nhánh, rồi 25%, 50%, 100% hồ sơ xe mới, theo [[feature-flag|feature flag]] ở lớp định tuyến.\n- Tự động duyệt hồ sơ nhỏ là tính năng mới chỉ có ở service mới: đây là lý do nghiệp vụ để làm, không phải làm lại nguyên các màn hình cũ. Tính năng cũ chỉ làm lại khi log cho thấy còn dùng.\n- Hợp đồng vẫn ở monolith. Service mới đọc hợp đồng qua API của monolith (có cache) và một [[anti-corruption-layer|anti-corruption layer]] dịch mô hình hợp đồng cũ sang mô hình của mình, không đọc bảng.\n\n**5. Nguồn sự thật và legacy mimic**\n\n| Dữ liệu | Nguồn sự thật | Ai khác cần | Cách |\n|---|---|---|---|\n| Hợp đồng | Monolith | Service bồi thường | API của monolith |\n| Hồ sơ xe cũ | Monolith | Tra cứu ở service mới | CDC một chiều, chỉ đọc |\n| Hồ sơ xe mới | Service mới | Báo cáo tài chính, file cho cơ quan quản lý | Outbox → consumer ghi vào bảng bồi thường cũ |\n\nDòng cuối là legacy mimic: consumer ghi hồ sơ mới vào đúng bảng và định dạng monolith dùng, nên báo cáo tài chính và file gửi cơ quan quản lý không phải sửa. Đây là transitional architecture: có người phụ trách và mốc tắt khi báo cáo chuyển sang đọc warehouse (bài Kiến trúc dữ liệu). Consumer phải idempotent theo mã hồ sơ.\n\nTrong giai đoạn chuyển dần, cả hai hệ thống cùng tạo hồ sơ xe, nên tách không gian khoá: service mới cấp mã có tiền tố riêng (hoặc dải id mà sequence của Oracle không bao giờ chạm tới). Bảng cũ có thêm cột `origin`; CDC hồ sơ cũ sang service mới lọc bỏ các dòng do consumer ghi, để không đẩy ngược lại chính dữ liệu của service mới.\n\nĐồng bộ ngược này cũng là đường rollback. Cờ ở gateway chỉ quyết định nơi tạo hồ sơ mới: tắt cờ thì hồ sơ mới lại tạo trong monolith, còn hồ sơ đã tạo ở service mới chạy hết vòng đời ở đó, nên không có hai nơi cùng ghi một hồ sơ, và báo cáo vẫn đủ dữ liệu. Nếu phải bỏ hẳn service mới, bàn giao quyền ghi từng hồ sơ sang monolith sau khi outbox hết lag; khi đó mimic phải ghi đủ trạng thái để monolith xử lý tiếp, không chỉ các cột báo cáo cần. Điểm không quay lại đến khi service mới lưu thứ bảng cũ không biểu diễn được (ví dụ kết quả tự động duyệt với cấu trúc mới); trước mốc đó, mở rộng bảng cũ hoặc chấp nhận rollback chỉ giữ dữ liệu tối thiểu, và ghi quyết định vào ADR.\n\n**6. Kiểm chứng**\n\n- Parallel run phần tính số tiền bồi thường: 4 tuần, mỗi hồ sơ xe chạy cả công thức cũ và mới, trả kết quả cũ, ghi khác biệt. Mục tiêu: mọi khác biệt được phân loại và khác biệt chưa giải thích dưới 0,1% trước khi chuyển nhóm đầu tiên.\n- Đối soát hằng ngày giữa service mới và bảng cũ theo ngày tạo: số hồ sơ, tổng tiền duyệt, hash các dòng đã chuẩn hoá (NULL, định dạng số, múi giờ).\n- Bảng Oracle sang PostgreSQL (khi chuyển hồ sơ cũ sang tra cứu): kiểm chuỗi rỗng và NULL, `DATE` có giờ, tên cột chữ hoa, transaction bị huỷ sau lỗi, `setval` cho mọi sequence trước khi mở ghi.\n\n**7. Thời gian**\n\n| Tháng | Việc |\n|---|---|\n| 1–2 | Đánh giá danh mục, retire, ký SaaS, landing zone, Direct Connect |\n| 3–10 | Các đợt rehost/replatform theo move group, monolith + Oracle ở đợt cuối, diễn tập cutover hai lần |\n| 6–12 | Service bồi thường xe, parallel run, chuyển dần từ một chi nhánh |\n| 11–14 | Dự phòng cho trễ, tắt datacenter |\n| Sau 14 | Báo cáo sang warehouse, tắt legacy mimic, lát cắt tiếp theo (bồi thường tài sản), cân nhắc chuyển hợp đồng và Oracle |",
+  "tradeoffs": [
+    {
+      "option": "Viết lại toàn bộ thành microservices trước khi rời datacenter",
+      "pros": [
+        "Chỉ chuyển một lần, không làm việc hai lần",
+        "Bỏ được Oracle và WebLogic sớm"
+      ],
+      "cons": [
+        "Hạn chót không dời được gắn vào dự án rủi ro nhất",
+        "Phải đạt tính năng ngang bằng cả monolith trước ngày cuối"
+      ]
+    },
+    {
+      "option": "Chuyển nguyên trạng mọi thứ, hiện đại hoá để sau",
+      "pros": [
+        "Nhanh và dễ dự đoán nhất",
+        "Rời datacenter đúng hạn"
+      ],
+      "cons": [
+        "Nghiệp vụ bồi thường chờ thêm một năm",
+        "\"Để sau\" dễ thành không bao giờ nếu không có kế hoạch"
+      ]
+    },
+    {
+      "option": "Replatform lõi trước hạn, strangler phần bồi thường song song",
+      "pros": [
+        "Hạn chót chỉ phụ thuộc vào việc chuyển",
+        "Có giá trị nghiệp vụ sớm từ lát cắt đầu"
+      ],
+      "cons": [
+        "Trả giấy phép Oracle lâu hơn",
+        "Vận hành thêm đồng bộ ngược và đối soát"
+      ]
+    }
+  ]
+}

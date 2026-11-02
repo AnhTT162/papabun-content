@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "hybrid-latency",
+      "kind": "single",
+      "prompt": "Monolith được chuyển lên AWS trước, Oracle ở lại datacenter thêm 6 tuần. Màn hình bồi thường chạy 900 câu SQL tuần tự; RTT trong datacenter 0,3 ms, qua Direct Connect 10 ms. Màn hình đó sẽ thế nào?",
+      "options": [
+        "Mất khoảng 9 giây cho riêng SQL, thay vì 0,27 giây trước đây",
+        "Chậm thêm khoảng 10 ms, vì chỉ có thêm một vòng mạng mỗi request",
+        "Không đổi, vì connection pool giữ kết nối mở sẵn tới Oracle",
+        "Chậm thêm khoảng 1 giây, vì Direct Connect gom các câu SQL lại"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi câu SQL tuần tự là một vòng mạng: 900 × 10 ms = 9 giây, so với 900 × 0,3 ms = 0,27 giây. Connection pool chỉ bỏ được chi phí mở kết nối, không bỏ được RTT của từng câu. Direct Connect là đường mạng, không gom câu SQL. Vì vậy app và database nói nhiều phải nằm cùng move group."
+    },
+    {
+      "id": "empty-string",
+      "kind": "output",
+      "prompt": "Bảng `policy` vừa chuyển từ Oracle sang PostgreSQL: 334 dòng cũ có `middle_name` rỗng (Oracle lưu là NULL). Code mới chạy trên PostgreSQL ghi thêm một dòng với `middle_name = ''`. Câu này trả về gì?",
+      "code": "SELECT count(*) FILTER (WHERE middle_name IS NULL) AS is_null,\n       count(*) FILTER (WHERE middle_name = '')   AS empty\nFROM policy;",
+      "options": [
+        "is_null = 334, empty = 1",
+        "is_null = 335, empty = 0",
+        "is_null = 335, empty = 1",
+        "is_null = 334, empty = 0"
+      ],
+      "answer": 0,
+      "explanation": "Oracle coi chuỗi rỗng là NULL nên 334 dòng cũ mang NULL sang PostgreSQL. PostgreSQL thì phân biệt: `'' IS NULL` là `false`, nên dòng mới đếm vào `empty` chứ không vào `is_null`. Báo cáo cũ lọc `IS NULL` sẽ bỏ sót dòng mới. Chọn một cách biểu diễn, chuẩn hoá khi ghi (ví dụ `NULLIF(x, '')`) và thêm ràng buộc `CHECK (middle_name <> '')`."
+    },
+    {
+      "id": "source-of-truth",
+      "kind": "single",
+      "prompt": "Service bồi thường mới nhận hồ sơ xe mới. Báo cáo tài chính vẫn đọc bảng bồi thường trong Oracle. Cách nào giữ báo cáo đúng mà vẫn có đường rollback?",
+      "options": [
+        "Service mới ghi PostgreSQL rồi qua outbox, consumer ghi bảng cũ",
+        "Service mới ghi PostgreSQL và ghi luôn bảng Oracle trong code",
+        "Cho báo cáo tài chính đọc cả hai database rồi tự gộp kết quả",
+        "Để monolith và service mới cùng nhận ghi, cuối ngày gộp lại"
+      ],
+      "answer": 0,
+      "explanation": "Service mới là nguồn sự thật; outbox nằm cùng transaction với dữ liệu nên event không mất, consumer idempotent ghi vào bảng cũ (legacy mimic). Ghi hai database từ code là dual-write: một bên lỗi là lệch vĩnh viễn. Báo cáo tự gộp hai nguồn đẩy logic chuyển tiếp vào mọi báo cáo. Hai hệ thống cùng nhận ghi thì không còn nguồn sự thật để biết bên nào đúng."
+    },
+    {
+      "id": "reconcile",
+      "kind": "single",
+      "prompt": "Đối soát hai database theo khoảng id: mỗi khoảng so số dòng và tổng cột `premium`. Trường hợp nào cách này không phát hiện được?",
+      "options": [
+        "Hai dòng trong cùng khoảng bị tráo giá trị premium cho nhau",
+        "Một dòng bị mất khi nạp dữ liệu sang database mới",
+        "Một dòng có premium lệch 0,01 do làm tròn khác nhau",
+        "Một dòng bị nạp hai lần sang database mới vì CDC lặp"
+      ],
+      "answer": 0,
+      "explanation": "Tráo giá trị giữa hai dòng giữ nguyên cả số dòng lẫn tổng. Mất dòng và nạp trùng làm đổi số dòng (và thường cả tổng); lệch 0,01 làm đổi tổng. Thêm hash của các dòng đã chuẩn hoá (khoá, từng cột, NULL, định dạng số) thì bắt được cả trường hợp tráo."
+    }
+  ]
+}

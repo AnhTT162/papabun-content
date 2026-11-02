@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Sau ba sự cố trong một tháng: SLO, chính sách budget và thiết kế cho lỗi ở một app đặt đồ ăn",
+  "prompt": "Bạn là solution architect của một nền tảng đặt đồ ăn: khoảng 3 triệu lượt checkout mỗi ngày, đỉnh vào trưa và tối. Checkout gọi đồng bộ: giỏ hàng, tính giá, voucher, thanh toán qua một cổng thanh toán (PSP) duy nhất, ước tính thời gian giao, và gợi ý món mua kèm. Giá và voucher được cache trên Redis, nguồn là PostgreSQL. Chạy trên 3 AZ, mỗi AZ khoảng một phần ba số pod, HPA scale theo CPU.\n\nDashboard đã có SLO: 99,9% lượt checkout thành công trong 28 ngày. Không có chính sách gì đi kèm; không có alert nào dựa trên SLO.\n\nTrong 28 ngày qua:\n\n1. Một bản deploy đổi cấu hình tính giá bị sai: mọi lượt checkout lỗi trong 25 phút lúc 15 giờ (khoảng 1.200 lượt/phút). Team biết chuyện qua mạng xã hội.\n2. Một node Redis restart lúc 19 giờ. Cache giá trống, service tính giá dồn query xuống PostgreSQL, p99 vượt timeout 2 giây. App retry 3 lần, gateway retry thêm 2 lần. Redis trở lại sau 3 phút, nhưng 30% lượt checkout vẫn lỗi trong 45 phút (khoảng 3.500 lượt/phút), chỉ hết khi gateway chặn bớt lưu lượng.\n3. PSP lỗi chập chờn trong 2 giờ: 8% lượt checkout lỗi (khoảng 2.500 lượt/phút).\n\nProduct muốn ra tính năng đặt nhóm vào tuần sau. Trưởng nhóm vận hành muốn đóng băng mọi release một tháng. Một người đề xuất loại sự cố PSP khỏi SLO vì không phải lỗi của mình.\n\nCTO hỏi bạn: tình trạng error budget thực sự ra sao, nên có chính sách gì và quyết thế nào với tính năng đặt nhóm, cần đổi gì trong thiết kế, và làm sao biết các thay đổi đó có tác dụng trước sự cố tiếp theo.",
+  "hints": [
+    "Quy mỗi sự cố ra số lượt checkout lỗi rồi so với budget của 28 ngày. Sự cố nào ăn hơn 20%?",
+    "Khi PSP lỗi, người dùng thấy gì? Loại nó khỏi SLO thì việc gì sẽ không bao giờ được làm?",
+    "Redis chỉ lỗi 3 phút nhưng hệ thống lỗi 45 phút. Vòng nào giữ cho tải cao sau khi Redis đã trở lại?",
+    "Nếu mất một AZ lúc 19 giờ, hai AZ còn lại phải gánh bao nhiêu, và muốn có thêm pod thì cần những gì còn sống?"
+  ],
+  "solution": "**1. Tình trạng budget**\n\n28 ngày × 3 triệu = 84 triệu lượt; SLO 99,9% cho phép 84.000 lượt lỗi.\n\n| Sự cố | Lượt lỗi | Phần budget |\n|---|---|---|\n| Cấu hình giá sai | 25 × 1.200 = 30.000 | 35,7% |\n| Redis restart rồi quá tải | 0,30 × 45 × 3.500 = 47.250 | 56,3% |\n| PSP chập chờn | 0,08 × 120 × 2.500 = 24.000 | 28,6% |\n| Tổng | 101.250 | 120,5% |\n\nBudget đã vượt. Cả ba sự cố đều ăn hơn 20%, nên theo chính sách mẫu mỗi cái cần postmortem với ít nhất một việc P0. Burn rate lúc cao nhất là 1.000, 300 và 80; với alert nhiều cửa sổ (ngưỡng 14,4 cho cửa sổ 1 giờ và 5 phút, bài Metrics, tracing & SLO) ba sự cố gọi người trực sau khoảng 1, 3 và 11 phút, thay vì chờ mạng xã hội.\n\n**2. Không loại sự cố PSP**\n\nNgười dùng không thanh toán được là hỏng, bất kể lỗi ở đâu. Loại ra thì con số đẹp hơn (92,0%, còn trong budget) nhưng sẽ không ai làm việc thật sự cần: làm PSP thành dependency mềm. Ngoại lệ trong chính sách là cho team nội bộ đã tự đóng băng, không cho nhà cung cấp.\n\n**3. Chính sách, ký trước bởi product, phát triển và vận hành**\n\n- Cửa sổ 28 ngày. Còn trong SLO thì release bình thường.\n- Vượt SLO: dừng release tính năng; chỉ cho bản vá P0, bảo mật và việc độ tin cậy, cho tới khi cửa sổ 28 ngày trở lại trong SLO.\n- Một sự cố hơn 20% budget: postmortem trong 5 ngày làm việc, ít nhất một việc P0 có người và hạn.\n- Một loại sự cố hơn 20% trong quý: vào kế hoạch quý sau.\n- Tranh chấp thì CTO quyết, có ghi lại.\n\nVới đặt nhóm: chính sách thay cho cả hai đề xuất. Không đóng băng một tháng theo cảm giác, cũng không ra đúng hẹn. Release chờ tới khi cửa sổ 28 ngày trở lại trong SLO; trong lúc đó team vẫn phát triển tiếp, còn người cần thiết chuyển sang các việc P0 bên dưới. Nếu đặt nhóm gắn với hợp đồng, đó là ngoại lệ CTO quyết công khai, rollout từ 1% có rollback tự động, chứ không lặng lẽ bỏ qua chính sách.\n\n**4. Thiết kế lại theo từng sự cố**\n\n*Thay đổi (sự cố 1):*\n- Cấu hình giá đi qua cùng pipeline với code: kiểm tra schema và giá trị, canary 5% trên một AZ, so tỉ lệ lỗi checkout với phần còn lại, tự rollback khi lệch.\n- Alert theo burn rate cho SLO checkout.\n\n*Vòng tự duy trì (sự cố 2):*\n- Retry chỉ ở một tầng: gateway bỏ retry, app retry tối đa một lần trong retry budget khoảng 10%, có deadline tổng.\n- Service tính giá giới hạn số query đồng thời xuống PostgreSQL và gộp request trùng khoá khi cache trống. Quá ngưỡng thì shed sớm (503 kèm `Retry-After`) và ưu tiên checkout hơn trang xem món.\n- Redis có replica và failover tự động; cache giá hâm nóng từ trước thay vì chỉ nạp khi trượt.\n- Gợi ý món và ETA chính xác là dependency không bắt buộc: timeout 150 ms, fallback là ẩn khối gợi ý và ETA theo khu vực.\n\n*PSP (sự cố 3):*\n- Circuit breaker trên PSP, PSP thứ hai cho các phương thức phổ biến. Lỗi tạm thời thì nhận đơn ở trạng thái chờ thanh toán và mời thanh toán lại, thay vì trả lỗi ngay (chi tiết thanh toán ở bài Thiết kế hệ thống thanh toán).\n\n*Static stability:*\n- Mỗi AZ hiện chỉ có một phần ba capacity. Mất một AZ lúc 19 giờ thì hai AZ còn lại gánh gấp 1,5 lần và phải chờ HPA, cluster autoscaler và API tạo máy cùng chạy được. Nâng số pod tối thiểu để mỗi AZ gánh được một nửa tải đỉnh (tổng khoảng 150%), hoặc chấp nhận tắt gợi ý món và các trang phụ khi mất AZ để vừa capacity hiện có; phép tính ở bài Capacity planning & autoscaling.\n\n**5. Kiểm chứng trước sự cố tiếp theo**\n\nThí nghiệm chaos, mỗi cái có giả thuyết và điều kiện dừng là alert burn rate:\n\n| Thí nghiệm | Giả thuyết | Ở đâu |\n|---|---|---|\n| Restart node Redis chính | Checkout thành công ≥ 99,5% và p99 < 1,5 s trong 10 phút sau đó | Staging, rồi production ngoài giờ cao điểm |\n| PSP chậm 3 s và 10% lỗi 5xx (stub) | Breaker mở, đơn chuyển sang PSP thứ hai hoặc chờ thanh toán | Staging |\n| Service gợi ý trả lỗi hoặc chậm 2 s | Checkout không đổi tỉ lệ thành công | Production, 5% lưu lượng |\n| Mất điện một AZ (kịch bản AWS FIS) | Không cần pod mới để giữ SLO | Staging, rồi production sau khi đủ capacity |\n\nGame day trong tháng thứ hai với đội trực thật: đẩy một cấu hình giá sai lên canary (đo thời gian từ lúc đẩy tới lúc rollback), và tắt PSP chính (người trực chuyển sang PSP thứ hai theo runbook, có đủ quyền không). Mọi phát hiện thành việc có người phụ trách. Sau đó chạy lại thí nghiệm Redis và gợi ý món hằng tuần trong pipeline.",
+  "tradeoffs": [
+    {
+      "option": "Đóng băng mọi release một tháng",
+      "pros": [
+        "Giảm ngay nguồn sự cố lớn nhất là thay đổi",
+        "Dễ hiểu, không cần đo"
+      ],
+      "cons": [
+        "Không sửa được thiết kế đã gây sự cố 2 và 3",
+        "Tính năng dồn lại thành một đợt release lớn và rủi ro hơn sau đó"
+      ]
+    },
+    {
+      "option": "Ra đặt nhóm đúng hẹn, sửa độ ổn định song song",
+      "pros": [
+        "Giữ cam kết với product"
+      ],
+      "cons": [
+        "Người giỏi nhất bị chia đôi đúng lúc budget đã vượt",
+        "Từ nay budget không còn ý nghĩa với ai"
+      ]
+    },
+    {
+      "option": "Chính sách budget ký trước, việc P0 theo postmortem",
+      "pros": [
+        "Quyết định dựa trên số, áp lại được cho lần sau",
+        "Tiêu chí mở lại release rõ ràng"
+      ],
+      "cons": [
+        "Cần CTO và product thật sự chấp nhận dừng release",
+        "Đo SLO phải đủ tin cậy để mọi bên dựa vào"
+      ]
+    }
+  ]
+}

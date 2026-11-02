@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Strangler fig cho bồi thường xe: định tuyến, nguồn sự thật và đường lui",
+  "nodes": [
+    { "id": "users", "label": "Nhân viên, đại lý", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "gateway", "label": "API gateway", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "mono", "label": "Monolith cũ", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "claims", "label": "Bồi thường xe (mới)", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "oracle", "label": "Oracle (RDS)", "kind": "database", "x": 0.1, "y": 0.95 },
+    { "id": "pg", "label": "PostgreSQL bồi thường", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "users-gateway", "from": "users", "to": "gateway", "label": "mọi request" },
+    { "id": "gateway-mono", "from": "gateway", "to": "mono", "label": "phần còn lại" },
+    { "id": "mono-oracle", "from": "mono", "to": "oracle", "label": "SQL" },
+    { "id": "gateway-claims", "from": "gateway", "to": "claims", "label": "hồ sơ xe mới" },
+    { "id": "claims-pg", "from": "claims", "to": "pg", "label": "ghi hồ sơ" },
+    { "id": "claims-mono", "from": "claims", "to": "mono", "label": "đọc hợp đồng (API)" },
+    { "id": "pg-oracle", "from": "pg", "to": "oracle", "label": "consumer ghi bảng cũ" }
+  ],
+  "steps": [
+    { "caption": "Bước đầu chưa đổi gì: API gateway đứng trước monolith và chuyển mọi request vào đó. Đây là chỗ sẽ rẽ lưu lượng sau này.", "show": ["users", "gateway", "mono", "oracle", "users-gateway", "gateway-mono", "mono-oracle"], "highlight": ["gateway-mono"] },
+    { "caption": "Hồ sơ xe mới đi sang service mới theo feature flag: một chi nhánh, rồi 25%, 50%, 100%. Hồ sơ đang mở chạy hết vòng đời trong monolith.", "show": ["claims", "gateway-claims"], "highlight": ["gateway-claims"] },
+    { "caption": "Service mới là nguồn sự thật cho hồ sơ nó tạo, lưu trong PostgreSQL riêng.", "show": ["pg", "claims-pg"], "highlight": ["claims-pg"] },
+    { "caption": "Hợp đồng vẫn thuộc monolith. Service mới đọc qua API, không đọc thẳng bảng Oracle.", "show": ["claims-mono"], "highlight": ["claims-mono"] },
+    { "caption": "Legacy mimic: consumer đọc outbox và ghi hồ sơ mới vào đúng bảng cũ, nên báo cáo tài chính và file cho cơ quan quản lý không phải sửa.", "show": ["pg-oracle"], "highlight": ["pg-oracle"] },
+    { "caption": "Luồng đó cũng là đường lui: tắt cờ thì hồ sơ mới lại tạo trong monolith, hồ sơ đã ở service mới chạy nốt ở đó, báo cáo vẫn đủ. Nó là code tạm, có ngày tắt.", "show": [], "highlight": ["gateway-mono", "pg-oracle"] }
+  ]
+}

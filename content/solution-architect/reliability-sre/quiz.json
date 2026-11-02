@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "budget-left",
+      "kind": "single",
+      "prompt": "SLO 99,9% lượt checkout thành công trong 28 ngày, 3 triệu lượt mỗi ngày. Một sự cố làm 30% lượt lỗi trong 45 phút lúc 3.500 lượt/phút. Sự cố này ăn bao nhiêu budget?",
+      "options": [
+        "Khoảng 56%, vì 47.250 lượt lỗi trên budget 84.000 lượt",
+        "Khoảng 112%, vì 45 phút đã vượt quá 40 phút ngừng cho phép",
+        "Khoảng 34%, vì chỉ 30% của 45 phút tức 13,5 phút bị tính",
+        "Khoảng 0,06%, vì 47.250 lượt trên 84 triệu lượt của 28 ngày"
+      ],
+      "answer": 0,
+      "explanation": "Budget là 0,1% của 84 triệu lượt, tức 84.000 lượt. Sự cố gây 0,30 × 45 × 3.500 = 47.250 lượt lỗi, khoảng 56%. Tính theo phút ngừng hoàn toàn bỏ qua việc chỉ 30% lỗi; quy 30% thành 13,5 phút rồi so với 40,3 phút lại bỏ qua việc giờ cao điểm có lưu lượng khoảng 1,7 lần trung bình. Còn 0,06% là tỉ lệ lỗi trên toàn bộ request, phải so với 0,1% được phép chứ không phải đọc như phần budget. Theo chính sách mẫu, một sự cố trên 20% budget phải có postmortem với ít nhất một việc P0."
+    },
+    {
+      "id": "double-budget",
+      "kind": "output",
+      "prompt": "Service tính số lượt lỗi được phép cho SLO 99,99% trên 84 triệu request. Dòng này in ra gì?",
+      "code": "long requests = 84_000_000;\ndouble slo = 0.9999;\nSystem.out.println((long) ((1 - slo) * requests));",
+      "options": [
+        "8399",
+        "8400",
+        "8400.0",
+        "8401"
+      ],
+      "answer": 0,
+      "explanation": "`1 - 0.9999` trong `double` là `9.999999999998899E-5`, hơi nhỏ hơn 0,0001. Nhân với 84 triệu ra 8399,99..., và ép kiểu `long` cắt phần thập phân thành 8399. Kết quả là `long` nên không in `.0`. Tính bằng số nguyên `requests * (10_000 - 9_999) / 10_000` hoặc `BigDecimal` thì ra đúng 8400."
+    },
+    {
+      "id": "metastable-fix",
+      "kind": "single",
+      "prompt": "Redis restart, cache giá trống, PostgreSQL quá tải. Redis trở lại sau 3 phút nhưng 30% checkout vẫn lỗi suốt 45 phút sau đó; app retry 3 lần và gateway retry 2 lần. Việc nào giúp thoát nhanh nhất?",
+      "options": [
+        "Chặn bớt lưu lượng và tắt retry ở gateway, rồi mở lại dần",
+        "Tăng gấp đôi số pod của service tính giá để xử lý kịp",
+        "Tăng timeout gọi PostgreSQL từ 2 giây lên 10 giây",
+        "Restart lại Redis để cache được nạp lại từ đầu lần nữa"
+      ],
+      "answer": 0,
+      "explanation": "Đây là metastable failure: retry ở hai tầng nhân tải lên tới 12 lần mỗi lượt và cache không kịp nóng vì database quá chậm, nên quá tải tự duy trì sau khi Redis đã về. Chỉ giảm tải xuống dưới ngưỡng mới phá vòng đó. Thêm pod chỉ đẩy thêm query xuống đúng chỗ đang nghẽn; timeout dài hơn giữ connection lâu hơn; restart Redis lại làm trống cache thêm lần nữa."
+    },
+    {
+      "id": "static-az",
+      "kind": "single",
+      "prompt": "Checkout chạy trên 3 AZ, mỗi AZ khoảng một phần ba tải đỉnh, HPA scale theo CPU. Muốn mất một AZ lúc cao điểm mà vẫn giữ SLO không phụ thuộc vào việc tạo máy mới, cần gì?",
+      "options": [
+        "Mỗi AZ có sẵn khoảng một nửa tải đỉnh, tổng chừng 150%",
+        "Hạ ngưỡng CPU của HPA để nó scale sớm hơn khi mất AZ",
+        "Bật cluster autoscaler với node group riêng cho từng AZ",
+        "Thêm AZ thứ tư để mỗi AZ chỉ còn gánh một phần tư tải"
+      ],
+      "answer": 0,
+      "explanation": "Static stability nghĩa là không cần control plane lúc sự cố: mất một AZ thì hai AZ còn lại phải gánh đủ tải ngay, tức mỗi AZ 50%. HPA và cluster autoscaler đều cần tạo pod, tạo máy và kéo image, đúng những thứ có thể đang bị ảnh hưởng. Thêm AZ thứ tư với mỗi AZ 25% thì mất một AZ vẫn thiếu, ba AZ còn lại mỗi cái phải gánh khoảng 33%. Bốn AZ vẫn là cách tốt nếu mỗi AZ có sẵn 33% (tổng 133%, rẻ hơn 150%)."
+    }
+  ]
+}

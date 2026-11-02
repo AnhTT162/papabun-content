@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "seven-rs", "front": "7 R khi chuyển lên cloud gồm những gì?", "back": "Retire, retain, rehost, relocate, repurchase, replatform, refactor. Quyết theo từng ứng dụng; phần lớn danh mục thường là rehost hoặc replatform, chỉ vài hệ thống lõi đáng refactor." },
+    { "id": "move-then-modernize", "front": "Có hạn chót rời datacenter thì có nên viết lại hệ thống lõi cùng lúc không?", "back": "Không. Chuyển trước (rehost hoặc replatform), hiện đại hoá sau. Gộp hai việc thì rủi ro của dự án viết lại thành rủi ro của hạn chót không dời được." },
+    { "id": "move-group", "front": "Vì sao app và database nói nhiều với nhau phải chuyển cùng một đợt?", "back": "Vì độ trễ nhân theo số vòng gọi: 900 câu SQL tuần tự với RTT 10 ms qua đường hybrid là 9 giây, so với 0,27 giây khi RTT 0,3 ms trong datacenter." },
+    { "id": "strangler-slice", "front": "Chia lát strangler theo ngày tạo có lợi gì?", "back": "Bản ghi mới vào hệ thống mới, bản ghi đang dở chạy hết vòng đời ở hệ thống cũ. Không phải migrate dữ liệu đang xử lý dở, chỉ cần dữ liệu lịch sử cho tra cứu." },
+    { "id": "legacy-mimic", "front": "Legacy mimic là gì?", "back": "Hệ thống mới giả làm giao diện mà hệ thống cũ mong đợi, ví dụ ghi bản ghi mới vào đúng bảng cũ, để báo cáo và tích hợp cũ không phải sửa trong lúc chuyển." },
+    { "id": "feature-parity", "front": "Vì sao đòi tính năng ngang bằng (feature parity) là bẫy?", "back": "Hệ thống cũ có nhiều tính năng không ai còn dùng. Làm lại hết thì không ai được chuyển sớm; đo log sử dụng và chỉ làm lại phần còn cần." },
+    { "id": "parallel-run", "front": "Parallel run dùng cho việc gì và cần cẩn thận gì?", "back": "Chạy cùng đầu vào qua cả hai hệ thống, trả kết quả cũ, ghi khác biệt. Chỉ hợp cho đọc và tính toán; bản chạy thử không được ghi hay gọi ra ngoài thật (gửi email, trừ tiền)." },
+    { "id": "sequence-after-load", "front": "Sau khi nạp dữ liệu có sẵn id vào PostgreSQL, insert tiếp theo lỗi gì và sửa thế nào?", "back": "Duplicate key, vì sequence vẫn bắt đầu từ 1. Chạy `SELECT setval(pg_get_serial_sequence('policy','id'), (SELECT max(id) FROM policy))` cho mọi sequence trước khi mở ghi." },
+    { "id": "pg-tx-abort", "front": "Chuyển từ Oracle sang PostgreSQL, code bắt exception rồi chạy tiếp trong transaction bị gì?", "back": "PostgreSQL huỷ cả transaction sau lỗi; câu tiếp theo nhận `25P02 current transaction is aborted`. Oracle chỉ huỷ câu lỗi. Cần savepoint." },
+    { "id": "point-of-no-return", "front": "Điểm không quay lại trong cutover là gì?", "back": "Thời điểm mà sau đó rollback sẽ mất dữ liệu, thường là khi hệ thống mới nhận ghi mà không còn đồng bộ ngược. Ghi rõ nó trong runbook; đồng bộ ngược đẩy nó ra xa hơn." }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "reliability-sre",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Độ tin cậy & SRE",
+  "summary": "SLO theo hành trình người dùng, error budget tính theo request, chính sách budget ký trước và cách nó quyết chuyện ra tính năng hay sửa ổn định, toil, thiết kế cho lỗi (thay đổi an toàn, static stability, cell và shuffle sharding, dependency mềm, metastable failure), rồi kiểm chứng bằng chaos engineering và game day.",
+  "level": "architect",
+  "order": 13,
+  "minutes": 18,
+  "prerequisites": ["observability", "resilience-patterns", "capacity-planning", "nfr-quality-attributes"],
+  "terms": ["sre", "slo", "sli", "error-budget", "error-budget-policy", "burn-rate", "postmortem", "toil", "production-readiness-review", "sla", "blast-radius", "static-stability", "cell-based-architecture", "shuffle-sharding", "bulkhead", "graceful-degradation", "metastable-failure", "retry-budget", "load-shedding", "chaos-engineering", "steady-state-hypothesis", "fault-injection", "game-day", "runbook"],
+  "references": [
+    { "title": "Google SRE Workbook: Example Error Budget Policy", "url": "https://sre.google/workbook/error-budget-policy/" },
+    { "title": "Principles of Chaos Engineering", "url": "https://principlesofchaos.org/" },
+    { "title": "Amazon Builders' Library: Static stability using Availability Zones", "url": "https://aws.amazon.com/builders-library/static-stability-using-availability-zones/" },
+    { "title": "Amazon Builders' Library: Workload isolation using shuffle-sharding", "url": "https://aws.amazon.com/builders-library/workload-isolation-using-shuffle-sharding/" },
+    { "title": "Amazon Builders' Library: Avoiding fallback in distributed systems", "url": "https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Product không chịu dừng release khi hết budget thì sao?\" Đừng biến nó thành cuộc cãi giữa hai team. Chính sách phải được product ký trước, lúc chưa có sự cố, với một người được nêu tên giải quyết tranh chấp. Nếu vẫn cần ra một tính năng khi budget âm, đó là ngoại lệ người đó quyết công khai và ghi lại, kèm điều kiện như rollout từ 1% có rollback tự động. Không ai có quyền dừng release thì SLO chỉ là con số trên dashboard." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chép SLO từ SLA của nhà cung cấp cloud hay lấy hiệu năng hiện tại làm mục tiêu. SLO 99,99% cho checkout có budget khoảng 4 phút mỗi tháng: một lần deploy lỗi là hết, và team sẽ phải đóng băng gần như vĩnh viễn. Bắt đầu từ mức người dùng thật sự chấp nhận, đo vài tháng rồi chỉnh." },
+    { "type": "callout", "style": "tip", "markdown": "Thí nghiệm chaos đầu tiên nên là thứ đội tin chắc là chịu được: một pod chết, một dependency không bắt buộc trả lỗi. Gắn điều kiện dừng vào alert burn rate của SLO, chạy ở staging rồi mới tới một phần nhỏ production. Nếu đã biết chắc hệ thống sẽ sập thì đừng thí nghiệm, sửa trước." }
+  ]
+}
