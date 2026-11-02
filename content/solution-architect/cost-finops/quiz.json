@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "kafka-cross-az",
+      "kind": "single",
+      "prompt": "Kafka tự chạy trên 3 AZ, replication factor 3, ghi 13 TB mỗi tháng, 3 consumer group đọc toàn bộ. Bật fetch from follower thì phần truyền giữa AZ nào còn lại?",
+      "options": [
+        "Replication sang 2 AZ khác và producer gửi tới leader khác AZ",
+        "Không còn gì, vì mọi client giờ đều đọc ghi trong cùng AZ",
+        "Chỉ phần consumer, vì fetch from follower đổi cách chép",
+        "Chỉ phần producer, vì follower nhận dữ liệu qua bộ nhớ chung"
+      ],
+      "answer": 0,
+      "explanation": "Fetch from follower (KIP-392) chỉ cho consumer đọc replica cùng AZ qua `client.rack`. Producer vẫn phải ghi vào leader, nằm ở AZ khác khoảng 2/3 số lần, và mỗi GB vẫn được chép sang 2 AZ còn lại: đó là giá của độ bền khi mất một AZ. Cách chép giữa broker không đổi, và broker không chia sẻ bộ nhớ. Trên Amazon MSK, phần chép giữa broker không bị tính phí truyền dữ liệu."
+    },
+    {
+      "id": "sp-breakeven",
+      "kind": "single",
+      "prompt": "m7g.large on-demand 0,0816 USD/giờ, Compute Savings Plans 1 năm 0,0599. Một nhóm node chỉ chạy giờ hành chính, 60 trên 168 giờ mỗi tuần. Có nên mua Savings Plans cho nhóm này?",
+      "options": [
+        "Không, cam kết theo giờ nên giờ tắt máy vẫn mất tiền; cần chạy trên ~73% số giờ",
+        "Có, vì giảm 26,6% đơn giá thì chạy ít hay nhiều giờ vẫn luôn có lợi",
+        "Có, vì phần cam kết không dùng ban đêm được dồn sang giờ làm ngày hôm sau",
+        "Không, vì Compute Savings Plans chỉ áp cho Fargate và Lambda, không cho EC2"
+      ],
+      "answer": 0,
+      "explanation": "Savings Plans là cam kết USD/giờ; giờ nào dùng ít hơn thì phần thiếu mất luôn, không dồn sang giờ sau. Hoà vốn khi phần được phủ chạy hơn 0,0599 / 0,0816 ≈ 73,4% số giờ, còn nhóm này chạy 35,7%. Tắt ngoài giờ đã giảm 64% rồi; mua cam kết cho tải nền chạy 24/7. Compute Savings Plans áp cho cả EC2, Fargate và Lambda."
+    },
+    {
+      "id": "nat-s3",
+      "kind": "single",
+      "prompt": "Pod trong subnet private ghi 30 TB mỗi tháng vào S3 cùng region qua NAT gateway. Cách nào bỏ được phần lớn chi phí của luồng này?",
+      "options": [
+        "Thêm gateway endpoint cho S3 vào route table của subnet",
+        "Đặt NAT gateway trong cùng AZ với bucket S3 đang dùng",
+        "Mua Compute Savings Plans để phủ phí xử lý của NAT",
+        "Bật S3 Transfer Acceleration để rút ngắn đường đi"
+      ],
+      "answer": 0,
+      "explanation": "NAT gateway thu 0,045 USD mỗi GB xử lý, 30 TB là khoảng 1.380 USD. Gateway endpoint cho S3 miễn phí và cho traffic đi thẳng tới S3 không qua NAT. Bucket S3 là dịch vụ cấp region, không nằm trong một AZ. Savings Plans không phủ NAT. Transfer Acceleration dùng cho upload từ xa qua edge, tốn thêm tiền chứ không bớt."
+    },
+    {
+      "id": "budget-alert",
+      "kind": "single",
+      "prompt": "Một hàm Lambda bị vòng lặp ghi log liên tục. Team đã có AWS Budgets với ngưỡng 10.000 USD/tháng và cảnh báo email. Điều gì xảy ra khi chi phí vượt ngưỡng?",
+      "options": [
+        "Có email cảnh báo, chậm nhiều giờ, còn tài nguyên vẫn chạy và tốn tiền",
+        "AWS tự dừng mọi dịch vụ trong tài khoản khi chi phí chạm ngưỡng đã đặt",
+        "Lambda bị throttle về 0 vì Budgets gắn với reserved concurrency",
+        "Phần vượt ngưỡng không bị tính tiền vì đã có budget cho tài khoản"
+      ],
+      "answer": 0,
+      "explanation": "Budgets chỉ cảnh báo; muốn hành động phải cấu hình budget action (áp IAM policy hay SCP, dừng EC2/RDS). Dữ liệu chi phí cũng trễ nhiều giờ. Với rủi ro chạy mất kiểm soát, cần alert kỹ thuật trên metric như số lần gọi Lambda hay byte log đưa vào mỗi giờ."
+    },
+    {
+      "id": "cut-proposal",
+      "kind": "single",
+      "prompt": "CFO muốn giảm 30% hoá đơn. Đề xuất nào nên làm trước?",
+      "options": [
+        "Đặt retention cho log, tắt dev ngoài giờ, rồi rightsize node",
+        "Chuyển database production từ Multi-AZ về Single-AZ ngay",
+        "Mua Compute Savings Plans 1 năm theo mức dùng hiện tại",
+        "Đưa toàn bộ node production sang spot để giảm tới 90%"
+      ],
+      "answer": 0,
+      "explanation": "Bỏ lãng phí và rightsize giảm tiền mà không đổi SLO hay RTO. Bỏ Multi-AZ làm mất failover tự động, RTO thành hàng giờ. Mua cam kết theo mức dùng hiện tại, trước khi rightsize, là cam kết cho cả phần đang thừa: sau khi rightsize phần đó thành cam kết không dùng, mất mỗi giờ. Spot có thể bị thu hồi với 2 phút báo trước, nên không đặt phần capacity mà SLO cần lên đó."
+    }
+  ]
+}

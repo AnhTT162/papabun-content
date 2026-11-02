@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "multi-tenancy",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Kiến trúc multi-tenant",
+  "summary": "Silo, pool và bridge theo tầng và theo gói, ba cách chia dữ liệu quan hệ (chung bảng, schema, database riêng), row-level security của PostgreSQL và các bẫy của nó (chủ bảng bỏ qua RLS, SET trên connection pool, view, policy hỏng theo hướng đóng), tenant context từ token tới log, message và cache, noisy neighbor, tenant quá lớn, vòng đời tenant (onboarding, đổi gói, xoá, khôi phục), khoá mã hoá và nơi lưu, chi phí theo tenant.",
+  "level": "architect",
+  "order": 16,
+  "minutes": 18,
+  "prerequisites": ["sharding-strategies", "threadlocal", "rate-limiting", "security-architecture", "cost-finops"],
+  "terms": ["multi-tenancy", "tenant", "silo-model", "pool-model", "bridge-model", "row-level-security", "noisy-neighbor", "tenant-context", "cache-key", "rate-limiting", "idor", "mdc", "bulkhead", "shuffle-sharding", "cell-based-architecture", "directory-sharding", "crypto-shredding", "home-region", "feature-flag", "microkernel-architecture"],
+  "references": [
+    { "title": "PostgreSQL 17: Row Security Policies", "url": "https://www.postgresql.org/docs/17/ddl-rowsecurity.html" },
+    { "title": "AWS Whitepaper: SaaS Architecture Fundamentals", "url": "https://docs.aws.amazon.com/whitepapers/latest/saas-architecture-fundamentals/saas-architecture-fundamentals.html" },
+    { "title": "AWS Whitepaper: SaaS Tenant Isolation Strategies", "url": "https://docs.aws.amazon.com/whitepapers/latest/saas-tenant-isolation-strategies/saas-tenant-isolation-strategies.html" },
+    { "title": "PostgreSQL 17: CREATE VIEW (security_invoker)", "url": "https://www.postgresql.org/docs/17/sql-createview.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn chứng minh với khách enterprise rằng dữ liệu của họ không lộ sang tenant khác thế nào?\" Kể các lớp độc lập: tenant lấy từ token, filter ở ORM, RLS ở database với role không sở hữu bảng, khoá mã hoá riêng nếu họ ở silo. Rồi đưa bằng chứng kiểm được: test cô lập chạy trong CI cho mọi endpoint, test kiểm mọi bảng có tenant đều bật RLS và FORCE, log truy cập có tenant, và kết quả pentest." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng để app kết nối database bằng role sở hữu bảng hay role có BYPASSRLS. RLS khi đó vẫn hiện trong schema nhưng không lọc gì, và lỗi chỉ lộ ra khi có một câu query quên điều kiện tenant. Viết một test đăng nhập bằng role của app, đặt tenant A, và khẳng định không đếm được dòng nào của tenant B." },
+    { "type": "callout", "style": "tip", "markdown": "Tạo bảng tra tenant → gói → nơi chứa dữ liệu ngay từ ngày đầu, kể cả khi mọi tenant đều ở một database. Sau này tách tenant lớn sang shard, chuyển khách sang silo hay đặt home region chỉ là đổi một dòng và sao chép dữ liệu, không phải sửa logic định tuyến khắp code." }
+  ]
+}

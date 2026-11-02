@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pooled-set",
+      "kind": "output",
+      "prompt": "Bảng `orders` bật RLS, policy `tenant_id = current_setting('app.tenant_id')::bigint`. Cột `total` của tenant 1 là 100, 200, 300; của tenant 2 là 888, 999. App dùng role không sở hữu bảng và một connection pool. Request thứ hai mượn đúng connection của request đầu. Request thứ hai in ra gì?",
+      "code": "-- request 1 (tenant 1)\nSET app.tenant_id = '1';\nSELECT string_agg(total::text, ',' ORDER BY total) FROM orders;\n\n-- request 2 (tenant 2), quên đặt tenant\nSELECT string_agg(total::text, ',' ORDER BY total) FROM orders;",
+      "options": [
+        "100,200,300",
+        "888,999",
+        "NULL (không thấy dòng nào)",
+        "Lỗi: unrecognized parameter"
+      ],
+      "answer": 0,
+      "explanation": "`SET` sống theo session, và connection của pool giữ nguyên session giữa các request. Request thứ hai vẫn chạy với `app.tenant_id = 1` nên thấy đơn của tenant 1 (đã chạy trên PostgreSQL 17.6). Lỗi tham số chỉ xảy ra trên connection chưa từng đặt giá trị. Dùng `set_config('app.tenant_id', ?, true)` trong transaction để giá trị tự mất khi transaction kết thúc."
+    },
+    {
+      "id": "owner-sees-all",
+      "kind": "single",
+      "prompt": "Bảng đã `ENABLE ROW LEVEL SECURITY` và có policy theo tenant. App kết nối bằng role đã tạo bảng, đặt tenant 1, nhưng vẫn đếm được dòng của mọi tenant. Vì sao?",
+      "options": [
+        "Chủ bảng không chịu RLS nếu bảng chưa bật FORCE ROW LEVEL SECURITY",
+        "Policy chỉ áp cho lệnh ghi; SELECT cần thêm một policy riêng cho đọc",
+        "RLS chỉ có hiệu lực sau khi chạy ANALYZE để planner thấy policy mới",
+        "Connection pool cache plan cũ được tạo từ trước khi policy tồn tại"
+      ],
+      "answer": 0,
+      "explanation": "Chủ sở hữu bảng bỏ qua RLS trừ khi `ALTER TABLE ... FORCE ROW LEVEL SECURITY`; superuser và role `BYPASSRLS` luôn bỏ qua. Lab: chủ bảng đếm được 5 dòng, sau FORCE còn 3. Policy không ghi lệnh thì áp cho mọi lệnh, kể cả SELECT. Policy không phụ thuộc ANALYZE. Cách đúng là cho app một role riêng không sở hữu bảng."
+    },
+    {
+      "id": "model-choice",
+      "kind": "single",
+      "prompt": "SaaS có 3.000 cửa hàng trả 30 USD/tháng và vài khách enterprise đòi database và khoá mã hoá riêng. Mô hình nào hợp lý nhất?",
+      "options": [
+        "Bridge theo gói: pool có RLS cho khách nhỏ, silo cho enterprise",
+        "Silo cho mọi tenant để ai cũng được cô lập ở mức cao nhất",
+        "Schema riêng cho mỗi tenant trong cùng một database chung",
+        "Pool cho tất cả, khách enterprise dùng chung bảng có thêm cờ"
+      ],
+      "answer": 0,
+      "explanation": "Database riêng tốn vài trăm USD mỗi tháng, gấp nhiều lần giá gói thường, nên silo cho tất cả là lỗ. Schema riêng cho 3.000 tenant làm catalog phình, migration chạy 3.000 lần, và vẫn không cho khách enterprise khoá mã hoá riêng ở mức database. Pool cho tất cả không đáp ứng điều kiện hợp đồng. Bridge cho mỗi gói chi phí và mức cô lập phù hợp, cùng một code."
+    },
+    {
+      "id": "view-rls",
+      "kind": "single",
+      "prompt": "App (role không sở hữu bảng, RLS đang có hiệu lực) đặt tenant 1 rồi đọc view `order_summary` do chủ bảng tạo; bảng chưa bật FORCE ROW LEVEL SECURITY. Kết quả có dòng của tenant 2. Cách sửa trên PostgreSQL 15+?",
+      "options": [
+        "ALTER VIEW order_summary SET (security_invoker = true)",
+        "Thêm WHERE tenant_id = 1 cố định vào định nghĩa của view",
+        "GRANT SELECT trên bảng orders trực tiếp cho role của app",
+        "REFRESH lại view để nó đọc policy mới nhất của bảng gốc"
+      ],
+      "answer": 0,
+      "explanation": "View chạy với quyền của chủ view, nên RLS áp theo chủ view chứ không theo người gọi; chủ bảng chưa FORCE thì không chịu RLS. `security_invoker = true` (PostgreSQL 15+) làm view kiểm quyền và RLS theo người gọi: lab ra `1:3` thay vì `2:2,1:3`. Gắn cứng tenant vào view không dùng được cho tenant khác. Cấp quyền trên bảng không đổi cách view chạy. Chỉ materialized view mới REFRESH được."
+    }
+  ]
+}

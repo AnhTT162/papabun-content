@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "optimize-order", "front": "Tối ưu chi phí cloud theo thứ tự nào?", "back": "Bỏ thứ không dùng, rightsize theo mức dùng thật, sửa đường đi của dữ liệu, rồi mới mua Savings Plans hay reserved instance cho tải nền. Cam kết trước thì khoá vào cỡ đang thừa." },
+    { "id": "unit-cost", "front": "Vì sao theo dõi unit cost thay vì tổng hoá đơn?", "back": "Tổng tăng khi kinh doanh tăng là bình thường. Chi phí trên một đơn hay một tenant tăng mới là dấu hiệu lãng phí hoặc thiết kế kém hiệu quả." },
+    { "id": "cross-az", "front": "Truyền dữ liệu giữa hai AZ trên AWS tính phí thế nào?", "back": "0,01 USD/GB mỗi chiều, nên mỗi GB đi qua tốn khoảng 0,02 USD. Replication, producer và consumer khác AZ cộng dồn thành khoản lớn." },
+    { "id": "nat-s3", "front": "Pod ghi vào S3 qua NAT gateway tốn thêm gì, và tránh thế nào?", "back": "0,045 USD cho mỗi GB NAT xử lý, cộng phí giờ. Gateway endpoint cho S3 (và DynamoDB) miễn phí và đi thẳng, gánh cả layer image của ECR." },
+    { "id": "sp-hourly", "front": "Savings Plans tính cam kết thế nào, và khi nào có lợi?", "back": "Cam kết một mức USD/giờ; giờ nào dùng ít hơn thì phần thiếu mất luôn. Compute SP 1 năm giảm khoảng 26% nên chỉ có lợi khi phần được phủ chạy hơn khoảng 73% số giờ: chỉ mua cho tải nền." },
+    { "id": "compute-vs-instance-sp", "front": "Compute Savings Plans khác EC2 Instance Savings Plans thế nào?", "back": "Compute áp cho mọi family, region, cả Fargate và Lambda; EC2 Instance khoá một family trong một region nhưng giảm sâu hơn. Sắp đổi family (như sang Graviton) thì chọn Compute." },
+    { "id": "budget-no-cap", "front": "AWS Budgets có tự chặn chi tiêu không?", "back": "Không, nó chỉ cảnh báo. Muốn hành động phải cấu hình budget action (áp policy, dừng EC2/RDS). Dữ liệu chi phí trễ nhiều giờ nên cần thêm alert kỹ thuật." },
+    { "id": "showback-chargeback", "front": "Showback khác chargeback thế nào?", "back": "Showback cho team thấy họ tiêu bao nhiêu; chargeback trừ thẳng vào ngân sách của họ. Bắt đầu bằng showback, chargeback khi số liệu phân bổ đã được tin." },
+    { "id": "cost-vs-reliability", "front": "Trình bày một đề xuất cắt chi phí chạm vào độ tin cậy thế nào?", "back": "Tiết kiệm bao nhiêu mỗi tháng, RTO/RPO hay SLO đổi thế nào, ai chấp nhận rủi ro. Ví dụ bỏ Multi-AZ cho database chính tiết kiệm vài trăm USD nhưng RTO thành hàng giờ." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Hoá đơn tăng 40% trong khi số đơn tăng 10%: giảm chi phí mà không cắt vào độ tin cậy",
+  "prompt": "Bạn là solution architect của một nền tảng thương mại điện tử chạy trên AWS us-east-1, khoảng 1,2 triệu đơn mỗi tháng. Trong 6 tháng, hoá đơn tăng 40% còn số đơn chỉ tăng 10%. CFO yêu cầu giảm 30% trong một quý.\n\nHoá đơn tháng gần nhất (USD, giá Price List API 10/2026):\n\n| Khoản | Chi tiết | USD/tháng |\n|---|---|---|\n| EKS production | 24 node m7i.xlarge on-demand; CPU trung bình 18%, request của pod gấp đôi mức dùng | 3.532 |\n| EKS dev + staging | 16 node m7i.xlarge chạy 24/7 | 2.355 |\n| Control plane EKS | 3 cluster | 219 |\n| RDS production | PostgreSQL db.r7g.xlarge Multi-AZ, 2 TB gp3 | 1.158 |\n| RDS staging | db.r7g.xlarge Multi-AZ, 500 GB gp3 | 813 |\n| NAT gateway | 3 gateway, 32 TB đi qua mỗi tháng | 1.573 |\n| Truyền dữ liệu giữa AZ | 60 TB | 1.210 |\n| CloudWatch Logs | 3 TB đưa vào mỗi tháng, 20 TB đang lưu | 2.150 |\n| S3 | 120 TB Standard | 2.755 |\n| Khác | ALB, ECR, Route 53, CloudFront | 1.800 |\n| **Tổng** | | **17.564** |\n\nThêm vài thông tin:\n\n- Đo lại sau khi chỉnh request theo mức dùng thật: đỉnh tải cần khoảng 12 node, ban đêm khoảng 7 node. Có kế hoạch chuyển sang Graviton trong 6 tháng tới.\n- Kafka tự chạy trên EKS (3 broker ở 3 AZ, replication factor 3), ghi trung bình 5 MB/s, 3 consumer group đọc toàn bộ.\n- Pod ghi file xuất đơn hàng và ảnh sản phẩm vào S3 qua NAT; node kéo image từ ECR cũng qua NAT. Khoảng 2 TB mỗi tháng là gọi API đối tác ngoài Internet.\n- Log production đang ở mức DEBUG từ một đợt điều tra 4 tháng trước. Không log group nào có retention.\n- 90 TB trong S3 là file xuất đơn hàng cũ hơn 90 ngày, mỗi file vài chục MB, gần như không ai đọc nhưng phải giữ 5 năm.\n- Không có tag; mọi team chung một tài khoản AWS.\n\nCác đề xuất đã có trên bàn: (1) chuyển RDS production về Single-AZ; (2) chạy toàn bộ node production bằng spot; (3) giảm replication factor của Kafka xuống 2; (4) mua ngay EC2 Instance Savings Plans 3 năm cho 24 node m7i hiện có.\n\nCTO cần: kế hoạch giảm chi phí có số, ý kiến về bốn đề xuất, và cách để sáu tháng sau không lặp lại.",
+  "hints": [
+    "Trước khi mua cam kết, hỏi: bao nhiêu phần trong hoá đơn là thứ không cần chạy, hay chạy sai cỡ?",
+    "Dữ liệu từ pod tới S3 đi qua NAT tốn bao nhiêu mỗi GB, và có đường nào miễn phí không?",
+    "Với Kafka, phần truyền giữa AZ nào là giá của độ bền và phần nào chỉ do consumer đọc nhầm chỗ?",
+    "Với mỗi đề xuất chạm vào độ tin cậy, viết ra: tiết kiệm bao nhiêu mỗi tháng, RTO hay SLO đổi thế nào, ai chấp nhận rủi ro."
+  ],
+  "solution": "**1. Vì sao hoá đơn tăng nhanh hơn kinh doanh**\n\nUnit cost hiện là 17.564 / 1,2 triệu ≈ 0,0146 USD mỗi đơn. Phần lớn chênh lệch không đến từ tải mà từ những thứ không gắn với đơn hàng: log DEBUG không hết hạn, dữ liệu cũ ở lớp đắt, môi trường dev chạy cả đêm, dữ liệu đi vòng qua NAT. Không có tag nên không team nào thấy phần của mình.\n\n**2. Kế hoạch theo thứ tự: bỏ, sửa cỡ, sửa đường đi, rồi mới cam kết**\n\n| Khoản | Việc làm | Trước | Sau |\n|---|---|---|---|\n| Logs | Về INFO, retention 30 ngày, log audit sang S3; còn khoảng 0,9 TB/tháng | 2.150 | 488 |\n| S3 | Lifecycle: file xuất cũ hơn 90 ngày sang Glacier Instant Retrieval (0,004 USD/GB) | 2.755 | 1.075 |\n| Dev + staging | 8 node, tắt ngoài 12 giờ × 5 ngày (60/168 giờ) | 2.355 | 420 |\n| RDS staging | db.r7g.large Single-AZ, tắt theo cùng lịch; storage vẫn tính | 813 | 120 |\n| NAT | Gateway endpoint cho S3 (miễn phí, gánh cả layer của ECR); còn 2 TB API đối tác | 1.573 | 191 |\n| Giữa AZ | Fetch from follower cho consumer Kafka; replication giữ nguyên | 1.210 | 691 |\n| EKS production | Chỉnh request theo p95, giữ tối thiểu 18 node; Compute Savings Plans 1 năm cho 12 node | 3.532 | 2.180 |\n| Không đổi | Control plane, RDS production, khác | 3.177 | 3.177 |\n| **Tổng** | | **17.564** | **8.343** |\n\nGiảm khoảng 52%, vượt mục tiêu 30% mà không chạm vào RDS production, replication hay capacity dự phòng. Unit cost về khoảng 0,0070 USD mỗi đơn.\n\nVài điểm cần cẩn thận:\n\n- *S3*: file vài chục MB nên mức tính tối thiểu 128 KB không đáng kể; Glacier IR tính tối thiểu 90 ngày, hợp vì file phải giữ 5 năm. Nếu một phần vẫn được đọc lại thường xuyên thì phí đọc theo GB sẽ ăn vào phần tiết kiệm; kiểm bằng S3 Storage Lens hoặc log truy cập trước. Glacier IR được chọn vì khi có khiếu nại hay kiểm toán, file phải lấy được ngay. Nếu chấp nhận chờ tới 12 giờ, Deep Archive (khoảng 0,00099 USD/GB, tối thiểu 180 ngày) đưa 90 TB từ khoảng 369 xuống khoảng 91 USD/tháng. Phí chuyển lớp tính theo số object, một lần.\n- *Kafka*: producer vẫn gửi tới leader ở AZ khác khoảng 2/3 số lần, và mỗi GB vẫn chép sang 2 AZ: khoảng 34,6 TB qua ranh giới AZ mỗi tháng. Đó là giá của việc mất một AZ không mất dữ liệu.\n- *18 node production*: autoscaler giữ tối thiểu 6 node mỗi AZ, mất một AZ còn 12 node, đúng mức đỉnh cần. Đây là static stability, không phải lãng phí (bài Độ tin cậy & SRE). Ban đêm tải chỉ cần 7 node nhưng 18 node vẫn chạy, nên đó là tải nền thật để cam kết.\n- *Cam kết sau cùng*: chỉ sau khi rightsize. Compute Savings Plans 1 năm không trả trước cho 12 node m7i.xlarge là 12 × 0,14811 ≈ 1,78 USD/giờ, giảm 26,5% so với on-demand. Vì sao 12 chứ không 18: sau khi chuyển Graviton, 18 node m7g chỉ tiêu 18 × 0,1199 ≈ 2,16 USD/giờ theo giá Savings Plans; cam kết theo mức 18 node m7i (khoảng 2,67 USD/giờ) sẽ thừa mỗi giờ. Cam kết 1,78 USD/giờ vẫn được dùng hết trước và sau khi chuyển. Chọn Compute chứ không EC2 Instance vì cam kết vẫn áp khi chuyển sang m7g; khi đó 1,78 USD/giờ phủ gần 15 node m7g, khoảng 3 node còn lại chạy on-demand (0,1632). Chuyển Graviton xong giảm thêm khoảng 500 USD/tháng.\n- *Database production*: RDS production đang on-demand. Database chạy ổn định nên mua RI 1 năm (0,7363 so với 0,956, giảm 23%, khoảng 160 USD/tháng); Database Savings Plans (0,7648) linh hoạt hơn nếu sắp đổi engine hay family.\n\n**3. Bốn đề xuất**\n\n- *(1) RDS production Single-AZ*: tiết kiệm 579 USD/tháng. Đổi lại, khi instance hay AZ hỏng thì không còn failover tự động trong một hai phút mà phải restore hoặc chờ khôi phục, RTO thành hàng giờ. Một giờ ngừng của 1,2 triệu đơn/tháng (khoảng 1.600 đơn/giờ) gần như chắc chắn mất hơn 579 USD. Từ chối, ghi rõ con số để CTO quyết nếu vẫn muốn.\n- *(2) Toàn bộ production trên spot*: spot có thể bị thu hồi với 2 phút báo trước, nhiều node cùng lúc khi một loại instance hết capacity. Dùng spot cho dev, CI và worker đọc hàng đợi; production chỉ đưa phần trên mức 12 node lên spot sau khi có xử lý tín hiệu thu hồi và đa dạng instance type.\n- *(3) Replication factor 2*: tiết kiệm phần chép sang AZ thứ ba, khoảng 13 TB × 0,02 ≈ 260 USD/tháng. Nhưng producer dùng `acks=all` với `min.insync.replicas` 2 thì mất một broker là partition đó dừng ghi, còn hạ xuống 1 thì có thể mất dữ liệu đã xác nhận. Mỗi partition cũng chỉ còn replica ở 2 trong 3 AZ, nên consumer ở AZ thứ ba lại đọc chéo AZ, ăn lại một phần tiết kiệm. Từ chối.\n- *(4) EC2 Instance SP 3 năm cho 24 node m7i*: cam kết cho số node sắp giảm còn 18, cho family sắp bỏ, trong 3 năm. Phần cam kết thừa mất mỗi giờ. Từ chối; mua sau rightsize, Compute SP, 1 năm, cho tải nền.\n\n**4. Để không lặp lại**\n\n- Tách tài khoản theo môi trường (production, staging, dev) trong AWS Organizations; tag bắt buộc `team`, `service`, `env` qua tag policy và kiểm tra trong pipeline IaC; kích hoạt làm cost allocation tag. Chi phí EKS chia theo request của pod (split cost allocation data cho EKS).\n- Showback hằng tháng cho từng team, kèm unit cost mỗi đơn của toàn hệ thống. Chargeback sau khi số liệu phân bổ được tin.\n- AWS Budgets cho từng tài khoản với cảnh báo theo dự báo, Cost Anomaly Detection theo service. Nhớ rằng budget chỉ cảnh báo, không chặn. Alert kỹ thuật cho byte log đưa vào mỗi giờ, vì dữ liệu chi phí trễ nhiều giờ.\n- Mỗi thiết kế mới có dòng chi phí tháng ước tính và ảnh hưởng tới unit cost; pipeline IaC báo chênh lệch chi phí trên pull request.\n- Review cam kết mỗi quý theo coverage và utilization, mua thêm từng đợt nhỏ.",
+  "tradeoffs": [
+    {
+      "option": "Cắt theo đề xuất có sẵn (Single-AZ, spot, giảm replication)",
+      "pros": [
+        "Nhanh, thấy ngay trên hoá đơn",
+        "Không cần đo hay sửa code"
+      ],
+      "cons": [
+        "Tăng RTO và rủi ro mất dữ liệu mà không ai quyết rõ",
+        "Lãng phí thật (log, NAT, dev chạy đêm) vẫn còn nguyên"
+      ]
+    },
+    {
+      "option": "Mua cam kết lớn ngay cho toàn bộ fleet",
+      "pros": [
+        "Giảm 30–50% đơn giá mà không đụng vào hệ thống",
+        "Một quyết định, ít việc kỹ thuật"
+      ],
+      "cons": [
+        "Khoá vào cỡ và family đang thừa",
+        "Phần cam kết không dùng mất mỗi giờ"
+      ]
+    },
+    {
+      "option": "Bỏ lãng phí, rightsize, sửa đường dữ liệu rồi mới cam kết",
+      "pros": [
+        "Giảm nhiều nhất mà giữ nguyên SLO và RTO",
+        "Cam kết đúng mức tải nền thật"
+      ],
+      "cons": [
+        "Cần vài tuần việc kỹ thuật và đo lại",
+        "Cần phân bổ chi phí để giữ kết quả lâu dài"
+      ]
+    }
+  ]
+}

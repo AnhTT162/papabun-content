@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns", "reliability-sre"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns", "reliability-sre", "multi-tenancy"]
     },
     {
       "id": "hash-spreading",
@@ -2189,7 +2189,7 @@
       "meaning": "Gán dòng vào shard bằng một bảng tra cứu (key hoặc bucket → shard) thay vì công thức cố định, nên chuyển riêng từng tenant được.",
       "example": "Tenant lớn nhất được ghi riêng trong directory là nằm ở shard 9.",
       "related": ["logical-shard", "shard-key"],
-      "topics": ["sharding-strategies"]
+      "topics": ["sharding-strategies", "multi-tenancy"]
     },
     {
       "id": "resharding",
@@ -2405,7 +2405,7 @@
       "meaning": "Khoá dùng để tìm một mục trong cache. Phải chứa mọi thứ làm kết quả khác đi (tenant, ngôn ngữ, người dùng nếu cá nhân hoá), nếu không sẽ trả nhầm dữ liệu.",
       "example": "`v3:product:{tenant}:{id}:{locale}`",
       "related": ["cache", "http-caching"],
-      "topics": ["caching-basics", "cache-patterns", "dns-cdn"]
+      "topics": ["caching-basics", "cache-patterns", "dns-cdn", "multi-tenancy"]
     },
     {
       "id": "http-caching",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler", "multi-tenancy"]
     },
     {
       "id": "redis-sentinel",
@@ -3669,7 +3669,7 @@
       "meaning": "Mapped Diagnostic Context: bảng key-value theo thread của thư viện log (SLF4J, Logback), tự gắn vào mọi dòng log của thread đó. Dựa trên `ThreadLocal` nên không tự sang thread khác.",
       "example": "`MDC.put(\"traceId\", id)` trong filter, pattern log có `%X{traceId}`.",
       "related": ["thread-local", "context-propagation"],
-      "topics": ["threadlocal", "production-logging", "java-logging"]
+      "topics": ["threadlocal", "production-logging", "java-logging", "multi-tenancy"]
     },
     {
       "id": "inheritable-thread-local",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy"]
     },
     {
       "id": "dora-metrics",
@@ -5157,7 +5157,7 @@
       "meaning": "Mã hoá dữ liệu cá nhân bằng khoá riêng của từng người; khi cần xoá thì xoá khoá, dữ liệu còn đó nhưng không đọc được nữa.",
       "example": "Event lưu email đã mã hoá bằng khoá của user 42 trong kho khoá; user yêu cầu xoá thì xoá khoá đó.",
       "related": ["event-sourcing"],
-      "topics": ["cqrs-event-sourcing"]
+      "topics": ["cqrs-event-sourcing", "multi-tenancy"]
     },
     {
       "id": "two-phase-commit",
@@ -5453,7 +5453,7 @@
       "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
       "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
       "related": [],
-      "topics": ["clocks-ids", "design-id-generator"]
+      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy"]
     },
     {
       "id": "leap-second",
@@ -5517,7 +5517,7 @@
       "meaning": "Region duy nhất được ghi một phần dữ liệu (theo người dùng, tenant, khách sạn...). Region khác đọc bản sao và chuyển tiếp lần ghi về home, nên không có xung đột ghi.",
       "example": "Tồn kho của khách sạn Đà Nẵng chỉ được trừ ở Singapore, kể cả khi người đặt đang ở châu Âu.",
       "related": ["active-active", "last-write-wins"],
-      "topics": ["multi-region-active-active"]
+      "topics": ["multi-region-active-active", "multi-tenancy"]
     },
     {
       "id": "geodns",
@@ -5573,7 +5573,7 @@
       "meaning": "Chia hệ thống thành nhiều cell độc lập, mỗi cell đủ service và database cho một nhóm người dùng, để lỗi hay đợt triển khai hỏng chỉ ảnh hưởng một cell.",
       "example": "20 cell, mỗi cell phục vụ 5% tenant; bản deploy lỗi chỉ ra cell đầu tiên rồi bị dừng.",
       "related": ["active-active", "home-region"],
-      "topics": ["multi-region-active-active", "reliability-sre"]
+      "topics": ["multi-region-active-active", "reliability-sre", "multi-tenancy"]
     },
     {
       "id": "latency",
@@ -6069,7 +6069,7 @@
       "meaning": "Phần capacity chừa lại giữa mức tải chạy thường và trần của hệ thống, để chịu đỉnh bất ngờ, mất một node hay zone mà latency không vọt lên.",
       "example": "Pod giữ SLO tới 400 req/s nhưng chỉ lên kế hoạch 240 req/s: headroom 40%.",
       "related": ["saturation", "n-plus-1"],
-      "topics": ["capacity-planning", "back-of-envelope"]
+      "topics": ["capacity-planning", "back-of-envelope", "cost-finops"]
     },
     {
       "id": "n-plus-1",
@@ -8933,7 +8933,7 @@
       "meaning": "Một tenant hay workload dùng quá nhiều tài nguyên chung (CPU, kết nối, IOPS) làm chậm các tenant khác trên cùng hệ thống.",
       "example": "Một khách hàng chạy job xuất dữ liệu gửi 5.000 request/giây làm p99 của mọi khách khác tăng gấp ba.",
       "related": ["rate-limiting", "bulkhead"],
-      "topics": ["design-rate-limiter", "design-metrics-logging"]
+      "topics": ["design-rate-limiter", "design-metrics-logging", "multi-tenancy"]
     },
     {
       "id": "segment-allocation",
@@ -10685,7 +10685,7 @@
       "meaning": "Kiểu kiến trúc gồm một lõi giữ luồng chung và các plugin thêm luật hay tính năng riêng qua một hợp đồng cố định. Còn gọi là plug-in architecture.",
       "example": "Lõi tính giá vé chung, mỗi nhà xe có cấu hình hoặc plugin luật đổi, hoàn vé riêng.",
       "related": ["architecture-style"],
-      "topics": ["architecture-styles"]
+      "topics": ["architecture-styles", "multi-tenancy"]
     },
     {
       "id": "service-based-architecture",
@@ -11117,7 +11117,7 @@
       "meaning": "Đường kết nối riêng từ VPC tới dịch vụ AWS (S3, KMS, Secrets Manager) mà không đi qua internet. Bucket policy có thể chỉ nhận request qua một endpoint cụ thể.",
       "example": "Bucket KYC từ chối mọi request có `aws:SourceVpce` khác endpoint của VPC production.",
       "related": ["network-segmentation"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "cost-finops"]
     },
     {
       "id": "policy-enforcement-point",
@@ -11221,7 +11221,7 @@
       "meaning": "Gán mỗi khách một tổ hợp ngẫu nhiên vài node trong nhóm, để lỗi do một khách gây ra chỉ ảnh hưởng toàn bộ tới những khách có đúng tổ hợp đó.",
       "example": "8 worker, mỗi khách 2 worker: có 28 tổ hợp, một khách độc chỉ làm khoảng 3,6% khách mất hẳn dịch vụ.",
       "related": ["blast-radius", "cell-based-architecture", "bulkhead"],
-      "topics": ["reliability-sre"]
+      "topics": ["reliability-sre", "multi-tenancy"]
     },
     {
       "id": "graceful-degradation",
@@ -11358,6 +11358,142 @@
       "example": "Runbook ghi: sau khi mở ghi ở hệ thống mới lúc 02:00, rollback chỉ còn khả thi nhờ đồng bộ ngược.",
       "related": ["cutover", "reverse-replication"],
       "topics": ["migration-modernization"]
+    },
+    {
+      "id": "finops",
+      "term": "FinOps",
+      "meaning": "Cách vận hành chi phí cloud trong đó kỹ sư, tài chính và business cùng nhìn một dữ liệu chi phí và cùng chịu trách nhiệm; đi qua ba giai đoạn lặp lại Inform, Optimize, Operate.",
+      "example": "Mỗi tháng team nhận báo cáo chi phí theo service và unit cost mỗi đơn, rồi tự chọn việc tối ưu trong sprint.",
+      "related": ["unit-economics", "showback"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "unit-economics",
+      "term": "Unit cost (unit economics)",
+      "meaning": "Chi phí hạ tầng chia cho một đơn vị nghiệp vụ như đơn hàng, giao dịch hay tenant hoạt động. Cho biết chi phí tăng vì kinh doanh tăng hay vì lãng phí.",
+      "example": "17.564 USD cho 1,2 triệu đơn là khoảng 0,0146 USD mỗi đơn; sau tối ưu còn 0,0070.",
+      "related": ["finops"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "rightsizing",
+      "term": "Rightsizing",
+      "meaning": "Chỉnh cỡ tài nguyên (instance, request CPU/bộ nhớ của pod, database) theo mức dùng đo được thay vì theo ước đoán ban đầu.",
+      "example": "Pod xin 2 CPU nhưng p95 chỉ dùng 0,4: hạ request xuống 0,5 thì nếu CPU là giới hạn, số node cần giảm khoảng ba phần tư.",
+      "related": ["headroom", "finops"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "nat-gateway",
+      "term": "NAT gateway",
+      "meaning": "Dịch vụ NAT quản lý của AWS cho máy trong subnet private ra ngoài. Tính phí theo giờ và theo mỗi GB xử lý, kể cả khi đích là dịch vụ AWS cùng region.",
+      "example": "32 TB đi qua NAT mỗi tháng tốn khoảng 1.475 USD phí xử lý; chuyển phần đi S3 sang gateway endpoint thì gần như hết.",
+      "related": ["nat", "vpc-endpoint"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "cost-allocation-tag",
+      "term": "Cost allocation tag",
+      "meaning": "Tag trên tài nguyên cloud (team, service, env) được kích hoạt trong Billing để chi phí được nhóm theo nó trong báo cáo.",
+      "example": "Sau khi kích hoạt tag `team`, Cost Explorer cho thấy team Tìm kiếm tiêu 22% hoá đơn.",
+      "related": ["showback"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "showback",
+      "term": "Showback",
+      "meaning": "Báo cho từng team biết họ đã tiêu bao nhiêu chi phí cloud, nhưng không trừ vào ngân sách của họ.",
+      "example": "Báo cáo tháng gửi mỗi team: chi phí theo service, xu hướng, và ba khoản tăng nhiều nhất.",
+      "related": ["cost-chargeback", "cost-allocation-tag"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "cost-chargeback",
+      "term": "Chargeback (chi phí cloud)",
+      "meaning": "Trừ chi phí cloud đã phân bổ thẳng vào ngân sách của từng team hay đơn vị kinh doanh. Khác chargeback trong thanh toán thẻ.",
+      "example": "Từ quý sau, phần cluster dùng chung được chia theo request của pod và trừ vào ngân sách từng team.",
+      "related": ["showback"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "savings-plan",
+      "term": "Savings Plans",
+      "meaning": "Cam kết của AWS: chi một mức USD mỗi giờ trong 1 hoặc 3 năm để được giá thấp hơn on-demand. Giờ nào dùng ít hơn mức cam kết thì phần thiếu mất luôn.",
+      "example": "Compute Savings Plans 1 năm không trả trước cho m7g.large là 0,0599 USD/giờ so với 0,0816 on-demand.",
+      "related": ["reserved-instance", "spot-instance"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "reserved-instance",
+      "term": "Reserved instance",
+      "meaning": "Cam kết dùng một loại instance (EC2, RDS, ElastiCache...) trong 1 hoặc 3 năm để được giảm giá. Với database, đây là cách cam kết có kỳ hạn 3 năm và giảm sâu hơn Database Savings Plans.",
+      "example": "Mua RI 1 năm cho db.r7g.xlarge Multi-AZ của database production đã chạy ổn định một năm.",
+      "related": ["savings-plan"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "spot-instance",
+      "term": "Spot instance",
+      "meaning": "Instance dùng capacity thừa của AWS với giá giảm tới khoảng 90%, có thể bị thu hồi với thông báo trước 2 phút.",
+      "example": "Runner CI và worker đọc hàng đợi chạy trên spot; phần capacity cần cho SLO giữ on-demand.",
+      "related": ["savings-plan"],
+      "topics": ["cost-finops"]
+    },
+    {
+      "id": "multi-tenancy",
+      "term": "Multi-tenancy",
+      "meaning": "Một hệ thống phục vụ nhiều khách hàng (tenant) trên cùng code và hạ tầng, mỗi tenant chỉ thấy dữ liệu và cấu hình của mình.",
+      "example": "Một SaaS bán hàng chạy một bản code cho 3.000 cửa hàng, mỗi cửa hàng là một tenant.",
+      "related": ["tenant", "silo-model", "pool-model"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "tenant",
+      "term": "Tenant",
+      "meaning": "Một khách hàng (thường là một tổ chức) dùng hệ thống multi-tenant, có người dùng, dữ liệu, gói dịch vụ và cấu hình riêng.",
+      "example": "Chuỗi 800 cửa hàng là một tenant; nhân viên của họ là người dùng thuộc tenant đó.",
+      "related": ["multi-tenancy"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "silo-model",
+      "term": "Silo (mô hình tenant)",
+      "meaning": "Mỗi tenant có bộ tài nguyên riêng (database, đôi khi cả service hay tài khoản cloud). Cô lập mạnh, dễ tính chi phí, nhưng đắt và phải vận hành N lần.",
+      "example": "Khách enterprise có một instance RDS riêng mã hoá bằng khoá KMS của họ.",
+      "related": ["pool-model", "bridge-model"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "pool-model",
+      "term": "Pool (mô hình tenant)",
+      "meaning": "Mọi tenant dùng chung tài nguyên, dữ liệu phân biệt bằng cột tenant_id. Rẻ và vận hành một lần, nhưng cô lập phụ thuộc vào code và database.",
+      "example": "3.000 cửa hàng chung bảng `orders`, RLS lọc theo `tenant_id`.",
+      "related": ["silo-model", "row-level-security"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "bridge-model",
+      "term": "Bridge (mô hình tenant)",
+      "meaning": "Trộn silo và pool theo tầng (service chung, database riêng) hoặc theo gói (khách nhỏ ở pool, enterprise ở silo).",
+      "example": "Gói thường ở database chung, gói enterprise ở database riêng, cùng một code và bảng tra tenant.",
+      "related": ["silo-model", "pool-model"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "row-level-security",
+      "term": "Row-level security (RLS)",
+      "meaning": "Database tự thêm điều kiện của policy vào mọi câu query trên bảng, để mỗi role hay mỗi phiên chỉ thấy và sửa được những dòng được phép. Ở PostgreSQL, chủ bảng không chịu RLS trừ khi FORCE.",
+      "example": "`CREATE POLICY tenant_isolation ON orders USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::bigint);`",
+      "related": ["pool-model", "tenant-context"],
+      "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "tenant-context",
+      "term": "Tenant context",
+      "meaning": "Tenant của request hiện tại, xác định một lần ở rìa (từ token) rồi đi theo request qua code, log, lời gọi nội bộ, message và session database.",
+      "example": "Filter đọc claim `tenant_id`, đặt vào `ScopedValue` và MDC; transaction đầu tiên gọi `set_config('app.tenant_id', ?, true)`.",
+      "related": ["row-level-security", "mdc"],
+      "topics": ["multi-tenancy"]
     }
   ]
 }

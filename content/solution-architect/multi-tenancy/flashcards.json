@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-models", "front": "Silo, pool và bridge khác nhau thế nào?", "back": "Silo: mỗi tenant một bộ tài nguyên riêng. Pool: dùng chung, phân biệt bằng tenant_id. Bridge: trộn hai kiểu theo tầng hay theo gói, ví dụ khách nhỏ ở pool, enterprise ở silo." },
+    { "id": "owner-bypass", "front": "Bật RLS trên bảng rồi nhưng app vẫn thấy dữ liệu mọi tenant. Nguyên nhân hay gặp?", "back": "App kết nối bằng role sở hữu bảng: chủ bảng không chịu RLS trừ khi FORCE ROW LEVEL SECURITY. Superuser và BYPASSRLS luôn bỏ qua. Dùng role riêng không sở hữu bảng." },
+    { "id": "set-local", "front": "Vì sao đặt tenant bằng SET trên connection của pool là nguy hiểm?", "back": "SET sống theo session; request sau mượn cùng connection mà quên đặt lại sẽ thấy dữ liệu tenant trước. Dùng SET LOCAL hay set_config(..., true) trong transaction." },
+    { "id": "fail-closed", "front": "Policy RLS nên đọc tenant thế nào để chưa đặt tenant thì không thấy gì?", "back": "NULLIF(current_setting('app.tenant_id', true), '')::bigint. Chưa đặt hoặc đã reset (chuỗi rỗng) đều thành NULL, so sánh không khớp, ra 0 dòng thay vì lỗi hay rò." },
+    { "id": "view-bypass", "front": "View có tôn trọng RLS của người gọi không?", "back": "Mặc định không: view chạy với quyền của chủ view. PostgreSQL 15+ đặt security_invoker = true để view chạy với quyền người gọi." },
+    { "id": "schema-per-tenant", "front": "Schema riêng mỗi tenant có giới hạn gì?", "back": "N tenant × M bảng là N×M bảng thật: catalog phình, backup và autovacuum chậm, migration chạy N lần và dễ lệch phiên bản. Hợp vài chục tới vài trăm tenant, không hợp hàng nghìn." },
+    { "id": "tenant-source", "front": "Lấy tenant của request từ đâu?", "back": "Từ claim của token đã xác thực (hoặc tên miền con ánh xạ ở server), rồi kiểm user thuộc tenant đó. Không tin header do client gửi." },
+    { "id": "noisy-neighbor-fix", "front": "Chặn noisy neighbor trong pool bằng gì?", "back": "Rate limit và giới hạn đồng thời theo tenant và gói, hàng đợi lấy công bằng theo tenant cho việc nặng, pool connection riêng cho job, đo latency theo tenant; tenant quá lớn thì chuyển shard hay silo." },
+    { "id": "pool-restore", "front": "Khôi phục dữ liệu của một tenant trong pool thế nào?", "back": "Không restore cả database về quá khứ vì tenant khác mất dữ liệu. Restore point-in-time ra instance phụ rồi chép riêng dòng của tenant đó về." }
+  ]
+}

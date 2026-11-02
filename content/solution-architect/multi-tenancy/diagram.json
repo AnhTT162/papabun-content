@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Bridge theo gói: tenant đi từ token tới đúng database, cô lập ở nhiều lớp",
+  "nodes": [
+    { "id": "users", "label": "Người dùng của tenant", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "gateway", "label": "API gateway", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "app", "label": "Service bán hàng", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "directory", "label": "Bảng tra tenant", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "pool", "label": "PostgreSQL pool (RLS)", "kind": "database", "x": 0.1, "y": 0.95 },
+    { "id": "silo", "label": "DB riêng enterprise", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "users-gateway", "from": "users", "to": "gateway", "label": "token có tenant_id" },
+    { "id": "gateway-directory", "from": "gateway", "to": "directory", "label": "gói, hạn mức" },
+    { "id": "gateway-app", "from": "gateway", "to": "app", "label": "tenant từ claim" },
+    { "id": "app-directory", "from": "app", "to": "directory", "label": "tenant ở DB nào?" },
+    { "id": "app-pool", "from": "app", "to": "pool", "label": "SET LOCAL + RLS" },
+    { "id": "app-silo", "from": "app", "to": "silo", "label": "tenant enterprise" }
+  ],
+  "steps": [
+    { "caption": "Tenant đi theo token đã xác thực, không theo header client tự gửi. Gateway kiểm chữ ký và lấy tenant_id từ claim.", "show": ["users", "gateway", "users-gateway"], "highlight": ["users-gateway"] },
+    { "caption": "Gateway đọc gói của tenant từ bảng tra (có cache) và áp rate limit theo tenant và theo gói, chặn noisy neighbor từ ngoài cửa.", "show": ["directory", "gateway-directory"], "highlight": ["gateway-directory"] },
+    { "caption": "Service nhận tenant từ claim, đặt tenant context một lần ở rìa request, đưa vào MDC, và dọn trong finally.", "show": ["app", "gateway-app"], "highlight": ["gateway-app"] },
+    { "caption": "Bảng tra cho biết tenant nằm ở đâu. Có nó từ đầu thì sau này chuyển một tenant sang shard hay silo chỉ là đổi một dòng.", "show": ["app-directory"], "highlight": ["app-directory"] },
+    { "caption": "Khách gói thường ở pool: mỗi transaction đặt set_config(app.tenant_id, true), app dùng role không sở hữu bảng, RLS lọc mọi câu query kể cả native SQL.", "show": ["pool", "app-pool"], "highlight": ["app-pool"] },
+    { "caption": "Khách enterprise có database riêng, khoá KMS riêng, cùng code và cùng schema. Routing DataSource chọn connection theo bảng tra.", "show": ["silo", "app-silo"], "highlight": ["app-silo"] }
+  ]
+}

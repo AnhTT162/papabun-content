@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "SaaS bán hàng cho cửa hàng: một lần lộ dữ liệu, một khách lớn làm chậm tất cả, và một hợp đồng enterprise",
+  "prompt": "Bạn là solution architect của một SaaS quản lý bán hàng: khoảng 3.000 tenant, phần lớn là cửa hàng nhỏ trả 30 USD/tháng. Tất cả dùng chung một service Spring Boot và một PostgreSQL 17 (Multi-AZ), các bảng có cột `tenant_id`. JPA dùng `@TenantId` của Hibernate 6; báo cáo viết bằng `JdbcTemplate` cho nhanh. App kết nối database bằng role `app_owner`, cũng là role tạo bảng và chạy migration. Tenant được lấy từ header `X-Tenant-Id` mà frontend gửi.\n\nTrong tháng qua:\n\n1. Một báo cáo doanh thu mới viết bằng native SQL quên điều kiện `tenant_id`. Trong 40 phút, chủ cửa hàng thấy doanh thu của các cửa hàng khác.\n2. Một chuỗi 800 cửa hàng (khoảng 30% số dòng của cả hệ thống) chạy import 2 triệu dòng giá cuối tháng qua API. Pool connection cạn, p99 của mọi tenant tăng từ 300 ms lên 1,4 giây trong 2 giờ.\n3. Chính chuỗi đó muốn ký hợp đồng enterprise 4.000 USD/tháng với điều kiện: database riêng, khoá mã hoá riêng, xoá hết dữ liệu trong 30 ngày sau khi chấm dứt hợp đồng, và không bị khách khác làm chậm.\n\nCTO hỏi: chọn mô hình cô lập nào, làm sao để lỗi như sự cố 1 không thể lộ dữ liệu nữa, xử lý noisy neighbor thế nào, chuyển chuỗi kia sang database riêng ra sao mà không dừng lâu, và chi phí có hợp lý không.",
+  "hints": [
+    "Nếu mọi khách đều có database riêng, chi phí sàn mỗi tenant là bao nhiêu so với 30 USD/tháng?",
+    "Sự cố 1 đi qua những lớp nào? Lớp nào lẽ ra phải chặn được câu native SQL thiếu điều kiện, và vì sao nó không chặn với role hiện tại?",
+    "Import 2 triệu dòng đi cùng đường với request bán hàng. Tách nó ra thế nào để một tenant chỉ ăn được phần của mình?",
+    "Chuyển dữ liệu của một tenant sang instance khác mà vẫn ghi được: PostgreSQL có cách nào sao chép chỉ các dòng của một tenant?"
+  ],
+  "solution": "**1. Mô hình: bridge theo gói**\n\nSilo cho tất cả là không thể: một db.r7g.large Multi-AZ đã khoảng 349 USD/tháng, cộng 500 GB gp3 Multi-AZ là khoảng 464 USD, gấp 15 lần giá gói thường. Giữ pool cho cửa hàng nhỏ, silo cho gói enterprise, cùng code, cùng schema, cùng pipeline migration. Thêm ngay một bảng tra tenant (tenant → gói → database), kể cả khi lúc đầu mọi dòng đều trỏ về pool.\n\nVới chuỗi 800 cửa hàng, database riêng chưa đủ cho điều kiện không bị làm chậm: service và gateway vẫn dùng chung. Chạy thêm một deployment riêng của cùng service trên node pool riêng cho tenant này (một cell riêng), gateway định tuyến theo bảng tra, hạn mức riêng ở gateway. Database khoảng 464 USD, vài node m7g.xlarge (0,1632 USD/giờ, khoảng 119 USD/tháng mỗi node) cộng phần vận hành vẫn là một phần nhỏ của 4.000 USD. Gói enterprise phải có giá sàn đủ cho silo.\n\n**2. Cô lập nhiều lớp cho pool**\n\nSự cố 1 lọt qua vì chỉ có một lớp (Hibernate), và lớp đó không áp cho native SQL. Lẽ ra RLS chặn được, nhưng role sở hữu bảng không chịu RLS.\n\n- *Tenant từ token*: lấy `tenant_id` từ claim của token đã xác thực, kiểm user thuộc tenant đó. Bỏ header `X-Tenant-Id`: ai sửa được request là đổi được tenant.\n- *Tenant context*: đặt một lần trong filter, dọn trong `finally`, đưa vào MDC.\n- *Database*: tạo role `app_rw` không sở hữu bảng cho app; `app_owner` chỉ dùng cho migration. Bật RLS và `FORCE ROW LEVEL SECURITY` trên mọi bảng có tenant, policy `tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::bigint` để chưa đặt tenant thì ra 0 dòng. Đặt tenant bằng `set_config('app.tenant_id', ?, true)` ở đầu mỗi transaction, không dùng `SET` trên connection của pool. Stack này dùng `JpaTransactionManager`, không có `prepareTransactionalConnection`: override `doBegin` và chạy `set_config` sau `super.doBegin`. `JdbcTemplate` của báo cáo trong cùng `@Transactional` dùng chung connection nên được phủ; báo cáo nào chạy ngoài transaction phải được bọc vào một transaction chỉ đọc. View dùng cho báo cáo đặt `security_invoker = true`.\n- *Ràng buộc và cache*: mọi unique constraint có `tenant_id`; mọi cache key và đường dẫn file có tenant.\n- *Test trong CI*: mỗi endpoint được gọi bằng tenant A với id của tenant B, kỳ vọng 404; thêm một test kiểm mọi bảng có cột `tenant_id` đều bật RLS và FORCE (đọc từ `pg_class.relrowsecurity`, `relforcerowsecurity`).\n- *Sự cố đã xảy ra*: dùng log truy cập để xác định tenant nào đã xem báo cáo trong 40 phút đó và dữ liệu của tenant nào bị lộ; báo cho khách theo hợp đồng và luật bảo vệ dữ liệu; postmortem với các việc trên.\n\nVới lớp RLS, câu native SQL quên điều kiện vẫn chỉ thấy dòng của tenant hiện tại. Điều kiện policy dùng được index `(tenant_id, ...)` nên không đổi plan đáng kể.\n\n**3. Noisy neighbor**\n\n- Import không đi qua API đồng bộ: upload file lên S3 (`tenants/{id}/imports/...`), tạo job vào hàng đợi. Worker lấy job xoay vòng theo tenant, mỗi tenant tối đa 2 job song song, mỗi transaction 1.000 dòng.\n- Worker dùng pool connection riêng nhỏ (bulkhead) và role có `statement_timeout`; request bán hàng có pool riêng của nó.\n- Rate limit theo tenant và theo gói ở gateway; endpoint báo cáo có giới hạn số request đang chạy.\n- Đo p99 và lỗi theo gói và theo 20 tenant lớn nhất; chi tiết từng tenant trong log và trace, không làm nhãn metric cho cả 3.000 tenant.\n\n**4. Chuyển chuỗi 800 cửa hàng sang database riêng**\n\n- Dựng instance mới bằng IaC, mã hoá bằng khoá KMS riêng của tenant (khoá mã hoá của RDS chọn lúc tạo, không đổi sau được). Chạy cùng migration để có cùng schema.\n- Logical replication với row filter (PostgreSQL 15+): `CREATE PUBLICATION chain_pub FOR TABLE orders, products, ... WHERE (tenant_id = 4711);`. `tenant_id` đã nằm trong primary key nên UPDATE và DELETE sao chép được (điều kiện replica identity ở bài Sharding). Lần chép đầu theo filter; theo dõi slot giữ WAL trên primary.\n- Đối soát số dòng và tổng tiền theo bảng, theo tháng.\n- Cutover trong vài phút: chặn ghi của riêng tenant đó ở gateway, chờ replication đuổi kịp, `setval` các sequence nếu có, đổi dòng trong bảng tra sang database mới, mở lại. Các tenant khác không bị ảnh hưởng.\n- Giữ dữ liệu cũ trong pool hai tuần để quay lui (khi đó phải sao chép ngược), rồi xoá theo lô.\n\n**5. Xoá dữ liệu khi chấm dứt hợp đồng**\n\n- Silo: xuất dữ liệu theo định dạng đã cam kết, xoá instance cùng mọi bản sao không tự hết hạn: snapshot thủ công, recovery point trong AWS Backup vault, snapshot đã chép sang region DR, file xuất trên S3. Lên lịch xoá khoá KMS (thời gian chờ 7–30 ngày), cả khoá ở region DR vì bản chép cross-region được mã hoá bằng khoá của region đích. Mất khoá thì mọi bản backup còn sót cũng không đọc được. Tính thời gian chờ xoá khoá vào hạn 30 ngày.\n- Pool: xoá dòng theo `tenant_id`; backup tự hết theo thời gian lưu (RDS tối đa 35 ngày). Ghi rõ thời hạn này trong hợp đồng gói thường; dữ liệu nhạy cảm dùng khoá riêng mỗi tenant (crypto-shredding) nếu cần cam kết chặt hơn.\n\n**6. Chi phí theo tenant**\n\nSilo gắn tag `tenant` là thấy ngay chi phí. Pool đo theo tenant số request, số dòng, GB lưu và số job, rồi chia chi phí chung theo tỉ lệ để thấy tenant nào hay gói nào lỗ; các tenant gói thường dùng nhiều bất thường là ứng viên cho gói cao hơn.",
+  "tradeoffs": [
+    {
+      "option": "Silo cho mọi tenant",
+      "pros": [
+        "Cô lập dữ liệu và tài nguyên mạnh nhất",
+        "Xoá, khôi phục, tính chi phí theo tenant dễ"
+      ],
+      "cons": [
+        "Chi phí sàn gấp nhiều lần giá gói thường",
+        "Migrate và vận hành 3.000 database"
+      ]
+    },
+    {
+      "option": "Pool cho mọi tenant, thêm RLS và hạn mức",
+      "pros": [
+        "Rẻ nhất, vận hành một lần",
+        "RLS chặn được lỗi quên điều kiện"
+      ],
+      "cons": [
+        "Không đáp ứng điều kiện database và khoá riêng",
+        "Tenant lớn vẫn dùng chung I/O và vacuum"
+      ]
+    },
+    {
+      "option": "Bridge theo gói: pool có RLS, silo cho enterprise",
+      "pros": [
+        "Chi phí khớp giá từng gói",
+        "Cùng code, chuyển gói chỉ là đổi bảng tra"
+      ],
+      "cons": [
+        "Hai cách vận hành dữ liệu song song",
+        "Chuyển gói là một migration dữ liệu thật"
+      ]
+    }
+  ]
+}

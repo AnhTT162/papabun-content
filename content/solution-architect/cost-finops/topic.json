@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cost-finops",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Ước tính chi phí & FinOps",
+  "summary": "Hoá đơn cloud gồm những gì và khoản nào hay bất ngờ (truyền dữ liệu giữa AZ, NAT gateway, log không hết hạn), ước tính từ driver nghiệp vụ, FinOps (nguyên tắc, Inform/Optimize/Operate, FOCUS), phân bổ chi phí bằng tài khoản và tag, showback/chargeback, unit economics, rightsizing, Savings Plans và reserved instance (cam kết theo giờ, hoà vốn, coverage/utilization), spot, giám sát chi phí, và đánh đổi chi phí với độ tin cậy.",
+  "level": "architect",
+  "order": 15,
+  "minutes": 18,
+  "prerequisites": ["well-architected", "nfr-quality-attributes", "capacity-planning", "architecture-styles"],
+  "terms": ["finops", "unit-economics", "rightsizing", "nat-gateway", "cost-allocation-tag", "showback", "cost-chargeback", "vpc-endpoint", "savings-plan", "reserved-instance", "spot-instance"],
+  "references": [
+    { "title": "FinOps Foundation: FinOps Framework", "url": "https://www.finops.org/framework/" },
+    { "title": "AWS: What are Savings Plans?", "url": "https://docs.aws.amazon.com/savingsplans/latest/userguide/what-is-savings-plans.html" },
+    { "title": "Amazon EC2 On-Demand Pricing: Data Transfer", "url": "https://aws.amazon.com/ec2/pricing/on-demand/" },
+    { "title": "AWS Billing: Using cost allocation tags", "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html" },
+    { "title": "Apache Kafka KIP-392: Allow consumers to fetch from closest replica", "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-392%3A+Allow+consumers+to+fetch+from+closest+replica" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Ước tính chi phí cho một hệ thống chưa tồn tại thế nào?\" Đi từ driver nghiệp vụ (người dùng, request đỉnh, dữ liệu mới mỗi tháng, thời gian lưu, lưu lượng ra Internet) ra tài nguyên bằng số đo throughput, rồi nhân đơn giá có ghi ngày và region. Cộng môi trường không phải production, log, backup, support; đưa ra khoảng thấp, kỳ vọng, cao kèm giả định, và nói trước giả định nào sai thì con số đổi bao nhiêu." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng mua Savings Plans hay reserved instance trước khi rightsize và trước một đợt đổi kiến trúc đã lên lịch. Cam kết tính theo từng giờ: phần không dùng mất luôn, và hợp đồng 3 năm không huỷ được. Cam kết cho đáy tải của nhiều tuần, mua từng đợt nhỏ." },
+    { "type": "callout", "style": "tip", "markdown": "Đặt một unit cost cạnh mỗi dashboard kinh doanh: chi phí hạ tầng trên một đơn hàng, một giao dịch hay một tenant. Khi hoá đơn tăng, câu hỏi đầu tiên là unit cost có tăng không; nếu không, đó là tăng trưởng chứ không phải lãng phí." }
+  ]
+}
