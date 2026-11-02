@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "mtls-only-output",
+      "kind": "output",
+      "prompt": "Server `payments` bắt buộc chứng chỉ client (`setNeedClientAuth(true)`) và tin một CA nội bộ. `orders` và `reports` đều có chứng chỉ do CA đó cấp, SAN là `spiffe://shop.local/ns/prod/sa/<tên>`. `checkIdentity` là `false`. Với client `reports`, chương trình in gì?",
+      "code": "server.createContext(\"/refunds\", ex -> {\n    var cert = (X509Certificate) ((HttpsExchange) ex).getSSLSession().getPeerCertificates()[0];\n    String caller = spiffeId(cert);\n    boolean ok = !checkIdentity || Set.of(\"spiffe://shop.local/ns/prod/sa/orders\").contains(caller);\n    byte[] body = ((ok ? \"refund created for \" : \"forbidden: \") + caller).getBytes(UTF_8);\n    ex.sendResponseHeaders(ok ? 201 : 403, body.length);\n    ex.getResponseBody().write(body);\n    ex.close();\n});\n// client reports gửi POST /refunds\nSystem.out.println(r.statusCode() + \" \" + r.body());",
+      "options": [
+        "201 refund created for spiffe://shop.local/ns/prod/sa/reports",
+        "403 forbidden: spiffe://shop.local/ns/prod/sa/reports",
+        "SSLHandshakeException: (certificate_unknown) Received fatal alert",
+        "SSLHandshakeException: (certificate_required) Received fatal alert"
+      ],
+      "answer": 0,
+      "explanation": "Chứng chỉ của `reports` do đúng CA cấp nên handshake thành công; mTLS chỉ chứng minh người gọi là `reports`. Khi `checkIdentity` tắt, không ai kiểm `reports` có được hoàn tiền không, nên nhận 201. Bật allowlist thì `reports` nhận 403. `certificate_required` là lỗi của client không gửi chứng chỉ nào. Đã chạy trên JDK 27."
+    },
+    {
+      "id": "stolen-key-outside",
+      "kind": "single",
+      "prompt": "Access key tạm của role `kyc-service` bị lộ và được dùng từ một máy ngoài AWS để đọc bucket KYC. Lớp nào chặn được việc đọc này dù key có đúng quyền?",
+      "options": [
+        "Bucket policy từ chối request không đi qua VPC endpoint (`aws:SourceVpce`)",
+        "Bật mã hoá SSE-S3 mặc định cho mọi object trong bucket KYC",
+        "Bật IMDSv2 bắt buộc với hop limit 1 trên các node của cụm EKS",
+        "NetworkPolicy chặn pod `kyc-service` gọi ra địa chỉ metadata"
+      ],
+      "answer": 0,
+      "explanation": "Điều kiện `aws:SourceVpce` từ chối mọi request không đi qua endpoint của VPC production, nên key dùng từ ngoài không đọc được bucket này. SSE-S3 do S3 tự giải mã cho bất kỳ ai có quyền đọc object. IMDSv2 và NetworkPolicy chặn việc lấy credential ngay từ đầu, nhưng key đã lộ rồi thì chúng không còn tác dụng."
+    },
+    {
+      "id": "netpol-egress",
+      "kind": "single",
+      "prompt": "Namespace `payments` có một NetworkPolicy chọn mọi pod, chỉ có mục `ingress` cho phép từ namespace `checkout`, không khai `policyTypes`. Pod `payments` gọi ra `169.254.169.254` thì sao?",
+      "options": [
+        "Đi được, vì policy chỉ áp chiều vào",
+        "Bị chặn, vì pod đã bị policy chọn",
+        "Bị chặn, trừ khi có luật egress riêng",
+        "Đi được, vì metadata không qua CNI"
+      ],
+      "answer": 0,
+      "explanation": "Không khai `policyTypes` thì policy luôn có Ingress, và chỉ có Egress khi có mục `egress`. Policy này chỉ cô lập chiều vào; chiều ra vẫn mặc định cho phép. Muốn chặn phải có policy khai `Egress` (mặc định chặn rồi mở từng đường). Với CNI hỗ trợ NetworkPolicy, lưu lượng của pod tới metadata service chịu policy như mọi đích khác; pod `hostNetwork` thì không."
+    },
+    {
+      "id": "ci-oidc-sub",
+      "kind": "single",
+      "prompt": "Team cho pipeline CI lên AWS bằng OIDC federation thay vì access key. Trust policy của role deploy chỉ kiểm `aud` là `sts.amazonaws.com`. Rủi ro là gì?",
+      "options": [
+        "Workflow của repo khác cũng có thể nhận role vì thiếu điều kiện `sub`",
+        "Token OIDC sống quá lâu nên phải xoay vòng như access key tĩnh",
+        "Role chỉ dùng được cho nhánh main nên pull request không deploy được",
+        "AWS không chấp nhận token OIDC nếu không kèm thêm access key"
+      ],
+      "answer": 0,
+      "explanation": "Mọi workflow trên cùng nhà cung cấp CI đều xin được token có cùng `aud`. Thiếu điều kiện trên `sub` (repo, nhánh hoặc môi trường) thì role không biết ai đang xin. Token OIDC và credential STS đều ngắn hạn, không phải xoay vòng. Không có `sub` thì role rộng hơn chứ không hẹp hơn, và không cần access key nào."
+    },
+    {
+      "id": "ztna-scope",
+      "kind": "single",
+      "prompt": "Pentest khai thác SSRF tới metadata service để lấy credential của role node rồi tải ảnh KYC từ máy ngoài. CTO muốn mua ZTNA thay VPN và báo là đã zero trust. Nhận xét nào đúng nhất?",
+      "options": [
+        "ZTNA chỉ thay đường người dùng tới ứng dụng, không chạm đường tấn công này",
+        "ZTNA chặn được SSRF vì mọi request phải qua proxy kiểm danh tính",
+        "ZTNA thay được IMDSv2 vì nó cấp danh tính ngắn hạn cho cả pod",
+        "ZTNA là đủ nếu kèm thêm MFA cho toàn bộ nhân viên của công ty"
+      ],
+      "answer": 0,
+      "explanation": "ZTNA kiểm người dùng và thiết bị khi vào ứng dụng nội bộ; nó đáng làm, nhưng đường tấn công đi từ pod tới metadata service rồi tới API của S3, không qua proxy của người dùng. SSRF do chính server gửi request. Danh tính của pod là việc của Pod Identity hay IRSA. MFA cho nhân viên cũng không chạm tới credential của máy."
+    }
+  ]
+}

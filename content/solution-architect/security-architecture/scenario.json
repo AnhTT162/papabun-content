@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Sau bản pentest: kiến trúc bảo mật cho một công ty cho vay tiêu dùng",
+  "prompt": "Bạn là solution architect của một công ty cho vay tiêu dùng: 600 nhân viên, khoảng 2 triệu hồ sơ khách hàng có ảnh căn cước và sao kê lương. Mọi thứ chạy trên AWS trong một tài khoản, một VPC.\n\nHiện trạng:\n\n- Một cụm EKS chạy cả namespace `dev` và `prod`. Không có NetworkPolicy. Pod dùng role của node; role này có `s3:GetObject` trên mọi bucket, kể cả bucket ảnh giấy tờ KYC.\n- Node vẫn cho IMDSv1.\n- Nhân viên vào hệ thống qua VPN; vào được VPN là tới được mọi thứ trong VPC, kể cả database production.\n- Danh tính rải rác: email và VPN dùng Active Directory; Jenkins, Grafana và console AWS dùng tài khoản riêng (AWS có 40 IAM user). Kiểm tra thấy 11 người nghỉ việc vẫn còn tài khoản Jenkins hoặc AWS.\n- Jenkins deploy bằng access key quyền `AdministratorAccess`. Đội vận hành vào database qua một bastion SSH dùng chung khoá, bằng user `app_admin` dùng chung.\n\nBản pentest vừa tìm thấy: service `doc-preview` nhận một URL để tạo ảnh xem trước. Gửi `http://169.254.169.254/latest/meta-data/iam/security-credentials/<tên role>` thì nhận về access key tạm của role node, và dùng key đó từ máy ngoài tải được ảnh căn cước trong bucket KYC.\n\nNgân hàng đối tác yêu cầu khắc phục trong 6 tháng. CTO đề xuất mua một sản phẩm ZTNA thay VPN và báo cáo với ngân hàng là đã triển khai zero trust.\n\nHãy chỉ ra đường tấn công đã đi qua những lớp nào, làm gì trong hai tuần đầu, lộ trình 6 tháng, và trả lời đề xuất của CTO.",
+  "hints": [
+    "Viết đường tấn công thành từng bước, từ URL người dùng gửi tới ảnh căn cước nằm trên máy ngoài. Ở mỗi bước, lớp nào lẽ ra phải chặn hoặc phát hiện?",
+    "Sửa lỗi SSRF trong `doc-preview` có đủ không? Service khác nhận URL thì sao, và role của node vẫn còn rộng như vậy?",
+    "Key đánh cắp được dùng từ máy ngoài AWS. Có điều kiện nào trên bucket làm key đúng quyền vẫn vô dụng khi dùng ở ngoài?",
+    "ZTNA thay đường nào trong hệ thống: người dùng tới ứng dụng, hay service tới service, hay pod tới API của AWS?"
+  ],
+  "solution": "**1. Đường tấn công và các lớp đã thủng**\n\n| Bước | Lớp lẽ ra chặn | Hiện trạng |\n|---|---|---|\n| URL trỏ tới `169.254.169.254` | Ứng dụng kiểm URL đích | Không kiểm |\n| Pod gọi ra metadata service | NetworkPolicy chặn chiều ra | Không có policy |\n| Metadata trả credential cho một GET | IMDSv2 bắt buộc, hop limit 1 | IMDSv1 còn bật |\n| Credential đọc được bucket KYC | Role node tối thiểu, role riêng mỗi service | Role node đọc mọi bucket |\n| Key dùng từ máy ngoài | Bucket chỉ nhận qua VPC endpoint | Không có điều kiện |\n| Hàng loạt ảnh bị tải | Cảnh báo truy cập bất thường | Không có data event, không cảnh báo |\n\nSáu lớp, không lớp nào hoạt động. Đây là ý nghĩa của defense in depth: chỉ cần một trong sáu lớp này hoạt động là đường tấn công bị chặn hoặc bị phát hiện.\n\n**2. Hai tuần đầu: đóng đường đã biết**\n\n- Bật IMDSv2 bắt buộc (`HttpTokens=required`), hop limit 1 trên mọi node. Pod chạy trong network namespace riêng không nhận được token nữa, nên không đọc được credential của node. Trước đó liệt kê pod nào đang dựa vào role node (thường là agent log, autoscaler) và chuyển chúng sang role riêng.\n- Sửa `doc-preview`: chỉ nhận `https`, phân giải DNS rồi chặn dải private, loopback và link-local, kiểm lại sau mỗi redirect. Tìm mọi service khác nhận URL.\n- NetworkPolicy `Egress` cho phép mọi đích trừ `169.254.169.254/32` (`ipBlock` có `except`), kèm DNS, cho mọi namespace ứng dụng. Pod `hostNetwork` không chịu NetworkPolicy và vẫn lấy được token IMDS: liệt kê và giữ chúng ở mức tối thiểu.\n- Gỡ mọi quyền S3 khỏi role node ngay (node không cần đọc bucket nào), và thu hồi các phiên credential đang sống của role đó (deny theo `aws:TokenIssueTime`, chức năng revoke active sessions của IAM).\n- Coi như role node đã lộ: xem CloudTrail các lệnh gọi bằng credential đó từ IP ngoài AWS; bật S3 data event cho bucket KYC; đánh giá có phải thông báo sự cố dữ liệu cá nhân không.\n- Thu hồi tài khoản của 11 người đã nghỉ; xoay access key admin của Jenkins và thu hẹp quyền xuống đúng việc deploy ngay, bỏ hẳn key ở bước 4.\n\n**3. Danh tính của người (tháng 1–2)**\n\n- Một IdP (Active Directory nối với IdP cloud, hoặc IdP cloud làm gốc). AWS qua IAM Identity Center, Jenkins, Grafana qua OIDC hoặc SAML. Xoá 40 IAM user.\n- Vào, chuyển, nghỉ theo dữ liệu nhân sự, đẩy xuống ứng dụng bằng SCIM. Quyền theo nhóm.\n- Passkey hoặc khoá FIDO2 cho mọi quyền quản trị.\n- Quyền production chỉ cấp khi cần, tối đa vài giờ, có người duyệt. Hai tài khoản break-glass có khoá cứng, cảnh báo mỗi lần đăng nhập.\n\n**4. Danh tính của workload (tháng 1–3)**\n\n- Mỗi service một role qua EKS Pod Identity hoặc IRSA. `kyc-service` là role duy nhất đọc bucket KYC; `doc-preview` không có quyền S3 nào.\n- Jenkins deploy bằng role, không bằng key tĩnh; nếu chuyển sang CI hỗ trợ OIDC federation thì trust policy giới hạn claim `sub` theo repo và nhánh.\n- Mỗi service một user database quyền tối thiểu; bỏ `app_admin` dùng chung.\n\n**5. Phân vùng (tháng 2–5)**\n\n- Tách tài khoản AWS: production, dev, log, quản trị. Dev ra khỏi cụm production. SCP chặn tắt CloudTrail và chặn region không dùng.\n- Subnet dữ liệu không có đường ra internet; security group của database chỉ nhận từ security group của service.\n- Mỗi namespace một NetworkPolicy mặc định chặn hai chiều, mở từng đường cần (kể cả DNS). Chiều ra internet qua proxy egress có allowlist.\n- S3 và KMS qua VPC endpoint. Bucket KYC có policy từ chối mọi request không đi qua endpoint của VPC production (`aws:SourceVpce`); key bị đánh cắp không đọc được bucket này từ ngoài VPC dù đúng quyền. Policy cần ngoại lệ cho role quản trị và các dịch vụ AWS truy cập thay.\n- Mesh mTLS `STRICT` cho các service xử lý hồ sơ, `AuthorizationPolicy` chỉ cho gateway gọi `kyc-service`.\n\n**6. Dữ liệu và truy cập quản trị (tháng 3–5)**\n\n- Bucket KYC mã hoá bằng khoá KMS riêng; key policy chỉ cho role `kyc-service` giải mã. Nhân viên thẩm định xem ảnh qua `kyc-service`: service kiểm người đó được giao hồ sơ nào, đọc ảnh qua VPC endpoint rồi trả về qua chính nó và ghi audit. Không phát URL ký sẵn cho trình duyệt: trình duyệt gọi S3 qua internet nên bị chính điều kiện VPC endpoint chặn, và nới điều kiện đó là mở lại đường cho key bị lộ.\n- Bỏ bastion SSH: vào máy và database qua Session Manager hoặc proxy truy cập gắn IdP, ghi phiên, quyền có hạn.\n\n**7. Phát hiện (song song, từ tuần đầu)**\n\nCloudTrail cho cả tổ chức ghi vào tài khoản log, bật Object Lock. Cảnh báo: đăng nhập root, đổi policy IAM, tắt log, credential của máy dùng từ ngoài AWS (GuardDuty có loại cảnh báo này), một người hay một role đọc bất thường nhiều object KYC. Runbook thu hồi credential và cô lập pod, tập dượt một lần trước khi báo cáo ngân hàng.\n\n**8. Trả lời CTO**\n\nZTNA giải đúng một đường: nhân viên vào ứng dụng nội bộ không qua VPN phẳng, được kiểm danh tính và thiết bị mỗi lần. Nên làm, ở tháng 3–4 sau khi đã có một IdP. Nhưng nó không chạm tới đường tấn công vừa tìm thấy: SSRF, IMDSv1, role node, bucket không điều kiện đều là service tới service và pod tới API của AWS. Zero trust là nguyên tắc áp cho cả người lẫn workload, không phải một sản phẩm. Báo cáo với ngân hàng nên là bảng sáu lớp ở bước 1, lớp nào đã đóng, bằng chứng là gì.",
+  "tradeoffs": [
+    {
+      "option": "Mua ZTNA thay VPN, coi là đã zero trust",
+      "pros": [
+        "Triển khai nhanh, có tài liệu cho kiểm toán",
+        "Bỏ được truy cập phẳng của người dùng qua VPN"
+      ],
+      "cons": [
+        "Không chạm tới SSRF, IMDS, role node và bucket",
+        "Tạo cảm giác đã xong trong khi đường tấn công còn nguyên"
+      ]
+    },
+    {
+      "option": "Đóng theo đường tấn công trước, rồi danh tính, rồi phân vùng",
+      "pros": [
+        "Đường đã bị chứng minh khai thác được đóng trong hai tuần",
+        "Mỗi lớp có bằng chứng riêng cho ngân hàng"
+      ],
+      "cons": [
+        "Nhiều việc song song cho đội nhỏ",
+        "Tách tài khoản và NetworkPolicy dễ làm vỡ luồng nếu thiếu danh mục kết nối"
+      ]
+    },
+    {
+      "option": "Chỉ sửa lỗi SSRF trong doc-preview",
+      "pros": [
+        "Nhanh nhất, ít rủi ro làm vỡ hệ thống"
+      ],
+      "cons": [
+        "Service nhận URL tiếp theo lại mở đúng đường đó",
+        "Role node, VPN phẳng, key admin của Jenkins vẫn còn"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "shared-replica", "front": "Vì sao không cho BI dùng chung replica với ứng dụng trên PostgreSQL?", "back": "Query báo cáo dài làm standby ngừng áp WAL tới 30 giây trước khi huỷ query, nên ứng dụng đọc replica thấy dữ liệu cũ. Bật hot_standby_feedback thì hết huỷ nhưng primary giữ dòng chết và phình." },
+    { "id": "feedback-where", "front": "Bật hot_standby_feedback trên replica riêng cho BI thì bảng nào phình?", "back": "Bảng trên primary. Replica báo xmin của query về primary, và VACUUM trên primary không dọn được dòng chết mà query đó còn có thể cần." },
+    { "id": "watermark-miss", "front": "Hai lỗi của trích xuất theo updated_at > watermark?", "back": "Bỏ sót dòng của transaction commit sau khi job đã đẩy watermark qua giá trị updated_at của nó, và không thấy dòng bị xoá cứng. CDC đọc log theo thứ tự commit tránh được cả hai." },
+    { "id": "lake-vs-lakehouse", "front": "Open table format thêm gì cho file Parquet trên object storage?", "back": "Commit nguyên tử, snapshot và time travel, đổi schema không viết lại dữ liệu (Iceberg đổi được cả partition), để nhiều engine cùng đọc ghi an toàn. Giá: phải chạy compaction và xoá snapshot cũ." },
+    { "id": "etl-elt", "front": "ELT khác ETL ở đâu và bẫy của nó?", "back": "ELT nạp bản thô rồi biến đổi trong warehouse, giữ được bản thô để chạy lại khi sửa logic. Bẫy: PII thô nằm trong kho mà nhiều người đọc được nếu không che sớm." },
+    { "id": "grain", "front": "Việc đầu tiên khi thiết kế một bảng fact?", "back": "Chốt grain: một dòng là gì (một dòng đơn, một đơn, tổng theo ngày). Trộn grain trong một bảng fact làm phép cộng sai." },
+    { "id": "scd2", "front": "SCD type 2 giải quyết chuyện gì?", "back": "Thuộc tính dimension đổi theo thời gian (vùng của khách) không làm số quá khứ đổi theo: mỗi lần đổi thêm một dòng với valid_from, valid_to và surrogate key riêng, fact trỏ tới phiên bản lúc phát sinh." },
+    { "id": "data-contract", "front": "Vì sao CDC cho phân tích cần data contract?", "back": "CDC thô biến bảng nội bộ của team ứng dụng thành giao diện cho team dữ liệu. Không có hợp đồng thì đổi tên một cột là pipeline vỡ mà không ai được báo trước." },
+    { "id": "lambda-kappa", "front": "Lambda và Kappa architecture khác nhau thế nào?", "back": "Lambda chạy song song lớp batch và lớp speed, hai bộ code cho một chỉ số nên dễ lệch. Kappa chỉ có stream và tính lại bằng cách đọc lại log." },
+    { "id": "data-mesh", "front": "Khi nào data mesh là lựa chọn sai?", "back": "Công ty ít domain, chưa có nền tảng tự phục vụ và quản trị chung. Khi đó nó thành nhiều kho rời nhau, mỗi nơi định nghĩa chỉ số một kiểu." }
+  ]
+}

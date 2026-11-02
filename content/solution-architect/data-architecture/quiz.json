@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "watermark-output",
+      "kind": "output",
+      "prompt": "Bảng `orders` trên PostgreSQL có `updated_at timestamptz DEFAULT now()` và sẵn đơn 100. `extract` lấy các dòng `updated_at > watermark`, thêm id vào `warehouse` và trả về `updated_at` lớn nhất đã thấy. Lần chạy đầu đã lấy đơn 100. Dòng cuối in gì?",
+      "code": "slow.setAutoCommit(false);\nslow.createStatement().execute(\"INSERT INTO orders(id, amount) VALUES (1, 120)\");\nThread.sleep(300);\nfast.createStatement().execute(\"INSERT INTO orders(id, amount) VALUES (2, 80)\");\nfast.createStatement().execute(\"DELETE FROM orders WHERE id = 100\");\n\nwatermark = extract(watermark, warehouse);\nslow.commit();\nwatermark = extract(watermark, warehouse);\nSystem.out.println(\"warehouse: \" + warehouse); // TreeSet<Long>",
+      "options": [
+        "warehouse: [2, 100]",
+        "warehouse: [1, 2]",
+        "warehouse: [1, 2, 100]",
+        "warehouse: [2]"
+      ],
+      "answer": 0,
+      "explanation": "`now()` trả thời điểm transaction bắt đầu, nên đơn 1 có `updated_at` sớm hơn đơn 2. Ở lời gọi `extract` đầu tiên trong đoạn code, đơn 1 chưa commit nên chỉ thấy đơn 2, watermark nhảy tới giờ của đơn 2. Sau khi commit, `updated_at` của đơn 1 nhỏ hơn watermark nên không bao giờ được lấy. Đơn 100 đã xoá nhưng không còn dòng nào để `SELECT` thấy, nên vẫn nằm trong kho. Đã chạy trên PostgreSQL 17.6 và JDK 27."
+    },
+    {
+      "id": "feedback-bloat",
+      "kind": "single",
+      "prompt": "Replica R2 chỉ phục vụ BI. DBA bật `hot_standby_feedback` trên R2 để báo cáo 40 phút không bị huỷ. Hệ quả chính cần theo dõi là gì?",
+      "options": [
+        "Bảng nóng trên primary phình vì VACUUM giữ lại dòng chết",
+        "R2 trễ thêm tới 30 giây mỗi khi báo cáo đang chạy",
+        "Ứng dụng đọc R1 thấy dữ liệu cũ trong lúc R2 chạy báo cáo",
+        "Đĩa của R2 đầy vì WAL dồn lại chờ báo cáo kết thúc"
+      ],
+      "answer": 0,
+      "explanation": "Feedback đẩy xmin của query trên R2 về primary, và VACUUM trên primary phải giữ mọi dòng chết sinh ra từ lúc query bắt đầu. Lab: xoá 100.000 dòng rồi VACUUM, `n_dead_tup` vẫn 100.000. Chính feedback làm R2 không phải ngừng áp WAL nên lag gần 0. R1 là replica riêng, không liên quan tới snapshot của R2. WAL dồn chờ là hành vi khi feedback tắt, và bị giới hạn bởi `max_standby_streaming_delay` (trừ khi đặt `-1`)."
+    },
+    {
+      "id": "scd-region",
+      "kind": "single",
+      "prompt": "Khách mua 10 triệu đồng năm 2025 khi ở Hà Nội, tháng 3/2026 chuyển vào TP.HCM. Bảng khách hàng ghi đè vùng. Báo cáo \"doanh thu 2025 theo vùng\" chạy lại tháng 10/2026 thì sao, và sửa thế nào?",
+      "options": [
+        "10 triệu chuyển sang TP.HCM; dùng SCD type 2 trỏ phiên bản lúc mua",
+        "Số không đổi vì đơn 2025 đã khoá; chỉ báo cáo 2026 bị ảnh hưởng",
+        "10 triệu bị mất khỏi báo cáo; thêm khoá ngoại từ đơn tới khách",
+        "10 triệu chuyển sang TP.HCM; chạy lại báo cáo mỗi đêm cho đúng"
+      ],
+      "answer": 0,
+      "explanation": "Báo cáo join đơn với bảng khách hiện tại, nên doanh thu cũ đi theo vùng mới (SCD type 1). Đơn không bị sửa, dimension mới bị sửa. SCD type 2 thêm dòng khách mới với `valid_from` và surrogate key riêng; fact trỏ tới phiên bản đúng lúc mua nên 2025 giữ ở Hà Nội. Chạy lại mỗi đêm chỉ tính lại cùng con số sai."
+    },
+    {
+      "id": "lakehouse-adds",
+      "kind": "single",
+      "prompt": "Team đang có data lake: file Parquet trên S3, Spark ghi mỗi giờ. Hai job ghi cùng partition giẫm nhau và job lỗi giữa chừng để lại file dở. Chuyển sang Apache Iceberg giải quyết điều này thế nào?",
+      "options": [
+        "Mỗi lần ghi là một commit nguyên tử của snapshot trong metadata",
+        "Iceberg khoá cả bucket S3 trong lúc một job đang ghi dữ liệu",
+        "Iceberg đổi Parquet sang định dạng hàng để ghi đè từng dòng",
+        "Iceberg chép dữ liệu vào warehouse rồi ghi lại vào S3 sau"
+      ],
+      "answer": 0,
+      "explanation": "Open table format giữ danh sách file của mỗi snapshot trong metadata; job chỉ có hiệu lực khi commit thay con trỏ snapshot thành công, xung đột thì commit sau thất bại và thử lại. File của job lỗi không thuộc snapshot nào nên người đọc không thấy, sau đó được dọn như file mồ côi. Dữ liệu vẫn là Parquet theo cột, không có khoá cả bucket hay bản sao trong warehouse."
+    },
+    {
+      "id": "freshness-need",
+      "kind": "single",
+      "prompt": "Mọi báo cáo cần số theo ngày, riêng marketing cần dashboard trễ dưới 15 phút. Team dữ liệu 2 người, công ty đã có Kafka. Cách nạp nào hợp nhất?",
+      "options": [
+        "CDC vào Kafka, MERGE vào warehouse theo lô mỗi 10 phút",
+        "Streaming Flink cho mọi bảng, báo cáo nào cũng real-time",
+        "Job đêm lấy `updated_at > watermark`, thêm job 15 phút",
+        "Cho dashboard marketing query thẳng primary qua view"
+      ],
+      "answer": 0,
+      "explanation": "Micro-batch 10 phút từ CDC đáp ứng yêu cầu khắt khe nhất, không sót dòng commit muộn hay lệnh xoá, và hai người vận hành được. Streaming cho mọi bảng tốn công vận hành mà không ai cần độ tươi tính bằng giây. Job watermark chạy dày hơn vẫn sót dòng commit muộn. Query thẳng primary đưa tải báo cáo trở lại đúng chỗ cần tránh."
+    }
+  ]
+}

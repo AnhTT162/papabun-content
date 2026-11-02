@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Các lớp quanh hồ sơ giấy tờ khách hàng",
+  "nodes": [
+    { "id": "staff", "label": "Nhân viên thẩm định", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "idp", "label": "IdP (SSO + MFA)", "kind": "external", "x": 0.85, "y": 0.05 },
+    { "id": "gw", "label": "Proxy + gateway", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "kyc", "label": "kyc-service", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "audit", "label": "Audit log riêng", "kind": "database", "x": 0.1, "y": 0.95 },
+    { "id": "bucket", "label": "Bucket KYC + khoá KMS", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "staff-idp", "from": "staff", "to": "idp", "label": "OIDC + passkey" },
+    { "id": "staff-gw", "from": "staff", "to": "gw", "label": "token + thiết bị" },
+    { "id": "gw-kyc", "from": "gw", "to": "kyc", "label": "mTLS + JWT" },
+    { "id": "kyc-bucket", "from": "kyc", "to": "bucket", "label": "qua VPC endpoint" },
+    { "id": "kyc-audit", "from": "kyc", "to": "audit", "label": "ai xem hồ sơ nào" },
+    { "id": "bucket-audit", "from": "bucket", "to": "audit", "label": "data event S3" }
+  ],
+  "steps": [
+    { "caption": "Danh tính trước: nhân viên đăng nhập một IdP bằng passkey; nghỉ việc là tài khoản bị khoá ở mọi nơi qua SSO và SCIM.", "show": ["staff", "idp", "staff-idp"], "highlight": ["staff-idp"] },
+    { "caption": "Không có VPN phẳng: proxy truy cập kiểm danh tính và thiết bị cho từng phiên rồi mới cho tới ứng dụng (PEP theo zero trust).", "show": ["gw", "staff-gw"], "highlight": ["staff-gw"] },
+    { "caption": "Gateway gọi kyc-service qua mTLS và chuyển tiếp JWT của người dùng. kyc-service tự kiểm người này được xem hồ sơ nào; mTLS chỉ nói ai đang gọi.", "show": ["kyc", "gw-kyc"], "highlight": ["gw-kyc"] },
+    { "caption": "Chỉ role của kyc-service đọc được bucket và giải mã được khoá KMS; bucket chỉ nhận request qua VPC endpoint nên credential lộ ra ngoài không đọc được bucket này.", "show": ["bucket", "kyc-bucket"], "highlight": ["kyc-bucket"] },
+    { "caption": "Mỗi lần xem hồ sơ và mỗi lần đọc object vào audit log ở tài khoản riêng, không xoá được, có cảnh báo khi một người đọc bất thường nhiều.", "show": ["audit", "kyc-audit", "bucket-audit"], "highlight": ["kyc-audit", "bucket-audit"] }
+  ]
+}

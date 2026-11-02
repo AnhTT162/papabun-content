@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường dữ liệu từ database bán hàng tới báo cáo",
+  "nodes": [
+    { "id": "oltp", "label": "PostgreSQL bán hàng", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "cdc", "label": "Debezium + Kafka", "kind": "queue", "x": 0.85, "y": 0.05 },
+    { "id": "bronze", "label": "Bronze (bản thô)", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "gold", "label": "Silver/Gold (dbt)", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "bi", "label": "BI / dashboard", "kind": "client", "x": 0.1, "y": 0.95 },
+    { "id": "recon", "label": "Đối soát hằng ngày", "kind": "generic", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "oltp-cdc", "from": "oltp", "to": "cdc", "label": "WAL theo commit" },
+    { "id": "cdc-bronze", "from": "cdc", "to": "bronze", "label": "append 10 phút/lần" },
+    { "id": "bronze-gold", "from": "bronze", "to": "gold", "label": "khử trùng, SCD2" },
+    { "id": "gold-bi", "from": "gold", "to": "bi", "label": "mart doanh thu" },
+    { "id": "gold-recon", "from": "gold", "to": "recon", "label": "tổng theo ngày" },
+    { "id": "oltp-recon", "from": "oltp", "to": "recon", "label": "tổng ở nguồn" }
+  ],
+  "steps": [
+    { "caption": "CDC đọc WAL qua slot logical theo thứ tự commit, thấy cả dòng commit muộn lẫn lệnh xoá; primary không phải chạy query báo cáo nào.", "show": ["oltp", "cdc", "oltp-cdc"], "highlight": ["oltp-cdc"] },
+    { "caption": "Tầng bronze là change log append-only: mỗi thay đổi một dòng kèm LSN và thời điểm nạp. Mười phút một lô là đủ cho yêu cầu 15 phút.", "show": ["bronze", "cdc-bronze"], "highlight": ["cdc-bronze"] },
+    { "caption": "dbt gộp change log thành bản mới nhất mỗi khoá (MERGE ở silver), che PII, dựng dimension khách SCD type 2 và fact dòng đơn. Sửa logic thì chạy lại từ bronze.", "show": ["gold", "bronze-gold"], "highlight": ["bronze-gold"] },
+    { "caption": "BI chỉ đọc bảng gold có người sở hữu và cam kết độ tươi, không chạm database bán hàng.", "show": ["bi", "gold-bi"], "highlight": ["gold-bi"] },
+    { "caption": "Mỗi sáng so số đơn và tổng tiền theo ngày kinh doanh giữa nguồn và kho. Lệch quá ngưỡng là pipeline đang hỏng, có người phải xử lý.", "show": ["recon", "gold-recon", "oltp-recon"], "highlight": ["gold-recon", "oltp-recon"] }
+  ]
+}

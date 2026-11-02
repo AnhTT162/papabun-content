@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "depth-independent", "front": "Điều kiện để defense in depth có tác dụng?", "back": "Các lớp phải độc lập: mỗi bước tấn công có một lớp chặn hoặc phát hiện riêng, và các lớp không dùng chung một credential hay một giả định." },
+    { "id": "zero-trust-core", "front": "Zero trust thay đổi điều gì so với mô hình VPN?", "back": "Quyền không đến từ vị trí mạng. Mỗi phiên được xác thực và kiểm quyền theo danh tính, thiết bị và ngữ cảnh, tại một điểm thực thi đứng trước tài nguyên." },
+    { "id": "pdp-pep", "front": "PDP và PEP trong NIST SP 800-207 là gì?", "back": "Policy decision point quyết định cho hay không; policy enforcement point (proxy, gateway, sidecar) đứng trước tài nguyên và thực thi quyết định đó." },
+    { "id": "mtls-authz", "front": "Bật mTLS giữa các service đã đủ phân quyền chưa?", "back": "Chưa. mTLS chỉ chứng minh ai đang gọi; mọi service có chứng chỉ của cùng CA đều qua được. Phải kiểm danh tính trong chứng chỉ với chính sách, như AuthorizationPolicy của mesh." },
+    { "id": "netpol-default", "front": "Hành vi mặc định của mạng pod trong Kubernetes?", "back": "Mọi pod gọi được mọi pod và ra được ngoài. NetworkPolicy chỉ có luật cho phép, cộng dồn, cần CNI hỗ trợ; nên đặt policy mặc định chặn rồi mở từng đường." },
+    { "id": "imds-ssrf", "front": "Ba lớp chặn SSRF lấy credential từ metadata service trên EC2?", "back": "Ứng dụng kiểm URL đích sau khi phân giải DNS; IMDSv2 bắt buộc với hop limit 1; chặn chiều ra tới 169.254.169.254. Cộng thêm role tối thiểu cho mỗi service." },
+    { "id": "source-vpce", "front": "Điều kiện aws:SourceVpce trên bucket policy giúp gì?", "back": "Bucket chỉ nhận request đi qua VPC endpoint của mình, nên credential bị đánh cắp dùng từ máy ngoài không đọc được bucket đó dù đúng quyền. Nó không chặn API khác hay máy khác trong VPC." },
+    { "id": "jml", "front": "Vì sao mọi công cụ phải đăng nhập qua SSO của một IdP?", "back": "Công cụ còn tài khoản riêng là nơi tài khoản của người đã nghỉ việc sống sót. Một IdP cộng SCIM cho phép khoá một lần là mất quyền ở mọi nơi." },
+    { "id": "ci-oidc", "front": "Bẫy khi cho CI lên cloud bằng OIDC federation?", "back": "Trust policy chỉ kiểm audience thì workflow của repo khác cũng nhận được role. Phải giới hạn claim sub theo repo và nhánh hoặc môi trường." },
+    { "id": "break-glass", "front": "Tài khoản break-glass cần những gì?", "back": "Rất ít tài khoản, dùng khi IdP chết; khoá MFA cứng cất riêng, cảnh báo mỗi lần đăng nhập, và thử định kỳ để chắc còn dùng được." }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "data-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Kiến trúc dữ liệu",
+  "summary": "Đưa báo cáo ra khỏi database nghiệp vụ theo từng bậc (replica riêng, bảng tổng hợp, warehouse), hệ quả của query dài trên replica PostgreSQL, warehouse, data lake và lakehouse (Parquet, Iceberg), ETL và ELT, vì sao trích xuất theo updated_at sót dòng, CDC và data contract, medallion, star schema và SCD type 2, Lambda và Kappa, độ tươi, đối soát, quản trị và data mesh.",
+  "level": "architect",
+  "order": 11,
+  "minutes": 18,
+  "prerequisites": ["replication-ha", "mvcc-vacuum", "olap-doris", "outbox-cdc", "integration-patterns"],
+  "terms": ["oltp", "olap", "read-replica", "data-warehouse", "lakehouse", "parquet", "open-table-format", "cdc", "elt", "dbt", "star-schema", "slowly-changing-dimension", "data-contract", "materialized-view", "data-lake", "etl", "backfill", "incremental-extraction", "medallion-architecture", "fact-table", "dimension-table", "surrogate-key", "lambda-architecture", "kappa-architecture", "reverse-etl", "data-catalog", "data-lineage", "data-mesh", "hot-standby-feedback", "xmin-horizon", "replication-slot", "reconciliation"],
+  "references": [
+    { "title": "PostgreSQL 17: Hot Standby, handling query conflicts", "url": "https://www.postgresql.org/docs/17/hot-standby.html" },
+    { "title": "Kimball Group: Dimensional Modeling Techniques", "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/" },
+    { "title": "Apache Iceberg: Table Spec", "url": "https://iceberg.apache.org/spec/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sao không cho BI đọc read replica là xong?\" Trả lời theo điều kiện: được, nếu là replica riêng cho BI, chỉ một nguồn, không cần lịch sử thay đổi, và query có giới hạn thời gian. Nói luôn giá trên PostgreSQL: tắt `hot_standby_feedback` thì query dài bị huỷ và replica trễ trong lúc chờ; bật thì primary giữ dòng chết. Khi cần join nhiều nguồn, giữ lịch sử, hay quét nhiều tháng, đó là việc của warehouse." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "`updated_at > watermark` trông như đủ cho nạp tăng dần nhưng sót dòng của transaction commit muộn (`now()` là lúc transaction bắt đầu, không phải lúc commit; đổi sang `clock_timestamp()` cũng vậy, vì mọi mốc gán trước lúc commit đều có lỗ này) và không bao giờ thấy dòng bị xoá cứng. Lệch nhỏ, không có lỗi nào được log, và thường chỉ lộ ra khi tài chính khoá sổ." },
+    { "type": "callout", "style": "tip", "markdown": "Viết định nghĩa của mỗi chỉ số quan trọng thành một dòng có chủ: doanh thu gồm những gì, ngày kinh doanh theo múi giờ nào, đơn huỷ và hoàn trừ ra sao, cập nhật trước mấy giờ. Phần lớn tranh cãi \"số của ai đúng\" là hai bên dùng hai định nghĩa." }
+  ]
+}

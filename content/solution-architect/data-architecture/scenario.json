@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đưa báo cáo của chuỗi bán lẻ ra khỏi database bán hàng",
+  "prompt": "Bạn là solution architect của một chuỗi bán lẻ thời trang: 300 cửa hàng và một web shop, khoảng 120.000 đơn mỗi ngày. Mọi bán hàng ghi vào một PostgreSQL 17 (primary 1,6 TB). Một replica R1 phục vụ ứng dụng (trang \"Đơn của tôi\", tra tồn kho), và công cụ BI cũng trỏ vào R1.\n\nHiện trạng:\n\n- Trước đây, 8–9 giờ sáng khoảng 40 quản lý vùng mở dashboard. Log của R1 đầy lỗi `canceling statement due to conflict with recovery`, báo cáo xuất 18 tháng không chạy xong lần nào, và khách phàn nàn vừa đặt xong không thấy đơn.\n- Hai tuần trước DBA bật `hot_standby_feedback` trên R1. Lỗi huỷ query hết, báo cáo 18 tháng chạy xong trong khoảng 40 phút, khách hết phàn nàn. Nhưng bảng `stock_levels` (tồn kho, cập nhật liên tục) trên primary phình từ 12 GB lên 20 GB, log autovacuum ghi nhiều dòng `dead but not yet removable`.\n- Tài chính dùng một job đêm lấy `updated_at > watermark` sang một database báo cáo. Doanh thu tháng 9 lệch sổ kế toán 0,4%. Kiểm tay thấy: thiếu đơn của vài cửa hàng gửi theo lô trong một transaction dài lúc đóng ca, và vẫn còn đơn nháp đã bị xoá cứng ở nguồn.\n- Báo cáo \"doanh thu 2025 theo vùng của khách\" chạy tháng 10/2026 ra số khác lần chạy tháng 1/2026, dù không ai sửa đơn năm 2025.\n- Marketing muốn dashboard chiến dịch trễ tối đa 15 phút.\n\nRàng buộc: team dữ liệu 2 người; công ty đã có cụm Kafka do team platform vận hành; ngân sách không cho thêm người.\n\nCó hai đề xuất. DBA: thêm replica R2 cấu hình mạnh riêng cho BI, giữ `hot_standby_feedback` bật để không còn lỗi huỷ query. Một vendor: dựng lakehouse streaming (Flink + Iceberg) cho cả 400 bảng, mọi báo cáo real-time.\n\nHãy giải thích từng triệu chứng, trả lời hai đề xuất và đề xuất kiến trúc dữ liệu.",
+  "hints": [
+    "Lỗi huỷ query và khách không thấy đơn có cùng một nguyên nhân không? Khi standby phải chọn giữa áp WAL và giữ snapshot cho query dài, nó làm gì trong 30 giây đầu?",
+    "`hot_standby_feedback` đẩy xmin của query trên replica về đâu? Nếu đặt nó trên R2 thay vì R1 thì bảng nào vẫn phình?",
+    "Job watermark thấy gì khi một transaction chèn đơn lúc 21:00 nhưng commit lúc 22:30, trong khi job chạy lúc 22:00? Nó thấy dòng bị xoá cứng bằng cách nào?",
+    "Báo cáo 2025 đổi số khi không ai sửa đơn 2025: dữ liệu nào đã đổi? Vùng của khách lúc mua hay vùng hiện tại?"
+  ],
+  "solution": "**1. Giải thích triệu chứng**\n\n- **Huỷ query và khách không thấy đơn (trước khi bật feedback) là một chuyện.** Khi primary dọn phiên bản dòng mà báo cáo trên R1 còn cần, R1 ngừng áp WAL tối đa `max_standby_streaming_delay` (mặc định 30 giây) rồi huỷ query. Đã chạy trên PostgreSQL 17.6: `replay_lag` lên 30,4 giây rồi query bị huỷ sau 33 giây. Trong lúc chờ, trang \"Đơn của tôi\" đọc R1 thấy dữ liệu cũ tới 30 giây. Dùng chung một replica cho ứng dụng và BI là gốc của vấn đề.\n- **Bảng phình vì feedback (hai tuần nay).** Với `hot_standby_feedback` bật, R1 báo xmin của query đang chạy về primary, và VACUUM trên primary phải giữ mọi dòng chết sinh ra trong thời gian báo cáo chạy. Lab cùng bản: xoá 100.000 dòng rồi VACUUM, `n_dead_tup` vẫn là 100.000. Mỗi sáng, mọi phiên bản cũ của `stock_levels` sinh ra trong 40 phút báo cáo chạy đều bị giữ lại; bảng cập nhật liên tục như tồn kho sinh dòng chết nhanh nhất nên phình trước, còn bảng chủ yếu chèn như `order_lines` gần như không đổi (cơ chế ở bài MVCC, VACUUM & undo log).\n- **Tài chính lệch.** Job lấy `updated_at > watermark`: đơn chèn lúc 21:00 trong transaction commit lúc 22:30 có `updated_at` 21:00; job lúc 22:00 không thấy nó (chưa commit), đặt watermark tới dòng mới nhất đã commit; lần sau `21:00 < watermark` nên đơn đó mất vĩnh viễn. Lab đã tái hiện: nguồn có đơn [1, 2], kho có [2, 100]. Dòng xoá cứng không còn gì để `SELECT` thấy, nên kho giữ mãi đơn nháp.\n- **Báo cáo 2025 đổi số.** Bảng khách hàng bị ghi đè vùng hiện tại (SCD type 1). Khách chuyển từ Hà Nội vào TP.HCM năm 2026 kéo doanh thu 2025 của họ sang TP.HCM khi báo cáo chạy lại.\n\n**2. Trả lời đề xuất của DBA**\n\nĐúng một nửa. Tách BI sang R2 riêng giải quyết chuyện khách không thấy đơn. Nhưng giữ feedback bật trên R2 thì primary vẫn phình y như cũ: dòng chết nằm trên primary, không phải trên replica nào. Cấu hình R2 cho riêng BI:\n\n- `hot_standby_feedback = off`.\n- `max_standby_streaming_delay = 15min`: R2 chấp nhận trễ tới 15 phút khi có xung đột, đổi lại query dưới 15 phút không bị huỷ.\n- `statement_timeout = 10min` cho user BI.\n- Báo cáo xuất 18 tháng không thuộc về replica nào; chuyển sang kho ở bước 4.\n\nĐây là bước làm trong một tuần, không phải đích cuối: R2 vẫn chỉ có một nguồn, không giữ lịch sử thay đổi, và vẫn lệch tài chính.\n\n**3. Trả lời đề xuất của vendor**\n\nQuá cỡ. Ngoài marketing (15 phút), mọi báo cáo đang hỏi số mỗi ngày. Streaming Flink cho 400 bảng nghĩa là hai người phải vận hành job stateful, checkpoint, compaction file nhỏ của Iceberg và xoá snapshot. Micro-batch 10 phút từ CDC đáp ứng được yêu cầu nhanh nhất. Lakehouse có thể đáng làm sau, khi có dữ liệu không quan hệ (log, clickstream) hoặc nhiều engine cần đọc chung.\n\n**4. Kiến trúc đề xuất**\n\n- **Nạp bằng CDC**: Debezium đọc WAL qua slot logical, chỉ cho khoảng 40 bảng mà báo cáo cần, đẩy vào Kafka sẵn có. CDC thấy dòng theo thứ tự commit và thấy lệnh xoá, nên hai lỗi của job watermark biến mất. Đặt `max_slot_wal_keep_size` và cảnh báo khi slot tụt, để connector chết không làm đầy đĩa primary.\n- **Kho**: warehouse managed, vì hai người không nên vận hành cụm. Bronze là change log append-only (loại thao tác, LSN, thời điểm nạp), mười phút một lô. dbt dựng silver: giữ thay đổi có LSN lớn nhất của mỗi khoá trong lô rồi `MERGE` thành bản mới nhất, chuẩn hoá mã cửa hàng, che số điện thoại và email; sau đó tới gold.\n- **Mô hình**: `fact_order_line` ở grain một dòng đơn, `dim_customer` SCD type 2 dựng từ change log ở bronze, có `valid_from`, `valid_to` và surrogate key; fact trỏ tới phiên bản khách lúc mua. Doanh thu 2025 theo vùng lúc mua không còn đổi; vẫn giữ cột vùng hiện tại cho câu hỏi \"khách đang ở đâu\". Ngày kinh doanh tính theo giờ Việt Nam, ghi trong định nghĩa chỉ số.\n- **Hợp đồng dữ liệu**: danh sách 40 bảng và cột là hợp đồng với team bán hàng; migration đổi tên hay xoá cột trong danh sách đi theo expand-contract và bị CI chặn nếu phá hợp đồng.\n- **Độ tươi và đối soát**: mỗi bảng gold có người sở hữu và cam kết (\"doanh thu hôm qua có trước 6 giờ\", \"dashboard chiến dịch trễ dưới 15 phút\"). Mỗi sáng so số đơn và tổng tiền theo ngày kinh doanh giữa primary (query nhỏ có index, chạy trên R2) và kho; lệch quá 0,01% thì báo cho người sở hữu.\n- **Chạy song song rồi cắt**: chạy job cũ và luồng CDC song song một kỳ khoá sổ, giải thích được từng khoản lệch, rồi mới tắt job watermark.\n\n**5. Thứ tự làm**\n\nTuần 1: R2 cho BI với cấu hình ở bước 2, trả R1 cho ứng dụng, tắt feedback. Tháng 1: CDC + warehouse cho tài chính, chạy song song với job cũ. Tháng 2: dashboard marketing và các báo cáo vùng trên gold. Sau đó mới xét lakehouse.",
+  "tradeoffs": [
+    {
+      "option": "Replica riêng cho BI (R2), feedback tắt",
+      "pros": [
+        "Làm trong một tuần, không thêm công nghệ mới",
+        "Trả replica của ứng dụng về đúng việc của nó"
+      ],
+      "cons": [
+        "Chỉ một nguồn, không giữ lịch sử, không có SCD",
+        "Báo cáo dài vẫn phải cắt bằng timeout",
+        "Không sửa được lệch tài chính"
+      ]
+    },
+    {
+      "option": "CDC vào warehouse managed, micro-batch 10 phút, dbt",
+      "pros": [
+        "Không sót dòng commit muộn, thấy cả lệnh xoá",
+        "Lịch sử, SCD và đối soát nằm ở một chỗ",
+        "Hai người vận hành được"
+      ],
+      "cons": [
+        "Slot logical giữ WAL trên primary khi connector dừng",
+        "Cần data contract với team bán hàng",
+        "Tốn tiền theo dữ liệu quét nếu dashboard viết ẩu"
+      ]
+    },
+    {
+      "option": "Lakehouse streaming cho mọi bảng",
+      "pros": [
+        "Độ tươi tính bằng giây",
+        "Nhiều engine đọc chung một bảng mở"
+      ],
+      "cons": [
+        "Vượt sức vận hành của hai người",
+        "Phần lớn báo cáo chỉ cần số mỗi ngày",
+        "Compaction và xoá snapshot thành việc thường xuyên"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "security-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Kiến trúc bảo mật",
+  "summary": "Defense in depth với các lớp độc lập, zero trust theo NIST SP 800-207 (PDP, PEP) và chỗ của ZTNA, phân vùng mạng bằng tài khoản, subnet, security group và NetworkPolicy, mTLS chỉ là xác thực (lab JDK 27), phân quyền ở gateway và ở service, danh tính tập trung cho người (IdP, SSO, SCIM, MFA chống phishing, JIT, break-glass) và cho workload (role ngắn hạn, OIDC federation cho CI), SSRF tới metadata service, bảo vệ dữ liệu bằng KMS và VPC endpoint, audit log và phát hiện.",
+  "level": "architect",
+  "order": 12,
+  "minutes": 18,
+  "prerequisites": ["network-basics", "tls-https", "api-gateway-service-mesh", "spring-security-architecture", "well-architected"],
+  "terms": ["defense-in-depth", "zero-trust", "assume-breach", "identity-provider", "sso", "oidc", "saml", "mfa", "workload-identity", "mtls", "lateral-movement", "kms", "ssrf", "policy-enforcement-point", "ztna", "network-segmentation", "vpc-endpoint", "network-policy", "microsegmentation", "spiffe", "scim", "just-in-time-access", "break-glass-access", "imds", "least-privilege", "security-group", "blast-radius", "audit-trail", "jwt", "token-relay", "service-mesh"],
+  "references": [
+    { "title": "NIST SP 800-207: Zero Trust Architecture", "url": "https://csrc.nist.gov/pubs/sp/800/207/final" },
+    { "title": "Kubernetes: Network Policies", "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/" },
+    { "title": "Amazon EC2: Use the Instance Metadata Service (IMDSv2)", "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đã có mTLS giữa mọi service rồi, còn cần gì nữa?\" mTLS trả lời ai đang gọi, không trả lời người đó được làm gì: mọi service có chứng chỉ của cùng CA đều qua handshake. Cần chính sách theo danh tính (service A chỉ được gọi endpoint X của B), và với dữ liệu của người dùng, service phải biết request đang làm thay người nào để kiểm quyền trên chính bản ghi đó." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Pod trên EKS mặc định với tới được metadata service của node và dùng được role của node. Nếu node còn cho IMDSv1, một lỗi SSRF ở bất kỳ service nào cũng thành credential cloud của cả node. Bắt buộc IMDSv2 với hop limit 1, cho mỗi service một role riêng, và chặn chiều ra tới `169.254.169.254`." },
+    { "type": "callout", "style": "tip", "markdown": "Với mỗi credential trong hệ thống (role, key, token CI, user database), viết một dòng: lộ cái này thì với tới được gì, ai biết khi nó bị dùng. Danh sách này chỉ ra nhanh hơn mọi checklist chỗ cần thu hẹp quyền trước." }
+  ]
+}

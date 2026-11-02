@@ -1242,10 +1242,10 @@
     {
       "id": "surrogate-key",
       "term": "Surrogate key",
-      "meaning": "Khoá nhân tạo không mang nghĩa nghiệp vụ (số tự tăng, UUID), dùng làm primary key thay cho natural key có thể thay đổi như email.",
+      "meaning": "Khoá nhân tạo không mang nghĩa nghiệp vụ (số tự tăng, UUID), dùng làm primary key thay cho natural key có thể thay đổi như email. Trong dimension SCD type 2, mỗi phiên bản của cùng một khách có surrogate key riêng.",
       "example": "`users.id` là surrogate key; `email` chỉ có UNIQUE.",
       "related": ["primary-key"],
-      "topics": ["relational-keys-normalization", "data-modeling"]
+      "topics": ["relational-keys-normalization", "data-modeling", "data-architecture"]
     },
     {
       "id": "normalization",
@@ -1653,7 +1653,7 @@
       "meaning": "View lưu sẵn kết quả như một bảng và có thể đánh index; dữ liệu chỉ mới khi được refresh. PostgreSQL và Oracle có, MySQL không có.",
       "example": "`REFRESH MATERIALIZED VIEW CONCURRENTLY sales_summary;` mỗi 10 phút.",
       "related": ["view"],
-      "topics": ["views-procedures-triggers", "olap-doris"]
+      "topics": ["views-procedures-triggers", "olap-doris", "data-architecture"]
     },
     {
       "id": "stored-procedure",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns", "data-architecture"]
     },
     {
       "id": "security-definer",
@@ -1709,7 +1709,7 @@
       "meaning": "Cơ chế PostgreSQL ghi nhớ một bên nhận (replica, Debezium) đã đọc WAL tới đâu và giữ lại WAL chưa được đọc. Bên nhận dừng lâu thì WAL tích tụ, có thể làm đầy đĩa.",
       "example": "`SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) FROM pg_replication_slots;`",
       "related": ["cdc", "wal"],
-      "topics": ["views-procedures-triggers", "backup-restore", "mvcc-vacuum", "replication-ha", "outbox-cdc"]
+      "topics": ["views-procedures-triggers", "backup-restore", "mvcc-vacuum", "replication-ha", "outbox-cdc", "data-architecture"]
     },
     {
       "id": "hot-row",
@@ -1741,7 +1741,7 @@
       "meaning": "Bản ghi ai đã thay đổi gì, khi nào, từ giá trị nào sang giá trị nào, dùng cho kiểm toán và điều tra sự cố.",
       "example": "Bảng `salary_history` lưu mỗi lần sửa lương: người sửa, thời điểm, giá trị cũ và mới.",
       "related": ["temporal-table", "cdc", "trigger"],
-      "topics": ["data-modeling"]
+      "topics": ["data-modeling", "security-architecture"]
     },
     {
       "id": "temporal-table",
@@ -1965,7 +1965,7 @@
       "meaning": "Mốc XID cũ nhất mà còn snapshot nào đó có thể cần thấy. VACUUM chỉ dọn được dòng chết cũ hơn mốc này.",
       "example": "Một transaction `idle in transaction` từ 3 giờ trước giữ horizon đứng yên, VACUUM báo \"dead but not yet removable\".",
       "related": ["vacuum", "mvcc", "hot-standby-feedback"],
-      "topics": ["mvcc-vacuum"]
+      "topics": ["mvcc-vacuum", "data-architecture"]
     },
     {
       "id": "table-bloat",
@@ -2045,7 +2045,7 @@
       "meaning": "Tham số của replica PostgreSQL: báo `xmin` của các query đang chạy trên replica về primary, để primary không dọn những phiên bản mà query đó còn cần. Đổi lại, query dài trên replica làm bảng trên primary phình.",
       "example": "Tắt nó thì query trên replica có thể bị huỷ với `canceling statement due to conflict with recovery`.",
       "related": ["xmin-horizon", "replication-slot"],
-      "topics": ["mvcc-vacuum", "replication-ha"]
+      "topics": ["mvcc-vacuum", "replication-ha", "data-architecture"]
     },
     {
       "id": "pg-repack",
@@ -2250,10 +2250,10 @@
     {
       "id": "backfill",
       "term": "Backfill",
-      "meaning": "Điền dữ liệu cho cột hoặc bảng mới từ dữ liệu cũ, chạy theo lô nhỏ để không tạo transaction khổng lồ.",
+      "meaning": "Điền dữ liệu cho cột hoặc bảng mới từ dữ liệu cũ, chạy theo lô nhỏ để không tạo transaction khổng lồ. Trong pipeline dữ liệu, cũng là chạy lại biến đổi cho dữ liệu lịch sử sau khi sửa logic hay thêm bảng.",
       "example": "`UPDATE customers SET phone_number = phone WHERE id >= 1000000 AND id < 1005000 AND phone_number IS NULL;`",
       "related": ["expand-contract", "replica-lag"],
-      "topics": ["schema-migration", "event-driven-architecture"]
+      "topics": ["schema-migration", "event-driven-architecture", "data-architecture"]
     },
     {
       "id": "table-rewrite",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment", "integration-patterns"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment", "integration-patterns", "data-architecture"]
     },
     {
       "id": "jitter",
@@ -4893,7 +4893,7 @@
       "meaning": "Tầng hạ tầng lo lưu lượng giữa các service bằng proxy đứng trên mọi kết nối (data plane) và một control plane cấu hình chúng: mTLS, retry, timeout, metric mà không sửa code.",
       "example": "Istio, Linkerd: mọi lời gọi từ `checkout` tới `payments` đi qua proxy được mã hoá và đo latency.",
       "related": ["sidecar", "data-plane", "control-plane"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "security-architecture"]
     },
     {
       "id": "mtls",
@@ -4901,7 +4901,7 @@
       "meaning": "Mutual TLS: cả hai đầu kết nối cùng trình chứng chỉ để xác thực nhau, không chỉ server như HTTPS thường. Dùng để xác thực service với service.",
       "example": "Sidecar của `checkout` trình chứng chỉ mang danh tính service account `checkout` khi gọi `payments`.",
       "related": ["service-mesh", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "tls-https"]
+      "topics": ["api-gateway-service-mesh", "tls-https", "security-architecture"]
     },
     {
       "id": "envoy",
@@ -4941,7 +4941,7 @@
       "meaning": "Gateway chuyển tiếp access token của người dùng xuống service phía sau để service tự kiểm tra và quyết định quyền, thay vì chỉ gửi header danh tính.",
       "example": "Spring Cloud Gateway với filter `TokenRelay` gắn `Authorization: Bearer ...` vào request tới `orders`.",
       "related": ["api-gateway", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "spring-cloud"]
+      "topics": ["api-gateway-service-mesh", "spring-cloud", "security-architecture"]
     },
     {
       "id": "zero-trust",
@@ -4949,7 +4949,7 @@
       "meaning": "Nguyên tắc không tin một request chỉ vì nó đến từ mạng nội bộ; mọi lời gọi đều phải xác thực và kiểm tra quyền.",
       "example": "Service `payments` từ chối request không có chứng chỉ mTLS hợp lệ dù đến từ cùng cluster.",
       "related": ["mtls", "token-relay"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "security-architecture"]
     },
     {
       "id": "gateway-api",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh", "design-notification"]
+      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture"]
     },
     {
       "id": "ingress",
@@ -5669,7 +5669,7 @@
       "meaning": "Phạm vi ảnh hưởng của một sự cố hay một thay đổi: bao nhiêu người dùng, endpoint, service, region bị ảnh hưởng.",
       "example": "Lỗi chỉ ở thanh toán thẻ của một provider, ví vẫn chạy.",
       "related": ["mitigation"],
-      "topics": ["troubleshooting-mindset"]
+      "topics": ["troubleshooting-mindset", "security-architecture"]
     },
     {
       "id": "heap-dump",
@@ -6253,7 +6253,7 @@
       "meaning": "Firewall ảo gắn vào interface mạng trên AWS, chỉ có luật cho phép. Nó stateful: cho chiều vào thì response tự được đi ra. Gói không khớp luật bị bỏ lặng lẽ nên phía gọi thấy timeout.",
       "example": "Security group của database cho phép TCP 5432 từ dải `10.0.1.0/24`.",
       "related": ["route-table", "subnet"],
-      "topics": ["network-basics"]
+      "topics": ["network-basics", "security-architecture"]
     },
     {
       "id": "mtu",
@@ -8669,7 +8669,7 @@
       "meaning": "Bản sao của database nhận thay đổi từ primary và phục vụ lượt đọc. Scale được đọc, không scale được ghi, và dữ liệu có thể trễ so với primary.",
       "example": "Trang báo cáo đọc từ replica; luồng vừa đặt hàng xong thì đọc từ primary để thấy ngay đơn mới.",
       "related": ["replica-lag", "read-your-writes", "sharding"],
-      "topics": ["sd-building-blocks", "well-architected"]
+      "topics": ["sd-building-blocks", "well-architected", "data-architecture"]
     },
     {
       "id": "presigned-url",
@@ -8701,7 +8701,7 @@
       "meaning": "Kho dữ liệu phục vụ phân tích (OLAP): lưu theo cột, quét và gộp hàng trăm triệu dòng nhanh, nạp dữ liệu từ các hệ thống nghiệp vụ (OLTP) theo lô hoặc theo luồng.",
       "example": "Báo cáo doanh thu theo vùng chạy trên BigQuery hay Redshift thay vì trên primary PostgreSQL.",
       "related": ["cdc"],
-      "topics": ["sd-building-blocks", "olap-doris"]
+      "topics": ["sd-building-blocks", "olap-doris", "data-architecture"]
     },
     {
       "id": "functional-requirement",
@@ -8773,7 +8773,7 @@
       "meaning": "Online Transaction Processing: hệ thống nghiệp vụ xử lý nhiều transaction nhỏ (đặt hàng, thanh toán), đọc ghi vài dòng mỗi lần, cần latency thấp. Đối lập với OLAP là phân tích, quét nhiều dòng.",
       "example": "PostgreSQL của service đơn hàng là OLTP; báo cáo doanh thu năm chạy trên data warehouse.",
       "related": ["data-warehouse"],
-      "topics": ["sd-building-blocks", "olap-doris"]
+      "topics": ["sd-building-blocks", "olap-doris", "data-architecture"]
     },
     {
       "id": "dau",
@@ -9245,7 +9245,7 @@
       "meaning": "Online Analytical Processing: truy vấn phân tích quét và gộp rất nhiều dòng nhưng chỉ vài cột, ví dụ doanh thu theo ngày theo vùng. Đối lập với OLTP là đọc ghi vài dòng mỗi transaction.",
       "example": "`SELECT region, SUM(amount) FROM orders WHERE dt >= ... GROUP BY region` trên 2 tỉ dòng chạy trên Doris thay vì PostgreSQL.",
       "related": ["oltp", "data-warehouse", "columnar-storage"],
-      "topics": ["olap-doris", "design-search-autocomplete"]
+      "topics": ["olap-doris", "design-search-autocomplete", "data-architecture"]
     },
     {
       "id": "columnar-storage",
@@ -10469,7 +10469,7 @@
       "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
       "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
       "related": ["shared-responsibility-model", "zero-trust"],
-      "topics": ["well-architected"]
+      "topics": ["well-architected", "security-architecture"]
     },
     {
       "id": "shared-responsibility-model",
@@ -10838,6 +10838,342 @@
       "example": "`INSERT INTO inbox (event_id, payload) ... ON CONFLICT DO NOTHING`, rồi worker đọc inbox để xử lý.",
       "related": ["webhook", "idempotent-consumer", "outbox"],
       "topics": ["integration-patterns"]
+    },
+    {
+      "id": "data-lake",
+      "term": "Data lake",
+      "meaning": "Kho dữ liệu dạng file trên object storage (S3, GCS), nhận mọi định dạng, schema chỉ áp khi đọc. Rẻ và linh hoạt, nhưng bản thân nó không có transaction hay quản lý phiên bản.",
+      "example": "Log click, ảnh chụp bảng và file CSV của đối tác cùng nằm dưới `s3://lake/raw/` theo ngày.",
+      "related": ["lakehouse", "parquet", "data-warehouse"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "lakehouse",
+      "term": "Lakehouse",
+      "meaning": "Data lake cộng một open table format (Iceberg, Delta Lake, Hudi): file vẫn trên object storage nhưng có commit nguyên tử, snapshot, đổi schema, nên dùng được như warehouse và nhiều engine cùng đọc.",
+      "example": "Bảng Iceberg `sales.order_lines` do Spark ghi, Trino và Doris cùng đọc qua một catalog.",
+      "related": ["data-lake", "open-table-format", "data-warehouse"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "parquet",
+      "term": "Parquet",
+      "meaning": "Định dạng file lưu theo cột: dữ liệu chia thành row group, mỗi cột nén riêng và có thống kê min/max để bỏ qua phần không khớp điều kiện lọc.",
+      "example": "Truy vấn chỉ đọc 3 trong 80 cột của file Parquet nên đọc ít byte hơn nhiều so với CSV.",
+      "related": ["columnar-storage", "data-lake"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "open-table-format",
+      "term": "Open table format",
+      "meaning": "Đặc tả lưu metadata của bảng (danh sách file, schema, partition, snapshot) cạnh file dữ liệu trên object storage, để mỗi lần ghi là một commit nguyên tử. Ví dụ: Apache Iceberg, Delta Lake, Apache Hudi.",
+      "example": "Job Spark lỗi giữa chừng không làm hỏng bảng Iceberg vì snapshot mới chưa được commit.",
+      "related": ["lakehouse", "parquet"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "etl",
+      "term": "ETL",
+      "meaning": "Extract, Transform, Load: lấy dữ liệu từ nguồn, biến đổi bên ngoài đích, rồi mới nạp vào kho.",
+      "example": "Job đêm đọc đơn từ PostgreSQL, che số điện thoại, tính tổng theo ngày rồi ghi vào warehouse.",
+      "related": ["elt", "data-warehouse"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "elt",
+      "term": "ELT",
+      "meaning": "Extract, Load, Transform: nạp bản thô vào kho trước, rồi biến đổi bằng SQL ngay trong kho. Giữ được bản thô để chạy lại khi sửa logic.",
+      "example": "CDC đổ bảng `orders` thô vào warehouse; dbt dựng bảng doanh thu từ đó.",
+      "related": ["etl", "dbt"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "dbt",
+      "term": "dbt",
+      "meaning": "Data build tool: công cụ viết biến đổi dữ liệu bằng các file SQL có version, test và phụ thuộc giữa các model, chạy ngay trong warehouse.",
+      "example": "`models/gold/fct_revenue.sql` đọc từ `silver_orders`; `dbt test` kiểm khoá không trùng và không null.",
+      "related": ["elt", "medallion-architecture"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "star-schema",
+      "term": "Star schema",
+      "meaning": "Mô hình cho báo cáo: một bảng fact ở giữa nối tới nhiều bảng dimension xung quanh, ít join và dễ hiểu cho người dùng BI.",
+      "example": "`fact_order_line` nối `dim_customer`, `dim_product`, `dim_store`, `dim_date`.",
+      "related": ["fact-table", "dimension-table"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "fact-table",
+      "term": "Fact table",
+      "meaning": "Bảng giữ số đo của sự kiện nghiệp vụ (số lượng, tiền) ở một grain cố định, kèm khoá tới các dimension.",
+      "example": "Mỗi dòng của `fact_order_line` là một dòng đơn: số lượng, thành tiền, khoá khách, sản phẩm, ngày.",
+      "related": ["star-schema", "dimension-table"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "dimension-table",
+      "term": "Dimension table",
+      "meaning": "Bảng giữ ngữ cảnh để lọc và nhóm số đo: khách, sản phẩm, cửa hàng, ngày.",
+      "example": "`dim_store` có tên cửa hàng, vùng, ngày khai trương.",
+      "related": ["star-schema", "fact-table", "slowly-changing-dimension"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "slowly-changing-dimension",
+      "term": "SCD",
+      "meaning": "Slowly changing dimension: cách xử lý khi thuộc tính dimension đổi theo thời gian. Type 1 ghi đè; type 2 thêm dòng mới có `valid_from`, `valid_to` để số quá khứ giữ nguyên.",
+      "example": "Khách chuyển vùng: type 2 thêm phiên bản mới, đơn cũ vẫn trỏ phiên bản ở vùng cũ.",
+      "related": ["dimension-table", "surrogate-key"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "incremental-extraction",
+      "term": "Incremental extraction",
+      "meaning": "Trích xuất tăng dần: mỗi lần chỉ lấy dòng đổi kể từ lần trước, thường theo `updated_at > watermark`. Cách này sót dòng của transaction commit muộn và không thấy dòng bị xoá.",
+      "example": "Job đêm lấy `WHERE updated_at > :last_run` rồi lưu giá trị lớn nhất làm mốc lần sau.",
+      "related": ["cdc", "etl"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "data-contract",
+      "term": "Data contract",
+      "meaning": "Thoả thuận giữa team sở hữu dữ liệu nguồn và team dùng dữ liệu: bảng hay event nào, cột, kiểu, nghĩa, độ tươi, cách thay đổi. Thường được kiểm tự động trong CI.",
+      "example": "Migration đổi tên cột `total` trong bảng thuộc hợp đồng bị CI chặn, phải đi theo expand-contract.",
+      "related": ["cdc", "schema-compatibility"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "medallion-architecture",
+      "term": "Medallion architecture",
+      "meaning": "Quy ước chia dữ liệu phân tích thành ba tầng: bronze (bản thô như nhận), silver (làm sạch, khử trùng, chuẩn hoá), gold (bảng phục vụ báo cáo).",
+      "example": "Bronze giữ mọi event CDC của `orders`; silver giữ bản mới nhất mỗi đơn; gold là doanh thu theo ngày và vùng.",
+      "related": ["elt", "lakehouse"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "lambda-architecture",
+      "term": "Lambda architecture",
+      "meaning": "Kiến trúc chạy song song lớp batch (tính lại đầy đủ, chậm) và lớp speed (stream, nhanh, gần đúng), rồi gộp kết quả khi truy vấn. Hai bộ code cho một chỉ số nên dễ lệch.",
+      "example": "Job Spark đêm tính doanh thu chính xác; Flink cộng dồn doanh thu trong ngày cho dashboard.",
+      "related": ["kappa-architecture"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "kappa-architecture",
+      "term": "Kappa architecture",
+      "meaning": "Kiến trúc chỉ dùng xử lý stream; muốn tính lại thì đọc lại log từ đầu bằng phiên bản code mới. Cần log giữ dữ liệu đủ lâu.",
+      "example": "Sửa công thức chỉ số: chạy job Flink mới từ offset đầu của topic, xong thì chuyển dashboard sang bảng mới.",
+      "related": ["lambda-architecture"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "reverse-etl",
+      "term": "Reverse ETL",
+      "meaning": "Đẩy kết quả tính trong warehouse ngược về hệ thống nghiệp vụ (CRM, ứng dụng, công cụ marketing).",
+      "example": "Phân khúc \"khách sắp rời bỏ\" tính trong warehouse được đồng bộ mỗi giờ sang CRM.",
+      "related": ["etl", "data-warehouse"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "data-catalog",
+      "term": "Data catalog",
+      "meaning": "Danh mục bảng và chỉ số của tổ chức: nghĩa, người sở hữu, độ tươi, mức nhạy cảm, để người dùng tìm và hiểu dữ liệu.",
+      "example": "Tra \"doanh thu thuần\" ra bảng gold, định nghĩa, người sở hữu và cập nhật trước 6 giờ sáng.",
+      "related": ["data-lineage"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "data-lineage",
+      "term": "Data lineage",
+      "meaning": "Đường đi của dữ liệu từ nguồn qua các bước biến đổi tới báo cáo, để biết đổi một cột thì ảnh hưởng tới đâu và một con số đến từ đâu.",
+      "example": "Lineage cho thấy dashboard vùng phụ thuộc cột `orders.store_id` qua ba model dbt.",
+      "related": ["data-catalog"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "data-mesh",
+      "term": "Data mesh",
+      "meaning": "Cách tổ chức dữ liệu phân tích theo domain: mỗi domain sở hữu và công bố dữ liệu như sản phẩm, trên một nền tảng tự phục vụ, với quản trị chung bằng chính sách tự động.",
+      "example": "Team thanh toán công bố bảng `payments_daily` có SLA và tài liệu; team marketing dùng mà không qua team dữ liệu trung tâm.",
+      "related": ["data-contract", "data-catalog"],
+      "topics": ["data-architecture"]
+    },
+    {
+      "id": "defense-in-depth",
+      "term": "Defense in depth",
+      "meaning": "Phòng thủ nhiều lớp độc lập (danh tính, mạng, ứng dụng, dữ liệu, phát hiện), để một lớp thủng thì lớp khác vẫn chặn hoặc phát hiện được.",
+      "example": "SSRF qua được kiểm URL nhưng bị IMDSv2 chặn; nếu không thì bucket chỉ nhận request qua VPC endpoint.",
+      "related": ["zero-trust", "assume-breach"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "assume-breach",
+      "term": "Assume breach",
+      "meaning": "Thiết kế với giả định một phần hệ thống đã hoặc sẽ bị chiếm: giới hạn những gì phần đó với tới được và bảo đảm việc bị lạm dụng được phát hiện.",
+      "example": "Coi role của node đã lộ: thu hồi, xem CloudTrail, thu hẹp quyền thay vì chỉ vá lỗi đã tìm thấy.",
+      "related": ["defense-in-depth", "blast-radius"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "identity-provider",
+      "term": "IdP",
+      "meaning": "Identity provider: hệ thống quản lý danh tính và xác thực người dùng, phát token hoặc assertion cho ứng dụng qua OIDC hay SAML.",
+      "example": "Nhân viên đăng nhập IdP một lần bằng passkey, rồi vào console cloud, CI và Grafana qua SSO.",
+      "related": ["sso", "oidc", "saml"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "sso",
+      "term": "SSO",
+      "meaning": "Single sign-on: đăng nhập một lần ở IdP để dùng nhiều ứng dụng; ứng dụng tin danh tính do IdP xác nhận thay vì tự giữ mật khẩu.",
+      "example": "Khoá tài khoản ở IdP là nhân viên mất quyền vào mọi công cụ nối SSO.",
+      "related": ["identity-provider", "oidc", "saml"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "oidc",
+      "term": "OIDC",
+      "meaning": "OpenID Connect: lớp danh tính trên OAuth 2.0; IdP trả ID token (JWT) cho biết người dùng là ai, cùng access token để gọi API.",
+      "example": "Grafana chuyển người dùng tới IdP, nhận lại ID token và đọc claim `groups` để gán quyền.",
+      "related": ["identity-provider", "jwt", "saml"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "saml",
+      "term": "SAML",
+      "meaning": "Security Assertion Markup Language: chuẩn SSO dựa trên XML, IdP gửi assertion có chữ ký cho ứng dụng qua trình duyệt. Phổ biến ở ứng dụng doanh nghiệp đời cũ.",
+      "example": "Ứng dụng nhân sự nhận SAML assertion từ IdP và tạo phiên cho nhân viên.",
+      "related": ["sso", "oidc"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "mfa",
+      "term": "MFA",
+      "meaning": "Multi-factor authentication: xác thực bằng từ hai yếu tố trở lên (thứ biết, thứ có, đặc điểm sinh trắc). Loại chống phishing như FIDO2, passkey gắn với tên miền nên trang giả không dùng được.",
+      "example": "Quản trị viên cloud bắt buộc dùng khoá FIDO2; OTP qua SMS không được chấp nhận.",
+      "related": ["identity-provider"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "scim",
+      "term": "SCIM",
+      "meaning": "System for Cross-domain Identity Management: chuẩn API để IdP tạo, cập nhật, khoá tài khoản và nhóm ở các ứng dụng một cách tự động.",
+      "example": "Nhân sự đánh dấu nhân viên nghỉ việc; IdP gửi SCIM tắt tài khoản ở CI và công cụ ticket ngay trong ngày.",
+      "related": ["identity-provider", "sso"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "workload-identity",
+      "term": "Workload identity",
+      "meaning": "Danh tính cấp cho service, pod hay pipeline (không phải con người), đổi lấy credential ngắn hạn thay cho key tĩnh.",
+      "example": "Pod `kyc-service` nhận role IAM riêng qua EKS Pod Identity; không có access key nào trong biến môi trường.",
+      "related": ["least-privilege", "spiffe"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "spiffe",
+      "term": "SPIFFE",
+      "meaning": "Chuẩn đặt danh tính cho workload dạng URI `spiffe://<trust-domain>/<path>`, thường nằm trong SAN của chứng chỉ mTLS ngắn hạn. SPIRE và Istio cấp danh tính theo chuẩn này.",
+      "example": "`spiffe://shop.local/ns/prod/sa/orders` là danh tính của service account `orders` trong namespace `prod`.",
+      "related": ["mtls", "workload-identity"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "lateral-movement",
+      "term": "Lateral movement",
+      "meaning": "Kẻ tấn công đã chiếm một máy hay một tài khoản đi tiếp sang hệ thống khác trong cùng mạng hoặc cùng quyền.",
+      "example": "Từ một pod bị chiếm trong mạng phẳng, kẻ tấn công kết nối thẳng tới database production.",
+      "related": ["network-segmentation", "microsegmentation"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "network-segmentation",
+      "term": "Network segmentation",
+      "meaning": "Chia mạng thành các vùng (tài khoản, VPC, subnet, namespace) và chỉ mở đúng đường cần giữa các vùng, để hạn chế lateral movement.",
+      "example": "Subnet dữ liệu không có đường ra internet; database chỉ nhận kết nối từ security group của service.",
+      "related": ["microsegmentation", "security-group"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "microsegmentation",
+      "term": "Microsegmentation",
+      "meaning": "Phân vùng ở mức từng workload: chính sách cho phép hay chặn theo danh tính service hoặc nhãn pod, thay vì theo dải mạng lớn.",
+      "example": "`AuthorizationPolicy` chỉ cho service account `gateway` gọi `kyc-service`.",
+      "related": ["network-segmentation", "network-policy", "service-mesh"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "network-policy",
+      "term": "NetworkPolicy",
+      "meaning": "Tài nguyên Kubernetes chọn pod theo nhãn và liệt kê lưu lượng được phép vào hoặc ra. Chỉ có luật cho phép, cộng dồn, và chỉ có hiệu lực khi CNI hỗ trợ.",
+      "example": "Policy `default-deny` với `podSelector: {}` và `policyTypes: [Ingress, Egress]` chặn mọi lưu lượng của namespace.",
+      "related": ["microsegmentation", "network-segmentation"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "vpc-endpoint",
+      "term": "VPC endpoint",
+      "meaning": "Đường kết nối riêng từ VPC tới dịch vụ AWS (S3, KMS, Secrets Manager) mà không đi qua internet. Bucket policy có thể chỉ nhận request qua một endpoint cụ thể.",
+      "example": "Bucket KYC từ chối mọi request có `aws:SourceVpce` khác endpoint của VPC production.",
+      "related": ["network-segmentation"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "policy-enforcement-point",
+      "term": "PEP",
+      "meaning": "Policy enforcement point: thành phần đứng trước tài nguyên (proxy, gateway, sidecar) chặn hoặc cho request đi theo quyết định của policy decision point (PDP).",
+      "example": "Proxy truy cập hỏi PDP với danh tính và trạng thái thiết bị rồi mới cho nhân viên vào ứng dụng nội bộ.",
+      "related": ["zero-trust", "ztna"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "ztna",
+      "term": "ZTNA",
+      "meaning": "Zero trust network access: sản phẩm cho người dùng vào ứng dụng nội bộ qua proxy kiểm danh tính và thiết bị ở từng phiên, thay cho VPN vào cả mạng.",
+      "example": "Nhân viên mở công cụ nội bộ qua proxy ZTNA; không có VPN nào cho thấy cả VPC.",
+      "related": ["zero-trust", "policy-enforcement-point"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "just-in-time-access",
+      "term": "Just-in-time access",
+      "meaning": "Cấp quyền cao chỉ khi cần, có thời hạn và thường có người duyệt, thay vì để quyền thường trực.",
+      "example": "Kỹ sư xin quyền ghi production 2 giờ để xử lý sự cố; hết giờ quyền tự thu hồi.",
+      "related": ["least-privilege", "break-glass-access"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "break-glass-access",
+      "term": "Break-glass access",
+      "meaning": "Vài tài khoản khẩn cấp dùng khi đường truy cập bình thường hỏng (IdP chết), bảo vệ chặt và cảnh báo mỗi lần dùng.",
+      "example": "Hai tài khoản có khoá FIDO2 cất trong két; mỗi lần đăng nhập gửi cảnh báo tới cả đội bảo mật.",
+      "related": ["just-in-time-access", "identity-provider"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "ssrf",
+      "term": "SSRF",
+      "meaning": "Server-side request forgery: kẻ tấn công khiến server gửi request tới đích do họ chọn, thường là địa chỉ nội bộ hay metadata service mà từ ngoài không với tới được.",
+      "example": "Service xem trước link nhận `http://169.254.169.254/latest/meta-data/iam/security-credentials/...` và trả về credential của máy.",
+      "related": ["imds", "defense-in-depth"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "imds",
+      "term": "IMDS",
+      "meaning": "Instance Metadata Service của EC2 tại `169.254.169.254`, trả thông tin máy và credential tạm của role gắn với máy. IMDSv2 bắt phải lấy token bằng `PUT` trước, chặn phần lớn SSRF dạng GET.",
+      "example": "`HttpTokens=required` và hop limit 1 làm pod trong container không lấy được credential của node.",
+      "related": ["ssrf", "workload-identity"],
+      "topics": ["security-architecture"]
+    },
+    {
+      "id": "kms",
+      "term": "KMS",
+      "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
+      "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
+      "related": ["least-privilege"],
+      "topics": ["security-architecture"]
     }
   ]
 }
