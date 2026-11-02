@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "architecture-tradeoffs",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Ra quyết định & trade-off",
+  "summary": "Phân loại quyết định theo khả năng đảo ngược, biến cửa một chiều thành hai chiều, ma trận có trọng số làm đúng cách (cổng loại, phương án bị lấn át, phân tích độ nhạy), pre-mortem và risk register, ai quyết định, và ghi ADR có điều kiện xem lại.",
+  "level": "senior",
+  "order": 7,
+  "minutes": 15,
+  "prerequisites": ["nfr-quality-attributes", "adr-c4"],
+  "terms": ["one-way-door", "decision-matrix", "sensitivity-analysis", "pre-mortem", "risk-register", "last-responsible-moment", "disagree-and-commit", "feature-flag", "atam", "tradeoff-point", "advice-process", "vendor-lock-in", "adr", "raci", "proof-of-concept", "outbox", "spike", "anti-corruption-layer", "expand-contract", "strangler-fig"],
+  "references": [
+    { "title": "Amazon 2015 Letter to Shareholders (quyết định loại 1 và loại 2)", "url": "https://www.sec.gov/Archives/edgar/data/1018724/000119312516530910/d168744dex991.htm" },
+    { "title": "SEI: The Architecture Tradeoff Analysis Method (CMU/SEI-98-TR-008)", "url": "https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method/" },
+    { "title": "Andrew Harmel-Law: Scaling the Practice of Architecture, Conversationally", "url": "https://martinfowler.com/articles/scaling-architecture-conversationally.html" },
+    { "title": "Gary Klein: Performing a Project Premortem (Harvard Business Review, 2007)", "url": "https://hbr.org/2007/09/performing-a-project-premortem" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Sếp đã chọn sẵn công nghệ rồi, anh làm gì?\" Đừng chống ngay, cũng đừng gật cho qua. Hỏi điều sếp muốn đạt được (thường là tốc độ, chi phí, hay quen với vendor), đưa phương án đó vào cùng ma trận với các tiêu chí đã chốt, và nói rõ cái giá: phần nào khó đảo ngược, rủi ro nào cần người chấp nhận. Nếu sếp vẫn chọn, ghi vào ADR ai quyết, lý do, rủi ro đã chấp nhận và điều kiện xem lại, rồi làm hết sức cho phương án đó." },
+    { "type": "callout", "style": "warning", "markdown": "Ma trận chấm sau khi đã chọn xong trong đầu chỉ là trang trí. Dấu hiệu: trọng số được sửa sau khi thấy điểm, hoặc tiêu chí \"phù hợp chiến lược\" xuất hiện ở phút cuối với trọng số vừa đủ để lật kết quả. Chốt tiêu chí và trọng số với stakeholder trước, cho mỗi người chấm độc lập." },
+    { "type": "callout", "style": "tip", "markdown": "Pre-mortem chỉ tốn 15 phút: \"Một năm nữa quyết định này hoá ra sai. Mỗi người viết ra mọi lý do nghĩ được.\" Viết riêng, rồi người dẫn mời từng người đọc một lý do mỗi lượt, đi vòng tới khi hết (Klein bắt đầu từ quản lý dự án). Các lý do lặp lại nhiều lần đi thẳng vào risk register, kèm người sở hữu và dấu hiệu sớm." }
+  ]
+}

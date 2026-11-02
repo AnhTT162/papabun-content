@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pert-calc",
+      "kind": "single",
+      "prompt": "Tích hợp POS cũ được ước O = 2, M = 4, P = 10 tuần. Kỳ vọng theo PERT là bao nhiêu?",
+      "options": [
+        "Khoảng 4,67 tuần",
+        "Đúng 4 tuần",
+        "Khoảng 5,33 tuần",
+        "Đúng 6 tuần"
+      ],
+      "answer": 0,
+      "explanation": "(2 + 4 × 4 + 10) / 6 = 28 / 6 ≈ 4,67. 4 là M, giá trị hay gặp nhất, không phải kỳ vọng. 5,33 là trung bình cộng đơn giản (2 + 4 + 10) / 3, cho M quá ít trọng số. 6 là trung điểm của O và P. Kỳ vọng lớn hơn M vì đuôi bên phải dài hơn đuôi bên trái."
+    },
+    {
+      "id": "merge-point",
+      "kind": "single",
+      "prompt": "Hai luồng backend và mobile chạy song song, mỗi luồng có xác suất 50% xong trong 10 tuần, độc lập nhau. Kiểm thử end-to-end chỉ bắt đầu khi cả hai xong. Xác suất bắt đầu được ở tuần 10 là bao nhiêu?",
+      "options": [
+        "Khoảng 25%",
+        "Khoảng 50%",
+        "Khoảng 75%",
+        "Khoảng 10%"
+      ],
+      "answer": 0,
+      "explanation": "Cả hai phải cùng xong: 0,5 × 0,5 = 25%. Đây là merge bias: mốc gặp nhau trễ hơn từng luồng. 50% là nhầm rằng chạy song song thì giữ nguyên xác suất của một luồng; 75% là xác suất ít nhất một luồng xong, không phải cả hai. 10% là nhầm sang cách tính cho nhiều luồng hơn: chỉ khi có ba đến bốn luồng độc lập (12,5% và 6,25%) mới xuống tới mức đó."
+    },
+    {
+      "id": "critical-path-shift",
+      "kind": "single",
+      "prompt": "Sau khi chuyển admin và báo cáo sang giai đoạn 2, luồng mobile là đường găng trong khoảng 82% kịch bản. Một spike giúp thu hẹp ước lượng tích hợp POS ở luồng backend. Tác động lên ngày xong của dự án thế nào?",
+      "options": [
+        "Kéo về rất ít, vì POS hầu như không còn trên đường găng",
+        "Kéo về nhiều, vì POS là hạng mục bất định lớn nhất dự án",
+        "Không đổi gì, vì spike không làm giảm công sức hạng mục",
+        "Làm trễ thêm, vì spike tốn thời gian của luồng mobile"
+      ],
+      "answer": 0,
+      "explanation": "Ngày xong do luồng chậm hơn quyết định. Khi mobile đã chậm hơn trong phần lớn kịch bản, thu hẹp bất định của backend chỉ tác động ở số ít kịch bản còn lại; mô phỏng cho xác suất kịp 17 tuần chỉ tăng từ 86,5% lên khoảng 88,7%. Spike vẫn có giá trị vì gỡ đuôi rủi ro và có thể phát hiện POS tệ hơn dự kiến. Nó không bằng 0, vì vẫn còn một phần kịch bản backend chậm hơn. Spike làm ở discovery bởi nhóm backend, không lấy người của mobile."
+    },
+    {
+      "id": "assumption-breaks",
+      "kind": "single",
+      "prompt": "Hợp đồng ghi giả định \"khách cấp môi trường test POS trước tuần 3\". Tới tuần 6 vẫn chưa có. Cách xử lý đúng là gì?",
+      "options": [
+        "Mở change request, ước lượng lại ngày và báo ảnh hưởng",
+        "Lặng lẽ cho team làm thêm giờ để bù lại phần đã mất",
+        "Dùng hết khoản dự phòng chung của dự án để che đi",
+        "Tạm dừng toàn bộ dự án tới khi khách cấp môi trường"
+      ],
+      "answer": 0,
+      "explanation": "Giả định được ghi ra chính là để khi nó sai, đó là thay đổi có căn cứ chứ không phải lỗi của team. Change request làm hai bên thấy cái giá và chọn: dời ngày, cắt phạm vi, hay khách tăng ưu tiên cho POS. Làm thêm giờ hay dùng dự phòng chung để che đi khiến khách không biết rủi ro đang ở phía họ, và dự phòng hết trước khi rủi ro thật xuất hiện. Dừng cả dự án là quá tay khi phần mobile vẫn làm tiếp được."
+    }
+  ]
+}

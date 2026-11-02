@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "requirements-estimation",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Khai thác yêu cầu & ước lượng",
+  "summary": "Chạy discovery và ghi RAID log, chốt phạm vi bằng MoSCoW và lát mỏng end-to-end, ước lượng ba điểm rồi mô phỏng Monte Carlo theo sơ đồ phụ thuộc (merge bias, đường găng dịch chuyển), các hạng mục hay bị quên, dự phòng cấp dự án, giả định trong hợp đồng và roadmap now/next/later.",
+  "level": "senior",
+  "order": 8,
+  "minutes": 16,
+  "prerequisites": ["tech-lead-role", "nfr-quality-attributes"],
+  "terms": ["event-storming", "user-story-mapping", "raid-log", "moscow", "mvp", "walking-skeleton", "three-point-estimate", "monte-carlo-simulation", "merge-bias", "critical-path", "change-request", "scope-creep", "cone-of-uncertainty", "spike", "brooks-law", "rfp", "stakeholder", "uat", "cutover", "burn-up-chart"],
+  "references": [
+    { "title": "Agile Business Consortium: DSDM Project Framework, MoSCoW Prioritisation", "url": "https://www.agilebusiness.org/dsdm-project-framework/moscow-prioritisation.html" },
+    { "title": "Jeff Patton: User Story Mapping", "url": "https://www.jpattonassociates.com/user-story-mapping/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khách đòi giá cố định ngay sau buổi gặp đầu. Anh làm gì?\" Không đưa một con số. Đưa một khoảng theo bậc độ lớn kèm giả định (\"4–8 tháng, giả định POS có API\"), và đề xuất một discovery ngắn có giá riêng, đầu ra là phạm vi, ước lượng có xác suất và roadmap. Nếu khách vẫn muốn giá cố định, giá phải theo mức xác suất cao, phạm vi ghi chặt cả phần out of scope, và có quy trình change request." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng cộng P80 của từng task rồi gọi là P80 của dự án, cũng đừng cộng các giá trị khả dĩ nhất. Cái đầu quá bi quan, cái sau quá lạc quan. Mô phỏng tổng theo đúng sơ đồ phụ thuộc, nhất là chỗ nhiều luồng gặp nhau." },
+    { "type": "callout", "style": "tip", "markdown": "Mô phỏng Monte Carlo không cần công cụ đắt tiền: một bảng tính với hàm ngẫu nhiên, hoặc vài chục dòng Java lấy mẫu từng hạng mục, lấy max ở chỗ các luồng gặp nhau, chạy vài chục nghìn lần rồi đọc percentile. Thử bỏ từng hạng mục để thấy cái nào thật sự kéo ngày." }
+  ]
+}

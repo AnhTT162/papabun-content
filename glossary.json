@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs"]
     },
     {
       "id": "replication-slot",
@@ -2229,7 +2229,7 @@
       "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
       "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
       "related": ["schema-migration", "backfill", "rolling-deployment"],
-      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic"]
+      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic", "architecture-tradeoffs"]
     },
     {
       "id": "rolling-deployment",
@@ -4293,7 +4293,7 @@
       "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
       "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
       "related": ["adapter-pattern"],
-      "topics": ["structural-patterns", "ddd-strategic"]
+      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs"]
     },
     {
       "id": "strategy-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs"]
     },
     {
       "id": "dora-metrics",
@@ -4533,7 +4533,7 @@
       "meaning": "Buổi làm việc với người nghiệp vụ, dán các sự kiện nghiệp vụ (ở thì quá khứ) lên tường theo thời gian để khám phá luồng, điểm đau và ranh giới context.",
       "example": "Chuỗi `Đã đặt hàng` → `Đã giữ hàng` → `Đã thanh toán` → `Đã xuất kho` lộ ra ranh giới giữa Ordering và Inventory.",
       "related": ["bounded-context"],
-      "topics": ["ddd-strategic"]
+      "topics": ["ddd-strategic", "requirements-estimation"]
     },
     {
       "id": "conways-law",
@@ -10101,7 +10101,7 @@
       "meaning": "Người hoặc nhóm có quyền lợi hay ảnh hưởng tới một hệ thống: business, người dùng, team dev, vận hành, bảo mật, pháp lý, tài chính. Mỗi nhóm quan tâm một điều khác nhau.",
       "example": "Tài chính hỏi chi phí mỗi tháng, bộ phận bảo mật hỏi dữ liệu nằm ở vùng nào, team vận hành hỏi ai trực sự cố.",
       "related": ["solution-architect", "raci"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "requirements-estimation"]
     },
     {
       "id": "adr",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs"]
     },
     {
       "id": "proof-of-concept",
@@ -10117,7 +10117,7 @@
       "meaning": "Proof of concept: bản thử nhỏ, có thời hạn, để kiểm chứng một giả định kỹ thuật rủi ro trước khi cam kết vào thiết kế.",
       "example": "Hai ngày dựng thử luồng CDC từ PostgreSQL sang kho báo cáo để đo độ trễ trước khi chọn kiến trúc.",
       "related": ["adr"],
-      "topics": ["sa-role", "project-storytelling", "tech-lead-role"]
+      "topics": ["sa-role", "project-storytelling", "tech-lead-role", "architecture-tradeoffs"]
     },
     {
       "id": "rfp",
@@ -10125,7 +10125,7 @@
       "meaning": "Request for Proposal: hồ sơ mời thầu khách hàng gửi các nhà cung cấp, nêu yêu cầu để họ gửi đề xuất giải pháp, ước lượng và giá.",
       "example": "Ngân hàng gửi RFP xây cổng thanh toán; SA pre-sales đọc yêu cầu, viết kiến trúc đề xuất và ước lượng công sức.",
       "related": ["solution-architect"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "requirements-estimation"]
     },
     {
       "id": "raci",
@@ -10133,7 +10133,7 @@
       "meaning": "Bảng phân vai cho từng quyết định hay công việc: Responsible (người làm), Accountable (người chịu trách nhiệm cuối, chỉ một), Consulted (người được hỏi ý kiến), Informed (người được báo).",
       "example": "Chọn database chính: SA là A, tech lead các team là C, bộ phận vận hành là C, product owner là I.",
       "related": ["stakeholder"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "architecture-tradeoffs"]
     },
     {
       "id": "behavioral-interview",
@@ -10165,7 +10165,7 @@
       "meaning": "Nói rõ bất đồng khi đang bàn, nhưng khi đã quyết thì cam kết làm theo hết sức, kể cả khi không đồng ý.",
       "example": "Anh B muốn dùng Redis lock, team chọn ràng buộc database; anh B ghi lý do vào ADR rồi vẫn viết phần cache thật tốt và hẹn điều kiện xem lại.",
       "related": ["behavioral-interview"],
-      "topics": ["project-storytelling"]
+      "topics": ["project-storytelling", "architecture-tradeoffs"]
     },
     {
       "id": "code-review",
@@ -10189,7 +10189,7 @@
       "meaning": "Task có giới hạn thời gian (thường 1–3 ngày) để trả lời một câu hỏi chưa rõ trước khi ước lượng hay thiết kế. Đầu ra là câu trả lời và ước lượng mới; code thường bỏ đi.",
       "example": "Spike 2 ngày: API của ví có hoàn tiền một phần không, và webhook ký bằng thuật toán gì.",
       "related": ["proof-of-concept", "cone-of-uncertainty"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "requirements-estimation", "architecture-tradeoffs"]
     },
     {
       "id": "delegation",
@@ -10237,7 +10237,7 @@
       "meaning": "Dải sai số của ước lượng thu hẹp dần khi dự án có thêm thông tin. Theo Steve McConnell, khoảng 0,25–4 lần ở giai đoạn ý tưởng và 0,67–1,5 lần khi yêu cầu đã chốt.",
       "example": "Ước lượng \"3 tháng\" lúc mới có ý tưởng thực chất là \"vài tuần tới một năm\".",
       "related": ["spike"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "requirements-estimation"]
     },
     {
       "id": "c4-model",
@@ -10309,7 +10309,7 @@
       "meaning": "Nhận xét của Fred Brooks: thêm người vào một dự án phần mềm đã trễ làm nó trễ thêm, vì người mới cần được hướng dẫn và việc chia lại, phối hợp tốn thêm thời gian.",
       "example": "Hai tuần trước hạn thêm hai người từ team khác; senior mất cả tuần kèm họ nên tính năng còn trễ hơn.",
       "related": ["tech-lead"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "requirements-estimation"]
     },
     {
       "id": "codeowners",
@@ -10389,7 +10389,7 @@
       "meaning": "Architecture Tradeoff Analysis Method của SEI: phương pháp đánh giá kiến trúc theo các quality attribute scenario đã ưu tiên, để tìm rủi ro, điểm nhạy và điểm đánh đổi.",
       "example": "Buổi đánh giá dựng utility tree, rồi xem kiến trúc đáp ứng các lá (H, H) thế nào và ở đâu một quyết định làm lợi thuộc tính này nhưng hại thuộc tính khác.",
       "related": ["utility-tree", "quality-attribute-scenario"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "architecture-tradeoffs"]
     },
     {
       "id": "iso-25010",
@@ -10478,6 +10478,190 @@
       "example": "AWS bảo vệ trung tâm dữ liệu; bucket S3 để public do khách hàng cấu hình là lỗi của khách hàng.",
       "related": ["least-privilege", "well-architected-framework"],
       "topics": ["well-architected"]
+    },
+    {
+      "id": "one-way-door",
+      "term": "One-way / two-way door",
+      "meaning": "Cách chia quyết định theo khả năng đảo ngược: cửa một chiều gần như không quay lại được hoặc quay lại rất đắt, cửa hai chiều sai thì sửa rẻ. Jeff Bezos gọi là quyết định loại 1 và loại 2.",
+      "example": "Chọn thư viện log là cửa hai chiều; chỉ lưu số dư mà bỏ lịch sử giao dịch là cửa một chiều.",
+      "related": ["decision-matrix", "adr", "last-responsible-moment"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "decision-matrix",
+      "term": "Decision matrix",
+      "meaning": "Ma trận quyết định có trọng số: mỗi phương án được chấm theo các tiêu chí, nhân trọng số rồi cộng. Tiêu chí bắt buộc nên là cổng loại đứng trước, vì tổng có trọng số cho phép điểm cao chỗ khác bù điểm thấp.",
+      "example": "PostgreSQL 4,40, DynamoDB 4,00, Cassandra 2,35 với năm tiêu chí có tổng trọng số 100.",
+      "related": ["sensitivity-analysis", "one-way-door"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "sensitivity-analysis",
+      "term": "Sensitivity analysis",
+      "meaning": "Phân tích độ nhạy: đổi từng trọng số hoặc điểm để xem kết quả lật ở đâu. Lật vì thay đổi nhỏ nghĩa là các phương án gần ngang nhau.",
+      "example": "PostgreSQL chỉ thắng khi trọng số tải dưới khoảng 29; trọng số hiện tại là 15.",
+      "related": ["decision-matrix"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "pre-mortem",
+      "term": "Pre-mortem",
+      "meaning": "Buổi làm việc trước khi cam kết: mọi người tưởng tượng quyết định đã thất bại và tự viết lý do, độc lập, rồi mới chia sẻ. Gary Klein mô tả trên Harvard Business Review năm 2007.",
+      "example": "\"Một năm nữa dự án điểm thưởng hoá ra sai, vì sao?\" cho ra rủi ro team khác đọc thẳng bảng.",
+      "related": ["risk-register", "postmortem"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "risk-register",
+      "term": "Risk register",
+      "meaning": "Danh sách rủi ro, mỗi dòng có mô tả \"nếu ... thì ...\", xác suất, tác động, người sở hữu, cách xử lý (tránh, giảm, chuyển, chấp nhận) và dấu hiệu sớm.",
+      "example": "Rủi ro \"tải vượt dự báo sớm\", xác suất thấp, tác động cao, dấu hiệu sớm là ghi đỉnh theo tháng.",
+      "related": ["pre-mortem", "raid-log"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "last-responsible-moment",
+      "term": "Last responsible moment",
+      "meaning": "Thời điểm mà nếu chờ thêm sẽ mất một phương án quan trọng (Mary và Tom Poppendieck, Lean Software Development). Hoãn quyết định tới lúc đó, không hoãn vô hạn.",
+      "example": "Định dạng mã đơn hàng công khai phải chốt trước khi đối tác đầu tiên tích hợp; sau đó mỗi lần đổi đều cần đối tác nâng cấp.",
+      "related": ["one-way-door"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "tradeoff-point",
+      "term": "Tradeoff point",
+      "meaning": "Thuật ngữ của ATAM: một quyết định đồng thời là sensitivity point của nhiều quality attribute, thường theo hướng ngược nhau. Sensitivity point là quyết định mà một thuộc tính phụ thuộc mạnh vào nó.",
+      "example": "Replication đồng bộ tăng độ bền dữ liệu nhưng giảm throughput ghi.",
+      "related": ["atam", "quality-attribute"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "advice-process",
+      "term": "Advice process",
+      "meaning": "Cách ra quyết định kiến trúc phi tập trung (Andrew Harmel-Law): ai cũng được quyết, miễn là đã hỏi ý kiến người bị ảnh hưởng và người có chuyên môn. Không cần mọi người đồng ý.",
+      "example": "Một team tự chọn message broker sau khi hỏi team platform và hai team consumer, rồi ghi ADR.",
+      "related": ["adr", "raci"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "vendor-lock-in",
+      "term": "Vendor lock-in",
+      "meaning": "Phụ thuộc vào sản phẩm của một nhà cung cấp tới mức đổi đi rất đắt. Là cái giá để dùng tính năng riêng của nền tảng; câu hỏi là chi phí thoát có lớn hơn lợi ích không.",
+      "example": "Mô hình dữ liệu viết riêng cho DynamoDB phải thiết kế lại khi chuyển sang database khác.",
+      "related": ["one-way-door"],
+      "topics": ["architecture-tradeoffs"]
+    },
+    {
+      "id": "user-story-mapping",
+      "term": "User story mapping",
+      "meaning": "Kỹ thuật của Jeff Patton: xếp hoạt động của người dùng thành một hàng ngang theo thứ tự hành trình, chi tiết xếp dọc bên dưới, rồi kẻ ngang để cắt release thành các lát end-to-end.",
+      "example": "Hàng ngang: chọn món, đặt hàng, thanh toán, nhận món, tích điểm; release 1 lấy lát mỏng nhất của cả năm cột.",
+      "related": ["mvp", "moscow"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "raid-log",
+      "term": "RAID log",
+      "meaning": "Bảng theo dõi Risks, Assumptions, Issues, Dependencies của dự án: rủi ro, giả định, vấn đề đang xảy ra và phụ thuộc, mỗi dòng có người sở hữu và ngày xem lại.",
+      "example": "Giả định \"khách cấp môi trường test POS trước tuần 3\", người sở hữu là trưởng IT bên khách.",
+      "related": ["risk-register", "change-request"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "moscow",
+      "term": "MoSCoW",
+      "meaning": "Cách ưu tiên Must, Should, Could, Won't (this time) của DSDM. Must không quá khoảng 60% công sức, Could khoảng 20% làm vùng đệm.",
+      "example": "Đặt hàng và tích điểm là Must, push Tết là Could, hạng thành viên là Won't cho đợt này.",
+      "related": ["mvp", "scope-creep"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "mvp",
+      "term": "MVP (Minimum Viable Product)",
+      "meaning": "Sản phẩm nhỏ nhất để kiểm một giả thuyết business với người dùng thật. Khác walking skeleton (kiểm kỹ thuật) và PoC (trả lời một câu hỏi kỹ thuật).",
+      "example": "App chỉ cho đặt trước một món ở 10 cửa hàng để xem khách có dùng không.",
+      "related": ["walking-skeleton", "proof-of-concept"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "walking-skeleton",
+      "term": "Walking skeleton",
+      "meaning": "Bản mỏng nhất chạy end-to-end, nối các thành phần kiến trúc chính (Alistair Cockburn). Freeman và Pryce (Growing Object-Oriented Software) nhấn thêm: deploy được qua pipeline thật. Dựng sớm để lộ rủi ro tích hợp và hạ tầng.",
+      "example": "Tuần 4: một đơn giả đi từ app qua backend tới file nhập POS trên môi trường test.",
+      "related": ["mvp", "spike"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "three-point-estimate",
+      "term": "Three-point estimate (PERT)",
+      "meaning": "Ước lượng mỗi hạng mục bằng ba số: lạc quan O, khả dĩ nhất M, bi quan P. Kỳ vọng PERT xấp xỉ (O + 4M + P) / 6, độ lệch chuẩn xấp xỉ (P − O) / 6.",
+      "example": "Tích hợp POS 2/4/10 tuần có kỳ vọng khoảng 4,67 tuần.",
+      "related": ["monte-carlo-simulation", "cone-of-uncertainty"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "monte-carlo-simulation",
+      "term": "Monte Carlo simulation",
+      "meaning": "Chạy lại kế hoạch rất nhiều lần, mỗi lần lấy ngẫu nhiên thời gian từng hạng mục theo phân phối của nó và ghép theo sơ đồ phụ thuộc, rồi đọc percentile của tổng.",
+      "example": "200.000 lần chạy cho P50 16,2 tuần và P80 17,5 tuần, trong khi cộng M chỉ ra 14.",
+      "related": ["three-point-estimate", "merge-bias"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "merge-bias",
+      "term": "Merge bias",
+      "meaning": "Hiện tượng mốc mà nhiều luồng song song cùng phải xong bị trễ hơn từng luồng, vì nó theo luồng chậm nhất trong mỗi kịch bản.",
+      "example": "Backend P50 10,1 tuần, mobile P50 9,8 tuần, nhưng mốc cả hai xong có P50 10,7 tuần.",
+      "related": ["critical-path", "monte-carlo-simulation"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "critical-path",
+      "term": "Critical path",
+      "meaning": "Đường găng: chuỗi việc phụ thuộc dài nhất quyết định ngày xong. Rút ngắn việc ngoài đường găng không làm dự án xong sớm hơn; khi các luồng gần bằng nhau, đường găng đổi giữa các kịch bản.",
+      "example": "Bỏ admin khỏi backend thì luồng mobile thành đường găng trong khoảng 82% kịch bản.",
+      "related": ["merge-bias"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "change-request",
+      "term": "Change request",
+      "meaning": "Yêu cầu thay đổi phạm vi hoặc giả định đã chốt, đi kèm ước lượng lại và ảnh hưởng tới ngày, chi phí; hai bên duyệt trước khi làm.",
+      "example": "Khách chậm cấp môi trường test POS ba tuần: mở change request dời ngày hoặc cắt Could.",
+      "related": ["raid-log", "scope-creep"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "scope-creep",
+      "term": "Scope creep",
+      "meaning": "Phạm vi phình dần qua các yêu cầu nhỏ không đi qua change request. Biểu đồ burn-up có đường tổng phạm vi giúp thấy nó.",
+      "example": "\"Thêm một bộ lọc nữa thôi\" lặp lại mười lần trong hai tháng.",
+      "related": ["change-request", "moscow"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "uat",
+      "term": "UAT (User Acceptance Testing)",
+      "meaning": "Kiểm thử chấp nhận do người dùng hoặc đại diện khách hàng làm trên kịch bản nghiệp vụ thật, để quyết định có nghiệm thu bản phát hành không.",
+      "example": "Quản lý hai cửa hàng thử đặt hàng và tích điểm trên staging một tuần rồi ký biên bản.",
+      "related": ["cutover", "change-request"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "cutover",
+      "term": "Cutover",
+      "meaning": "Giai đoạn chuyển từ hệ thống hoặc quy trình cũ sang mới khi go-live: chốt dữ liệu, migrate lần cuối, bật hệ thống mới, có kế hoạch quay lui.",
+      "example": "Đêm go-live: dừng nhập điểm thủ công lúc 22 giờ, chạy migrate thành viên, mở app lúc 6 giờ, giữ quy trình cũ làm dự phòng một tuần.",
+      "related": ["uat"],
+      "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "burn-up-chart",
+      "term": "Burn-up chart",
+      "meaning": "Biểu đồ có hai đường theo thời gian: lượng việc đã xong và tổng phạm vi. Tách được trễ vì làm chậm với trễ vì phạm vi tăng.",
+      "example": "Việc xong tăng đều mỗi tuần nhưng đường tổng phạm vi nhảy lên hai lần: dự án trễ vì scope creep.",
+      "related": ["scope-creep", "change-request"],
+      "topics": ["requirements-estimation"]
     }
   ]
 }

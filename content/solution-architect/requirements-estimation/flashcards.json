@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "discovery-outputs", "front": "Discovery nên cho ra những gì?", "back": "Mục tiêu business và cách đo, phạm vi in/out, danh sách tích hợp, NFR có số, kiến trúc mức container, ước lượng có khoảng, roadmap và RAID log." },
+    { "id": "raid", "front": "RAID log gồm những gì?", "back": "Risks, Assumptions, Issues, Dependencies: rủi ro, giả định, vấn đề đang xảy ra và phụ thuộc, mỗi dòng có người sở hữu và ngày xem lại." },
+    { "id": "moscow-60", "front": "DSDM khuyên tỉ lệ Must và Could thế nào?", "back": "Must không quá khoảng 60% công sức, Could khoảng 20% làm vùng đệm: trễ thì bỏ Could trước mà Must vẫn đủ." },
+    { "id": "skeleton-vs-mvp", "front": "Walking skeleton khác MVP thế nào?", "back": "Walking skeleton là bản mỏng nhất chạy end-to-end qua mọi thành phần và deploy được, để lộ rủi ro kỹ thuật sớm. MVP là sản phẩm nhỏ nhất để kiểm giả thuyết business với người dùng thật." },
+    { "id": "pert-mean", "front": "Kỳ vọng PERT của ước lượng ba điểm tính thế nào?", "back": "(O + 4M + P) / 6, độ lệch chuẩn xấp xỉ (P − O) / 6. Ví dụ 2/4/10 tuần cho kỳ vọng 4,67 tuần, lớn hơn M vì đuôi phải dài." },
+    { "id": "no-sum-percentile", "front": "Vì sao không cộng P80 của từng task?", "back": "Các task hiếm khi cùng lúc rơi vào phía xấu, nên tổng các P80 lớn hơn nhiều so với P80 của tổng. Phải mô phỏng tổng." },
+    { "id": "merge-bias", "front": "Merge bias là gì?", "back": "Mốc mà nhiều luồng song song cùng phải xong sẽ trễ theo luồng chậm nhất trong từng kịch bản. Hai luồng mỗi luồng 50% đúng hạn thì cả hai đúng hạn khoảng 25%." },
+    { "id": "contingency-level", "front": "Dự phòng nên đặt ở đâu?", "back": "Ở cấp dự án (khoảng chênh P50 và P80), không rải vào từng task, vì việc sẽ nở ra lấp đầy thời gian được cho." },
+    { "id": "hidden-work", "front": "Kể các hạng mục hay bị quên khi ước lượng.", "back": "Môi trường và pipeline, kiểm thử end-to-end và hiệu năng, review bảo mật, migrate dữ liệu, UAT, cutover, hỗ trợ sau go-live, duyệt app store." },
+    { "id": "now-next-later", "front": "Roadmap now/next/later khác Gantt chi tiết ở đâu?", "back": "Now chi tiết và đã cam kết, next có khoảng, later chỉ là định hướng không có ngày; độ chi tiết giảm theo độ bất định thay vì giả vờ chính xác tới từng tuần." }
+  ]
+}

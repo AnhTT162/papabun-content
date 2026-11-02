@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "one-way-two-way", "front": "Quyết định một chiều và hai chiều khác nhau thế nào?", "back": "Một chiều gần như không quay lại được hoặc quay lại rất đắt (mô hình dữ liệu cốt lõi, hợp đồng API với đối tác); hai chiều sai thì sửa rẻ (thư viện, cách cache). Chỉ loại một chiều mới cần so phương án, PoC, ADR." },
+    { "id": "door-closing", "front": "Vì sao một quyết định hai chiều có thể thành một chiều?", "back": "Vì dữ liệu tích luỹ theo nó, client ngoài bắt đầu gọi, team khác đọc thẳng bảng. Mỗi phụ thuộc mới làm chi phí quay lui tăng." },
+    { "id": "gate-vs-weight", "front": "Vì sao tiêu chí bắt buộc không nên chỉ là một dòng có trọng số?", "back": "Tổng có trọng số là cộng bù: điểm cao ở tiêu chí khác che điểm 1 ở tiêu chí bắt buộc. Tiêu chí bắt buộc phải là cổng đạt/không đạt trước khi chấm." },
+    { "id": "dominated-option", "front": "Phương án bị lấn át (dominated) là gì và làm gì với nó?", "back": "Phương án kém hơn hoặc bằng một phương án khác ở mọi tiêu chí. Bỏ ngay, trước khi tranh luận về trọng số." },
+    { "id": "sensitivity", "front": "Phân tích độ nhạy của ma trận quyết định trả lời câu hỏi gì?", "back": "Trọng số hoặc điểm phải đổi bao nhiêu thì người thắng đổi. Lật vì thay đổi nhỏ nghĩa là hai phương án ngang nhau; khi đó chọn cái dễ đảo ngược hơn." },
+    { "id": "poc-value", "front": "Khi nào PoC không đáng làm?", "back": "Khi mọi kết quả khả dĩ của PoC đều dẫn tới cùng một lựa chọn. Trước khi làm, đặt tiêu chí đạt và thời hạn." },
+    { "id": "lrm", "front": "Last responsible moment là gì?", "back": "Thời điểm mà chờ thêm sẽ mất một phương án quan trọng. Trước đó thu thêm thông tin; tới đó thì quyết với thông tin đang có." },
+    { "id": "premortem", "front": "Pre-mortem chạy thế nào?", "back": "Mọi người tưởng tượng quyết định đã thất bại, tự viết lý do độc lập trong vài phút, rồi mới đọc to. Cách hỏi này khiến người ta dám nêu rủi ro hơn." },
+    { "id": "advice-process", "front": "Advice process trong kiến trúc là gì?", "back": "Ai cũng được ra quyết định kiến trúc, miễn là đã hỏi ý kiến những người bị ảnh hưởng và người có chuyên môn. Cần lắng nghe, không cần mọi người đồng ý." },
+    { "id": "revisit-trigger", "front": "ADR nên có điều kiện xem lại dạng gì?", "back": "Con số đo được, ví dụ \"xem lại khi ghi đỉnh vượt 1.500 giao dịch/giây hoặc cần ghi ở hai region\". Có nó thì không phải tranh luận lại mỗi quý." }
+  ]
+}

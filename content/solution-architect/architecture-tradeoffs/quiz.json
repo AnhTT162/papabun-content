@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "which-one-way",
+      "kind": "single",
+      "prompt": "Trong dự án điểm thưởng có POS ở 300 cửa hàng, quyết định nào khó đảo ngược nhất?",
+      "options": [
+        "Chỉ lưu số dư điểm, không lưu từng giao dịch cộng trừ",
+        "Chọn thư viện client HTTP cho service điểm thưởng",
+        "Đặt TTL cho cache số dư hiển thị trên app là 5 giây",
+        "Chọn PostgreSQL cho database riêng của service điểm"
+      ],
+      "answer": 0,
+      "explanation": "Không lưu giao dịch thì lịch sử mất vĩnh viễn: không giải thích khiếu nại, không tính hết hạn theo lô, không đối soát được, và không có cách nào tạo lại. Thư viện HTTP và TTL cache đổi trong một lần deploy. Database của một service sở hữu riêng dữ liệu, có repository và event qua outbox, đổi được bằng một dự án migrate: đắt nhưng làm được."
+    },
+    {
+      "id": "compensatory-trap",
+      "kind": "single",
+      "prompt": "Ma trận: PostgreSQL 4,40, DynamoDB 4,00. Giả sử PoC cho thấy PostgreSQL không đạt tải 3 năm (bắt buộc); hạ điểm tải của nó từ 3 xuống 1 thì còn 4,10. Nên kết luận gì?",
+      "options": [
+        "Loại PostgreSQL vì trượt tiêu chí bắt buộc, dù tổng điểm cao",
+        "Giữ PostgreSQL vì tổng 4,10 vẫn cao hơn DynamoDB 4,00",
+        "Tăng trọng số tải cho tới khi DynamoDB thắng rồi chốt",
+        "Chấm lại mọi tiêu chí khác của PostgreSQL thấp đi một bậc"
+      ],
+      "answer": 0,
+      "explanation": "Tổng có trọng số cho phép điểm cao ở chỗ khác bù cho điểm thấp, nên nó không bao giờ tự loại một phương án trượt yêu cầu bắt buộc. Yêu cầu bắt buộc phải là cổng đạt/không đạt đứng trước ma trận. Sửa trọng số hay sửa điểm cho ra kết quả mong muốn là đúng cái bẫy chấm sau khi đã chọn."
+    },
+    {
+      "id": "dominated",
+      "kind": "single",
+      "prompt": "Cassandra tự vận hành có điểm kém hơn hoặc bằng DynamoDB ở cả năm tiêu chí. Người đề xuất Cassandra muốn tăng trọng số tải lên 50. Nhận định nào đúng?",
+      "options": [
+        "Với mọi bộ trọng số, Cassandra không thể vượt DynamoDB",
+        "Trọng số tải đủ lớn thì Cassandra sẽ vượt qua DynamoDB",
+        "Hai bên ngang điểm tải nên trọng số tải quyết định thắng",
+        "Cần thêm tiêu chí mới để Cassandra có cơ hội công bằng"
+      ],
+      "answer": 0,
+      "explanation": "Phương án bị lấn át có tổng nhỏ hơn hoặc bằng ở mọi bộ trọng số không âm, vì từng số hạng đều không lớn hơn. Bỏ nó trước khi bàn trọng số. Thêm tiêu chí chỉ để cứu một phương án là sửa đề cho hợp đáp án; nếu tiêu chí đó thật sự quan trọng thì nó phải có từ trước khi chấm."
+    },
+    {
+      "id": "poc-worth",
+      "kind": "single",
+      "prompt": "Team muốn làm PoC 3 tuần để so latency của hai message broker. Cả hai đều dư sức đạt NFR, và chênh lệch nào đo được cũng không đổi được lựa chọn, vì quyết định thật nằm ở chi phí vận hành. Nên làm gì?",
+      "options": [
+        "Bỏ PoC latency, dồn thời gian so chi phí và vận hành",
+        "Làm PoC đủ 3 tuần để có số liệu cho ADR chắc chắn hơn",
+        "Làm PoC nhưng rút còn 1 tuần để tiết kiệm thời gian",
+        "Hoãn quyết định đến khi có benchmark công khai mới hơn"
+      ],
+      "answer": 0,
+      "explanation": "PoC chỉ có giá trị khi một kết quả khả dĩ của nó có thể làm ta chọn khác. Ở đây mọi kết quả latency đều dẫn tới cùng lựa chọn, nên 1 tuần hay 3 tuần đều là chi phí không mua được thông tin. Hoãn chờ benchmark mới cũng vậy: thông tin chờ đợi không liên quan tới yếu tố quyết định."
+    }
+  ]
+}
