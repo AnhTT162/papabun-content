@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Ba luồng, ba kiểu tích hợp quanh một ERP cũ",
+  "nodes": [
+    { "id": "erp", "label": "ERP cũ (Oracle)", "kind": "database", "x": 0.1, "y": 0.05 },
+    { "id": "acl", "label": "CDC + ACL tồn kho", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "dropdir", "label": "Thư mục SFTP", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "topic", "label": "Topic tồn kho", "kind": "queue", "x": 0.85, "y": 0.5 },
+    { "id": "wms", "label": "WMS đối tác", "kind": "external", "x": 0.1, "y": 0.95 },
+    { "id": "shop", "label": "Web shop", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "erp-acl", "from": "erp", "to": "acl", "label": "redo log (CDC)" },
+    { "id": "acl-topic", "from": "acl", "to": "topic", "label": "StockChanged (Kafka)" },
+    { "id": "topic-shop", "from": "topic", "to": "shop", "label": "cập nhật tồn kho" },
+    { "id": "shop-dropdir", "from": "shop", "to": "dropdir", "label": "file đơn mỗi phút" },
+    { "id": "dropdir-erp", "from": "dropdir", "to": "erp", "label": "import 15 phút/lần" },
+    { "id": "wms-shop", "from": "wms", "to": "shop", "label": "webhook trạng thái" }
+  ],
+  "steps": [
+    { "caption": "ERP không sửa được code. CDC đọc redo log của Oracle qua LogMiner; LogMiner vẫn chạy trong ERP nên phải đo tải trước.", "show": ["erp", "acl", "erp-acl"], "highlight": ["erp-acl"] },
+    { "caption": "Anti-corruption layer dịch mã kho và mã trạng thái nội bộ của ERP thành event theo ngôn ngữ của web, rồi phát lên Kafka.", "show": ["topic", "acl-topic"], "highlight": ["acl-topic"] },
+    { "caption": "Web giữ bảng tồn kho riêng, cập nhật từ event. File tồn kho đêm của ERP chỉ còn dùng để đối soát.", "show": ["shop", "topic-shop"], "highlight": ["topic-shop"] },
+    { "caption": "Đơn vào ERP qua cửa import có sẵn, để luật của ERP vẫn chạy: ghi file .part rồi đổi tên, có trailer và mã đơn.", "show": ["dropdir", "shop-dropdir"], "highlight": ["shop-dropdir"] },
+    { "caption": "ERP quét 15 phút một lần, nên web phải tự giữ reservation cho đơn chưa vào ERP, nếu không sẽ bán quá số hàng.", "show": ["dropdir-erp"], "highlight": ["dropdir-erp"] },
+    { "caption": "WMS báo trạng thái qua webhook: kiểm chữ ký, ghi inbox khử trùng, rồi có job đối soát vì WMS chỉ retry 24 giờ.", "show": ["wms", "wms-shop"], "highlight": ["wms-shop"] }
+  ]
+}

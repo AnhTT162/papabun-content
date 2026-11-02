@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "integration-patterns",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Integration patterns",
+  "summary": "Bốn kiểu tích hợp (file, chung database, RPC, messaging) và mức ràng buộc của chúng, point-to-point và trục trung tâm, ESB và smart endpoints dumb pipes, API-led connectivity, canonical data model, từ vựng EIP, chuyển file an toàn (đổi tên nguyên tử, trailer, SFTP rename), CDC và anti-corruption layer cho hệ thống cũ, webhook có chữ ký và inbox, đối soát là lưới an toàn cuối cùng.",
+  "level": "architect",
+  "order": 10,
+  "minutes": 18,
+  "prerequisites": ["messaging-fundamentals", "service-communication", "outbox-cdc", "ddd-strategic", "architecture-styles"],
+  "terms": ["enterprise-integration-patterns", "file-transfer-integration", "shared-database-integration", "point-to-point-integration", "esb", "smart-endpoints-dumb-pipes", "ipaas", "api-led-connectivity", "canonical-data-model", "message-translator", "content-based-router", "eip-aggregator", "claim-check", "inbox-pattern", "cdc", "debezium", "anti-corruption-layer", "reconciliation", "dead-letter-queue", "correlation-id", "webhook", "bff", "dead-mans-switch", "bulkhead", "tolerant-reader", "strangler-fig", "idempotency-key"],
+  "references": [
+    { "title": "Gregor Hohpe, Bobby Woolf: Enterprise Integration Patterns", "url": "https://www.enterpriseintegrationpatterns.com/" },
+    { "title": "James Lewis, Martin Fowler: Microservices (smart endpoints and dumb pipes)", "url": "https://martinfowler.com/articles/microservices.html" },
+    { "title": "Debezium connector for Oracle", "url": "https://debezium.io/documentation/reference/stable/connectors/oracle.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống kia không có API, không sửa được, chỉ có database. Anh làm sao?\" Đừng trả lời ngay \"đọc thẳng bảng\". Hỏi độ trễ nghiệp vụ cần, rồi đi theo thứ tự: giao diện import/export có sẵn của nó; view do chủ hệ thống công bố, đọc từ replica; CDC đọc log giao dịch với quyền chỉ đọc. Dù chọn cách nào, đặt một anti-corruption layer để schema nội bộ của nó không lan sang hệ thống mới, và không bao giờ ghi thẳng vào bảng của nó." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Bên nhận đọc file ngay khi file xuất hiện có thể gặp file chưa ghi xong và xử lý nửa lô mà không có lỗi nào. Bên gửi ghi tên tạm rồi đổi tên trong cùng filesystem; bên nhận kiểm trailer (số bản ghi, checksum) trước khi xử lý và nhớ file nào đã xử lý." },
+    { "type": "callout", "style": "tip", "markdown": "Viết job đối soát cùng lúc với luồng tích hợp, không đợi tới khi có khiếu nại. So số lượng và tổng mỗi ngày, có người sở hữu phần lệch. Đối soát bắt được cả lỗi mà không message nào báo: bản ghi bị bỏ qua lặng lẽ, mapping sai, sửa tay trên hệ thống cũ." }
+  ]
+}

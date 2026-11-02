@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một hệ thống, ba kiểu kiến trúc: bán vé xe khách",
+  "nodes": [
+    { "id": "core", "label": "Modular monolith", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "db", "label": "PostgreSQL", "kind": "database", "x": 0.85, "y": 0.05 },
+    { "id": "pricing", "label": "Plugin giá nhà xe", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "queue", "label": "Hàng đợi hoá đơn", "kind": "queue", "x": 0.85, "y": 0.5 },
+    { "id": "fn", "label": "Lambda xuất hoá đơn", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "provider", "label": "Nhà cung cấp hoá đơn", "kind": "external", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "core-db", "from": "core", "to": "db", "label": "giữ ghế (JDBC)" },
+    { "id": "core-pricing", "from": "core", "to": "pricing", "label": "gọi plugin tính giá" },
+    { "id": "core-queue", "from": "core", "to": "queue", "label": "vé đã bán (SQS)" },
+    { "id": "queue-fn", "from": "queue", "to": "fn", "label": "Lambda poll message" },
+    { "id": "fn-provider", "from": "fn", "to": "provider", "label": "xuất hoá đơn (HTTPS)" }
+  ],
+  "steps": [
+    { "caption": "Lõi đặt vé là một modular monolith nhận request HTTPS của khách: tìm chuyến, giữ ghế, thanh toán nằm trong một đơn vị deploy, chia module theo miền.", "show": ["core"] },
+    { "caption": "Giữ ghế cần nhất quán mạnh, nên các module cùng dùng một database qua transaction. Chúng là một architecture quantum.", "show": ["db", "core-db"], "highlight": ["core-db"] },
+    { "caption": "Giá và luật hoàn vé khác nhau theo từng nhà xe: lõi tính giá chung, mỗi nhà xe là cấu hình hoặc một plugin theo kiểu microkernel.", "show": ["pricing", "core-pricing"], "highlight": ["core-pricing"] },
+    { "caption": "Hoá đơn được phép trễ vài phút. Lõi chỉ đẩy một message rồi trả lời khách, không chờ nhà cung cấp hoá đơn.", "show": ["queue", "core-queue"], "highlight": ["core-queue"] },
+    { "caption": "Phần hoá đơn chạy serverless: số lượng thất thường theo mùa, retry và DLQ có sẵn. Đây là quantum thứ hai, có quality attribute riêng.", "show": ["fn", "queue-fn"], "highlight": ["queue-fn"] },
+    { "caption": "Maximum concurrency trên event source mapping giới hạn tốc độ gọi ra ngoài, để không vượt hạn mức của nhà cung cấp hoá đơn.", "show": ["provider", "fn-provider"], "highlight": ["fn-provider"] }
+  ]
+}

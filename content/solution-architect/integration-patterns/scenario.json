@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Nối web shop mới với ERP cũ, kho đối tác và CRM",
+  "prompt": "Bạn là solution architect của một chuỗi bán lẻ đồ gia dụng: 120 cửa hàng và 10 kho, vừa mở kênh bán online. Bạn cần thiết kế tích hợp giữa các hệ thống sau.\n\n- **ERP** chạy on-premise 15 năm, database Oracle. Vendor đã ngừng phát triển, không sửa code được. Mọi bán hàng tại quầy ghi thẳng vào ERP. ERP có hai cửa: xuất file tồn kho CSV mỗi đêm (khoảng 2,6 triệu dòng: 20.000 SKU × 130 điểm), và một thư mục import nhận file đơn hàng, quét 15 phút một lần, ghi kết quả từng đơn ra file phản hồi. Phiếu xuất kho của ERP có cột tham chiếu chứa mã đơn nguồn. DBA đồng ý cấp quyền chỉ đọc nếu không làm chậm ERP.\n- **Web shop** mới do team trong công ty viết (Spring Boot, PostgreSQL). Yêu cầu: tồn kho hiển thị lệch tối đa 5 phút và không bán quá số hàng có. 8.000 đơn/ngày, đỉnh 5 đơn/giây khi có khuyến mãi. Mỗi đơn phải vào ERP để xuất hoá đơn và trừ tồn.\n- **WMS** của đối tác logistics (SaaS): REST API để tạo lệnh giao hàng, webhook báo trạng thái (đã lấy hàng, đang giao, đã giao, hoàn). Webhook giao ít nhất một lần, có thể sai thứ tự, và chỉ retry trong 24 giờ.\n- **CRM** SaaS cần thông tin khách và đơn để chăm sóc khách hàng; trễ một ngày chấp nhận được.\n\nTồn kho thay đổi khoảng 300.000 lần/ngày, đỉnh 40 lần/giây (phần lớn từ quầy).\n\nMột công ty tư vấn đề xuất mua một ESB, đưa mọi mapping và cả luật nghiệp vụ (kiểm tồn, chọn kho giao) vào ESB, do một team trung tâm 3 người vận hành.\n\nHãy chọn kiểu tích hợp cho từng luồng, chỉ ra chỗ có thể bán quá số hàng, và trả lời đề xuất ESB.",
+  "hints": [
+    "Liệt kê từng luồng (tồn kho từ ERP ra, đơn hàng vào ERP, trạng thái giao hàng từ WMS, dữ liệu sang CRM). Mỗi luồng cần độ trễ bao nhiêu, và hệ thống nguồn cho phép những cửa nào?",
+    "File tồn kho mỗi đêm có đáp ứng được 5 phút không? Nếu không sửa được ERP, còn cách nào đọc thay đổi mà không đè tải lên nó?",
+    "Từ lúc web nhận một đơn tới lúc tồn kho ERP phản ánh đơn đó mất tối đa bao lâu? Trong khoảng đó, nếu web chỉ hiển thị tồn kho của ERP thì chuyện gì xảy ra với một SKU đang khuyến mãi?",
+    "WMS chỉ retry 24 giờ. Endpoint của bạn chết 30 giờ thì sao? Đơn bị ERP từ chối trong file phản hồi thì ai biết?"
+  ],
+  "solution": "**1. Từng luồng một kiểu tích hợp**\n\n| Luồng | Kiểu | Lý do |\n|---|---|---|\n| Tồn kho ERP → web | CDC trên Oracle + anti-corruption layer → event | File đêm trễ tới 24 giờ; không sửa được ERP |\n| Đơn web → ERP | Chuyển file vào thư mục import, đọc file phản hồi | Cửa duy nhất giữ được luật nghiệp vụ của ERP |\n| WMS → web | Webhook vào inbox + job đối soát gọi API | Có webhook, nhưng không tin được hoàn toàn |\n| Web → CRM | Đồng bộ theo lô mỗi đêm qua bulk API hoặc connector iPaaS | Trễ một ngày được, không đáng tự viết nhiều |\n\n**2. Tồn kho: CDC + anti-corruption layer, file đêm thành đối soát**\n\nDebezium đọc redo log của Oracle qua LogMiner trên bảng tồn kho và bảng phiếu xuất, không phải sửa code ERP. Không phải \"miễn phí\": LogMiner chạy ngay trong instance nguồn và tốn CPU, bộ nhớ của ERP; supplemental logging làm redo nhiều hơn; nếu database chưa ở ARCHIVELOG thì phải restart để bật; user của connector cần quyền hệ thống (LOGMINING, SELECT ANY TRANSACTION, EXECUTE trên DBMS_LOGMNR), nhiều hơn \"chỉ đọc\" thông thường. Vì DBA đặt điều kiện không làm chậm ERP, đo trên môi trường giống thật trước; nếu nặng, mine từ standby hoặc dùng adapter khác của Debezium (XStream, OpenLogReplicator). 40 thay đổi/giây là tải nhỏ cho bản thân CDC. Một service nhỏ làm anti-corruption layer: đổi mã kho, mã trạng thái nội bộ của ERP thành event `StockChanged` theo ngôn ngữ của web, rồi phát lên Kafka. Web giữ bảng tồn kho của riêng nó, cập nhật từ event.\n\nFile tồn kho mỗi đêm không bỏ đi: nó thành nguồn đối soát. So 2,6 triệu dòng với bảng của web, sửa phần lệch và báo nếu tỉ lệ lệch vượt ngưỡng; lệch nhiều nghĩa là CDC hoặc mapping đang hỏng.\n\n**3. Chỗ bán quá số hàng**\n\nĐơn web vào ERP chậm nhất khoảng 16 phút (file mỗi phút, ERP quét 15 phút). Nếu web chỉ hiển thị tồn kho của ERP: giả sử ERP vừa quét lúc phút 0, lần quét sau là phút 15, nên mọi đơn web nhận trong khoảng đó chưa trừ vào tồn ERP. Một SKU khuyến mãi còn 60 cái, bán 5 cái/phút: web vẫn thấy 60 suốt 15 phút, nhận 75 đơn, bán quá 15 cái.\n\nCách sửa: web giữ bảng reservation của mình. Số hiển thị = tồn kho ERP − reservation chưa được ERP phản ánh. Debezium phát mỗi bảng ra một topic riêng và Kafka không giữ thứ tự giữa hai topic, nên thay đổi tồn kho và phiếu xuất đến thành hai event rời nhau. ACL gom chúng theo transaction id của Oracle (`source.txId`, hoặc bật `provide.transaction.metadata` để biết khi nào transaction đủ event), rồi phát một `StockChanged` mang kèm mã đơn tham chiếu. Web áp thay đổi tồn kho và xoá reservation của đơn đó **trong cùng một transaction**, nên không lúc nào bị trừ hai lần hay cộng trả sớm. Bán tại quầy vẫn đi thẳng vào ERP và tới web sau vài giây qua CDC; với SKU đang khuyến mãi, giấu thêm vài cái cuối làm vùng đệm.\n\n**4. Đơn vào ERP: chuyển file làm đúng**\n\n- Mỗi phút một file, tên duy nhất `orders_<thời điểm>_<số thứ tự>.csv`, ghi `.part` rồi đổi tên; trailer ghi số đơn và tổng tiền.\n- Mỗi dòng mang mã đơn web làm correlation id. Đọc file phản hồi: đơn được nhận thì lưu số chứng từ ERP; đơn bị từ chối (sai mã SKU, khách bị khoá) vào hàng đợi xử lý có người phụ trách, không chỉ ghi log.\n- Đơn đã gửi mà sau 1 giờ chưa có phản hồi thì cảnh báo. Không gửi lại tự động nếu không chắc ERP từ chối trùng mã đơn; kiểm trước bằng cách đối chiếu bảng đơn của ERP qua quyền chỉ đọc.\n- Đối soát mỗi ngày: số đơn và tổng tiền web đã gửi so với ERP đã nhận.\n\n**5. WMS: webhook có chữ ký, inbox, và đối soát**\n\nEndpoint kiểm chữ ký HMAC trên byte gốc và mốc thời gian, ghi event vào bảng inbox unique theo event id, trả 2xx ngay. Worker xử lý sau và chỉ cho trạng thái tiến lên (đã lấy hàng → đang giao → đã giao); event cũ đến muộn bị bỏ qua. Vì WMS chỉ retry 24 giờ, endpoint chết 30 giờ là mất event: job mỗi giờ gọi API của WMS cho các đơn chưa tới trạng thái cuối sau 6 giờ. Lệnh tạo giao hàng gửi WMS kèm idempotency key là mã đơn.\n\n**6. CRM: đừng tự viết nếu không cần**\n\nTrễ một ngày, dữ liệu ít, không có luật nghiệp vụ: connector iPaaS có sẵn hoặc job đêm gọi bulk API là đủ. Đây là chỗ mua rẻ hơn tự làm.\n\n**7. Trả lời đề xuất ESB**\n\nGiữ phần có ích, bỏ phần nguy hiểm. Với bốn hệ thống, số kết nối nhỏ, chưa cần trục trung tâm. Phần nguy hiểm là đưa kiểm tồn và chọn kho vào ESB: đó là luật lõi của bán hàng online, thay đổi theo mỗi đợt khuyến mãi, và sẽ phải xếp hàng chờ team 3 người không sở hữu nghiệp vụ. Luật đó thuộc về web shop. Đường ống (Kafka, thư mục SFTP, connector) chỉ chuyển dữ liệu. Nếu sau này phải nối thêm nhiều SaaS mà không có đội dev, cân nhắc iPaaS cho phần kết nối, vẫn không đặt luật nghiệp vụ trong đó.\n\n**8. Vận hành**\n\nĐo cho từng luồng: lag CDC, thời điểm file đơn và file phản hồi cuối cùng (cảnh báo khi quá hạn), độ sâu DLQ, số event inbox chưa xử lý, tỉ lệ lệch trong đối soát đêm. Ghi danh mục tích hợp: chủ sở hữu, kiểu, tần suất, người liên hệ phía ERP và WMS.",
+  "tradeoffs": [
+    {
+      "option": "ESB trung tâm giữ cả mapping và luật nghiệp vụ",
+      "pros": [
+        "Một chỗ để xem mọi luồng",
+        "Connector có sẵn cho Oracle, SFTP, SaaS"
+      ],
+      "cons": [
+        "Luật bán hàng nằm ngoài team sở hữu, đổi phải xếp hàng",
+        "Thêm license và một điểm lỗi chung",
+        "Vẫn không giải được khoảng trễ 16 phút nếu không có reservation"
+      ]
+    },
+    {
+      "option": "Mỗi luồng một kiểu, logic ở web shop, đường ống chỉ chuyển",
+      "pros": [
+        "Luật nằm cùng team chịu trách nhiệm",
+        "Mỗi luồng chọn độ trễ và cách chịu lỗi riêng"
+      ],
+      "cons": [
+        "Team web phải vận hành CDC, Kafka và job đối soát",
+        "Cần danh mục tích hợp để không mất dấu các luồng"
+      ]
+    },
+    {
+      "option": "Chỉ dùng file đêm cho tồn kho (giữ nguyên hiện trạng)",
+      "pros": [
+        "Không cần quyền gì thêm từ DBA",
+        "Đơn giản nhất"
+      ],
+      "cons": [
+        "Trễ tới 24 giờ, không đạt yêu cầu 5 phút",
+        "Bán quá số hàng mỗi đợt khuyến mãi"
+      ]
+    }
+  ]
+}

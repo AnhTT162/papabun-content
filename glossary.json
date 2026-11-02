@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing", "back-of-envelope", "nfr-quality-attributes"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing", "back-of-envelope", "nfr-quality-attributes", "architecture-styles"]
     },
     {
       "id": "virtual-thread",
@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns"]
     },
     {
       "id": "hash-spreading",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns"]
     },
     {
       "id": "orm",
@@ -1429,7 +1429,7 @@
       "meaning": "Connection pooler nhẹ đứng giữa ứng dụng và PostgreSQL. Ở chế độ transaction, nhiều connection phía client dùng chung một số ít connection thật tới database.",
       "example": "500 pod mỗi pod mở 5 connection tới PgBouncer (2.500), PgBouncer chỉ giữ 60 connection thật tới PostgreSQL.",
       "related": ["connection-pool", "max-connections"],
-      "topics": ["connection-pool", "sharding-strategies", "postgres-vs-mysql"]
+      "topics": ["connection-pool", "sharding-strategies", "postgres-vs-mysql", "architecture-styles"]
     },
     {
       "id": "max-lifetime",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns"]
     },
     {
       "id": "security-definer",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification", "design-job-scheduler"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification", "design-job-scheduler", "integration-patterns"]
     },
     {
       "id": "poison-message",
@@ -2989,7 +2989,7 @@
       "meaning": "Nguyên tắc consumer chỉ đọc trường mình cần và bỏ qua trường lạ, để producer thêm trường không làm vỡ consumer.",
       "example": "Jackson tắt `FAIL_ON_UNKNOWN_PROPERTIES`.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution", "rest-api-design"]
+      "topics": ["event-schema-evolution", "rest-api-design", "integration-patterns"]
     },
     {
       "id": "consumer-lag",
@@ -4093,7 +4093,7 @@
       "meaning": "Kiến trúc port và adapter: lõi nghiệp vụ định nghĩa interface (port), còn database, broker, HTTP là adapter cài đặt hoặc gọi các port đó.",
       "example": "Port `OrderRepository` nằm trong lõi; `JpaOrderRepository` là adapter ở tầng hạ tầng.",
       "related": ["dependency-inversion"],
-      "topics": ["solid", "clean-hexagonal"]
+      "topics": ["solid", "clean-hexagonal", "architecture-styles"]
     },
     {
       "id": "layered-architecture",
@@ -4101,7 +4101,7 @@
       "meaning": "Kiến trúc chia ứng dụng thành các tầng (controller, service, repository), mỗi tầng một trách nhiệm và chỉ phụ thuộc vào tầng bên dưới.",
       "example": "`OrderController` gọi `OrderService`, `OrderService` gọi `OrderRepository`; repository không biết controller tồn tại.",
       "related": ["dto", "package-by-feature"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "architecture-styles"]
     },
     {
       "id": "dto",
@@ -4125,7 +4125,7 @@
       "meaning": "Anti-pattern của kiến trúc phân lớp: phần lớn request đi qua các tầng mà không tầng nào xử lý gì, chỉ chuyển tiếp xuống dưới.",
       "example": "`ProductService.findById` chỉ gọi `productRepository.findById` và trả về.",
       "related": ["layered-architecture"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "architecture-styles"]
     },
     {
       "id": "anemic-domain-model",
@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "adr-c4"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "adr-c4", "architecture-styles"]
     },
     {
       "id": "adapter-pattern",
@@ -4293,7 +4293,7 @@
       "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
       "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
       "related": ["adapter-pattern"],
-      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs"]
+      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs", "integration-patterns"]
     },
     {
       "id": "strategy-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4541,7 +4541,7 @@
       "meaning": "Quan sát rằng kiến trúc hệ thống phản chiếu cấu trúc giao tiếp của tổ chức xây dựng nó.",
       "example": "Ba đội cùng sửa một module thì ranh giới trong module đó dần bị trộn lẫn.",
       "related": ["bounded-context"],
-      "topics": ["ddd-strategic", "microservices-tradeoffs"]
+      "topics": ["ddd-strategic", "microservices-tradeoffs", "architecture-styles"]
     },
     {
       "id": "ddd-entity",
@@ -4613,7 +4613,7 @@
       "meaning": "Hệ thống tách thành nhiều service nhưng vẫn phải deploy và thay đổi cùng nhau vì ranh giới sai; mang chi phí của hệ phân tán mà không có lợi ích độc lập.",
       "example": "Đổi một trường trong service đơn hàng buộc năm service khác cùng release.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith", "microservices-tradeoffs"]
+      "topics": ["modular-monolith", "microservices-tradeoffs", "architecture-styles"]
     },
     {
       "id": "partial-failure",
@@ -4693,7 +4693,7 @@
       "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó.",
       "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
       "related": ["graphql"],
-      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance"]
+      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance", "integration-patterns"]
     },
     {
       "id": "headless-service",
@@ -4821,7 +4821,7 @@
       "meaning": "Đối soát: job định kỳ so dữ liệu giữa các hệ thống (hay với đối tác) để tìm và sửa chỗ lệch mà các cơ chế khác không chặn được.",
       "example": "Mỗi đêm so đơn `PAID` với giao dịch ở cổng thanh toán; đơn không có giao dịch được đưa vào hàng chờ xử lý.",
       "related": ["dual-write", "saga"],
-      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment"]
+      "topics": ["data-consistency-services", "event-driven-architecture", "saga", "distributed-transactions", "design-ecommerce-order", "design-payment", "integration-patterns"]
     },
     {
       "id": "jitter",
@@ -4861,7 +4861,7 @@
       "meaning": "Kiến trúc chia hệ thống thành các service deploy độc lập, mỗi service gắn với một năng lực nghiệp vụ, sở hữu dữ liệu riêng và do một đội chủ quản.",
       "example": "Service tìm kiếm scale riêng mùa cao điểm và release nhiều lần mỗi ngày, độc lập với service đặt phòng.",
       "related": ["bounded-context", "distributed-monolith", "modular-monolith"],
-      "topics": ["microservices-tradeoffs", "sd-framework"]
+      "topics": ["microservices-tradeoffs", "sd-framework", "architecture-styles"]
     },
     {
       "id": "consumer-driven-contract",
@@ -4933,7 +4933,7 @@
       "meaning": "Mã gắn với một yêu cầu hay một luồng nghiệp vụ, truyền qua mọi lời gọi và message để ghép log của nhiều service lại với nhau.",
       "example": "Gateway gắn header `X-Correlation-Id`; mọi event của đơn đó mang cùng mã trong header message.",
       "related": ["api-gateway", "integration-event"],
-      "topics": ["api-gateway-service-mesh", "event-driven-architecture", "production-logging"]
+      "topics": ["api-gateway-service-mesh", "event-driven-architecture", "production-logging", "integration-patterns"]
     },
     {
       "id": "token-relay",
@@ -4965,7 +4965,7 @@
       "meaning": "Kiến trúc trong đó service phát event về việc đã xảy ra mà không biết ai nghe, các service khác đăng ký và tự phản ứng.",
       "example": "Order phát `OrderPlaced`; Loyalty, Email, Search tự nghe mà Order không gọi ai.",
       "related": ["event-notification", "event-carried-state", "choreography"],
-      "topics": ["event-driven-architecture"]
+      "topics": ["event-driven-architecture", "architecture-styles"]
     },
     {
       "id": "event-notification",
@@ -5093,7 +5093,7 @@
       "meaning": "Nền tảng CDC mã nguồn mở, chạy như connector của Kafka Connect, đọc log giao dịch (WAL của PostgreSQL, binlog của MySQL...) và phát mỗi thay đổi thành message.",
       "example": "Connector PostgreSQL của Debezium đọc bảng `outbox` qua `pgoutput` và đẩy vào topic `outbox.event.order`.",
       "related": ["cdc", "kafka-connect"],
-      "topics": ["outbox-cdc"]
+      "topics": ["outbox-cdc", "integration-patterns"]
     },
     {
       "id": "kafka-connect",
@@ -8605,7 +8605,7 @@
       "meaning": "Thời gian từ lúc nền tảng tạo instance mới (pod, function) tới khi nó trả lời request đầu tiên, gồm cả khởi động runtime và ứng dụng. Quan trọng nhất khi scale to zero.",
       "example": "Function Java trên JVM có cold start vài giây; bản native image hay có snapshot thì dưới một giây.",
       "related": ["native-image", "crac"],
-      "topics": ["startup-native"]
+      "topics": ["startup-native", "architecture-styles"]
     },
     {
       "id": "startup-probe",
@@ -9109,7 +9109,7 @@
       "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
       "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
       "related": ["idempotency", "idempotent-consumer"],
-      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes"]
+      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes", "integration-patterns"]
     },
     {
       "id": "payment-authorization",
@@ -9613,7 +9613,7 @@
       "meaning": "Cảnh báo bật lên khi một tín hiệu mong đợi không xuất hiện đúng hạn, thay vì khi có lỗi. Bắt được trường hợp job không chạy hoặc chết lặng lẽ.",
       "example": "Job đối soát phải có lần chạy thành công trước 01:00; quá giờ mà chưa có thì báo on-call.",
       "related": ["cron"],
-      "topics": ["design-job-scheduler"]
+      "topics": ["design-job-scheduler", "integration-patterns"]
     },
     {
       "id": "transcoding",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles"]
     },
     {
       "id": "proof-of-concept",
@@ -10357,7 +10357,7 @@
       "meaning": "Thuộc tính chất lượng: hệ thống tốt tới mức nào về performance, availability, bảo mật, khả năng sửa đổi, chi phí. Là cách gọi NFR trong kiến trúc, dùng để so các phương án.",
       "example": "Availability 99,9% cho luồng tạo đơn; thêm một phương thức thanh toán không quá 2 tuần-người.",
       "related": ["non-functional-requirement", "quality-attribute-scenario", "utility-tree"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "architecture-styles"]
     },
     {
       "id": "quality-attribute-scenario",
@@ -10413,7 +10413,7 @@
       "meaning": "Kiểm tra tự động cho biết kiến trúc còn đạt một đặc tính mong muốn hay không, chạy trong pipeline hoặc trên production.",
       "example": "Test ArchUnit cấm module checkout phụ thuộc module báo cáo; load test chặn bản phát hành nếu p99 vượt 800 ms.",
       "related": ["quality-attribute", "archunit"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "architecture-styles"]
     },
     {
       "id": "well-architected-framework",
@@ -10662,6 +10662,182 @@
       "example": "Việc xong tăng đều mỗi tuần nhưng đường tổng phạm vi nhảy lên hai lần: dự án trễ vì scope creep.",
       "related": ["scope-creep", "change-request"],
       "topics": ["requirements-estimation"]
+    },
+    {
+      "id": "architecture-style",
+      "term": "Architecture style",
+      "meaning": "Hình dạng tổng thể của hệ thống: chia theo tầng hay theo miền, một hay nhiều đơn vị deploy, giao tiếp đồng bộ hay bất đồng bộ. Ví dụ: layered, microkernel, microservices, event-driven, serverless.",
+      "example": "Lõi modular monolith, phần hoá đơn serverless sau hàng đợi: một hệ thống dùng hai kiểu.",
+      "related": ["architecture-quantum", "quality-attribute"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "architecture-quantum",
+      "term": "Architecture quantum",
+      "meaning": "Phần deploy độc lập, gắn kết chức năng cao, ràng buộc tĩnh cao (chung database, thư viện, hạ tầng) và bên trong gọi nhau đồng bộ (khái niệm của Neal Ford và Mark Richards). Là đơn vị nhỏ nhất có thể có quality attribute riêng.",
+      "example": "Hai service dùng chung một database vẫn là một quantum; service nhận event qua Kafka và có dữ liệu riêng là quantum khác.",
+      "related": ["architecture-style", "distributed-monolith"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "microkernel-architecture",
+      "term": "Microkernel architecture",
+      "meaning": "Kiểu kiến trúc gồm một lõi giữ luồng chung và các plugin thêm luật hay tính năng riêng qua một hợp đồng cố định. Còn gọi là plug-in architecture.",
+      "example": "Lõi tính giá vé chung, mỗi nhà xe có cấu hình hoặc plugin luật đổi, hoàn vé riêng.",
+      "related": ["architecture-style"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "service-based-architecture",
+      "term": "Service-based architecture",
+      "meaning": "Kiểu phân tán thực dụng: khoảng 4–12 service lớn theo miền, thường dùng chung database. Được deploy riêng mà không phải trả hết chi phí của microservices.",
+      "example": "Năm service đặt hàng, kho, giao hàng, thanh toán, báo cáo cùng một PostgreSQL, mỗi bảng chỉ một service ghi.",
+      "related": ["microservices", "modular-monolith"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "space-based-architecture",
+      "term": "Space-based architecture",
+      "meaning": "Kiểu kiến trúc đưa dữ liệu vào data grid trong bộ nhớ của các processing unit, database chỉ được ghi bất đồng bộ, để chịu đỉnh tải rất lớn.",
+      "example": "Hệ thống đấu giá trực tuyến giữ giá hiện tại của các phiên trong bộ nhớ, data pump ghi xuống database sau.",
+      "related": ["data-grid"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "serverless",
+      "term": "Serverless",
+      "meaning": "Mô hình không tự quản lý server: FaaS (function chạy theo sự kiện, như AWS Lambda) và BaaS (dịch vụ managed như S3, DynamoDB). Trả tiền theo lần chạy và thời gian chạy.",
+      "example": "Message vào SQS kích hoạt một Lambda xuất hoá đơn; không có máy nào chạy khi không có vé bán ra.",
+      "related": ["cold-start", "reserved-concurrency"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "data-grid",
+      "term": "Data grid",
+      "meaning": "Bộ nhớ đệm phân tán giữ dữ liệu trong RAM của nhiều node và replicate giữa chúng, như Hazelcast hay Apache Ignite. Là thành phần chính của space-based architecture.",
+      "example": "Mỗi processing unit đọc ghế trống từ data grid thay vì query database.",
+      "related": ["space-based-architecture"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "reserved-concurrency",
+      "term": "Reserved concurrency",
+      "meaning": "Số concurrent execution dành riêng và đồng thời là trần cho một Lambda function. Với nguồn SQS nên dùng maximum concurrency của event source mapping để tránh throttle đẩy message vào DLQ.",
+      "example": "Reserved concurrency 100 với mỗi lần 2 giây giới hạn khoảng 50 lần gọi mỗi giây.",
+      "related": ["serverless", "littles-law"],
+      "topics": ["architecture-styles"]
+    },
+    {
+      "id": "enterprise-integration-patterns",
+      "term": "EIP",
+      "meaning": "Enterprise Integration Patterns: bộ 65 pattern tích hợp bằng messaging của Gregor Hohpe và Bobby Woolf (2003), kèm bốn kiểu tích hợp: file, chung database, RPC, messaging.",
+      "example": "Content-based router, splitter, aggregator, dead letter channel đều là tên pattern trong EIP; Apache Camel cài chúng bằng Java.",
+      "related": ["message-translator", "content-based-router"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "file-transfer-integration",
+      "term": "File transfer",
+      "meaning": "Kiểu tích hợp trong đó một hệ thống ghi file và hệ thống kia đọc theo chu kỳ, thường qua SFTP hoặc object storage. Ràng buộc thấp, hợp với lô lớn, nhưng trễ theo chu kỳ.",
+      "example": "ERP quét thư mục import 15 phút một lần và ghi file phản hồi cho từng đơn.",
+      "related": ["dead-mans-switch"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "shared-database-integration",
+      "term": "Shared database",
+      "meaning": "Kiểu tích hợp trong đó nhiều hệ thống đọc ghi cùng một database. Nhanh lúc đầu nhưng schema thành hợp đồng không ai quản và bên ghi bỏ qua luật của chủ dữ liệu.",
+      "example": "Hệ thống báo cáo đọc thẳng bảng `orders` của service đặt hàng; đổi tên một cột là báo cáo hỏng.",
+      "related": ["anti-corruption-layer"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "point-to-point-integration",
+      "term": "Point-to-point integration",
+      "meaning": "Các hệ thống nối thẳng với nhau, không qua trục trung tâm. N hệ thống có thể cần tới N(N−1)/2 kết nối.",
+      "example": "4 hệ thống tối đa 6 kết nối, quản được; 10 hệ thống là 45.",
+      "related": ["esb"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "esb",
+      "term": "ESB",
+      "meaning": "Enterprise Service Bus: trục tích hợp trung tâm lo định tuyến, chuyển đổi định dạng, chuyển giao thức và điều phối. Thành nút thắt khi giữ cả luật nghiệp vụ.",
+      "example": "ESB nhận SOAP từ hệ thống cũ, đổi sang JSON và gọi REST của hệ thống mới.",
+      "related": ["smart-endpoints-dumb-pipes", "ipaas"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "smart-endpoints-dumb-pipes",
+      "term": "Smart endpoints, dumb pipes",
+      "meaning": "Nguyên tắc trong bài Microservices của Lewis và Fowler (2014): logic nằm ở service, đường ống (broker, HTTP) chỉ chuyển message, không chứa luật nghiệp vụ.",
+      "example": "Kafka chỉ chuyển `OrderPlaced`; quyết định chọn kho nằm trong service đặt hàng, không nằm trong bus.",
+      "related": ["esb"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "ipaas",
+      "term": "iPaaS",
+      "meaning": "Integration Platform as a Service: nền tảng tích hợp dạng dịch vụ với connector có sẵn cho nhiều SaaS và hệ thống, cấu hình luồng bằng giao diện.",
+      "example": "Đồng bộ khách hàng từ web shop sang CRM mỗi đêm bằng connector có sẵn, không viết code.",
+      "related": ["esb"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "api-led-connectivity",
+      "term": "API-led connectivity",
+      "meaning": "Cách chia API tích hợp thành ba lớp: system API bọc hệ thống gốc, process API ghép nghiệp vụ, experience API cho từng kênh. Do MuleSoft phổ biến.",
+      "example": "System API bọc ERP được cả process API đặt hàng lẫn process API đối soát dùng lại.",
+      "related": ["bff", "esb"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "canonical-data-model",
+      "term": "Canonical data model",
+      "meaning": "Một định dạng dữ liệu chung mà mọi hệ thống dịch sang khi trao đổi, giảm số bộ dịch từ N(N−1) xuống 2N. Dễ phình to khi áp cho cả công ty.",
+      "example": "ISO 20022 là mô hình chuẩn hẹp cho thông điệp thanh toán giữa các ngân hàng.",
+      "related": ["message-translator", "bounded-context"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "message-translator",
+      "term": "Message translator",
+      "meaning": "Pattern EIP chuyển message từ định dạng của bên gửi sang định dạng bên nhận cần, để hai bên không phải biết định dạng của nhau.",
+      "example": "Đổi dòng CSV tồn kho của ERP thành event JSON `StockChanged`.",
+      "related": ["canonical-data-model", "anti-corruption-layer"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "content-based-router",
+      "term": "Content-based router",
+      "meaning": "Pattern EIP đọc nội dung message để quyết định gửi tới kênh nào.",
+      "example": "Đơn có `country = VN` đi tới kho trong nước, còn lại đi tới đối tác xuất khẩu.",
+      "related": ["enterprise-integration-patterns"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "eip-aggregator",
+      "term": "Aggregator",
+      "meaning": "Pattern EIP gom nhiều message liên quan (theo correlation id) thành một. Cần điều kiện hoàn tất và timeout, nếu không sẽ chờ mãi phần bị mất.",
+      "example": "Gom kết quả giao từng kiện của một đơn; đủ kiện hoặc quá 48 giờ thì phát `OrderFulfilled` hay cảnh báo.",
+      "related": ["correlation-id"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "claim-check",
+      "term": "Claim check",
+      "meaning": "Pattern EIP để payload lớn ở kho lưu trữ, message chỉ mang tham chiếu tới nó. Dùng khi payload vượt giới hạn của broker.",
+      "example": "File PDF 20 MB lên S3, message SQS chỉ chứa key của object.",
+      "related": ["object-storage"],
+      "topics": ["integration-patterns"]
+    },
+    {
+      "id": "inbox-pattern",
+      "term": "Inbox",
+      "meaning": "Bảng ghi lại message hoặc webhook nhận được, unique theo id, trước khi xử lý. Giúp trả lời bên gửi nhanh, khử trùng và xử lý lại khi lỗi.",
+      "example": "`INSERT INTO inbox (event_id, payload) ... ON CONFLICT DO NOTHING`, rồi worker đọc inbox để xử lý.",
+      "related": ["webhook", "idempotent-consumer", "outbox"],
+      "topics": ["integration-patterns"]
     }
   ]
 }

@@ -416,8 +416,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 6 | `well-architected` | ✚ AWS Well-Architected & 6 trụ cột | senior | Operational excellence, security, reliability, performance, cost, sustainability; dùng để review | L Sc | ✅ |
 | 7 | `architecture-tradeoffs` | Ra quyết định & trade-off | senior | Quyết định một chiều và hai chiều, ma trận đánh giá, rủi ro | L Sc | ✅ |
 | 8 | `requirements-estimation` | ✚ Khai thác yêu cầu & ước lượng | senior | Discovery workshop, chốt phạm vi, ước lượng công sức, roadmap | L Sc | ✅ |
-| 9 | `architecture-styles` | Chọn kiểu kiến trúc | architect | Layered, microservices, event-driven, serverless, space-based | L D Sc | ⬜ |
-| 10 | `integration-patterns` | Integration patterns | architect | EIP, API-led, ESB, file và event, tích hợp hệ thống cũ | L D Sc | ⬜ |
+| 9 | `architecture-styles` | Chọn kiểu kiến trúc | architect | Layered, microservices, event-driven, serverless, space-based | L D Sc | ✅ |
+| 10 | `integration-patterns` | Integration patterns | architect | EIP, API-led, ESB, file và event, tích hợp hệ thống cũ | L D Sc | ✅ |
 | 11 | `data-architecture` | ✚ Kiến trúc dữ liệu | architect | OLTP và OLAP, data warehouse/lake/lakehouse, ETL/ELT, CDC, báo cáo không đè lên DB chính | L D Sc | ⬜ |
 | 12 | `security-architecture` | ✚ Kiến trúc bảo mật | architect | Defense in depth, zero trust, phân vùng mạng, quản lý danh tính tập trung | L D Sc | ⬜ |
 | 13 | `reliability-sre` | ✚ Độ tin cậy & SRE | architect | SLO và error budget, chaos engineering, game day, thiết kế cho lỗi | L Sc | ⬜ |

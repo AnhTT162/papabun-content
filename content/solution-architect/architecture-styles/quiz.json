@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "count-quanta",
+      "kind": "single",
+      "prompt": "Hệ thống tách thành 6 service. Bốn service đặt hàng, kho, giá, khuyến mãi dùng chung một database và gọi đồng bộ nhau trên mỗi đơn. Thông báo và báo cáo nhận event qua Kafka, có dữ liệu riêng. Có bao nhiêu architecture quantum?",
+      "options": [
+        "Ba: nhóm bốn service, thông báo, báo cáo",
+        "Sáu: mỗi service deploy riêng là một quantum",
+        "Hai: nhóm đồng bộ và nhóm nhận event",
+        "Một: mọi service cùng chung một Kafka"
+      ],
+      "answer": 0,
+      "explanation": "Bốn service chung database và gọi đồng bộ nhau: một bên chết hay đổi schema là bên kia hỏng theo, nên chúng là một quantum dù deploy riêng. Thông báo và báo cáo nối bất đồng bộ và có dữ liệu riêng, mỗi cái là một quantum riêng (hai cái không phụ thuộc nhau nên không gộp). Dùng chung broker không gộp quantum, vì broker tách các bên về thời gian."
+    },
+    {
+      "id": "lambda-io-wait",
+      "kind": "single",
+      "prompt": "Function xuất hoá đơn chạy 2 giây ở 512 MB, trong đó 1,8 giây chờ API bên ngoài. 750.000 lần/tháng tốn khoảng 12,65 USD. Câu nào đúng?",
+      "options": [
+        "Phần lớn số tiền trả cho lúc chờ, vì Lambda tính theo thời gian chạy",
+        "Lambda chỉ tính CPU thật dùng nên lúc chờ API không tốn tiền",
+        "Tăng bộ nhớ lên 1 GB sẽ giảm tiền vì CPU mạnh gấp đôi",
+        "Phí request chiếm phần lớn vì mỗi lần chạy tính 0,20 USD"
+      ],
+      "answer": 0,
+      "explanation": "Lambda tính GB-giây theo thời gian chạy, gồm cả lúc chờ I/O: 1 GB-giây mỗi lần, khoảng 12,5 USD cho phần thời gian, còn phí request chỉ 0,15 USD (0,20 USD mỗi triệu request, không phải mỗi lần). Nếu chỉ trả cho 0,2 giây CPU thì khoảng 1,4 USD. Tăng bộ nhớ không rút ngắn thời gian chờ API, nên chỉ làm đắt gấp đôi."
+    },
+    {
+      "id": "breakeven-choice",
+      "kind": "single",
+      "prompt": "API chạy 120 ms mỗi request ở 1 GB qua HTTP API, khoảng 3,2 USD mỗi triệu request. Hai task Fargate đủ sức chạy suốt tháng tốn 72 USD. Trung bình 30 request/giây quanh năm. Kết luận nào hợp lý?",
+      "options": [
+        "Container rẻ hơn rõ, vì Lambda khoảng 249 USD mỗi tháng",
+        "Lambda rẻ hơn vì chỉ trả tiền khi có request đến",
+        "Hai bên ngang nhau vì tải 30 request/giây là thấp",
+        "Không so được vì Lambda còn được free tier mỗi tháng"
+      ],
+      "answer": 0,
+      "explanation": "30 × 2.592.000 giây ≈ 77,8 triệu request × 3,2 USD mỗi triệu ≈ 249 USD, gấp hơn ba lần 72 USD. Hoà vốn ở khoảng 22,5 triệu request mỗi tháng, tức chừng 9 request/giây trung bình. Free tier của Lambda (1 triệu request và 400.000 GB-giây mỗi tháng) chỉ bớt khoảng 7 USD, không đổi kết luận."
+    },
+    {
+      "id": "pick-style",
+      "kind": "single",
+      "prompt": "Phần mềm tính phí bảo hiểm dùng cho 30 đối tác; mỗi đối tác có công thức riêng và đối tác mới đến hằng tháng. Luồng chung (nhận hồ sơ, tính, xuất báo giá) ổn định. Team 6 người. Kiểu nào hợp nhất cho phần tính phí?",
+      "options": [
+        "Microkernel: lõi chung, luật mỗi đối tác là cấu hình hoặc plugin",
+        "Microservices: mỗi đối tác một service riêng có database riêng",
+        "Service-based: mỗi nhóm đối tác một service, chung database",
+        "Event-driven: mỗi đối tác nghe event hồ sơ rồi tự tính"
+      ],
+      "answer": 0,
+      "explanation": "Luồng chung ổn định cộng nhiều biến thể theo đối tác là đúng bài toán của microkernel. 30 service cho 6 người là quá tải vận hành và lặp luồng chung 30 lần. Chia service theo nhóm đối tác vẫn lặp luồng chung ở mỗi service và mỗi đối tác mới vẫn phải sửa code. Event-driven làm luồng tính phí rời rạc mà không giảm công thêm đối tác mới."
+    }
+  ]
+}

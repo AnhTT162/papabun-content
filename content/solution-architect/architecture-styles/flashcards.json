@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "two-axes", "front": "Hai trục để phân loại kiểu kiến trúc là gì?", "back": "Chia theo tầng kỹ thuật hay theo miền nghiệp vụ, và một đơn vị deploy hay nhiều (phân tán). Cách giao tiếp đồng bộ hay bất đồng bộ là lựa chọn thứ ba đi kèm." },
+    { "id": "quantum", "front": "Architecture quantum là gì?", "back": "Phần deploy độc lập, gắn kết chức năng cao, ràng buộc tĩnh cao (chung database, thư viện), bên trong gọi nhau đồng bộ. Là đơn vị nhỏ nhất có quality attribute riêng; hai service chung database vẫn là một quantum." },
+    { "id": "microkernel-when", "front": "Khi nào microkernel hợp?", "back": "Khi có luồng chung ổn định và nhiều biến thể theo khách hàng hay đối tác. Lõi giữ luồng chung, plugin thêm luật qua hợp đồng hẹp có version; phần lớn biến thể nên là cấu hình." },
+    { "id": "service-based", "front": "Service-based khác microservices ở đâu?", "back": "Ít service hơn (khoảng 4–12), mỗi service lớn theo miền và thường dùng chung database. Được deploy riêng và cô lập lỗi một phần mà rẻ hơn nhiều." },
+    { "id": "space-based", "front": "Space-based architecture giải bài toán gì và giá là gì?", "back": "Đỉnh tải cực lớn: dữ liệu nằm trong data grid ở bộ nhớ các processing unit, database chỉ ghi bất đồng bộ. Giá: data collision, có thể mất dữ liệu chưa ghi, đắt và khó test." },
+    { "id": "eda-topology", "front": "Broker và mediator topology của event-driven khác nhau thế nào?", "back": "Broker: các bên tự phản ứng với event, không ai điều phối, dễ thêm bên nghe nhưng khó thấy luồng. Mediator: bộ điều phối gửi lệnh từng bước, dễ xử lý lỗi nhưng là điểm tập trung." },
+    { "id": "lambda-billing", "front": "Vì sao Lambda đắt với việc chủ yếu chờ API bên ngoài?", "back": "Mỗi execution environment xử lý một request một lúc và bị tính tiền theo GB-giây cả lúc chờ. Container chờ nhiều request cùng lúc bằng thread nên không trả thêm." },
+    { "id": "breakeven", "front": "Serverless hay container rẻ hơn?", "back": "Tải thấp và thất thường thì serverless; tải đều và cao thì container. Ví dụ: 120 ms ở 1 GB qua HTTP API hoà vốn với hai task Fargate 1 vCPU/2 GB ở khoảng 9 request/giây trung bình." },
+    { "id": "reserved-concurrency", "front": "Làm sao để Lambda đọc SQS không vượt hạn mức 50 request/giây của bên thứ ba khi mỗi lần mất 2 giây?", "back": "Giới hạn concurrency 100 (maximum concurrency trên event source mapping): theo Little's law, 100 / 2 giây = tối đa 50 lần/giây. Bên kia chậm đi thì tốc độ tự giảm." }
+  ]
+}

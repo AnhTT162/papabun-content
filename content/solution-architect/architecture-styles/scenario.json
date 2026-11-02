@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn kiến trúc cho nền tảng bán vé xe khách trước mùa Tết",
+  "prompt": "Bạn là solution architect của một nền tảng bán vé xe khách liên tỉnh. Hệ thống hiện tại là một monolith Spring Boot 6 năm tuổi, code dính chùm, dùng một PostgreSQL. Ban giám đốc duyệt ngân sách làm lại kiến trúc trong năm nay.\n\nSố liệu và bối cảnh:\n- 60 nhà xe, kế hoạch thêm 40 nhà xe trong năm. Mỗi nhà xe có luật giá và luật đổi, hoàn vé riêng; hiện mỗi nhà xe mới tốn khoảng 2 tuần dev để sửa code.\n- Tải thường: đỉnh 30 request/giây, trung bình khoảng 8 request/giây. Hai tuần mở bán vé Tết: đỉnh 1.500 request/giây, phần lớn là tìm chuyến; giữ ghế đỉnh 200 lần/giây. Năm ngoái hệ thống chậm nặng vì truy vấn tìm chuyến làm database quá tải.\n- Mỗi vé phải có hoá đơn điện tử qua một nhà cung cấp bên ngoài, được phép trễ vài phút. 25.000 hoá đơn/ngày bình thường, 120.000/ngày trong 14 ngày Tết. Mỗi lần mất khoảng 2 giây (gần hết là chờ API của nhà cung cấp), cần 512 MB bộ nhớ. Nhà cung cấp giới hạn 50 request/giây.\n- Team 7 dev, 1 người vận hành bán thời gian. Chạy trên AWS.\n\nHai đề xuất đang được bàn:\n- A (CTO): viết lại thành 15 microservices trên Kubernetes trong 9 tháng.\n- B (một senior): chuyển toàn bộ sang serverless, Lambda sau API Gateway.\n\nGiá tham khảo us-east-1 (chưa tính free tier): Lambda 0,0000166667 USD mỗi GB-giây và 0,20 USD mỗi triệu request; API Gateway HTTP API 1 USD mỗi triệu request; hai task Fargate 0,5 vCPU/1 GB chạy suốt tháng khoảng 36 USD, hai task 1 vCPU/2 GB khoảng 72 USD.\n\nHãy chọn kiểu kiến trúc cho từng phần, giải thích bằng quality attribute, và trả lời cả hai đề xuất.",
+  "hints": [
+    "Liệt kê các phần của hệ thống (tìm chuyến và giữ ghế, luật giá theo nhà xe, hoá đơn, quản trị). Mỗi phần cần quality attribute nào nhất? Phần nào giống nhau, phần nào khác hẳn?",
+    "Phần nào phải nhất quán mạnh với nhau trong cùng transaction? Phần nào nối bất đồng bộ được? Từ đó hệ thống cần bao nhiêu architecture quantum?",
+    "Vấn đề Tết năm ngoái nằm ở đâu: ở cách deploy hay ở database? Microservices có giải được nó không?",
+    "Tính chi phí Lambda cho phần hoá đơn trong tháng thường và tháng Tết, so với hai task Fargate. Rồi làm tương tự cho API đặt vé ở trung bình 8 request/giây, mỗi request 120 ms ở 1 GB. Ngoài tiền, còn rủi ro gì?"
+  ],
+  "solution": "**1. Mỗi phần cần gì**\n\n| Phần | Quality attribute chính | Ghi chú |\n|---|---|---|\n| Tìm chuyến, giữ ghế, thanh toán | Elasticity (×50 dịp Tết), nhất quán ghế | Không bán một ghế cho hai người |\n| Luật giá, đổi và hoàn vé | Khả năng mở rộng theo nhà xe | 40 nhà xe mới trong năm |\n| Hoá đơn điện tử | Chịu lỗi, retry, không vượt 50 request/giây | Được trễ vài phút |\n| Quản trị nhà xe | Đơn giản | Tải nhỏ |\n\n**2. Bao nhiêu quantum**\n\nGiữ ghế, thanh toán và tính giá cần chung transaction hoặc gọi đồng bộ nhau trên mỗi lượt đặt: đó là một quantum. Hoá đơn được trễ, nối bằng hàng đợi được, và có đặc tính khác hẳn (theo đợt, phụ thuộc bên ngoài): quantum thứ hai. Quản trị không có lý do tách. Vậy là hai quantum, không phải mười lăm.\n\n**3. Lõi: modular monolith, chịu Tết bằng cách sửa đúng chỗ nghẽn**\n\nNăm ngoái nghẽn ở database vì truy vấn tìm chuyến, không phải vì cách deploy. Mười lăm service vẫn đọc cùng dữ liệu chuyến và ghế, nên vẫn nghẽn, cộng thêm gọi mạng giữa service. Cách sửa:\n\n- Tìm chuyến chiếm phần lớn 1.500 request/giây và chịu được dữ liệu trễ vài giây: đọc từ cache và read replica; hiển thị \"còn khoảng N ghế\", con số chính xác chỉ kiểm lúc giữ ghế.\n- Giữ ghế 200 lần/giây đi thẳng vào primary bằng `UPDATE` có điều kiện (bài Thiết kế đơn hàng & tồn kho); một PostgreSQL chịu được mức này.\n- App stateless, scale ngang theo lịch trước giờ mở bán; phòng chờ phía trước nếu đỉnh vượt sức (bài Thiết kế flash sale).\n- Gỡ code dính chùm thành module theo miền (tìm chuyến, đặt vé, thanh toán, nhà xe), mỗi module sở hữu bảng của mình, kiểm tra ranh giới tự động. Làm dần trong lúc vẫn chạy, không viết lại 9 tháng.\n\n**4. Luật theo nhà xe: microkernel bên trong monolith**\n\nLõi tính giá giữ luồng chung (giá gốc theo tuyến, ghế, ngày). Phần lớn khác biệt giữa các nhà xe là tham số: giảm theo khung giờ, phí đổi theo số giờ trước khi chạy. Đưa chúng vào bảng luật mà team vận hành tự nhập. Nhà xe có luật không diễn đạt được bằng bảng thì viết plugin theo một interface hẹp, có version, có timeout và test hợp đồng. Mục tiêu đo được: nhà xe chỉ cần cấu hình thì lên trong 1–2 ngày thay vì 2 tuần.\n\n**5. Hoá đơn: serverless sau hàng đợi**\n\nTính chi phí (mỗi lần 2 giây × 0,5 GB = 1 GB-giây):\n\n- Tháng thường: 750.000 lần → khoảng **12,65 USD**.\n- Tháng Tết: 16 × 25.000 + 14 × 120.000 = 2.080.000 lần → khoảng **35,08 USD**.\n- Hai task Fargate 0,5 vCPU/1 GB: khoảng **36 USD** mỗi tháng. Hoà vốn ở khoảng 2,1 triệu lần mỗi tháng, tức trung bình chừng 71.000 hoá đơn/ngày.\n\nTiền gần như ngang nhau, nên tiền không phải lý do chọn. Đáng chú ý: Lambda tính tiền cả 1,8 giây chờ nhà cung cấp; nếu chỉ trả cho 0,2 giây CPU thì tháng thường chỉ khoảng 1,4 USD. Một container chờ nhiều request cùng lúc bằng thread nên không tốn thêm khi chờ.\n\nVẫn chọn Lambda + SQS vì: không có server để vá với một người vận hành bán thời gian; retry và DLQ có sẵn; mùa Tết tự scale. Đặt maximum concurrency = 100 trên event source mapping của SQS (chỉ dùng reserved concurrency thì poller vẫn kéo vượt mức, message bị throttle quay lại queue và có thể vào DLQ sớm): theo Little's law, 100 lần chạy đồng thời × 2 giây mỗi lần là tối đa 50 lần/giây, đúng hạn mức nhà cung cấp; nhà cung cấp chậm đi thì tốc độ tự giảm theo. 120.000 hoá đơn ở 50 lần/giây là 40 phút xử lý, dư sức trong một ngày. SQS giao ít nhất một lần, nên dùng mã vé làm khoá idempotency khi gọi nhà cung cấp; đặt `maxReceiveCount` của DLQ đủ lớn (từ 5 trở lên) và visibility timeout ít nhất 6 lần timeout của function.\n\n**6. Trả lời hai đề xuất**\n\n- A: mục tiêu đúng (gỡ code dính chùm, chịu được Tết), cách làm sai. Microservices giải bài toán nhiều team release độc lập; 7 dev là một team. Viết lại 9 tháng nghĩa là Tết năm nay vẫn chạy hệ thống cũ, và không sửa điểm nghẽn database. Đưa ra điều kiện để tách service sau này thay vì từ chối.\n- B: API đặt vé ở trung bình 8 request/giây, mỗi request 120 ms ở 1 GB, cộng phí HTTP API: khoảng 3,2 USD mỗi triệu request, tức khoảng 66 USD mỗi tháng, so với 72 USD của hai task Fargate. Hoà vốn ở khoảng 9 request/giây trung bình, nên tiền không thắng rõ. Rủi ro thì có: lúc mở bán khoảng 1.500 × 0,12 = 180 execution environment, mỗi cái một connection, cộng cold start Java đúng lúc đông nhất; và vẫn phải viết lại toàn bộ.\n\n**7. ADR và điều kiện xem lại**\n\nGhi ba quyết định: lõi modular monolith; luật nhà xe theo microkernel (bảng luật trước, plugin sau); hoá đơn serverless sau hàng đợi. Điều kiện xem lại: tách module đặt vé thành service riêng khi có từ hai team trở lên cùng sửa nó hoặc cần release khác nhịp; chuyển hoá đơn sang container khi trung bình vượt khoảng 71.000 hoá đơn/ngày quanh năm; xem lại cách giữ ghế nếu đỉnh giữ ghế vượt sức một primary trong load test.",
+  "tradeoffs": [
+    {
+      "option": "A: 15 microservices trên Kubernetes",
+      "pros": [
+        "Scale và deploy riêng từng phần",
+        "Sẵn sàng khi tổ chức lớn lên nhiều team"
+      ],
+      "cons": [
+        "9 tháng viết lại, Tết năm nay vẫn chạy hệ cũ",
+        "Không sửa điểm nghẽn database",
+        "7 dev và 1 người vận hành phải lo 15 service và một cluster"
+      ]
+    },
+    {
+      "option": "B: toàn bộ serverless",
+      "pros": [
+        "Không quản lý server, tự scale",
+        "Rẻ khi tải thấp và thất thường"
+      ],
+      "cons": [
+        "API đặt vé gần điểm hoà vốn, không rẻ hơn rõ",
+        "Connection tới database tăng theo số execution environment",
+        "Cold start đúng lúc mở bán, vẫn phải viết lại toàn bộ"
+      ]
+    },
+    {
+      "option": "Lai: modular monolith + microkernel + serverless cho hoá đơn",
+      "pros": [
+        "Sửa đúng điểm nghẽn, làm dần được trước Tết",
+        "Mỗi kiểu được chọn cho phần có lý do riêng"
+      ],
+      "cons": [
+        "Phải giữ kỷ luật ranh giới module, nếu không lại dính chùm",
+        "Team phải biết vận hành hai mô hình chạy"
+      ]
+    }
+  ]
+}

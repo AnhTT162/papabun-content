@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "architecture-styles",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Chọn kiểu kiến trúc",
+  "summary": "Hai trục để phân loại (chia theo tầng hay theo miền, một hay nhiều đơn vị deploy), architecture quantum, layered, pipeline, microkernel, service-based, microservices, event-driven (broker và mediator), space-based, serverless và cách Lambda tính tiền, điểm hoà vốn với container, chọn theo quality attribute của từng phần và hệ thống lai.",
+  "level": "architect",
+  "order": 9,
+  "minutes": 18,
+  "prerequisites": ["nfr-quality-attributes", "architecture-tradeoffs", "modular-monolith", "microservices-tradeoffs"],
+  "terms": ["architecture-style", "architecture-quantum", "quality-attribute", "layered-architecture", "modular-monolith", "microkernel-architecture", "service-based-architecture", "microservices", "event-driven-architecture", "space-based-architecture", "serverless", "distributed-monolith", "hexagonal-architecture", "conways-law", "architecture-sinkhole", "data-grid", "cold-start", "pgbouncer", "littles-law", "reserved-concurrency", "adr", "strangler-fig", "fitness-function"],
+  "references": [
+    { "title": "Mark Richards, Neal Ford: Fundamentals of Software Architecture (O'Reilly)", "url": "https://www.oreilly.com/library/view/fundamentals-of-software/9781492043447/" },
+    { "title": "Mike Roberts: Serverless Architectures (martinfowler.com)", "url": "https://martinfowler.com/articles/serverless.html" },
+    { "title": "AWS Lambda pricing", "url": "https://aws.amazon.com/lambda/pricing/" },
+    { "title": "Martin Fowler: MonolithFirst", "url": "https://martinfowler.com/bliki/MonolithFirst.html" },
+    { "title": "Neal Ford, Mark Richards và cộng sự: Software Architecture: The Hard Parts (O'Reilly)", "url": "https://www.oreilly.com/library/view/software-architecture-the/9781492086888/" },
+    { "title": "AWS Lambda: configuring maximum concurrency for Amazon SQS event sources", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-scaling.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kiến trúc nào tốt nhất?\" Trả lời \"tuỳ\" chỉ được điểm khi nói ngay tuỳ vào gì: ba quality attribute quan trọng nhất của từng phần, phần nào cần scale hay chịu lỗi riêng (tức cần quantum riêng), có bao nhiêu team và ai vận hành, ngân sách bao nhiêu. Rồi đưa một mặc định có lý do, ví dụ \"modular monolith cho lõi, tách khi có số đo\", kèm điều kiện sẽ đổi ý." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Tách service mà vẫn dùng chung bảng, hoặc gọi đồng bộ nhau trên mọi request, thì vẫn là một quantum: một phần chết hay đổi schema là phần kia hỏng theo, và phải deploy cùng nhau. Đó là distributed monolith, mang giá của hệ phân tán mà không có lợi ích độc lập. Đếm quantum trước khi đếm service." },
+    { "type": "callout", "style": "tip", "markdown": "So serverless với container bằng một phép tính, không bằng cảm giác: chi phí mỗi request của Lambda (GB-giây × thời gian chạy, cộng phí request và API Gateway) nhân với số request mỗi tháng, đặt cạnh số task container tối thiểu chạy suốt tháng. Nhớ rằng Lambda tính cả thời gian chờ I/O và cả pha INIT." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four-styles", "front": "Bốn kiểu tích hợp theo Enterprise Integration Patterns là gì?", "back": "Chuyển file, dùng chung database, gọi trực tiếp (RPC/API) và messaging. Khác nhau ở mức ràng buộc về thời gian, định dạng và quyền sở hữu dữ liệu." },
+    { "id": "shared-db", "front": "Vì sao tránh tích hợp bằng chung database?", "back": "Schema thành hợp đồng mà không ai quản: bên sở hữu không đổi được bảng mà không làm vỡ bên khác, và bên ghi vào bỏ qua luật nghiệp vụ của chủ dữ liệu." },
+    { "id": "esb-failure", "front": "ESB thất bại kiểu kinh điển thế nào?", "back": "Luật nghiệp vụ dồn vào bus, mọi tích hợp deploy chung, một team trung tâm không sở hữu nghiệp vụ thành nút thắt. Đối lập là smart endpoints, dumb pipes." },
+    { "id": "api-led", "front": "Ba lớp của API-led connectivity là gì và bẫy của nó?", "back": "System API bọc hệ thống gốc, process API ghép nghiệp vụ, experience API cho từng kênh. Bẫy: mọi request qua ba bước mạng, và lớp process thành ESB mới." },
+    { "id": "canonical", "front": "Canonical data model giúp gì và hại gì?", "back": "Giảm số bộ dịch từ N(N−1) xuống 2N. Nhưng mô hình chung cho cả công ty phình to, đổi gì cũng cần mọi team; thường tốt hơn là mỗi context công bố ngôn ngữ riêng có version." },
+    { "id": "claim-check", "front": "Claim check là gì?", "back": "Payload lớn để ở object storage, message chỉ mang tham chiếu. Dùng khi payload vượt giới hạn broker (SQS 1 MiB, Kafka mặc định khoảng 1 MB)." },
+    { "id": "file-safe", "front": "Ba việc để chuyển file an toàn?", "back": "Ghi tên tạm rồi đổi tên nguyên tử trong cùng filesystem; trailer hoặc file điều khiển có số bản ghi và checksum; tên duy nhất và ghi lại file đã xử lý để không xử lý trùng." },
+    { "id": "webhook-verify", "front": "Kiểm chữ ký webhook thế nào cho đúng?", "back": "HMAC trên byte gốc của body (không parse rồi serialize lại), kiểm mốc thời gian để chống phát lại, so bằng MessageDigest.isEqual. Rồi ghi inbox unique theo event id và trả 2xx ngay." },
+    { "id": "cdc-acl", "front": "Vì sao CDC từ hệ thống cũ cần anti-corruption layer?", "back": "CDC thô phản ánh bảng nội bộ, mã trạng thái và tên cột của hệ thống cũ. Không dịch thì mọi bên nhận phụ thuộc schema đó, giống như chung database." }
+  ]
+}

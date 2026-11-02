@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "webhook-raw-bytes",
+      "kind": "output",
+      "prompt": "`verify` tính HMAC-SHA256 trên `t + \".\" + body`, so bằng `MessageDigest.isEqual`, và từ chối nếu mốc `t` lệch quá 5 phút so với `now`. `header` được ký từ đúng `body` lúc `sent`. Chương trình in gì?",
+      "code": "byte[] body = \"{\\\"event_id\\\":\\\"evt_901\\\",\\\"status\\\":\\\"DELIVERED\\\"}\".getBytes(UTF_8);\nbyte[] pretty = \"{\\\"event_id\\\": \\\"evt_901\\\", \\\"status\\\": \\\"DELIVERED\\\"}\".getBytes(UTF_8);\n\nSystem.out.println(verify(secret, header, body, sent.plusSeconds(3)));\nSystem.out.println(verify(secret, header, pretty, sent.plusSeconds(3)));\nSystem.out.println(verify(secret, header, body, sent.plus(Duration.ofHours(1))));",
+      "options": [
+        "true, false, false",
+        "true, true, false",
+        "true, true, true",
+        "true, false, true"
+      ],
+      "answer": 0,
+      "explanation": "Lần đầu đúng body, đúng hạn: true. Lần hai cùng nội dung JSON nhưng thêm khoảng trắng: byte khác nên HMAC khác, false; vì vậy phải kiểm trên byte gốc nhận được, không parse rồi serialize lại. Lần ba đúng chữ ký nhưng gửi lại sau 1 giờ, vượt giới hạn 5 phút: false, đó là phần chống phát lại. Đã chạy trên JDK 27."
+    },
+    {
+      "id": "legacy-no-api",
+      "kind": "single",
+      "prompt": "ERP cũ không sửa được code, không có API. Web shop cần tồn kho của ERP lệch tối đa 5 phút. ERP chỉ xuất file tồn kho mỗi đêm. DBA đồng ý cấp quyền chỉ đọc. Cách nào hợp nhất?",
+      "options": [
+        "CDC đọc log giao dịch, qua anti-corruption layer rồi phát event",
+        "Web shop query thẳng bảng tồn kho của ERP mỗi khi khách xem",
+        "Cho ERP xuất toàn bộ file tồn kho mỗi 5 phút thay vì mỗi đêm",
+        "Thêm trigger vào bảng tồn kho của ERP để ghi ra bảng phụ"
+      ],
+      "answer": 0,
+      "explanation": "CDC đọc log giao dịch nên không phải sửa code ERP và nhẹ, đều hơn query lặp lại (LogMiner vẫn chạy trong ERP nên cần đo tải); anti-corruption layer giữ schema nội bộ của ERP không lan sang web. Query thẳng mỗi lượt xem đè tải lên ERP và buộc web vào schema của nó. Xuất toàn bộ 2,6 triệu dòng mỗi 5 phút cũng đè tải lên ERP mà vẫn trễ tới 5 phút cộng thời gian xử lý. Trigger là sửa hệ thống của vendor, điều không được phép."
+    },
+    {
+      "id": "esb-logic",
+      "kind": "single",
+      "prompt": "Công ty có 4 hệ thống cần tích hợp. Tư vấn đề xuất đưa cả luật kiểm tồn và chọn kho giao vào ESB, do team trung tâm 3 người vận hành. Rủi ro lớn nhất là gì?",
+      "options": [
+        "Luật bán hàng nằm ngoài team sở hữu, mỗi lần đổi phải chờ team trung tâm",
+        "ESB không hỗ trợ kết nối Oracle và SFTP nên phải tự viết adapter",
+        "ESB làm latency mỗi message tăng lên vài giây so với gọi trực tiếp",
+        "Bốn hệ thống là quá nhiều để nối point-to-point mà không có trục chung"
+      ],
+      "answer": 0,
+      "explanation": "Luật kiểm tồn và chọn kho đổi theo từng đợt khuyến mãi; đặt chúng trong bus thì team bán hàng mất quyền sửa, team trung tâm thành nút thắt. Các ESB phổ biến đều có connector Oracle và SFTP. Thêm một hop không tới mức vài giây. Bốn hệ thống chỉ cần tối đa 6 kết nối, point-to-point có kỷ luật vẫn quản được."
+    },
+    {
+      "id": "oversell-gap",
+      "kind": "single",
+      "prompt": "Đơn web vào ERP qua thư mục import quét 15 phút một lần; web hiển thị tồn kho lấy từ ERP qua CDC. Một SKU khuyến mãi còn 60 cái, bán 5 cái/phút, ERP vừa quét xong. Cần làm gì để không bán quá?",
+      "options": [
+        "Web giữ reservation, trừ khỏi tồn ERP cho tới khi ERP phản ánh đơn",
+        "Tăng tần suất CDC lên mỗi giây để tồn kho trên web luôn mới nhất",
+        "Đọc file tồn kho mỗi đêm để sửa lại số hiển thị trên web cho đúng",
+        "Khoá SKU trên web mỗi 15 phút trong lúc ERP đang quét file đơn"
+      ],
+      "answer": 0,
+      "explanation": "Trong 15 phút tới ERP chưa trừ đơn web nào, nên tồn ERP vẫn là 60 dù web nhận 75 đơn. CDC nhanh hơn cũng chỉ chuyển nhanh một con số chưa thay đổi. File đêm là đối soát, không chặn được bán quá trong ngày. Reservation của web, xoá khi CDC thấy phiếu xuất tham chiếu tới đơn đó, mới làm số hiển thị đúng."
+    }
+  ]
+}
