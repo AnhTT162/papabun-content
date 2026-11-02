@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "adr-parts", "front": "Mẫu ADR của Michael Nygard gồm những phần nào?", "back": "Tiêu đề, trạng thái, bối cảnh, quyết định, hệ quả. Nên thêm các phương án đã cân nhắc và lý do loại." },
+    { "id": "adr-immutable", "front": "Quyết định trong ADR thay đổi thì làm gì?", "back": "Viết ADR mới ghi \"Supersedes ADR-n\"; ADR cũ chỉ đổi trạng thái thành \"Superseded by\", không sửa nội dung." },
+    { "id": "adr-when", "front": "Khi nào nên viết ADR?", "back": "Quyết định khó hoặc tốn để đảo ngược, ảnh hưởng nhiều team, có tranh luận, hoặc đi ngược chuẩn chung. Không viết cho việc đổi được trong một ngày." },
+    { "id": "consequences", "front": "Phần hệ quả của ADR phải có gì?", "back": "Cả cái giá, không chỉ lợi ích. Ví dụ: mỗi service một database thì báo cáo phải lấy dữ liệu qua CDC." },
+    { "id": "c4-levels", "front": "Bốn mức của C4 là gì?", "back": "System Context (hệ thống, người dùng, hệ thống ngoài), Container (thứ chạy hoặc lưu dữ liệu riêng), Component (nhóm chức năng trong một container), Code." },
+    { "id": "container-vs-component", "front": "Container khác component trong C4 thế nào?", "back": "Container chạy hoặc lưu dữ liệu tách biệt, gọi nhau qua mạng hay tiến trình; component nằm trong một container, gọi nhau trong cùng tiến trình, không deploy riêng." },
+    { "id": "arrow-rules", "front": "Mũi tên trên sơ đồ C4 nên ghi gì?", "back": "Một chiều, nhãn là hành động kèm giao thức, ví dụ \"gửi đơn (JSON/HTTPS)\". Mũi tên hai đầu không nhãn là chưa nghĩ ai gọi ai." },
+    { "id": "sequence-when", "front": "Khi nào cần sequence diagram thay vì sơ đồ container?", "back": "Khi thứ tự, gọi bất đồng bộ, retry, timeout hay nhánh lỗi quan trọng, ví dụ webhook tới trước response của lời gọi tạo giao dịch." },
+    { "id": "arc42", "front": "arc42 dùng thế nào cho hệ thống nhỏ?", "back": "Như checklist 12 mục, chỉ điền các mục cần: mục tiêu, bối cảnh, chiến lược, building block, quyết định (ADR), rủi ro." },
+    { "id": "keep-in-sync", "front": "Giữ sơ đồ kiến trúc khớp code bằng cách nào?", "back": "Docs as code (sơ đồ dạng text, sửa cùng PR), test ArchUnit so sơ đồ component với phụ thuộc thật, so sơ đồ container với service map từ tracing." }
+  ]
+}

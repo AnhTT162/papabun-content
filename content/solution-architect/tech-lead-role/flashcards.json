@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "measure-tech-lead", "front": "Đo một tech lead bằng gì?", "back": "Bằng năng lực của cả team: giao hàng đúng hẹn đã thoả thuận, chất lượng, thời gian chờ review, số người tự dẫn được tính năng, sự cố không lặp lại; không bằng lượng code của chính mình." },
+    { "id": "tl-vs-em", "front": "Tech lead khác engineering manager thế nào?", "back": "Engineering manager lo con người (tuyển, đánh giá, 1:1, nghề nghiệp); tech lead lo hướng kỹ thuật và giao hàng của team. Nhiều nơi gộp hai vai." },
+    { "id": "review-focus", "front": "Code review nên tập trung chặn những gì?", "back": "Thứ đắt nếu sửa sau: API và schema event, migration không đảo ngược, gọi ngoài trong transaction, retry không idempotent, thiếu timeout, bảo mật, concurrency. Format để công cụ lo." },
+    { "id": "review-speed", "front": "Hướng dẫn review của Google đặt tốc độ và cỡ PR thế nào?", "back": "Phản hồi tối đa trong một ngày làm việc; khoảng 100 dòng là hợp lý, 1.000 dòng thường quá lớn để review thật sự." },
+    { "id": "estimate-target-commitment", "front": "Ước lượng, mục tiêu, cam kết khác nhau thế nào?", "back": "Ước lượng là dự đoán có độ bất định; mục tiêu là điều business muốn; cam kết là lời hứa giao một phạm vi vào một ngày. \"Kịp không?\" thường là hỏi cam kết." },
+    { "id": "sum-of-estimates", "front": "Vì sao cộng các ước lượng 50/50 của từng task vẫn hụt?", "back": "Thời gian task lệch phải: trễ được gấp đôi nhưng không sớm hơn 0. Mô phỏng 10 task tổng 26 ngày (σ 0,5): chỉ 28% xong trong 26, trung vị 29, mức 85% là 35." },
+    { "id": "squeezed-date", "front": "Bị ép ngày thì đàm phán biến nào?", "back": "Phạm vi hoặc ngày. Thêm người vào việc đã trễ thường làm trễ thêm (Brooks's law); hạ ước lượng chỉ dời rủi ro tới tuần cuối." },
+    { "id": "spike", "front": "Spike là gì?", "back": "Task có giới hạn thời gian (thường 1–3 ngày) để trả lời một câu hỏi chưa rõ trước khi ước lượng; đầu ra là câu trả lời và ước lượng mới, code thường bỏ đi." },
+    { "id": "bus-factor", "front": "Bus factor là gì và giảm thế nào?", "back": "Số người phải vắng để một vùng không còn ai sửa được. Giảm bằng xoay vòng task và lịch trực, pair ở vùng khó, nhiều người được duyệt mỗi vùng, runbook." },
+    { "id": "incident-role", "front": "Trong sự cố, tech lead nên đóng vai gì?", "back": "Thường là incident commander: điều phối, phân việc, quyết rollback, đảm bảo có người cập nhật cho stakeholder; để người khác cầm terminal debug." }
+  ]
+}

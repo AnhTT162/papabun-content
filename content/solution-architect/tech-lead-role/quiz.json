@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sum-medians",
+      "kind": "single",
+      "prompt": "Team tách một tính năng thành 10 task, cộng các ước lượng 50/50 (trung vị) được 26 ngày-người. Thời gian thật của mỗi task thường bằng 0,6–1,7 lần ước lượng. Khả năng xong trong 26 ngày-người gần với mức nào nhất?",
+      "options": [
+        "Khoảng 30%, vì task trễ bù không hết bằng task sớm",
+        "Khoảng 50%, vì sai số các task bù trừ cho nhau",
+        "Khoảng 70%, vì cộng nhiều task làm sai số nhỏ lại",
+        "Khoảng 90%, vì ước lượng từng task đã có sẵn dự phòng"
+      ],
+      "answer": 0,
+      "explanation": "Thời gian task lệch phải: một task 4 ngày có thể thành 8 ngày nhưng không thể thành âm 4 ngày, nên trung bình của mỗi task lớn hơn trung vị (khoảng 13% với σ = 0,5). Mô phỏng log-normal σ = 0,5 cho 28% khả năng xong trong 26 ngày, trung vị của tổng là 29. Sai số tương đối của tổng có nhỏ lại khi cộng nhiều task, nhưng tổng bị dịch lên trên chứ không xoay quanh 26. Ước lượng 50/50 không chứa dự phòng; nếu team đưa giá trị khả dĩ nhất (đỉnh phân phối, thấp hơn trung vị) thì tổng còn hụt nhiều hơn."
+    },
+    {
+      "id": "review-bottleneck",
+      "kind": "single",
+      "prompt": "PR của team chờ review trung vị 2,5 ngày; 70% PR phải chờ tech lead vì `CODEOWNERS` chỉ có tên tech lead; PR trung bình 900 dòng. Thay đổi nào giải quyết gốc vấn đề tốt nhất?",
+      "options": [
+        "Thêm người duyệt mỗi vùng, quy ước PR nhỏ và trả lời trong 1 ngày",
+        "Tech lead dành 2 giờ mỗi sáng chỉ để duyệt hết hàng đợi PR",
+        "Bỏ yêu cầu review cho PR dưới 900 dòng để giảm hàng đợi",
+        "Gộp các PR nhỏ thành một PR lớn mỗi tuần để duyệt một lần"
+      ],
+      "answer": 0,
+      "explanation": "Nút cổ chai là một người duyệt duy nhất cộng PR quá lớn. Thêm người đủ quyền duyệt cho mỗi vùng (tech lead chỉ bắt buộc ở vùng rủi ro), PR nhỏ và cam kết thời gian phản hồi giải quyết cả hai. Tech lead dành thêm giờ vẫn giữ một người làm nút cổ chai và lấy mất thời gian thiết kế. Bỏ review hay gộp PR lớn hơn làm review mất tác dụng: PR càng lớn càng dễ nhận \"LGTM\" mà không ai đọc kỹ."
+    },
+    {
+      "id": "estimate-vs-commitment",
+      "kind": "single",
+      "prompt": "Product owner hỏi: \"Tính năng này kịp ra mắt sau 4 tuần không?\" Bạn ước lượng khả năng đủ phạm vi trong 4 tuần khoảng 15%. Câu trả lời nào tốt nhất?",
+      "options": [
+        "Đủ phạm vi 4 tuần khó; chọn dời 6 tuần hoặc cắt bớt bản đầu",
+        "Được, team sẽ cố gắng tăng ca để kịp ngày ra mắt đã hứa",
+        "Không được, ước lượng của team là 6 tuần và không thể đổi",
+        "Được nếu thêm hai người từ team khác sang hỗ trợ ngay"
+      ],
+      "answer": 0,
+      "explanation": "Product owner đang hỏi một cam kết trong khi bạn mới có ước lượng với độ bất định. Nói xác suất và đưa phương án đổi phạm vi hoặc ngày để người có quyền chọn. Hứa \"được\" rồi tăng ca chỉ dời rủi ro tới tuần cuối. Từ chối thẳng bỏ qua phương án cắt phạm vi. Thêm người vào việc đang gấp thường không giúp ngắn hạn (Brooks's law): người mới cần được kèm và chia việc lại cũng tốn thời gian."
+    },
+    {
+      "id": "incident-commander",
+      "kind": "single",
+      "prompt": "Sự cố lúc giờ cao điểm: thanh toán lỗi hàng loạt. Bạn là tech lead và là người hiểu module thanh toán nhất. Hai senior đã online. Bạn nên làm gì đầu tiên?",
+      "options": [
+        "Nhận điều phối, giao một senior debug, một người báo CSKH",
+        "Tự debug ngay vì bạn hiểu module này nhanh hơn mọi người",
+        "Đợi tìm ra nguyên nhân gốc rồi mới báo cho stakeholder",
+        "Bảo cả hai senior cùng debug độc lập để tìm ra nhanh hơn"
+      ],
+      "answer": 0,
+      "explanation": "Sự cố cần một người điều phối: phân việc, quyết cầm máu (rollback, tắt tính năng), và đảm bảo có người cập nhật cho chăm sóc khách hàng định kỳ. Bạn vẫn hỗ trợ senior bằng kiến thức của mình, nhưng không cầm terminal. Tự debug thì không ai điều phối và không ai báo khách. Đợi nguyên nhân gốc mới báo làm stakeholder mù thông tin hàng giờ. Hai người debug độc lập không phối hợp dễ cùng thử thay đổi trên production và giẫm chân nhau."
+    },
+    {
+      "id": "delegation",
+      "kind": "single",
+      "prompt": "Phần idempotency của tính năng mới khó và rủi ro. Bạn làm nhanh nhất; một mid trong team chưa từng làm phần này. Cách giao nào tốt nhất cho dài hạn mà vẫn an toàn?",
+      "options": [
+        "Giao cho mid, xem hướng đi sau một ngày, pair ở chỗ khó",
+        "Bạn tự làm vì phần rủi ro không nên giao cho người chưa làm",
+        "Giao cho mid và để họ tự làm hết hai tuần cho chủ động",
+        "Giao cho mid kèm bản thiết kế chi tiết từng class phải viết"
+      ],
+      "answer": 0,
+      "explanation": "Giao bài toán kèm điểm kiểm tra sớm vừa giúp người được giao lớn lên, vừa phát hiện sai hướng sau một ngày chứ không sau hai tuần, và tăng số người hiểu vùng rủi ro (giảm bus factor). Tự làm thì nhanh lần này nhưng giữ bạn là người duy nhất hiểu nó. Để một mình hai tuần là bỏ mặc. Giao lời giải chi tiết từng class biến việc thành gõ theo, người được giao không học cách ra quyết định."
+    }
+  ]
+}

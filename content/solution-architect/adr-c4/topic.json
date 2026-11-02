@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "adr-c4",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "ADR, C4 model & tài liệu kiến trúc",
+  "summary": "Viết ADR có phương án bị loại và cái giá, vòng đời Superseded thay vì sửa; bốn mức C4 và nghĩa thật của container; quy tắc ký hiệu, sơ đồ deployment và sequence; arc42 làm checklist; docs as code và giữ sơ đồ component khớp code bằng ArchUnit.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 14,
+  "prerequisites": ["sa-role", "layered-architecture"],
+  "terms": ["adr", "c4-model", "c4-container", "sequence-diagram", "arc42", "docs-as-code", "design-doc", "archunit", "plantuml", "structurizr", "modular-monolith", "cdc", "stakeholder", "distributed-tracing", "madr", "y-statement", "mermaid"],
+  "references": [
+    { "title": "Michael Nygard: Documenting Architecture Decisions", "url": "https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions" },
+    { "title": "Simon Brown: The C4 model for visualising software architecture", "url": "https://c4model.com/" },
+    { "title": "ArchUnit User Guide: PlantUML Component Diagrams as rules", "url": "https://www.archunit.org/userguide/html/000_Index.html#_plantuml_component_diagrams_as_rules" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Một năm sau, quyết định trong ADR hoá ra sai. Anh làm gì với ADR đó?\" Không sửa hay xoá nó. Viết ADR mới với bối cảnh mới (điều gì đã đổi, số liệu nào cho thấy quyết định cũ không còn đúng), ghi \"Supersedes ADR-7\", rồi chỉ đổi dòng trạng thái của ADR cũ thành \"Superseded by ADR-15\". ADR cũ vẫn giải thích vì sao phần code cũ trông như vậy, và cho thấy quyết định lúc đó hợp lý với thông tin lúc đó." },
+    { "type": "callout", "style": "warning", "markdown": "\"Container\" trong C4 không phải Docker container. Nó là thứ chạy hoặc lưu dữ liệu tách biệt: một Spring Boot app, một SPA chạy trong trình duyệt, một database, một bucket. Ba replica của cùng một service vẫn là một container trên sơ đồ container; số bản và nơi chạy thuộc về sơ đồ deployment." },
+    { "type": "callout", "style": "tip", "markdown": "Khi nhận một hệ thống cũ, viết ngay ADR-0001 \"Ghi lại các quyết định kiến trúc\" và năm sáu ADR hồi tố cho những quyết định đã có (database, cách xác thực, cách chia service), mỗi cái vài đoạn. Hỏi người làm lâu năm vì sao; câu trả lời \"không ai nhớ\" cũng đáng ghi, vì nó cho biết chỗ nào có thể đổi mà không phạm vào lý do cũ." }
+  ]
+}

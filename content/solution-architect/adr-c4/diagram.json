@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ System Context tới Container của hệ thống đặt hàng",
+  "nodes": [
+    { "id": "customer", "label": "Khách hàng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "webapp", "label": "Web app (React SPA)", "kind": "client", "x": 0.85, "y": 0.05 },
+    { "id": "psp", "label": "Cổng thanh toán (ngoài)", "kind": "external", "x": 0.1, "y": 0.5 },
+    { "id": "api", "label": "Order API (Spring Boot)", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "topic", "label": "Topic order-events", "kind": "queue", "x": 0.1, "y": 0.95 },
+    { "id": "db", "label": "Order DB (PostgreSQL)", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "customer-webapp", "from": "customer", "to": "webapp", "label": "đặt hàng (HTTPS)" },
+    { "id": "webapp-api", "from": "webapp", "to": "api", "label": "gọi API (JSON/HTTPS)" },
+    { "id": "api-db", "from": "api", "to": "db", "label": "đọc, ghi (JDBC)" },
+    { "id": "api-psp", "from": "api", "to": "psp", "label": "tạo giao dịch HTTPS" },
+    { "id": "psp-api", "from": "psp", "to": "api", "label": "webhook (HTTPS)" },
+    { "id": "api-topic", "from": "api", "to": "topic", "label": "OrderPlaced (Kafka)" }
+  ],
+  "steps": [
+    { "caption": "Mức 1, System Context, bắt đầu từ người dùng: ai dùng hệ thống và để làm gì.", "show": ["customer"] },
+    { "caption": "Rồi tới các hệ thống ngoài mà ta không sở hữu, như cổng thanh toán. Ở mức này, cả hệ thống đặt hàng chỉ là một hộp ở giữa; sơ đồ này bỏ qua hộp đó và mở thẳng vào bên trong.", "show": ["psp"] },
+    { "caption": "Mức 2, Container, mở hộp đó ra. SPA chạy trong trình duyệt cũng là một container riêng.", "show": ["webapp", "customer-webapp"], "highlight": ["customer-webapp"] },
+    { "caption": "Mỗi mũi tên một chiều, nhãn là hành động kèm giao thức.", "show": ["api", "webapp-api"], "highlight": ["webapp-api"] },
+    { "caption": "Database là một container: nó chạy và lưu dữ liệu tách biệt khỏi API.", "show": ["db", "api-db"], "highlight": ["api-db"] },
+    { "caption": "Hai chiều với cổng thanh toán là hai mũi tên có nhãn riêng: ai gọi ai, gọi để làm gì.", "show": ["api-psp", "psp-api"], "highlight": ["api-psp", "psp-api"] },
+    { "caption": "Topic có chủ sở hữu và schema riêng thì vẽ như một container. Mức 3, Component, sẽ phóng to riêng Order API.", "show": ["topic", "api-topic"], "highlight": ["api-topic"] }
+  ]
+}

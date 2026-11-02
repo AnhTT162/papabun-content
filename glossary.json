@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4"]
     },
     {
       "id": "security-definer",
@@ -4053,7 +4053,7 @@
       "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
       "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
       "related": ["dependency-inversion", "coupling"],
-      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal", "modular-monolith"]
+      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal", "modular-monolith", "adr-c4"]
     },
     {
       "id": "template-method",
@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "adr-c4"]
     },
     {
       "id": "adapter-pattern",
@@ -4389,7 +4389,7 @@
       "meaning": "Chi phí thay đổi tăng thêm do thiết kế hay code hiện tại; như tiền lãi, chỉ phải trả khi code đó bị sửa.",
       "example": "Mỗi lần thêm loại giảm giá phải sửa sáu câu `switch` ở sáu file.",
       "related": ["hotspot", "refactoring"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role"]
     },
     {
       "id": "primitive-obsession",
@@ -4429,7 +4429,7 @@
       "meaning": "Phần code vừa phức tạp vừa bị thay đổi nhiều; nơi trả nợ kỹ thuật mang lại lợi ích lớn nhất.",
       "example": "`PricingService.java` sửa 87 lần trong năm và có cognitive complexity cao nhất repo.",
       "related": ["technical-debt"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role"]
     },
     {
       "id": "mutation-testing",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role"]
     },
     {
       "id": "dora-metrics",
@@ -4469,7 +4469,7 @@
       "meaning": "Bốn chỉ số đo năng lực giao phần mềm của nhóm: lead time cho thay đổi, tần suất deploy, tỉ lệ deploy gây lỗi, thời gian khôi phục sau deploy lỗi.",
       "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
       "related": ["technical-debt"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role"]
     },
     {
       "id": "port",
@@ -5685,7 +5685,7 @@
       "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
       "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
       "related": ["mitigation", "postmortem"],
-      "topics": ["troubleshooting-mindset"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role"]
     },
     {
       "id": "postmortem",
@@ -5693,7 +5693,7 @@
       "meaning": "Bản phân tích sau sự cố: dòng thời gian, ảnh hưởng, nguyên nhân và các yếu tố góp phần, hành động phòng ngừa có người phụ trách. Viết theo tinh thần không đổ lỗi cho cá nhân.",
       "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
       "related": ["runbook"],
-      "topics": ["troubleshooting-mindset"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role"]
     },
     {
       "id": "distributed-tracing",
@@ -5701,7 +5701,7 @@
       "meaning": "Ghi lại đường đi của một request qua nhiều service thành một trace gồm các span có quan hệ cha con, để thấy thời gian mất ở bước nào.",
       "example": "Trace 1,3 giây: gateway → order-api → payment-api (1,2 giây).",
       "related": ["span", "context-propagation", "opentelemetry"],
-      "topics": ["observability", "slow-api"]
+      "topics": ["observability", "slow-api", "adr-c4"]
     },
     {
       "id": "span",
@@ -10093,7 +10093,7 @@
       "meaning": "Người dẫn dắt kỹ thuật của một team, theo nhịp sprint tới vài quý: thiết kế chi tiết, chia việc, review code, gỡ vướng, chịu trách nhiệm chất lượng phần team giao.",
       "example": "Tech lead team Booking chia story cho năm người, review PR thay đổi schema và tự làm PoC phần khoá slot.",
       "related": ["solution-architect"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "tech-lead-role"]
     },
     {
       "id": "stakeholder",
@@ -10101,7 +10101,7 @@
       "meaning": "Người hoặc nhóm có quyền lợi hay ảnh hưởng tới một hệ thống: business, người dùng, team dev, vận hành, bảo mật, pháp lý, tài chính. Mỗi nhóm quan tâm một điều khác nhau.",
       "example": "Tài chính hỏi chi phí mỗi tháng, bộ phận bảo mật hỏi dữ liệu nằm ở vùng nào, team vận hành hỏi ai trực sự cố.",
       "related": ["solution-architect", "raci"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4"]
     },
     {
       "id": "adr",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4"]
     },
     {
       "id": "proof-of-concept",
@@ -10117,7 +10117,7 @@
       "meaning": "Proof of concept: bản thử nhỏ, có thời hạn, để kiểm chứng một giả định kỹ thuật rủi ro trước khi cam kết vào thiết kế.",
       "example": "Hai ngày dựng thử luồng CDC từ PostgreSQL sang kho báo cáo để đo độ trễ trước khi chọn kiến trúc.",
       "related": ["adr"],
-      "topics": ["sa-role", "project-storytelling"]
+      "topics": ["sa-role", "project-storytelling", "tech-lead-role"]
     },
     {
       "id": "rfp",
@@ -10166,6 +10166,190 @@
       "example": "Anh B muốn dùng Redis lock, team chọn ràng buộc database; anh B ghi lý do vào ADR rồi vẫn viết phần cache thật tốt và hẹn điều kiện xem lại.",
       "related": ["behavioral-interview"],
       "topics": ["project-storytelling"]
+    },
+    {
+      "id": "code-review",
+      "term": "Code review",
+      "meaning": "Một người khác đọc thay đổi trước khi merge để bắt lỗi khó sửa sau (thiết kế, API, migration, bảo mật) và chia sẻ hiểu biết về code. Format và style nên để công cụ kiểm.",
+      "example": "Reviewer chặn PR vì gọi cổng thanh toán bên trong `@Transactional`, còn góp ý đặt tên thì ghi `nit:` để tác giả tự quyết.",
+      "related": ["tech-lead"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "design-doc",
+      "term": "Design doc",
+      "meaning": "Tài liệu mô tả thiết kế và kế hoạch cho một thay đổi lớn trước khi code: bối cảnh, mục tiêu và những gì không làm, phương án chọn và bị loại, rủi ro, cách triển khai và rollback.",
+      "example": "Design doc tích hợp ví điện tử 4 trang, team góp ý trong một tuần, sinh ra hai ADR về idempotency và đối soát.",
+      "related": ["adr", "tech-lead"],
+      "topics": ["tech-lead-role", "adr-c4"]
+    },
+    {
+      "id": "spike",
+      "term": "Spike",
+      "meaning": "Task có giới hạn thời gian (thường 1–3 ngày) để trả lời một câu hỏi chưa rõ trước khi ước lượng hay thiết kế. Đầu ra là câu trả lời và ước lượng mới; code thường bỏ đi.",
+      "example": "Spike 2 ngày: API của ví có hoàn tiền một phần không, và webhook ký bằng thuật toán gì.",
+      "related": ["proof-of-concept", "cone-of-uncertainty"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "delegation",
+      "term": "Delegation",
+      "meaning": "Giao việc kèm quyền quyết ở mức rõ ràng (làm theo hướng dẫn, đề xuất rồi làm, làm rồi báo, tự quyết). Giao bài toán chứ không giao lời giải, có điểm kiểm tra sớm.",
+      "example": "Giao phần idempotency cho một mid, xem hướng đi sau một ngày, pair ở chỗ khó.",
+      "related": ["mentoring", "bus-factor"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "mentoring",
+      "term": "Mentoring",
+      "meaning": "Kèm người khác lớn lên về kỹ thuật và cách làm việc: hỏi để họ tự tìm ra, pair khi họ cầm bàn phím, góp ý cụ thể qua review, giao việc vừa sức cao hơn một chút.",
+      "example": "Thay vì sửa hộ, hỏi: \"Nếu provider trả kết quả sau khi mình đã timeout thì sao?\"",
+      "related": ["delegation", "code-review"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "bus-factor",
+      "term": "Bus factor",
+      "meaning": "Số người phải vắng mặt để một vùng của hệ thống không còn ai sửa được. Bằng 1 là rủi ro cho cả giao hàng lẫn trực sự cố.",
+      "example": "Chỉ một người hiểu job đối soát; người đó nghỉ phép đúng tuần file đối soát đổi định dạng.",
+      "related": ["delegation", "runbook"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "incident-commander",
+      "term": "Incident commander",
+      "meaning": "Người điều phối khi có sự cố: phân vai, quyết định cầm máu (rollback, tắt tính năng), đảm bảo có cập nhật định kỳ cho stakeholder. Thường không tự cầm terminal debug.",
+      "example": "IC giao một senior debug, một người cập nhật cho chăm sóc khách hàng mỗi 30 phút, và quyết rollback lúc 14:20.",
+      "related": ["mitigation", "postmortem", "runbook"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "engineering-manager",
+      "term": "Engineering manager",
+      "meaning": "Người quản lý con người trong team kỹ thuật: tuyển, đánh giá, 1:1, lộ trình nghề nghiệp, sức khoẻ của team. Khác tech lead, người lo hướng kỹ thuật và giao hàng.",
+      "example": "Engineering manager xử lý chuyện một kỹ sư muốn chuyển team; tech lead quyết cách tách module thanh toán.",
+      "related": ["tech-lead"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "cone-of-uncertainty",
+      "term": "Cone of uncertainty",
+      "meaning": "Dải sai số của ước lượng thu hẹp dần khi dự án có thêm thông tin. Theo Steve McConnell, khoảng 0,25–4 lần ở giai đoạn ý tưởng và 0,67–1,5 lần khi yêu cầu đã chốt.",
+      "example": "Ước lượng \"3 tháng\" lúc mới có ý tưởng thực chất là \"vài tuần tới một năm\".",
+      "related": ["spike"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "c4-model",
+      "term": "C4 model",
+      "meaning": "Cách vẽ kiến trúc phần mềm của Simon Brown theo bốn mức phóng to: System Context, Container, Component, Code; kèm các sơ đồ bổ trợ như deployment và dynamic.",
+      "example": "Sơ đồ context cho business, sơ đồ container cho team dev và vận hành, sơ đồ component cho người sửa Order API.",
+      "related": ["c4-container", "adr", "arc42"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "c4-container",
+      "term": "Container (C4)",
+      "meaning": "Trong C4, thứ chạy hoặc lưu dữ liệu tách biệt: web app, SPA, API, database, bucket, topic. Không phải Docker container; ba replica của một service vẫn là một container.",
+      "example": "SPA React, Order API và PostgreSQL là ba container; các package trong Order API là component.",
+      "related": ["c4-model"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "sequence-diagram",
+      "term": "Sequence diagram",
+      "meaning": "Sơ đồ thể hiện các bên trao đổi message theo thứ tự thời gian, phân biệt gọi đồng bộ và bất đồng bộ. Hợp cho luồng có retry, timeout, nhánh lỗi.",
+      "example": "Sơ đồ luồng thanh toán vẽ cả nhánh webhook tới trước response của lời gọi tạo giao dịch.",
+      "related": ["c4-model"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "arc42",
+      "term": "arc42",
+      "meaning": "Khung tài liệu kiến trúc 12 mục: mục tiêu, ràng buộc, bối cảnh, chiến lược, building block, runtime, deployment, khái niệm xuyên suốt, quyết định, yêu cầu chất lượng, rủi ro, glossary.",
+      "example": "Hệ thống nhỏ chỉ điền mục 1, 3, 4, 5, 9, 11; mục 9 trỏ tới thư mục ADR.",
+      "related": ["c4-model", "adr"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "docs-as-code",
+      "term": "Docs as code",
+      "meaning": "Viết tài liệu như code: Markdown và sơ đồ dạng text trong repo, review trong pull request, render và kiểm trong CI, sửa cùng PR với thay đổi code.",
+      "example": "PR thêm package `payment` cập nhật luôn file `order-components.puml`, và test ArchUnit kiểm hai thứ khớp nhau.",
+      "related": ["plantuml", "structurizr", "adr"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "plantuml",
+      "term": "PlantUML",
+      "meaning": "Công cụ vẽ sơ đồ từ text (sequence, component, deployment...). Thư viện C4-PlantUML thêm ký hiệu C4; ArchUnit đọc được sơ đồ component của PlantUML để kiểm code.",
+      "example": "`[API] <<..api..>>` khai báo component API gồm các class trong package khớp `..api..`.",
+      "related": ["docs-as-code", "archunit"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "structurizr",
+      "term": "Structurizr",
+      "meaning": "Công cụ của Simon Brown cho C4: Structurizr DSL khai báo model (phần tử, quan hệ) một lần rồi sinh nhiều view (context, container, deployment).",
+      "example": "Đổi tên container `Order API` trong model là mọi sơ đồ sinh ra đều đổi theo.",
+      "related": ["c4-model", "docs-as-code"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "story-points",
+      "term": "Story point",
+      "meaning": "Đơn vị đo tương đối độ lớn của task (công sức, độ phức tạp, độ bất định), đổi ra thời gian qua velocity của chính team đó. Không so được giữa các team.",
+      "example": "Task 5 point của team A không bằng task 5 point của team B; velocity 30 point/sprint chỉ có nghĩa với team A.",
+      "related": ["cone-of-uncertainty"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "brooks-law",
+      "term": "Brooks's law",
+      "meaning": "Nhận xét của Fred Brooks: thêm người vào một dự án phần mềm đã trễ làm nó trễ thêm, vì người mới cần được hướng dẫn và việc chia lại, phối hợp tốn thêm thời gian.",
+      "example": "Hai tuần trước hạn thêm hai người từ team khác; senior mất cả tuần kèm họ nên tính năng còn trễ hơn.",
+      "related": ["tech-lead"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "codeowners",
+      "term": "CODEOWNERS",
+      "meaning": "File trong repo (GitHub, GitLab) gán người hoặc nhóm chịu trách nhiệm duyệt cho từng đường dẫn; PR chạm vào đường dẫn đó cần họ duyệt.",
+      "example": "`/src/ledger/ @payments-seniors` thay vì `* @tech-lead` cho cả repo.",
+      "related": ["code-review"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "staff-engineer",
+      "term": "Staff engineer",
+      "meaning": "Kỹ sư ở bậc trên senior, chịu trách nhiệm một mảng kỹ thuật xuyên nhiều team mà không quản lý người; có các kiểu như tech lead, architect, solver.",
+      "example": "Staff engineer dẫn việc chuẩn hoá cách gọi giữa các service cho năm team.",
+      "related": ["tech-lead", "solution-architect"],
+      "topics": ["tech-lead-role"]
+    },
+    {
+      "id": "madr",
+      "term": "MADR",
+      "meaning": "Markdown Architectural Decision Records: một mẫu ADR mở rộng, thêm decision drivers, considered options và ưu nhược của từng phương án.",
+      "example": "Mục `Considered Options` liệt kê polling, CDC, dual write, kèm lý do loại hai cái sau.",
+      "related": ["adr", "y-statement"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "y-statement",
+      "term": "Y-statement",
+      "meaning": "Cách viết một quyết định trong một câu (Olaf Zimmermann): trong bối cảnh X, đối mặt Y, chọn Z không chọn W, để đạt Q, chấp nhận giá phải trả.",
+      "example": "Trong bối cảnh báo cáo đọc từ DB chính, đối mặt tải đọc nặng, chọn CDC sang kho riêng thay vì read replica, để tách tải, chấp nhận trễ vài phút.",
+      "related": ["adr", "madr"],
+      "topics": ["adr-c4"]
+    },
+    {
+      "id": "mermaid",
+      "term": "Mermaid",
+      "meaning": "Công cụ vẽ sơ đồ từ text, được GitHub và GitLab render thẳng trong Markdown; có cú pháp sequence, flowchart và C4 (tương thích C4-PlantUML, còn thiếu một số tính năng).",
+      "example": "Khối ```mermaid sequenceDiagram``` trong README hiện thành sơ đồ trên GitHub.",
+      "related": ["plantuml", "docs-as-code"],
+      "topics": ["adr-c4"]
     }
   ]
 }

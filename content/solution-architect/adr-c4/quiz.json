@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "archunit-not-contained",
+      "kind": "output",
+      "prompt": "Sơ đồ PlantUML chỉ có ba component `API`, `Domain`, `Persistence`. Code có thêm package `com.shop.order.payment` với `PspClient`, được `OrderController` (package `api`) dùng qua field, tham số constructor và một lời gọi method. Rule sau báo gì?",
+      "code": "classes().should(adhereToPlantUmlDiagram(\n        Path.of(\"docs/architecture/order-components.puml\"),\n        consideringOnlyDependenciesInDiagram()));",
+      "options": [
+        "1 vi phạm: `PspClient` không thuộc component nào",
+        "Đạt, vì `payment` không có trong sơ đồ nên bỏ qua",
+        "3 vi phạm: các phụ thuộc từ controller tới `PspClient`",
+        "4 vi phạm: `PspClient` ngoài sơ đồ và 3 phụ thuộc"
+      ],
+      "answer": 0,
+      "explanation": "Không có `that()` nên mọi class được import đều bị xét; `PspClient` không khớp stereotype nào nên bị báo \"is not contained in any component\" (đã chạy với ArchUnit 1.5.1). Nhưng `consideringOnlyDependenciesInDiagram()` bỏ qua phụ thuộc tới class không thuộc component nào, nên ba phụ thuộc từ `OrderController` không bị báo. Đổi sang `consideringOnlyDependenciesInAnyPackage(\"com.shop..\")` thì ra 4 vi phạm. Thêm `that().resideInAnyPackage(...)` chỉ gồm ba package của sơ đồ thì test đạt, đúng cái bẫy trong lab."
+    },
+    {
+      "id": "superseded",
+      "kind": "single",
+      "prompt": "ADR-7 (đã Accepted) chọn polling database để đồng bộ dữ liệu sang hệ báo cáo. Một năm sau team chuyển sang CDC. Cách cập nhật tài liệu nào đúng?",
+      "options": [
+        "Viết ADR mới thay thế ADR-7, đổi trạng thái ADR-7 thành Superseded",
+        "Sửa phần quyết định của ADR-7 thành CDC và ghi ngày sửa ở cuối",
+        "Xoá ADR-7 khỏi repo để người mới không đọc nhầm quyết định cũ",
+        "Giữ ADR-7, ghi thêm một đoạn CDC vào phần hệ quả của ADR-7"
+      ],
+      "answer": 0,
+      "explanation": "ADR là bản ghi theo thời gian: ADR mới nêu bối cảnh mới và lý do đổi, ghi \"Supersedes ADR-7\"; ADR-7 chỉ đổi dòng trạng thái. Sửa hay xoá ADR cũ làm mất lý do của quyết định lúc đó, trong khi phần code cũ vẫn mang dấu vết của nó. Ghi thêm vào phần hệ quả trộn hai quyết định vào một bản ghi, và trạng thái của ADR-7 vẫn nói nó đang có hiệu lực."
+    },
+    {
+      "id": "c4-container",
+      "kind": "single",
+      "prompt": "Hệ thống gồm một SPA React, một Spring Boot API chạy 3 replica trên Kubernetes, một PostgreSQL. API chia thành các package `ordering`, `billing`, `catalog`. Sơ đồ mức Container có bao nhiêu container?",
+      "options": [
+        "3: SPA, API, PostgreSQL",
+        "5: SPA, 3 replica API, PostgreSQL",
+        "5: SPA, ordering, billing, catalog, PostgreSQL",
+        "2: API và PostgreSQL, SPA chỉ là giao diện"
+      ],
+      "answer": 0,
+      "explanation": "Container là thứ chạy hoặc lưu dữ liệu tách biệt. SPA chạy trong trình duyệt nên là một container riêng; API là một container dù chạy 3 replica (số bản thuộc sơ đồ deployment); PostgreSQL là một container. Ba package trong API là component, thuộc sơ đồ mức Component của container API."
+    },
+    {
+      "id": "when-adr",
+      "kind": "single",
+      "prompt": "Quyết định nào đáng viết ADR nhất?",
+      "options": [
+        "Mỗi service một database riêng thay vì một database chung",
+        "Dùng Lombok cho DTO thay vì viết getter và setter bằng tay",
+        "Đặt tên endpoint theo danh từ số nhiều như `/orders`",
+        "Dùng AssertJ thay vì assert của JUnit trong các test mới"
+      ],
+      "answer": 0,
+      "explanation": "ADR dành cho quyết định khó đảo ngược hoặc ảnh hưởng nhiều team. Tách database theo service đổi cách làm báo cáo, transaction xuyên service, migration dữ liệu, và rất tốn để quay lại. Lombok, AssertJ là lựa chọn trong team, đổi được dần dần. Quy ước đặt tên endpoint nên nằm trong hướng dẫn API chung, không cần một ADR riêng."
+    },
+    {
+      "id": "broker-drawing",
+      "kind": "single",
+      "prompt": "Sơ đồ container của bạn vẽ một hộp \"Kafka\" ở giữa, tám service đều có mũi tên nối vào hộp đó. Vấn đề chính của cách vẽ này là gì?",
+      "options": [
+        "Không thấy service nào phụ thuộc vào event của service nào",
+        "Kafka chỉ được vẽ ở mức System Context như hệ thống ngoài",
+        "Kafka là hạ tầng nên chỉ được vẽ trên sơ đồ deployment",
+        "Mũi tên vào Kafka phải là hai chiều vì có cả gửi lẫn nhận"
+      ],
+      "answer": 0,
+      "explanation": "Mọi service nối vào một hộp chung nên quan hệ thật (ai phát `OrderPlaced`, ai tiêu thụ nó) biến mất, trong khi đó là thông tin người đọc cần nhất. Trang C4 về queue và topic coi hộp broker chung là cách vẽ sai: broker không phải container, mỗi topic mới là nơi lưu dữ liệu. Hai cách đúng: vẽ từng topic như một container có chủ sở hữu, hoặc vẽ mũi tên thẳng producer tới consumer với nhãn \"phát `OrderPlaced` qua Kafka\". Kafka do chính team vận hành là một phần bên trong hệ thống, không phải hệ thống ngoài ở mức context. Mũi tên hai chiều làm sơ đồ khó đọc hơn, không phải cách sửa."
+    }
+  ]
+}

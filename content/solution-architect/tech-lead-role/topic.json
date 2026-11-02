@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "tech-lead-role",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Vai trò Tech Lead",
+  "summary": "Tech lead chịu trách nhiệm kết quả kỹ thuật của team: code review chặn đúng thứ đắt, ước lượng bằng khoảng và xác suất, giao việc và mentoring để giảm bus factor, điều phối sự cố thay vì tự debug, và giành capacity cho nợ kỹ thuật.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 14,
+  "prerequisites": ["sa-role"],
+  "terms": ["tech-lead", "code-review", "design-doc", "adr", "spike", "delegation", "mentoring", "bus-factor", "incident-commander", "technical-debt", "engineering-manager", "feature-flag", "cone-of-uncertainty", "runbook", "hotspot", "dora-metrics", "postmortem", "proof-of-concept", "stakeholder", "codeowners", "story-points", "brooks-law", "staff-engineer"],
+  "references": [
+    { "title": "Google Engineering Practices: Speed of Code Reviews", "url": "https://google.github.io/eng-practices/review/reviewer/speed.html" },
+    { "title": "Google SRE Book: Managing Incidents", "url": "https://sre.google/sre-book/managing-incidents/" },
+    { "title": "Construx (Steve McConnell): The Cone of Uncertainty", "url": "https://www.construx.com/books/the-cone-of-uncertainty/" },
+    { "title": "Google Engineering Practices: Small CLs", "url": "https://google.github.io/eng-practices/review/developer/small-cls.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Product owner nói ước lượng 6 tuần của anh dài quá, phải xong trong 4 tuần. Anh làm gì?\" Đừng hạ con số cho vừa lòng, cũng đừng chỉ nói \"không được\". Nói xác suất của mỗi mốc (\"4 tuần đủ phạm vi khoảng 15%\"), đưa hai ba phương án đổi phạm vi hoặc ngày, nói rõ phần nào không được cắt vì rủi ro (bảo mật, mất tiền), để người có quyền chọn, rồi ghi lại lựa chọn và ước lượng lại sau mỗi mốc." },
+    { "type": "callout", "style": "warning", "markdown": "Tech lead \"anh hùng\" trông rất năng suất: làm phần khó nhất, duyệt mọi PR, sửa mọi sự cố lúc 2 giờ sáng. Dấu hiệu nó đang hại team: PR chờ nhiều ngày, người khác không tự quyết được gì, chỉ một người hiểu các vùng quan trọng, và tech lead nghỉ một tuần là giao hàng dừng." },
+    { "type": "callout", "style": "tip", "markdown": "Ngay tuần đầu nhận team, lấy ba số làm mốc: thời gian chờ review trung vị, tỉ lệ PR phải qua tay bạn, và mỗi vùng quan trọng có mấy người sửa được. Đo lại sau một quý. Đây cũng là câu chuyện có số liệu tốt cho phỏng vấn." }
+  ]
+}
