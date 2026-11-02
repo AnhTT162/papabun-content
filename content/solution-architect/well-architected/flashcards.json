@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "six-pillars", "front": "Sáu trụ cột của AWS Well-Architected?", "back": "Operational excellence, security, reliability, performance efficiency, cost optimization, sustainability." },
+    { "id": "sustainability-added", "front": "Trụ cột sustainability được thêm vào Well-Architected khi nào?", "back": "Cuối năm 2021, thành trụ cột thứ sáu." },
+    { "id": "review-not-audit", "front": "AWS mô tả một buổi Well-Architected review thế nào?", "back": "Một cuộc trao đổi về các quyết định kiến trúc, không phải audit; nhẹ, tính bằng giờ chứ không phải ngày." },
+    { "id": "when-review", "front": "Nên review Well-Architected vào lúc nào?", "back": "Sớm trong thiết kế để tránh quyết định khó đảo ngược, trước khi lên production, và cập nhật khi kiến trúc đổi lớn." },
+    { "id": "hri-mri", "front": "High risk issue khác medium risk issue thế nào?", "back": "HRI là lựa chọn kiến trúc hoặc vận hành có thể gây tác động tiêu cực đáng kể cho business; MRI cũng có hại nhưng ở mức nhỏ hơn." },
+    { "id": "wa-lens", "front": "Lens trong Well-Architected Tool là gì?", "back": "Bộ câu hỏi, best practice và improvement plan cho một loại workload. Lens chính thức nằm trong Lens Catalog; tổ chức có thể tự viết custom lens." },
+    { "id": "milestone", "front": "Milestone trong Well-Architected Tool dùng để làm gì?", "back": "Lưu trạng thái review tại một thời điểm để so số rủi ro và tiến độ cải thiện giữa các lần review." },
+    { "id": "rel-principles", "front": "Năm design principle của trụ cột reliability?", "back": "Tự phục hồi khi lỗi, diễn tập khôi phục, scale ngang để tăng availability tổng, ngừng đoán capacity, quản lý thay đổi bằng tự động hoá." },
+    { "id": "shared-sustainability", "front": "Trách nhiệm về sustainability chia giữa AWS và khách hàng thế nào?", "back": "AWS lo sustainability của cloud (hạ tầng, năng lượng); khách hàng lo sustainability trong cloud (tận dụng tài nguyên, giảm thứ phải chạy)." },
+    { "id": "azure-waf", "front": "Azure Well-Architected Framework có bao nhiêu trụ cột?", "back": "Năm: reliability, security, cost optimization, operational excellence, performance efficiency; không có sustainability như một trụ cột riêng." },
+    { "id": "gcp-waf", "front": "Google Cloud Well-Architected Framework có bao nhiêu trụ cột?", "back": "Sáu: operational excellence; security, privacy and compliance; reliability; cost optimization; performance optimization; sustainability." }
+  ]
+}

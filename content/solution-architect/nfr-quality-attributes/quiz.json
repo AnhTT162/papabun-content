@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "chain-availability",
+      "kind": "single",
+      "prompt": "Request tạo đơn đi đồng bộ qua bốn thành phần: gateway 99,99%, checkout 99,95%, inventory 99,95%, database 99,95%. Business muốn 99,95% cho tạo đơn. Nhận định nào đúng?",
+      "options": [
+        "Không đạt: chuỗi chỉ khoảng 99,84%, phải đổi kiến trúc",
+        "Đạt: availability của chuỗi bằng thành phần yếu nhất",
+        "Đạt, nếu mỗi service đều có health check xanh 99,95%",
+        "Không đạt, nhưng tối ưu code checkout là bù đủ phần thiếu"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi thành phần đều phải chạy thì request mới thành công, nên availability của chuỗi là tích: 0,9999 × 0,9995³ ≈ 99,84%, khoảng 69 phút ngừng mỗi 30 ngày so với 21,6 phút cho phép. Thành phần yếu nhất chỉ là cận trên, không phải kết quả. Health check xanh từng service vẫn là các thành phần nối tiếp, và còn có thể xanh trong khi request lỗi. Khoảng cách gấp ba lần ngân sách không lấp được bằng tối ưu code; phải bỏ bớt dependency đồng bộ, chạy dự phòng, hoặc thương lượng lại mục tiêu."
+    },
+    {
+      "id": "best-nfr",
+      "kind": "single",
+      "prompt": "Câu NFR nào kiểm được tốt nhất?",
+      "options": [
+        "Ở 320 đơn/giây trong 15 phút, p99 tạo đơn dưới 800 ms, lỗi dưới 0,5%",
+        "Latency trung bình của API tạo đơn dưới 300 ms trên môi trường staging",
+        "Trung bình p99 của các pod checkout dưới 800 ms trong giờ cao điểm",
+        "Chịu được 10.000 người dùng đồng thời mà không bị chậm đi đáng kể"
+      ],
+      "answer": 0,
+      "explanation": "Câu đúng có tải, thời gian, percentile, ngưỡng lỗi: chạy load test là biết đạt hay không. Trung bình che phần đuôi, và staging không có tải cụ thể. Trung bình p99 của các pod không phải p99 của dịch vụ; phải gộp histogram rồi mới tính. \"10.000 người dùng đồng thời\" không đổi thẳng ra request mỗi giây được, và \"đáng kể\" không đo được."
+    },
+    {
+      "id": "utility-tree-focus",
+      "kind": "single",
+      "prompt": "Trong utility tree, một scenario được chấm (quan trọng H, khó L): \"không bao giờ lưu số thẻ, chỉ lưu token của cổng thanh toán\". Nên đối xử với nó thế nào?",
+      "options": [
+        "Bắt buộc làm theo cách quen thuộc, không dồn PoC vào nó",
+        "Dồn PoC vào nó trước tiên vì bảo mật quan trọng nhất",
+        "Không cần ghi thành NFR vì team đã biết sẵn cách làm",
+        "Để sau go-live vì dễ đạt, làm lúc nào cũng kịp được"
+      ],
+      "answer": 0,
+      "explanation": "(H, L) nghĩa là business rất cần nhưng đã có cách làm chuẩn (trang thanh toán của cổng, tokenization). Vẫn ghi và kiểm, vì quan trọng; không ghi thì không ai kiểm, và dễ đạt không có nghĩa là để sau go-live được. Công sức thiết kế và PoC dành cho các lá (H, H). Ứng viên để thương lượng bỏ là các lá (L, H)."
+    },
+    {
+      "id": "nfr-tradeoff",
+      "kind": "single",
+      "prompt": "Team đề xuất tách checkout thành năm microservice gọi nhau đồng bộ để \"dễ thêm phương thức thanh toán\". NFR nào bị ảnh hưởng xấu nhiều nhất, nếu không thiết kế thêm?",
+      "options": [
+        "Availability và latency, vì thêm các chặng gọi nối tiếp",
+        "Throughput, vì các service phải chia nhau tài nguyên chung",
+        "Modifiability, vì mỗi service phải giữ một bản logic riêng",
+        "Không NFR nào, vì mỗi service đều scale được độc lập"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi chặng đồng bộ nhân thêm một hệ số availability nhỏ hơn 1 và cộng thêm latency mạng, nên đường tạo đơn yếu đi dù từng service tốt. Modifiability chính là thứ việc tách nhắm tới (nếu ranh giới đúng). Throughput thường tăng được vì scale riêng từng service, nhưng scale không cứu availability của chuỗi. Đây là đánh đổi giữa các quality attribute, cần ghi vào ADR."
+    }
+  ]
+}

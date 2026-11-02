@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "first-fix",
+      "kind": "single",
+      "prompt": "Review phát hiện: root account không MFA, access key admin nằm trong repo, database Single-AZ, hạ tầng tạo bằng click, dev chạy 24/7. Team có hai người. Việc nào nên làm trong tuần đầu?",
+      "options": [
+        "Bật MFA cho root, thay key lộ, cấp danh tính riêng mỗi người",
+        "Viết hạ tầng bằng Terraform trước, rồi sửa mọi thứ qua code",
+        "Bật Multi-AZ cho database vì mất dữ liệu là rủi ro lớn nhất",
+        "Tắt dev ngoài giờ trước, lấy tiền tiết kiệm trả cho phần khác"
+      ],
+      "answer": 0,
+      "explanation": "Làm trước việc rẻ mà giảm rủi ro lớn nhất: key admin bị lộ và root không MFA có thể làm mất cả tài khoản, kể cả database và backup, trong khi sửa chỉ mất vài giờ. Multi-AZ quan trọng nhưng không bảo vệ khỏi người có key admin xoá database. IaC rất đáng làm nhưng mất nhiều tuần, trong lúc đó rủi ro vẫn mở. Tiết kiệm chi phí đúng nhưng không gấp bằng."
+    },
+    {
+      "id": "backup-evidence",
+      "kind": "single",
+      "prompt": "Trong buổi review, team trả lời: \"Có backup tự động hằng ngày, giữ 7 ngày.\" Câu hỏi tiếp theo nào hữu ích nhất?",
+      "options": [
+        "Lần cuối restore thử là khi nào và mất bao lâu?",
+        "Backup lưu ở lớp lưu trữ nào, tốn bao nhiêu tiền?",
+        "Có nên tăng thời gian giữ backup lên 35 ngày không?",
+        "Backup có được mã hoá bằng khoá KMS riêng không?"
+      ],
+      "answer": 0,
+      "explanation": "Backup chưa restore thử thì không biết có dùng được không, và RTO chỉ là con số đoán. Reliability có design principle \"test recovery procedures\" đúng vì lý do này. Các câu khác có ích nhưng không trả lời câu hỏi quan trọng nhất: có khôi phục được không, trong bao lâu."
+    },
+    {
+      "id": "pillar-tradeoff",
+      "kind": "single",
+      "prompt": "Bật Multi-AZ cho RDS (dạng một instance chính và một standby) gần gấp đôi tiền instance và storage. Instance hiện tại 8 vCPU, CPU trung bình 8%, đỉnh 25%. Cách xử lý hợp lý nhất?",
+      "options": [
+        "Kiểm đỉnh CPU và bộ nhớ, giảm một cỡ rồi bật Multi-AZ",
+        "Giữ Single-AZ, thêm read replica làm bản dự phòng rẻ hơn",
+        "Giữ Single-AZ, chuyển backup sang mỗi giờ là đủ an toàn",
+        "Bật Multi-AZ rồi cho job báo cáo đọc từ bản standby"
+      ],
+      "answer": 0,
+      "explanation": "Không trụ cột nào luôn thắng; quyết định theo NFR của workload. Ở đây tài nguyên dư nên giảm cỡ (sau khi kiểm đỉnh và bộ nhớ) bù phần lớn chi phí standby. Read replica sao chép bất đồng bộ và phải promote, không phải failover tự động; backup mỗi giờ thì restore lâu và có thể mất tới một giờ dữ liệu. Standby của Multi-AZ dạng một instance không nhận truy vấn đọc (dạng Multi-AZ DB cluster mới có standby đọc được)."
+    },
+    {
+      "id": "review-style",
+      "kind": "single",
+      "prompt": "Một công ty giao cho đội kiến trúc review mọi workload theo Well-Architected, chấm điểm từng team và xếp hạng hằng quý. Vấn đề lớn nhất của cách này là gì?",
+      "options": [
+        "Thành audit, team trả lời cho đẹp thay vì nêu rủi ro thật",
+        "Hằng quý là quá thưa, phải review lại ở mỗi sprint mới đủ",
+        "Review lại là thừa, chỉ cần review một lần trước go-live",
+        "Đội kiến trúc không xây hệ thống nên không thể review được"
+      ],
+      "answer": 0,
+      "explanation": "AWS mô tả review là cuộc trao đổi, không phải cơ chế audit. Khi có điểm và xếp hạng, team có động cơ đánh dấu ô thay vì nói ra rủi ro, và review mất giá trị. Tần suất nên theo thay đổi kiến trúc, không theo sprint, nhưng cũng không chỉ một lần. Người ngoài team review được, miễn là có người xây và vận hành workload trong buổi review."
+    }
+  ]
+}

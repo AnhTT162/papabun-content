@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "nfr-vs-constraint", "front": "Quality attribute khác constraint thế nào?", "back": "Quality attribute là mức tốt cần đạt, dùng để so phương án (p99, availability). Constraint là quyết định có sẵn, không thương lượng (cloud đã chọn, dữ liệu ở trong nước, hạn ra mắt)." },
+    { "id": "qas-six-parts", "front": "Sáu phần của một quality attribute scenario?", "back": "Source, stimulus, environment, artifact, response, response measure: ai gây ra, sự kiện gì, trong điều kiện nào, tác động lên đâu, hệ thống làm gì, đo bằng số nào." },
+    { "id": "utility-tree-rank", "front": "Lá của utility tree được chấm theo hai trục nào?", "back": "Mức quan trọng với business và độ khó đạt về kiến trúc (H/M/L). Cặp (H, H) là nơi dồn công sức thiết kế và PoC." },
+    { "id": "serial-availability", "front": "Availability của chuỗi gọi đồng bộ tính thế nào?", "back": "Là tích availability của các thành phần (giả định lỗi độc lập). Năm thành phần 99,9% chỉ còn khoảng 99,5%." },
+    { "id": "nines-minutes", "front": "99,9%, 99,95%, 99,99% cho phép ngừng bao lâu mỗi 30 ngày?", "back": "Khoảng 43,2 phút, 21,6 phút và 4,3 phút." },
+    { "id": "iso-25010-2023", "front": "ISO/IEC 25010:2023 có mấy đặc tính chất lượng sản phẩm?", "back": "Chín: functional suitability, performance efficiency, compatibility, interaction capability, reliability, security, maintainability, flexibility, safety." },
+    { "id": "asr", "front": "Architecturally significant requirement là gì?", "back": "Yêu cầu ảnh hưởng mạnh tới cấu trúc và đắt nếu đổi sau, như dữ liệu phải ở trong một vùng hay chịu được mất một region. Mỗi cái nên dẫn tới ít nhất một ADR." },
+    { "id": "users-to-rps", "front": "Vì sao \"chịu 10.000 người dùng\" không phải NFR tốt?", "back": "Không rõ là tài khoản, người online hay request mỗi giây. Đổi sang request mỗi giây lúc đỉnh rồi dùng Little's law ra số request xử lý cùng lúc." },
+    { "id": "availability-definition", "front": "Availability theo thời gian khác theo request thế nào?", "back": "Theo thời gian đếm phút health check xanh; theo request đếm tỉ lệ request thành công. Lỗi 30% request mà health check vẫn xanh thì theo thời gian vẫn là 100%." }
+  ]
+}

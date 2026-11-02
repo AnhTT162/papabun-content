@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "well-architected",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "AWS Well-Architected & 6 trụ cột",
+  "summary": "Sáu trụ cột và các design principle của AWS Well-Architected, high risk issue hay gặp ở từng trụ cột, cách chạy một buổi review như cuộc trao đổi chứ không phải audit, Well-Architected Tool với lens và milestone, đánh đổi giữa các trụ cột, và so với framework của Azure, Google Cloud.",
+  "level": "senior",
+  "order": 6,
+  "minutes": 15,
+  "prerequisites": ["nfr-quality-attributes"],
+  "terms": ["well-architected-framework", "wa-workload", "high-risk-issue", "infrastructure-as-code", "least-privilege", "well-architected-tool", "runbook", "postmortem", "shared-responsibility-model", "wa-lens", "availability-zone", "rpo-rto", "pitr", "read-replica"],
+  "references": [
+    { "title": "AWS Well-Architected Framework: The pillars of the framework", "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/the-pillars-of-the-framework.html" },
+    { "title": "AWS Well-Architected Framework: The review process", "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/the-review-process.html" },
+    { "title": "AWS Well-Architected Tool User Guide: Lenses", "url": "https://docs.aws.amazon.com/wellarchitected/latest/userguide/lenses.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Review ra 30 high risk issue, team chỉ có hai người. Anh làm gì?\" Không sửa theo thứ tự trụ cột hay thứ tự câu hỏi. Xếp theo tác động nếu xảy ra và công sức để sửa: những việc vài giờ mà chặn rủi ro mất cả tài khoản hay mất dữ liệu (MFA cho root, thu hồi key lộ, thử restore) làm ngay tuần đầu. Việc lớn chia thành mốc có người phụ trách. Rủi ro chưa sửa thì ghi là đã chấp nhận, kèm lý do và người quyết định, thay vì để im." },
+    { "type": "callout", "style": "warning", "markdown": "Trả lời \"có\" cho câu hỏi về backup không có nghĩa là khôi phục được. Hỏi bằng chứng: lần cuối restore thử là khi nào, mất bao lâu, ai làm. Review mà chỉ đánh dấu ô sẽ cho kết quả xanh đẹp và một hệ thống vẫn sập như cũ." },
+    { "type": "callout", "style": "tip", "markdown": "Dùng custom lens để đưa chuẩn nội bộ vào review: bắt buộc SSO, bắt buộc tag chi phí, bắt buộc runbook cho mỗi alarm. Khi đó mọi team được review theo cùng một bộ câu hỏi, và kết quả so được giữa các workload." }
+  ]
+}

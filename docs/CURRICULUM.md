@@ -412,8 +412,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 2 | `project-storytelling` | ✚ Kể về dự án & câu hỏi hành vi | junior | Kể dự án theo bối cảnh → vai trò → quyết định → kết quả, STAR, câu hỏi về xung đột và thất bại | L Sc | ✅ |
 | 3 | `tech-lead-role` | ✚ Vai trò Tech Lead | mid | Code review, mentoring, ước lượng, giao việc, dẫn dắt sự cố, ưu tiên nợ kỹ thuật | A L Sc | ✅ |
 | 4 | `adr-c4` | ADR, C4 model & tài liệu kiến trúc | mid | Viết ADR, các mức C4, arc42, sequence diagram | L D B | ✅ |
-| 5 | `nfr-quality-attributes` | NFR & quality attribute | mid | Định lượng NFR, quality attribute scenario, utility tree | L Sc | ⬜ |
-| 6 | `well-architected` | ✚ AWS Well-Architected & 6 trụ cột | senior | Operational excellence, security, reliability, performance, cost, sustainability; dùng để review | L Sc | ⬜ |
+| 5 | `nfr-quality-attributes` | NFR & quality attribute | mid | Định lượng NFR, quality attribute scenario, utility tree | L Sc | ✅ |
+| 6 | `well-architected` | ✚ AWS Well-Architected & 6 trụ cột | senior | Operational excellence, security, reliability, performance, cost, sustainability; dùng để review | L Sc | ✅ |
 | 7 | `architecture-tradeoffs` | Ra quyết định & trade-off | senior | Quyết định một chiều và hai chiều, ma trận đánh giá, rủi ro | L Sc | ⬜ |
 | 8 | `requirements-estimation` | ✚ Khai thác yêu cầu & ước lượng | senior | Discovery workshop, chốt phạm vi, ước lượng công sức, roadmap | L Sc | ⬜ |
 | 9 | `architecture-styles` | Chọn kiểu kiến trúc | architect | Layered, microservices, event-driven, serverless, space-based | L D Sc | ⬜ |

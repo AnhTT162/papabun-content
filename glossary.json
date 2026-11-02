@@ -286,7 +286,7 @@
       "meaning": "Số việc đang xử lý đồng thời trung bình = throughput × thời gian xử lý trung bình (L = λW).",
       "example": "100 request/giây, mỗi request 0,2 giây thì trung bình có 20 request đang chạy cùng lúc.",
       "related": ["io-bound", "thread-pool"],
-      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing", "back-of-envelope"]
+      "topics": ["executor-thread-pool", "n-plus-one", "connection-pool", "producer-consumer", "virtual-threads", "perf-methodology", "server-tuning", "db-performance", "capacity-planning", "load-testing", "back-of-envelope", "nfr-quality-attributes"]
     },
     {
       "id": "virtual-thread",
@@ -1237,7 +1237,7 @@
       "meaning": "Quy tắc dữ liệu do database thực thi khi ghi: NOT NULL, UNIQUE, PRIMARY KEY, FOREIGN KEY, CHECK.",
       "example": "`CHECK (quantity > 0)` chặn dòng có số lượng âm.",
       "related": ["primary-key", "foreign-key"],
-      "topics": ["relational-keys-normalization", "acid-transactions-basics", "schema-migration"]
+      "topics": ["relational-keys-normalization", "acid-transactions-basics", "schema-migration", "nfr-quality-attributes"]
     },
     {
       "id": "surrogate-key",
@@ -1869,7 +1869,7 @@
       "meaning": "Point-In-Time Recovery: khôi phục database về một thời điểm bất kỳ bằng cách restore base backup rồi phát lại log thay đổi (WAL, binlog) tới thời điểm đó.",
       "example": "Khôi phục về 14:05:11, ngay trước câu `DELETE` sai lúc 14:05:12.",
       "related": ["wal", "binlog", "physical-backup", "logical-backup"],
-      "topics": ["backup-restore"]
+      "topics": ["backup-restore", "well-architected"]
     },
     {
       "id": "binlog",
@@ -1901,7 +1901,7 @@
       "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
       "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
       "related": ["pitr"],
-      "topics": ["backup-restore", "replication-ha", "multi-region-active-active"]
+      "topics": ["backup-restore", "replication-ha", "multi-region-active-active", "nfr-quality-attributes", "well-architected"]
     },
     {
       "id": "table-lock",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes"]
     },
     {
       "id": "compensating-transaction",
@@ -5597,7 +5597,7 @@
       "meaning": "Giá trị mà một tỉ lệ phần trăm số mẫu nằm dưới nó. p99 latency 300ms nghĩa là 99% request nhanh hơn 300ms. Không lấy trung bình hay cộng gộp giữa các máy được.",
       "example": "p50 20ms, p99 300ms, max 3 giây trong khi trung bình chỉ 61ms.",
       "related": ["latency", "tail-latency"],
-      "topics": ["perf-methodology", "slow-api", "sd-framework"]
+      "topics": ["perf-methodology", "slow-api", "sd-framework", "nfr-quality-attributes"]
     },
     {
       "id": "tail-latency",
@@ -5685,7 +5685,7 @@
       "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
       "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
       "related": ["mitigation", "postmortem"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected"]
     },
     {
       "id": "postmortem",
@@ -5693,7 +5693,7 @@
       "meaning": "Bản phân tích sau sự cố: dòng thời gian, ảnh hưởng, nguyên nhân và các yếu tố góp phần, hành động phòng ngừa có người phụ trách. Viết theo tinh thần không đổ lỗi cho cá nhân.",
       "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
       "related": ["runbook"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected"]
     },
     {
       "id": "distributed-tracing",
@@ -5741,7 +5741,7 @@
       "meaning": "Service Level Indicator: chỉ số đo chất lượng dịch vụ từ góc người dùng, thường là tỉ lệ sự kiện tốt trên tổng sự kiện.",
       "example": "Tỉ lệ `POST /checkout` không lỗi 5xx và nhanh hơn 1,5 giây, đo ở gateway.",
       "related": ["slo", "error-budget"],
-      "topics": ["observability"]
+      "topics": ["observability", "nfr-quality-attributes"]
     },
     {
       "id": "error-budget",
@@ -5749,7 +5749,7 @@
       "meaning": "Phần được phép hỏng theo SLO: 1 trừ mục tiêu SLO, tính trên cửa sổ thời gian. Dùng để alert và để quyết định nên đẩy tính năng hay ưu tiên độ ổn định.",
       "example": "SLO 99,9% trong 30 ngày: được hỏng 0,1% request, tương đương khoảng 43 phút.",
       "related": ["slo", "burn-rate"],
-      "topics": ["observability"]
+      "topics": ["observability", "nfr-quality-attributes"]
     },
     {
       "id": "burn-rate",
@@ -8669,7 +8669,7 @@
       "meaning": "Bản sao của database nhận thay đổi từ primary và phục vụ lượt đọc. Scale được đọc, không scale được ghi, và dữ liệu có thể trễ so với primary.",
       "example": "Trang báo cáo đọc từ replica; luồng vừa đặt hàng xong thì đọc từ primary để thấy ngay đơn mới.",
       "related": ["replica-lag", "read-your-writes", "sharding"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "well-architected"]
     },
     {
       "id": "presigned-url",
@@ -8717,7 +8717,7 @@
       "meaning": "Yêu cầu phi chức năng: hệ thống phải tốt tới mức nào, như quy mô, latency, availability, độ nhất quán, bảo mật, chi phí. Phải có số đo được.",
       "example": "p99 đọc dưới 200 ms, availability 99,9%, chịu 1 triệu ghi mỗi ngày.",
       "related": ["functional-requirement", "availability", "slo"],
-      "topics": ["sd-framework", "sa-role"]
+      "topics": ["sd-framework", "sa-role", "nfr-quality-attributes"]
     },
     {
       "id": "back-of-envelope-estimation",
@@ -8741,7 +8741,7 @@
       "meaning": "Tỉ lệ thời gian hệ thống phục vụ được, thường nói bằng số số 9. Mỗi số 9 thêm vào giảm thời gian ngừng cho phép đi 10 lần.",
       "example": "99,9% cho phép khoảng 43 phút ngừng mỗi tháng; 99,99% khoảng 4,3 phút.",
       "related": ["slo", "non-functional-requirement"],
-      "topics": ["sd-framework"]
+      "topics": ["sd-framework", "nfr-quality-attributes"]
     },
     {
       "id": "read-write-ratio",
@@ -8765,7 +8765,7 @@
       "meaning": "Một hay nhiều data center tách biệt về điện, mạng và làm mát trong cùng một region của cloud. Chạy qua nhiều AZ để một data center hỏng không làm ngừng hệ thống.",
       "example": "Ba instance app đặt ở ba AZ `ap-southeast-1a/b/c`; mất một AZ vẫn còn hai.",
       "related": ["single-point-of-failure", "availability"],
-      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue"]
+      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue", "well-architected"]
     },
     {
       "id": "oltp",
@@ -9109,7 +9109,7 @@
       "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
       "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
       "related": ["idempotency", "idempotent-consumer"],
-      "topics": ["design-ecommerce-order", "design-notification", "design-payment"]
+      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes"]
     },
     {
       "id": "payment-authorization",
@@ -9869,7 +9869,7 @@
       "meaning": "Bộ tiêu chuẩn bảo mật bắt buộc với hệ thống lưu, xử lý hay truyền dữ liệu thẻ thanh toán. Phạm vi càng ít hệ chạm số thẻ thì càng ít yêu cầu phải đáp ứng.",
       "example": "Dùng trang thanh toán do PSP host thì server không chạm số thẻ, phạm vi đánh giá thu nhỏ đáng kể so với tự nhận số thẻ qua API của mình.",
       "related": ["card-tokenization"],
-      "topics": ["design-payment"]
+      "topics": ["design-payment", "nfr-quality-attributes"]
     },
     {
       "id": "three-d-secure",
@@ -10350,6 +10350,134 @@
       "example": "Khối ```mermaid sequenceDiagram``` trong README hiện thành sơ đồ trên GitHub.",
       "related": ["plantuml", "docs-as-code"],
       "topics": ["adr-c4"]
+    },
+    {
+      "id": "quality-attribute",
+      "term": "Quality attribute",
+      "meaning": "Thuộc tính chất lượng: hệ thống tốt tới mức nào về performance, availability, bảo mật, khả năng sửa đổi, chi phí. Là cách gọi NFR trong kiến trúc, dùng để so các phương án.",
+      "example": "Availability 99,9% cho luồng tạo đơn; thêm một phương thức thanh toán không quá 2 tuần-người.",
+      "related": ["non-functional-requirement", "quality-attribute-scenario", "utility-tree"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "quality-attribute-scenario",
+      "term": "Quality attribute scenario",
+      "meaning": "Cách viết một quality attribute thành câu kiểm được, gồm sáu phần: nguồn, kích thích, môi trường, thành phần, phản hồi và thước đo (theo SEI).",
+      "example": "Người mua gửi 320 đơn/giây trong 15 phút đầu đợt sale tới API tạo đơn; p99 dưới 800 ms, lỗi dưới 0,5%.",
+      "related": ["quality-attribute", "utility-tree", "non-functional-requirement"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "utility-tree",
+      "term": "Utility tree",
+      "meaning": "Cây ưu tiên quality attribute: gốc là utility, nhánh là thuộc tính và tinh chỉnh, lá là scenario chấm theo hai trục quan trọng với business và khó đạt (H/M/L).",
+      "example": "Lá (H, H) \"chịu mất một AZ, phục hồi trong 5 phút\" được dành PoC; lá (L, H) là ứng viên để thương lượng bỏ.",
+      "related": ["quality-attribute-scenario", "atam", "architecturally-significant-requirement"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "architecturally-significant-requirement",
+      "term": "Architecturally significant requirement (ASR)",
+      "meaning": "Yêu cầu ảnh hưởng mạnh tới cấu trúc hệ thống và đắt nếu đổi sau. Mỗi ASR nên dẫn tới ít nhất một ADR.",
+      "example": "Dữ liệu khách hàng EU phải nằm trong EU; chịu được mất một region.",
+      "related": ["utility-tree", "adr", "quality-attribute"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "atam",
+      "term": "ATAM",
+      "meaning": "Architecture Tradeoff Analysis Method của SEI: phương pháp đánh giá kiến trúc theo các quality attribute scenario đã ưu tiên, để tìm rủi ro, điểm nhạy và điểm đánh đổi.",
+      "example": "Buổi đánh giá dựng utility tree, rồi xem kiến trúc đáp ứng các lá (H, H) thế nào và ở đâu một quyết định làm lợi thuộc tính này nhưng hại thuộc tính khác.",
+      "related": ["utility-tree", "quality-attribute-scenario"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "iso-25010",
+      "term": "ISO/IEC 25010",
+      "meaning": "Tiêu chuẩn mô hình chất lượng phần mềm. Bản 2023 có 9 đặc tính sản phẩm, từ functional suitability tới safety; hay dùng làm checklist khi khai thác NFR.",
+      "example": "Dò qua 9 đặc tính để không quên compatibility và safety khi viết yêu cầu.",
+      "related": ["quality-attribute", "non-functional-requirement"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "sla",
+      "term": "SLA",
+      "meaning": "Service Level Agreement: cam kết về mức dịch vụ ghi trong hợp đồng, kèm hậu quả (thường là hoàn tiền) khi vi phạm. Thường lỏng hơn SLO nội bộ.",
+      "example": "Cổng thanh toán cam kết 99,9% mỗi tháng, dưới mức đó hoàn 10% phí.",
+      "related": ["slo", "sli", "error-budget"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "fitness-function",
+      "term": "Fitness function",
+      "meaning": "Kiểm tra tự động cho biết kiến trúc còn đạt một đặc tính mong muốn hay không, chạy trong pipeline hoặc trên production.",
+      "example": "Test ArchUnit cấm module checkout phụ thuộc module báo cáo; load test chặn bản phát hành nếu p99 vượt 800 ms.",
+      "related": ["quality-attribute", "archunit"],
+      "topics": ["nfr-quality-attributes"]
+    },
+    {
+      "id": "well-architected-framework",
+      "term": "AWS Well-Architected Framework",
+      "meaning": "Bộ nguyên tắc, câu hỏi và best practice của AWS để đánh giá một workload theo sáu trụ cột: operational excellence, security, reliability, performance efficiency, cost optimization, sustainability.",
+      "example": "Review workload hoá đơn điện tử, tìm ra database Single-AZ và root không MFA là high risk issue.",
+      "related": ["well-architected-tool", "high-risk-issue", "wa-lens"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "wa-workload",
+      "term": "Workload (Well-Architected)",
+      "meaning": "Tập tài nguyên và code cùng mang lại một giá trị nghiệp vụ, là đơn vị được review trong Well-Architected.",
+      "example": "Ứng dụng hoá đơn gồm API trên ECS, RDS PostgreSQL, bucket log là một workload.",
+      "related": ["well-architected-framework", "well-architected-tool"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "high-risk-issue",
+      "term": "High risk issue (HRI)",
+      "meaning": "Trong Well-Architected Tool: lựa chọn kiến trúc hoặc vận hành mà AWS thấy có thể gây tác động tiêu cực đáng kể cho business. Medium risk issue có hại ở mức nhỏ hơn.",
+      "example": "Backup chưa từng restore thử; access key quyền admin nằm trong repo.",
+      "related": ["well-architected-tool", "well-architected-framework"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "well-architected-tool",
+      "term": "AWS Well-Architected Tool",
+      "meaning": "Dịch vụ miễn phí trong AWS console để review workload theo framework và các lens, đánh dấu rủi ro, sinh improvement plan và lưu milestone.",
+      "example": "Lưu milestone sau đợt sửa 8 tuần để so số high risk issue với lần review đầu.",
+      "related": ["well-architected-framework", "wa-lens", "high-risk-issue"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "wa-lens",
+      "term": "Lens (Well-Architected)",
+      "meaning": "Bộ câu hỏi, best practice và improvement plan bổ sung cho một loại workload. Lens chính thức nằm trong Lens Catalog; custom lens do tổ chức tự viết.",
+      "example": "Serverless Lens cho workload Lambda; custom lens bắt buộc SSO và tag chi phí.",
+      "related": ["well-architected-tool", "well-architected-framework"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "infrastructure-as-code",
+      "term": "Infrastructure as Code (IaC)",
+      "meaning": "Mô tả hạ tầng bằng code được quản lý phiên bản và review, rồi để công cụ tạo và cập nhật tài nguyên, thay vì click tay trên console.",
+      "example": "Terraform hoặc AWS CDK định nghĩa VPC, ECS service và RDS; thay đổi đi qua pull request và pipeline.",
+      "related": ["well-architected-framework"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "least-privilege",
+      "term": "Least privilege",
+      "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
+      "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
+      "related": ["shared-responsibility-model", "zero-trust"],
+      "topics": ["well-architected"]
+    },
+    {
+      "id": "shared-responsibility-model",
+      "term": "Shared responsibility model",
+      "meaning": "Cách chia trách nhiệm giữa nhà cung cấp cloud và khách hàng: nhà cung cấp lo phần của cloud (hạ tầng vật lý, dịch vụ), khách hàng lo phần trong cloud (cấu hình, dữ liệu, quyền truy cập). AWS dùng mô hình này cho cả security và sustainability.",
+      "example": "AWS bảo vệ trung tâm dữ liệu; bucket S3 để public do khách hàng cấu hình là lỗi của khách hàng.",
+      "related": ["least-privilege", "well-architected-framework"],
+      "topics": ["well-architected"]
     }
   ]
 }

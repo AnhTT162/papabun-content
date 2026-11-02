@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "nfr-quality-attributes",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "NFR & quality attribute",
+  "summary": "Khai thác NFR bằng câu hỏi tình huống, viết thành quality attribute scenario sáu phần kiểm được, ưu tiên bằng utility tree, kiểm khả thi bằng phép nhân availability và ngân sách latency, và nói rõ đánh đổi giữa các thuộc tính.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 14,
+  "prerequisites": ["sa-role", "sd-framework"],
+  "terms": ["non-functional-requirement", "quality-attribute", "iso-25010", "quality-attribute-scenario", "sli", "utility-tree", "architecturally-significant-requirement", "constraint", "atam", "error-budget", "slo", "sla", "littles-law", "rpo-rto", "fitness-function", "availability", "percentile", "pci-dss", "webhook"],
+  "references": [
+    { "title": "SEI: The Architecture Tradeoff Analysis Method (CMU/SEI-98-TR-008)", "url": "https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method/" },
+    { "title": "ISO 25000 portal: ISO/IEC 25010 product quality model", "url": "https://iso25000.com/index.php/en/iso-25000-standards/iso-25010" },
+    { "title": "AWS Well-Architected Framework: Reliability pillar, availability", "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/availability.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Business đòi 99,99%. Anh trả lời thế nào?\" Đừng nói có hay không ngay. Đổi con số ra thời gian (khoảng 4,3 phút mỗi 30 ngày, ngắn hơn thời gian gọi người trực dậy), hỏi một giờ ngừng thiệt hại bao nhiêu, rồi đưa hai ba mức kèm cái giá: 99,9% với một region nhiều AZ, 99,99% cần khôi phục tự động hoàn toàn, multi-region và deploy không downtime. Hỏi thêm 99,99% cho luồng nào: thường chỉ luồng tạo đơn cần, còn báo cáo và trang quản trị thì không." },
+    { "type": "callout", "style": "warning", "markdown": "NFR không có môi trường đo là NFR không kiểm được. \"p99 dưới 800 ms\" lúc 40 đơn/giây và lúc 320 đơn/giây với một AZ vừa mất là hai yêu cầu khác nhau. Luôn ghi tải, cỡ dữ liệu, trạng thái hệ thống và nơi đo (load balancer hay trong service)." },
+    { "type": "callout", "style": "tip", "markdown": "Mang theo danh sách câu hỏi vào workshop yêu cầu: lúc đông nhất bao nhiêu, ngừng một giờ thì mất gì, dữ liệu nào không được mất, dữ liệu nằm ở đâu và giữ bao lâu, ai được xem gì, năm sau thêm gì. Câu trả lời \"chưa biết\" cũng ghi lại, kèm người sẽ trả lời và hạn." }
+  ]
+}
