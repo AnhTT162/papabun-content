@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đăng nhập bằng session rồi gọi API",
+  "nodes": [
+    {"id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "app", "label": "App", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "users", "label": "Bảng users (hash)", "kind": "database", "x": 0.85, "y": 0.5},
+    {"id": "sessions", "label": "Session store (Redis)", "kind": "cache", "x": 0.1, "y": 0.5},
+    {"id": "orders", "label": "Bảng orders", "kind": "database", "x": 0.85, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "browser-app", "from": "browser", "to": "app", "label": "login, rồi cookie"},
+    {"id": "app-users", "from": "app", "to": "users", "label": "lấy hash, bcrypt"},
+    {"id": "app-sessions", "from": "app", "to": "sessions", "label": "tạo / tra session"},
+    {"id": "app-orders", "from": "app", "to": "orders", "label": "lọc theo owner"}
+  ],
+  "steps": [
+    {"caption": "Người dùng gửi email và mật khẩu qua HTTPS. Đây là lần duy nhất mật khẩu gốc đi qua server.", "show": ["browser", "app", "browser-app"], "highlight": ["browser-app"]},
+    {"caption": "App lấy hash theo email, băm mật khẩu vừa nhận với salt và cost đọc từ chính chuỗi hash rồi so. Sai email hay sai mật khẩu đều trả cùng một lỗi, cùng thời gian.", "show": ["users", "app-users"], "highlight": ["app-users"]},
+    {"caption": "Đúng thì sinh session id ngẫu nhiên mới (không dùng lại id cũ trước đăng nhập), lưu user id và hạn dùng vào kho chung để mọi instance đều đọc được.", "show": ["sessions", "app-sessions"], "highlight": ["app-sessions"]},
+    {"caption": "Response mang Set-Cookie: trình duyệt nhận session id trong cookie và tự gửi kèm mỗi request sau. Mật khẩu không cần gửi lại nữa.", "show": [], "highlight": ["browser-app"]},
+    {"caption": "Request sau: app tra session ra user (AuthN), rồi kiểm quyền trên đúng bản ghi, ví dụ đơn này có thuộc user đó không (AuthZ). Đăng xuất là xoá session trong kho.", "show": ["orders", "app-orders"], "highlight": ["app-sessions", "app-orders"]}
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cryptography-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Mật mã cho kỹ sư",
+  "summary": "Phân biệt encoding, hash, HMAC, mã hoá và chữ ký số; AES-GCM, nonce và vì sao lặp nonce là lộ dữ liệu; bẫy `Cipher.getInstance(\"AES\")` ra ECB và `\"RSA\"` ra PKCS#1 v1.5; mã hoá bất đối xứng, giới hạn kích thước và mã hoá lai; chữ ký ECDSA, Ed25519; SecureRandom và so sánh thời gian hằng; envelope encryption với KMS, xoay khoá, crypto-shredding; mật mã hậu lượng tử trong JDK.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 13,
+  "prerequisites": ["authn-authz-basics"],
+  "terms": ["encoding", "cryptographic-hash", "hmac", "symmetric-encryption", "asymmetric-encryption", "aes-gcm", "nonce", "aad", "digital-signature", "csprng", "envelope-encryption", "kms", "crypto-shredding", "jwt", "salt"],
+  "references": [
+    { "title": "Java SE: Java Cryptography Architecture (JCA) Reference Guide", "url": "https://docs.oracle.com/en/java/javase/21/security/java-cryptography-architecture-jca-reference-guide.html" },
+    { "title": "NIST SP 800-38D: Galois/Counter Mode (GCM)", "url": "https://csrc.nist.gov/pubs/sp/800/38/d/final" },
+    { "title": "AWS KMS: Envelope encryption", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/kms-cryptography.html#enveloping" },
+    { "title": "OWASP Cryptographic Storage Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html" },
+    { "title": "JEP 496: Quantum-Resistant Module-Lattice-Based Key Encapsulation Mechanism", "url": "https://openjdk.org/jeps/496" },
+    { "title": "AWS KMS: Rotate AWS KMS keys", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Database đã bật mã hoá at rest rồi, cột số CCCD có cần mã hoá ở ứng dụng nữa không?\" Hỏi lại: chống ai. Mã hoá at rest của RDS, EBS, S3 chống mất đĩa, mất snapshot, backup bị chép ra ngoài; còn ai đăng nhập được database (ứng dụng, DBA, kẻ có lỗi SQL injection) vẫn đọc dữ liệu rõ. Muốn giấu cả với họ thì mã hoá ở tầng ứng dụng bằng envelope encryption, gắn AAD là id bản ghi. Giá phải trả: không tìm kiếm, sắp xếp, đánh index trên cột đó được nữa; cần tìm chính xác thì thêm cột HMAC của giá trị (blind index), chấp nhận lộ việc hai dòng có cùng giá trị." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng viết `Cipher.getInstance(\"AES\")` hay `Cipher.getInstance(\"RSA\")`. Trong SunJCE, cái đầu là ECB (khối giống nhau ra bản mã giống nhau, lộ cấu trúc dữ liệu), cái sau là padding PKCS#1 v1.5 có lỗ hổng đã biết. Luôn ghi đủ `AES/GCM/NoPadding` và `RSA/ECB/OAEPWithSHA-256AndMGF1Padding` (kèm `OAEPParameterSpec` nếu bên kia dùng MGF1 SHA-256, vì SunJCE mặc định MGF1 SHA-1), hoặc dùng thư viện mức cao như Tink để khỏi phải chọn." }
+  ]
+}

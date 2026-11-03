@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Envelope encryption với KMS",
+  "nodes": [
+    {"id": "app", "label": "App", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "kms", "label": "KMS (khoá chính)", "kind": "external", "x": 0.85, "y": 0.05},
+    {"id": "aes", "label": "AES-GCM tại chỗ", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "store", "label": "DB / S3", "kind": "database", "x": 0.85, "y": 0.5}
+  ],
+  "edges": [
+    {"id": "app-kms", "from": "app", "to": "kms", "label": "cấp / giải data key"},
+    {"id": "app-aes", "from": "app", "to": "aes", "label": "data key rõ"},
+    {"id": "aes-store", "from": "aes", "to": "store", "label": "bản mã + key đã bọc"},
+    {"id": "store-app", "from": "store", "to": "app", "label": "đọc lại"}
+  ],
+  "steps": [
+    {"caption": "Khoá chính nằm trong phần cứng của KMS, không bao giờ rời khỏi đó. App gọi GenerateDataKey và nhận một khoá AES-256 ở hai dạng: bản rõ và bản đã được khoá chính bọc.", "show": ["app", "kms", "app-kms"], "highlight": ["app-kms"]},
+    {"caption": "App mã hoá dữ liệu ngay trong bộ nhớ bằng AES-GCM với data key rõ và một nonce ngẫu nhiên, rồi bỏ data key rõ đi. Dữ liệu lớn bao nhiêu cũng không phải gửi qua KMS.", "show": ["aes", "app-aes"], "highlight": ["app-aes"]},
+    {"caption": "Lưu bản mã, nonce và data key đã bọc cạnh nhau. Lộ cả bản ghi này cũng vô dụng nếu không có quyền gọi KMS giải data key.", "show": ["store", "aes-store"], "highlight": ["aes-store"]},
+    {"caption": "Đọc lại: lấy data key đã bọc từ bản ghi, gửi cho KMS Decrypt. KMS kiểm key policy, ghi audit log, rồi trả data key rõ để app giải mã tại chỗ.", "show": ["store-app"], "highlight": ["store-app", "app-kms"]}
+  ]
+}

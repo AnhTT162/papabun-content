@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "bcrypt-truncate-output",
+      "kind": "output",
+      "prompt": "Chạy với spring-security-crypto 7.1.2. Dòng in ra là gì?",
+      "code": "var encoder = new BCryptPasswordEncoder();\nString stored = encoder.encode(\"a\".repeat(72));\nSystem.out.println(encoder.matches(\"a\".repeat(72) + \"xyz\", stored));",
+      "options": [
+        "true, vì bcrypt chỉ đọc 72 byte đầu",
+        "false, vì chuỗi so sánh dài hơn ba ký tự",
+        "Ném IllegalArgumentException ở matches",
+        "Ném IllegalArgumentException ở encode"
+      ],
+      "answer": 0,
+      "explanation": "Chuỗi lưu đúng 72 byte nên `encode` chạy bình thường; lỗi `password cannot be more than 72 bytes` chỉ xảy ra khi encode chuỗi dài hơn. `matches` không kiểm độ dài mà cắt ở 72 byte, nên `xyz` bị bỏ qua và kết quả là `true` (đã chạy thử). Muốn chặn hẳn thì giới hạn độ dài mật khẩu ở tầng validate hoặc dùng Argon2id."
+    },
+    {
+      "id": "why-salt",
+      "kind": "single",
+      "prompt": "Bảng users lưu `sha256(password)` không salt. Database bị lộ. Thêm salt ngẫu nhiên cho mỗi user (vẫn SHA-256) giúp được gì?",
+      "options": [
+        "Phải dò riêng từng user, nhưng mỗi lần thử vẫn rất nhanh",
+        "Hash không đảo ngược được nữa, mật khẩu yếu cũng thành an toàn",
+        "Kẻ tấn công không biết salt vì salt được giấu ở một bảng khác",
+        "Tốc độ dò giảm khoảng một triệu lần, ngang với bcrypt cost 10"
+      ],
+      "answer": 0,
+      "explanation": "Salt làm hai người cùng mật khẩu có hash khác nhau, nên không dùng được rainbow table hay dò một lần cho cả bảng. Nhưng salt thường nằm ngay cạnh hash và không bí mật; SHA-256 vẫn nhanh (khoảng 23 triệu lần/giây một luồng), nên mật khẩu yếu của từng người vẫn dò ra nhanh. Làm chậm việc dò là việc của work factor trong bcrypt, Argon2id."
+    },
+    {
+      "id": "login-error-message",
+      "kind": "single",
+      "prompt": "Form đăng nhập trả \"Email không tồn tại\" khi sai email và \"Sai mật khẩu\" khi sai mật khẩu. Sửa thông báo thành một câu chung đã đủ chưa?",
+      "options": [
+        "Chưa, email không tồn tại thì không chạy bcrypt nên trả về sớm",
+        "Đủ, vì hai trường hợp giờ trả cùng một câu và cùng mã lỗi",
+        "Chưa, phải thêm CAPTCHA thì thông báo chung mới có tác dụng",
+        "Đủ, vì kẻ tấn công không còn cách nào biết email nào tồn tại"
+      ],
+      "answer": 0,
+      "explanation": "Email không tồn tại thì không có hash để so, response về sớm hơn khoảng 50 ms (bcrypt cost 10), đủ để đo và lọc ra email đã đăng ký. Phải chạy băm với một hash giả như `DaoAuthenticationProvider` của Spring làm. Màn hình quên mật khẩu và đăng ký cũng phải không lộ. CAPTCHA và giới hạn lượt làm chậm việc dò nhưng không xoá chênh lệch thời gian."
+    },
+    {
+      "id": "session-vs-jwt-revoke",
+      "kind": "single",
+      "prompt": "Nhân viên nghỉ việc, admin khoá tài khoản lúc 10:00. App dùng JWT access token hạn 60 phút, không có refresh token, service kiểm chữ ký tại chỗ, không tra kho. Người đó còn gọi API được không?",
+      "options": [
+        "Được, tới khi token đã cấp hết hạn, chậm nhất khoảng 11:00",
+        "Không, khoá tài khoản làm chữ ký của mọi token cũ hết hợp lệ",
+        "Không, vì service tự tra trạng thái tài khoản trong mỗi request",
+        "Không, vì token đã cấp bị thu hồi ngay khi tài khoản bị khoá"
+      ],
+      "answer": 0,
+      "explanation": "JWT tự chứa: service chỉ kiểm chữ ký và `exp`, không hỏi ai, nên token còn hạn vẫn được nhận. Đó là giá của việc không tra kho. Cách giảm: access token ngắn (5–15 phút), khoá tài khoản thì thu hồi refresh token ở server để không xin được token mới, hoặc danh sách chặn cho thao tác nhạy cảm. Session thì xoá trong kho là có hiệu lực ngay."
+    },
+    {
+      "id": "mfa-phishing",
+      "kind": "single",
+      "prompt": "Nhân viên bị dẫn tới trang đăng nhập giả giống hệt trang thật. Loại MFA nào vẫn chặn được kẻ tấn công đăng nhập bằng thông tin vừa lừa được?",
+      "options": [
+        "Passkey, vì chữ ký gắn với tên miền thật của trang",
+        "TOTP, vì mã đổi mỗi 30 giây nên không dùng lại được",
+        "SMS OTP, vì mã chỉ gửi tới đúng số điện thoại đã đăng ký",
+        "Push \"Duyệt\", vì người dùng phải tự bấm trên điện thoại"
+      ],
+      "answer": 0,
+      "explanation": "Với TOTP và SMS, người dùng gõ mã vào trang giả, trang giả chuyển ngay sang trang thật trong 30 giây: mã vẫn còn hạn. Push bị dùng bằng cách đăng nhập thật song song và người dùng bấm duyệt. Passkey (WebAuthn) ký thử thách kèm origin; trình duyệt chỉ dùng khoá của đúng tên miền đã đăng ký, nên trang giả không lấy được chữ ký hợp lệ."
+    }
+  ]
+}

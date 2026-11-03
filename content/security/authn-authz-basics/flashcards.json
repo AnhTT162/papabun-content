@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "authn-vs-authz", "front": "AuthN và AuthZ khác nhau thế nào?", "back": "AuthN xác minh bạn là ai; AuthZ quyết định bạn được làm gì, kiểm ở server trong mọi request." },
+    { "id": "why-not-sha256", "front": "Vì sao không lưu mật khẩu bằng SHA-256?", "back": "Quá nhanh (khoảng 23 triệu lần/giây một luồng CPU), lộ database là dò được mật khẩu phổ biến. Cần hàm chậm có chủ đích như bcrypt, Argon2id." },
+    { "id": "salt-purpose", "front": "Salt dùng để làm gì?", "back": "Mỗi user một giá trị ngẫu nhiên trộn vào trước khi băm, để cùng mật khẩu ra hash khác nhau và bảng tra sẵn vô dụng." },
+    { "id": "bcrypt-72", "front": "Giới hạn 72 byte của bcrypt gây ra gì?", "back": "Phần sau byte 72 bị bỏ qua: hai mật khẩu chung 72 byte đầu khớp cùng một hash." },
+    { "id": "delegating-encoder", "front": "Tiền tố `{bcrypt}` trong hash của Spring để làm gì?", "back": "Ghi thuật toán của từng hash, để một bảng chứa được nhiều loại hash và chuyển dần sang thuật toán mới." },
+    { "id": "session-vs-token", "front": "Session và JWT đánh đổi gì?", "back": "Session phải tra kho nhưng thu hồi tức thì; JWT tự kiểm được ở mọi service nhưng còn hiệu lực tới khi hết hạn." },
+    { "id": "session-fixation", "front": "Chống session fixation thế nào?", "back": "Đổi session id ngay khi đăng nhập thành công; Spring Security mặc định làm bằng changeSessionId." },
+    { "id": "nist-password", "front": "NIST SP 800-63B bản 4 nói gì về chính sách mật khẩu?", "back": "Ưu tiên độ dài và chặn mật khẩu đã lộ, thay vì bắt trộn ký tự hay đổi định kỳ." },
+    { "id": "passkey-phishing", "front": "Vì sao passkey chống phishing còn OTP thì không?", "back": "Chữ ký của passkey gắn với tên miền thật, trang giả không dùng được; mã OTP thì người dùng có thể gõ vào trang giả." }
+  ]
+}

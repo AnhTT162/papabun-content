@@ -4773,7 +4773,7 @@
       "meaning": "Load balancer gắn một client với cùng một instance (thường qua cookie), để dùng session lưu trong bộ nhớ instance đó.",
       "example": "Cookie `AWSALB` khiến người dùng luôn về instance B; B chết thì mất giỏ hàng trong `HttpSession`.",
       "related": ["load-balancer"],
-      "topics": ["load-balancing", "realtime-rpc-protocols", "sd-building-blocks"]
+      "topics": ["load-balancing", "realtime-rpc-protocols", "sd-building-blocks", "authn-authz-basics"]
     },
     {
       "id": "causal-consistency",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy"]
+      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy", "authn-authz-basics", "cryptography-basics"]
     },
     {
       "id": "ingress",
@@ -5157,7 +5157,7 @@
       "meaning": "Mã hoá dữ liệu cá nhân bằng khoá riêng của từng người; khi cần xoá thì xoá khoá, dữ liệu còn đó nhưng không đọc được nữa.",
       "example": "Event lưu email đã mã hoá bằng khoá của user 42 trong kho khoá; user yêu cầu xoá thì xoá khoá đó.",
       "related": ["event-sourcing"],
-      "topics": ["cqrs-event-sourcing", "multi-tenancy"]
+      "topics": ["cqrs-event-sourcing", "multi-tenancy", "cryptography-basics"]
     },
     {
       "id": "two-phase-commit",
@@ -5453,7 +5453,7 @@
       "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
       "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
       "related": [],
-      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy"]
+      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy", "authn-authz-basics"]
     },
     {
       "id": "leap-second",
@@ -8877,7 +8877,7 @@
       "meaning": "Lừa đảo giả mạo: dụ người dùng vào trang giả để lấy mật khẩu hay thông tin thanh toán. Link rút gọn hay bị dùng để giấu domain thật của trang giả.",
       "example": "Dịch vụ rút gọn kiểm URL qua danh sách đen lúc tạo, quét lại định kỳ, và tắt link bị báo trong vài phút.",
       "related": ["url-shortener"],
-      "topics": ["design-url-shortener"]
+      "topics": ["design-url-shortener", "authn-authz-basics"]
     },
     {
       "id": "unique-constraint",
@@ -8925,7 +8925,7 @@
       "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
       "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter", "build-vs-buy"]
+      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics"]
     },
     {
       "id": "noisy-neighbor",
@@ -11053,7 +11053,7 @@
       "meaning": "Multi-factor authentication: xác thực bằng từ hai yếu tố trở lên (thứ biết, thứ có, đặc điểm sinh trắc). Loại chống phishing như FIDO2, passkey gắn với tên miền nên trang giả không dùng được.",
       "example": "Quản trị viên cloud bắt buộc dùng khoá FIDO2; OTP qua SMS không được chấp nhận.",
       "related": ["identity-provider"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "authn-authz-basics"]
     },
     {
       "id": "scim",
@@ -11173,7 +11173,7 @@
       "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics"]
     },
     {
       "id": "sre",
@@ -12038,6 +12038,182 @@
       "example": "“Nếu sau giai đoạn 1 tỉ lệ huỷ ở 40 cửa hàng không dưới 1% thì dừng ở 900 triệu.”",
       "related": ["one-way-door", "proof-of-concept"],
       "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "authentication",
+      "term": "Authentication (AuthN)",
+      "meaning": "Xác minh người hoặc service gọi tới là ai, bằng mật khẩu, thiết bị, sinh trắc học hoặc credential của máy.",
+      "example": "Đăng nhập bằng email, mật khẩu và mã TOTP; service gọi service bằng chứng chỉ mTLS.",
+      "related": ["authorization", "mfa", "http-session"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "authorization",
+      "term": "Authorization (AuthZ)",
+      "meaning": "Quyết định danh tính đã xác thực được làm gì với tài nguyên nào. Kiểm ở server trong mọi request, mặc định từ chối.",
+      "example": "User có role CUSTOMER chỉ xem được đơn có owner_id là chính mình.",
+      "related": ["authentication", "idor", "least-privilege"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "http-session",
+      "term": "Session (HTTP)",
+      "meaning": "Trạng thái đăng nhập lưu ở server, gắn với một id ngẫu nhiên mà trình duyệt gửi lại qua cookie mỗi request. Xoá session là thu hồi ngay.",
+      "example": "Spring Session lưu session ở Redis để mọi instance đều đọc được sau khi người dùng đăng nhập.",
+      "related": ["session-fixation", "sticky-session", "jwt"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "password-hashing",
+      "term": "Password hashing",
+      "meaning": "Lưu mật khẩu bằng hàm băm chậm có chủ đích, có salt riêng mỗi user, để lộ database cũng khó dò ra mật khẩu gốc.",
+      "example": "Lưu `{bcrypt}$2a$10$...` thay vì mật khẩu gốc hay SHA-256 của nó.",
+      "related": ["salt", "bcrypt", "argon2"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "salt",
+      "term": "Salt",
+      "meaning": "Giá trị ngẫu nhiên riêng cho mỗi mật khẩu, trộn vào trước khi băm. Không cần bí mật; làm cùng mật khẩu ra hash khác nhau.",
+      "example": "Trong chuỗi bcrypt, 22 ký tự sau `$2a$10$` là salt.",
+      "related": ["password-hashing", "rainbow-table"],
+      "topics": ["authn-authz-basics", "cryptography-basics"]
+    },
+    {
+      "id": "bcrypt",
+      "term": "bcrypt",
+      "meaning": "Hàm băm mật khẩu có tham số cost: mỗi bậc gấp đôi thời gian. Chỉ đọc 72 byte đầu của mật khẩu.",
+      "example": "Cost 10 mất khoảng 50 ms một lần kiểm trên một core.",
+      "related": ["password-hashing", "argon2", "salt"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "argon2",
+      "term": "Argon2id",
+      "meaning": "Hàm băm mật khẩu thắng Password Hashing Competition 2015, tốn cả CPU lẫn bộ nhớ nên GPU khó dò song song. OWASP khuyên dùng đầu tiên.",
+      "example": "OWASP khuyên tham số m=19 MiB, t=2, p=1.",
+      "related": ["bcrypt", "password-hashing"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "rainbow-table",
+      "term": "Rainbow table",
+      "meaning": "Bảng tính sẵn từ hash ngược ra mật khẩu cho một hàm băm không salt. Salt làm nó vô dụng.",
+      "example": "Tra hash SHA-1 không salt của mật khẩu phổ biến ra ngay chuỗi gốc.",
+      "related": ["salt", "password-hashing"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "session-fixation",
+      "term": "Session fixation",
+      "meaning": "Kẻ tấn công cài sẵn một session id cho nạn nhân; nếu id không đổi khi nạn nhân đăng nhập thì kẻ đó dùng chung phiên đã đăng nhập.",
+      "example": "Spring Security đổi session id khi đăng nhập thành công (changeSessionId) để chặn kiểu tấn công này.",
+      "related": ["http-session"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "totp",
+      "term": "TOTP",
+      "meaning": "Time-based One-Time Password (RFC 6238): mã 6 số sinh từ HMAC của secret chung và thời gian, đổi mỗi 30 giây.",
+      "example": "App Authenticator quét QR chứa secret rồi tự sinh mã đăng nhập.",
+      "related": ["mfa", "hmac", "passkey"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "passkey",
+      "term": "Passkey",
+      "meaning": "Credential WebAuthn/FIDO2: khoá riêng nằm trên thiết bị, ký thử thách của server kèm tên miền, nên trang giả không dùng được. Thay hoặc bổ sung mật khẩu.",
+      "example": "Đăng nhập bằng Face ID trên điện thoại, server chỉ lưu khoá công khai.",
+      "related": ["mfa", "phishing", "digital-signature"],
+      "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "encoding",
+      "term": "Encoding",
+      "meaning": "Đổi cách biểu diễn dữ liệu (Base64, hex, UTF-8) để truyền hay lưu được. Không có khoá, ai cũng đảo ngược được.",
+      "example": "`YWRtaW46bWF0a2hhdTEyMw==` giải Base64 ra ngay `admin:matkhau123`.",
+      "related": ["cryptographic-hash", "symmetric-encryption"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "cryptographic-hash",
+      "term": "Cryptographic hash",
+      "meaning": "Hàm biến dữ liệu bất kỳ thành chuỗi cố định (SHA-256: 32 byte), không đảo ngược được và khó tìm hai đầu vào trùng kết quả.",
+      "example": "So SHA-256 của file tải về với giá trị công bố để biết file không bị hỏng hay bị thay.",
+      "related": ["hmac", "digital-signature", "password-hashing"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "hmac",
+      "term": "HMAC",
+      "meaning": "Hash-based Message Authentication Code: hash trộn với khoá bí mật. Chỉ bên có khoá tính được, nên chứng minh message không bị sửa và đến từ bên có khoá.",
+      "example": "Webhook gửi header chữ ký là HMAC-SHA256 của body với secret chung.",
+      "related": ["cryptographic-hash", "digital-signature"],
+      "topics": ["cryptography-basics", "authn-authz-basics"]
+    },
+    {
+      "id": "symmetric-encryption",
+      "term": "Mã hoá đối xứng",
+      "meaning": "Một khoá dùng cho cả mã hoá và giải mã, như AES. Nhanh, nhưng hai bên phải có chung khoá bí mật.",
+      "example": "Mã hoá cột dữ liệu nhạy cảm bằng AES-256-GCM.",
+      "related": ["aes-gcm", "asymmetric-encryption", "envelope-encryption"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "asymmetric-encryption",
+      "term": "Mã hoá bất đối xứng",
+      "meaning": "Cặp khoá công khai và khoá riêng (RSA, đường cong elliptic): khoá công khai mã hoá, chỉ khoá riêng giải được. Chậm và giới hạn kích thước, nên thường chỉ dùng để trao hoặc bọc khoá.",
+      "example": "RSA-2048 OAEP SHA-256 chỉ mã hoá được tối đa 190 byte.",
+      "related": ["symmetric-encryption", "digital-signature"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "aes-gcm",
+      "term": "AES-GCM",
+      "meaning": "AES ở chế độ Galois/Counter: vừa mã hoá vừa sinh tag 16 byte để phát hiện bị sửa (authenticated encryption). Cần nonce không lặp với cùng khoá.",
+      "example": "`Cipher.getInstance(\"AES/GCM/NoPadding\")` với nonce 12 byte từ SecureRandom.",
+      "related": ["nonce", "aad", "symmetric-encryption"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "nonce",
+      "term": "Nonce",
+      "meaning": "Number used once: giá trị chỉ được dùng một lần với một khoá. Không cần bí mật, chỉ cần không lặp.",
+      "example": "AES-GCM lặp nonce với cùng khoá thì XOR hai bản mã ra XOR hai bản rõ.",
+      "related": ["aes-gcm"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "aad",
+      "term": "AAD",
+      "meaning": "Additional Authenticated Data: dữ liệu không mã hoá nhưng được tag của AES-GCM bảo vệ; sai AAD thì giải mã thất bại.",
+      "example": "Dùng id bản ghi làm AAD để không chép được bản mã của dòng này sang dòng khác.",
+      "related": ["aes-gcm"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "digital-signature",
+      "term": "Chữ ký số",
+      "meaning": "Khoá riêng ký, khoá công khai kiểm: chứng minh ai tạo ra dữ liệu và dữ liệu không bị sửa. Không giấu nội dung.",
+      "example": "JWT ký RS256: service chỉ cần khoá công khai của issuer để kiểm.",
+      "related": ["asymmetric-encryption", "hmac", "jwt"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "csprng",
+      "term": "CSPRNG",
+      "meaning": "Bộ sinh số ngẫu nhiên an toàn cho mật mã, không đoán được giá trị sau từ các giá trị trước. Trong Java là SecureRandom.",
+      "example": "Sinh token đặt lại mật khẩu 32 byte bằng SecureRandom, không dùng Random.",
+      "related": ["nonce", "salt"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "envelope-encryption",
+      "term": "Envelope encryption",
+      "meaning": "Dữ liệu mã hoá bằng data key; data key được khoá chính trong KMS bọc lại và lưu cạnh dữ liệu. Khoá chính không rời KMS.",
+      "example": "GenerateDataKey trả khoá rõ để mã hoá tại chỗ và khoá đã bọc để lưu.",
+      "related": ["kms", "symmetric-encryption", "crypto-shredding"],
+      "topics": ["cryptography-basics"]
     }
   ]
 }

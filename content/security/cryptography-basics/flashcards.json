@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "encoding-not-encryption", "front": "Base64 có phải mã hoá không?", "back": "Không. Base64 là encoding: không có khoá, ai cũng đảo ngược được." },
+    { "id": "hash-vs-hmac", "front": "Hash và HMAC khác nhau thế nào?", "back": "Ai cũng tính được hash; HMAC cần khoá bí mật, nên chứng minh được message không bị sửa và đến từ bên có khoá." },
+    { "id": "aes-default-ecb", "front": "`Cipher.getInstance(\"AES\")` trong SunJCE cho chế độ gì?", "back": "AES/ECB/PKCS5Padding: khối giống nhau ra bản mã giống nhau. Phải ghi rõ AES/GCM/NoPadding." },
+    { "id": "gcm-nonce-reuse", "front": "Lặp nonce với cùng khoá AES-GCM thì sao?", "back": "Biết nội dung một thư là đọc được thư kia, vì XOR hai bản mã bằng XOR hai bản rõ." },
+    { "id": "gcm-tag", "front": "Tag 16 byte của AES-GCM để làm gì?", "back": "Phát hiện bản mã hoặc AAD bị sửa; giải mã sẽ ném AEADBadTagException." },
+    { "id": "rsa-size-limit", "front": "RSA-2048 với OAEP SHA-256 mã hoá được bao nhiêu byte?", "back": "Tối đa 190 byte. Vì vậy dùng RSA để bọc khoá AES, còn dữ liệu mã hoá bằng AES." },
+    { "id": "signature-direction", "front": "Chữ ký số dùng khoá nào để ký và để kiểm?", "back": "Khoá riêng để ký, khoá công khai để kiểm. Chữ ký không giấu nội dung." },
+    { "id": "envelope-why", "front": "Vì sao không mã hoá dữ liệu trực tiếp bằng KMS?", "back": "KMS Encrypt chỉ nhận tối đa 4 KB, mỗi lần là một request có quota; nên KMS chỉ bọc data key, dữ liệu mã hoá tại chỗ." },
+    { "id": "constant-time", "front": "So sánh HMAC hay token bằng gì?", "back": "MessageDigest.isEqual: so trọn, thời gian không phụ thuộc chỗ sai." }
+  ]
+}

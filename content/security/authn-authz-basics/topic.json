@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "authn-authz-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "AuthN & AuthZ cơ bản",
+  "summary": "Authentication và authorization khác nhau thế nào; vì sao mật khẩu phải băm bằng hàm chậm có salt (bcrypt, Argon2id) chứ không SHA-256, số đo thật và giới hạn 72 byte của bcrypt; nâng thuật toán hash dần; session và token tự chứa; session fixation, dò tài khoản, credential stuffing; chính sách mật khẩu NIST mới; các loại MFA và vì sao passkey chống được phishing.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 12,
+  "prerequisites": ["http-request-lifecycle"],
+  "terms": ["authentication", "authorization", "http-session", "jwt", "password-hashing", "salt", "bcrypt", "argon2", "rainbow-table", "mfa", "session-fixation", "credential-stuffing", "idor", "sticky-session", "totp", "passkey", "phishing", "kms", "hmac"],
+  "references": [
+    { "title": "OWASP Password Storage Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" },
+    { "title": "NIST SP 800-63B-4: Authentication and Authenticator Management", "url": "https://pages.nist.gov/800-63-4/sp800-63b.html" },
+    { "title": "Spring Security Reference: Password Storage", "url": "https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html" },
+    { "title": "OWASP Session Management Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" },
+    { "title": "Spring Security advisory: CVE-2025-22228", "url": "https://spring.io/security/cve-2025-22228" },
+    { "title": "RFC 6238: TOTP", "url": "https://www.rfc-editor.org/rfc/rfc6238" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống cũ lưu mật khẩu bằng MD5 không salt, chuyển sang bcrypt thế nào mà không bắt mọi người đặt lại mật khẩu?\" Hai bước. Ngay lập tức: bọc hash cũ, tức lưu `bcrypt(md5(password))` với tiền tố riêng (ví dụ `{bcrypt-md5}`), để database lộ ra hôm sau cũng không còn MD5 trần. Dần dần: khi người dùng đăng nhập đúng, lúc duy nhất có mật khẩu gốc, băm lại bằng bcrypt hoặc Argon2id thuần và đổi tiền tố. Sau vài tháng, tài khoản chưa đăng nhập lại thì buộc đặt lại mật khẩu. Đừng chỉ chờ người dùng đăng nhập: trong lúc chờ, MD5 vẫn nằm đó." },
+    { "type": "callout", "style": "warning", "markdown": "Ẩn nút \"Xoá\" trên giao diện không phải là phân quyền. Kẻ tấn công gọi thẳng API bằng curl. Mọi kiểm tra quyền phải nằm ở server, trong từng request, và kiểm trên đúng bản ghi: `DELETE /orders/1001` phải xác nhận đơn 1001 thuộc người gọi, không chỉ người gọi có role `CUSTOMER`. Đây là lỗi đứng đầu OWASP Top 10 (Broken Access Control)." }
+  ]
+}

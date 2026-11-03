@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "ecb-identical-blocks",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27. Chuỗi đầu vào gồm hai khối 16 byte giống nhau. Dòng in ra là gì?",
+      "code": "SecretKey key = KeyGenerator.getInstance(\"AES\").generateKey();\nCipher cipher = Cipher.getInstance(\"AES\");\ncipher.init(Cipher.ENCRYPT_MODE, key);\nbyte[] ct = cipher.doFinal(\"LUONG=25000000;;LUONG=25000000;;\".getBytes());\nSystem.out.println(ct.length + \" \" + Arrays.equals(ct, 0, 16, ct, 16, 32));",
+      "options": [
+        "48 true",
+        "32 true",
+        "48 false",
+        "32 false"
+      ],
+      "answer": 0,
+      "explanation": "`\"AES\"` trong SunJCE là `AES/ECB/PKCS5Padding`. ECB mã hoá từng khối độc lập, nên hai khối rõ giống nhau ra hai khối mã giống nhau (`true`). PKCS5 luôn thêm padding, 32 byte vừa khít thì thêm nguyên một khối 16 byte, ra 48. Nếu là AES-GCM thì cũng ra 48 byte (32 + tag 16) nhưng hai khối đầu khác nhau, vì mỗi khối được XOR với một giá trị bộ đếm khác."
+    },
+    {
+      "id": "pick-primitive-webhook",
+      "kind": "single",
+      "prompt": "Đối tác gửi webhook tới API của bạn. Bạn cần biết body không bị sửa và đúng là do đối tác gửi. Hai bên đã có chung một secret. Dùng gì?",
+      "options": [
+        "HMAC-SHA256 của body thô với secret, so bằng MessageDigest.isEqual",
+        "SHA-256 của body, đối tác gửi kèm trong header để bạn tính lại",
+        "Mã hoá body bằng AES-ECB với secret, giải mã được là hợp lệ",
+        "Base64 body cùng secret, giải ra đúng secret là body không bị sửa"
+      ],
+      "answer": 0,
+      "explanation": "SHA-256 không có khoá: kẻ sửa body tính lại hash mới là xong. Base64 chẳng giấu hay bảo vệ gì. ECB không có tag, đổi khối vẫn giải mã ra rác mà không báo lỗi. HMAC cần secret mới tính được, nên chứng minh cả toàn vẹn lẫn nguồn gửi. So bằng `MessageDigest.isEqual` để không lộ thời gian; thêm timestamp vào phần được ký để chống gửi lại (bài Thiết kế hệ thống thanh toán)."
+    },
+    {
+      "id": "gcm-counter-restart",
+      "kind": "single",
+      "prompt": "Service mã hoá token bằng AES-GCM, một khoá cố định, nonce là bộ đếm `AtomicLong` bắt đầu từ 0 mỗi lần service khởi động. Vấn đề là gì?",
+      "options": [
+        "Sau restart nonce lặp với cùng khoá, lộ nội dung và giả được tag",
+        "Bộ đếm đoán trước được, biết nonce là giải mã được bản mã",
+        "AtomicLong chỉ có 8 byte, trong khi GCM bắt buộc nonce 16 byte",
+        "Không vấn đề gì vì GCM có tag, mọi bản mã bị sửa đều bị phát hiện"
+      ],
+      "answer": 0,
+      "explanation": "Nonce của GCM không cần bí mật hay khó đoán, chỉ cần không bao giờ lặp với cùng khoá. Đếm lại từ 0 sau restart là lặp: XOR hai bản mã ra XOR hai bản rõ, và lộ khoá xác thực nên tag cũng giả được. Java chỉ chặn lặp IV trên cùng một object `Cipher`. Dùng 12 byte ngẫu nhiên mỗi lần, hoặc đổi data key thường xuyên theo kiểu envelope encryption."
+    },
+    {
+      "id": "kms-rotation-reencrypt",
+      "kind": "single",
+      "prompt": "Dữ liệu 50 TB được mã hoá bằng envelope encryption, data key bọc bằng khoá chính trong KMS. Bật xoay khoá chính tự động. Phải làm gì với 50 TB dữ liệu cũ?",
+      "options": [
+        "Không cần gì: KMS giữ vật liệu khoá cũ để giải các data key cũ",
+        "Giải mã và mã hoá lại toàn bộ 50 TB bằng data key mới trong một đợt",
+        "Gọi KMS Encrypt lại từng bản ghi để chúng chuyển sang khoá mới",
+        "Xoá khoá cũ ngay để dữ liệu chỉ còn mở được bằng khoá mới"
+      ],
+      "answer": 0,
+      "explanation": "Xoay khoá chính tự động của AWS KMS chỉ đổi vật liệu dùng cho lần bọc mới; vật liệu cũ vẫn được giữ để giải các data key đã bọc trước đó, nên dữ liệu không phải đụng tới. Muốn chuyển hẳn sang khoá chính khác thì chỉ bọc lại data key bằng `ReEncrypt` (vài chục byte mỗi cái), không phải 50 TB. Xoá khoá chính là crypto-shredding: mọi dữ liệu bọc bằng nó mất vĩnh viễn."
+    },
+    {
+      "id": "jwt-signed-readable",
+      "kind": "single",
+      "prompt": "Một JWT ký bằng RS256 chứa claim `email` và `role`. Người dùng dán token vào một trang giải mã JWT. Họ thấy gì?",
+      "options": [
+        "Đọc được email và role, vì chữ ký không giấu nội dung",
+        "Không đọc được gì nếu không có khoá riêng của issuer",
+        "Chỉ đọc được header, payload đã được mã hoá bằng RSA",
+        "Đọc được nhưng chỉ khi có thêm khoá công khai của issuer"
+      ],
+      "answer": 0,
+      "explanation": "Payload JWT chỉ là JSON encode Base64URL; chữ ký RS256 chứng minh token không bị sửa và do issuer cấp, không giấu gì. Khoá công khai chỉ cần để kiểm chữ ký, không cần để đọc. Vì vậy không đặt dữ liệu nhạy cảm vào JWT; cần giấu thì dùng JWE hoặc token ngẫu nhiên tra ở server (bài JWT chuyên sâu)."
+    }
+  ]
+}
