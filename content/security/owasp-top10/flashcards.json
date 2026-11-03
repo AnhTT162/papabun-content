@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "top10-2025-first", "front": "Nhóm nào đứng đầu OWASP Top 10:2025?", "back": "A01 Broken Access Control, nay gồm cả SSRF và CSRF." },
+    { "id": "top10-2025-new", "front": "OWASP Top 10:2025 có gì mới so với 2021?", "back": "A03 Software Supply Chain Failures mở rộng từ \"thư viện lỗi thời\", A10 Mishandling of Exceptional Conditions là nhóm mới, SSRF gộp vào A01." },
+    { "id": "idor-fix", "front": "Sửa IDOR trong Spring Data thế nào?", "back": "Lọc theo chủ sở hữu ngay trong truy vấn, như `findByIdAndOwnerId`, và trả `404` khi không thuộc người gọi." },
+    { "id": "injection-rule", "front": "Quy tắc chung chống injection là gì?", "back": "Dùng API tách dữ liệu khỏi lệnh (tham số, danh sách đối số); phần không tham số hoá được thì chọn từ allowlist." },
+    { "id": "processbuilder", "front": "`ProcessBuilder` với danh sách đối số còn rủi ro gì?", "back": "Argument injection: đối số khớp tuỳ chọn thật của chương trình được hiểu là tuỳ chọn. Thêm `--` nếu chương trình hỗ trợ, và kiểm định dạng." },
+    { "id": "spel-context", "front": "Đánh giá SpEL từ input an toàn hơn thế nào?", "back": "Dùng `SimpleEvaluationContext`, không cho tham chiếu kiểu `T(...)`; `StandardEvaluationContext` cho gọi mọi class." },
+    { "id": "xss-context", "front": "Vì sao chống XSS là escape theo ngữ cảnh?", "back": "HTML, thuộc tính, JavaScript, URL có quy tắc khác nhau; escape HTML không chặn `href=\"javascript:...\"`." },
+    { "id": "string-body-html", "front": "Vì sao `@RestController` trả `String` có thể thành XSS?", "back": "`StringHttpMessageConverter` chọn Content-Type theo `Accept`, trình duyệt gửi `text/html` nên response được dựng thành HTML." },
+    { "id": "ssrf-resolve", "front": "Kiểm URL chống SSRF ở đâu?", "back": "Trên IP đã phân giải, rồi kết nối tới đúng IP đó và không tự theo redirect; so chuỗi URL bị vượt dễ dàng." },
+    { "id": "fail-closed", "front": "Kiểm tra bảo mật nên fail open hay fail closed?", "back": "Fail closed: dịch vụ phân quyền lỗi thì từ chối, không cho qua." }
+  ]
+}

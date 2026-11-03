@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "API JSON bị báo lỗi XSS dù không có trang HTML nào",
+  "context": "Service tra cứu vận đơn `api.shop.example.com` (Spring Boot 4, Spring Security 7) chỉ phục vụ app di động và SPA, không có template HTML. Báo cáo pentest xếp mức High \"reflected XSS\" kèm một đường link; đội cho rằng báo nhầm vì \"API chỉ trả JSON\".",
+  "buggyCode": "@RestController\n@RequestMapping(\"/orders\")\nclass OrderTrackingController {\n\n    @GetMapping(\"/track\")\n    ResponseEntity<String> track(@RequestParam(\"code\") String code) {\n        if (!code.matches(\"[A-Z0-9]{10}\")) {\n            return ResponseEntity.badRequest().body(\"Invalid tracking code: \" + code);\n        }\n        return ResponseEntity.ok(trackingService.statusJson(code)); // chuỗi JSON dựng sẵn\n    }\n}",
+  "symptom": {
+    "description": "Gọi lại đường link trong báo cáo bằng curl, một lần với header `Accept` mà Chrome gửi khi mở link, một lần với `Accept` của app di động:",
+    "output": "$ curl -i 'https://api.shop.example.com/orders/track?code=%3Cimg%20src%3Dx%20onerror%3Dalert(document.domain)%3E' \\\n    -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'\nHTTP/2 400\ncontent-type: text/html;charset=UTF-8\nx-content-type-options: nosniff\nx-frame-options: DENY\n\nInvalid tracking code: <img src=x onerror=alert(document.domain)>\n\n$ curl -i '...cùng URL...' -H 'Accept: application/json'\nHTTP/2 400\ncontent-type: application/json\n\nInvalid tracking code: <img src=x onerror=alert(document.domain)>"
+  },
+  "diagnosis": {
+    "question": "Vì sao một API \"chỉ trả JSON\" lại chạy được script trong trình duyệt?",
+    "options": [
+      "Body String được ghi với Content-Type theo Accept, trình duyệt nhận text/html",
+      "Thiếu header X-XSS-Protection: 1 nên trình duyệt không lọc script phản chiếu",
+      "Body không phải JSON hợp lệ nên trình duyệt tự đoán nội dung là trang HTML",
+      "Spring trả trang lỗi mặc định dạng HTML có chèn tham số chưa được escape"
+    ],
+    "answer": 0,
+    "explanation": "Kiểu trả về `String` được ghi bởi `StringHttpMessageConverter`, converter này nhận mọi media type, nên Spring chọn kiểu cụ thể nhất mà client chấp nhận: với header `Accept` của trình duyệt là `text/html` (đã tái hiện với Spring Framework 7.0.10 MockMvc; cả nhánh thành công cũng ra `text/html`). Trình duyệt dựng HTML và chạy `onerror`, script chạy trong origin `api.shop.example.com`. Không có chuyện đoán kiểu: server đã khai `text/html`, còn `nosniff` chỉ cấm đoán khi kiểu được khai khác. `X-XSS-Protection` thuộc XSS Auditor đã bị gỡ khỏi trình duyệt; Spring Security cố ý đặt `0`. Body là đúng chuỗi controller trả, không phải trang lỗi của Spring Boot."
+  },
+  "fix": {
+    "code": "record TrackingStatus(String code, String status) {}\n\n@RestController\n@RequestMapping(\"/orders\")\nclass OrderTrackingController {\n\n    @GetMapping(path = \"/track\", produces = MediaType.APPLICATION_JSON_VALUE)\n    ResponseEntity<?> track(@RequestParam(\"code\") String code) {\n        if (!code.matches(\"[A-Z0-9]{10}\")) {\n            // Không phản chiếu input, khai rõ kiểu nội dung\n            return ResponseEntity.badRequest()\n                    .contentType(MediaType.APPLICATION_PROBLEM_JSON)\n                    .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,\n                            \"Mã vận đơn phải gồm 10 chữ hoa hoặc số\"));\n        }\n        return ResponseEntity.ok(trackingService.status(code)); // trả object, để Jackson ghi JSON\n    }\n}\n\n// Kết quả (đã chạy) với Accept của trình duyệt:\n// 400 application/problem+json {\"detail\":\"Mã vận đơn phải gồm 10 chữ hoa hoặc số\",\"instance\":\"/orders/track\",\"status\":400,\"title\":\"Bad Request\"}\n// 200 application/json {\"code\":\"VN12345678\",\"status\":\"SHIPPING\"}",
+    "explanation": "Trả object để Jackson ghi JSON và khai `produces`, thì response luôn là `application/json` hoặc `application/problem+json` dù client gửi `Accept` gì; trình duyệt hiển thị văn bản chứ không dựng HTML. Thông báo lỗi không cần lặp lại input: người gọi đã biết mình gửi gì, và phản chiếu input là nguồn của reflected XSS lẫn log injection. Rà cả codebase các phương thức trả `String` hay `ResponseEntity<String>` có ghép dữ liệu từ request. Thêm CSP `default-src 'none'; frame-ancestors 'none'` cho API làm lớp chặn thứ hai: kể cả khi một response bị hiểu là HTML, script inline cũng không chạy."
+  }
+}

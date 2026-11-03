@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "inetaddress-decimal-output",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27. Dòng in ra là gì?",
+      "code": "InetAddress address = InetAddress.getByName(\"2852039166\");\nSystem.out.println(address.getHostAddress() + \" \" + address.isLinkLocalAddress());",
+      "options": [
+        "169.254.169.254 true",
+        "UnknownHostException",
+        "2852039166 false",
+        "0.0.0.0 false"
+      ],
+      "answer": 0,
+      "explanation": "Chuỗi chỉ gồm số được hiểu là địa chỉ IPv4 32 bit: 2852039166 = 0xA9FEA9FE = `169.254.169.254`, địa chỉ link-local của metadata service (đã chạy thử). Bộ lọc so chuỗi với `\"169.254.169.254\"` sẽ cho qua; kiểm trên `InetAddress` đã phân giải thì bắt được. Dạng hex `0xA9FEA9FE` thì `InetAddress` của Java không nhận và ném `UnknownHostException`, nhưng thư viện khác có thể nhận."
+    },
+    {
+      "id": "string-body-content-type",
+      "kind": "single",
+      "prompt": "`@GetMapping(\"/hello\") String hello(@RequestParam(\"name\") String name) { return \"Xin chào \" + name; }` trong `@RestController`, không khai `produces`. Mở URL bằng Chrome thì response có Content-Type gì?",
+      "options": [
+        "text/html, vì Spring chọn theo header Accept của trình duyệt",
+        "application/json, vì @RestController luôn ghi body là JSON",
+        "text/plain, vì kiểu trả về String luôn được ghi là văn bản",
+        "Không có Content-Type, trình duyệt tự đoán theo nội dung"
+      ],
+      "answer": 0,
+      "explanation": "`@RestController` chỉ có nghĩa là ghi giá trị trả về vào body, không ép JSON. Với `String`, `StringHttpMessageConverter` hỗ trợ mọi media type, nên Spring lấy kiểu cụ thể nhất trong `Accept`: Chrome gửi `text/html` trước tiên, nên response là `text/html` (đã tái hiện với Spring 7.0.10). Client gửi `*/*` như curl mặc định mới nhận `text/plain`. Ghép input vào chuỗi đó là reflected XSS."
+    },
+    {
+      "id": "processbuilder-injection",
+      "kind": "single",
+      "prompt": "Code chuyển ảnh: `new ProcessBuilder(\"convert\", uploadName, \"out.png\").start()`. Đã bỏ `sh -c`. Còn rủi ro nào?",
+      "options": [
+        "Đối số khớp tuỳ chọn thật của convert bị hiểu là tuỳ chọn",
+        "Ký tự `;` trong tên file vẫn chạy được lệnh thứ hai",
+        "ProcessBuilder vẫn gọi shell nên `$(...)` vẫn chạy",
+        "Không còn rủi ro vì đối số đã được tách riêng từng phần"
+      ],
+      "answer": 0,
+      "explanation": "`ProcessBuilder` với danh sách đối số không qua shell, nên `;`, `|`, `$(...)` chỉ là ký tự trong tên file. Nhưng chương trình đích vẫn tự phân tích đối số: một phần tử khớp tuỳ chọn thật (ví dụ dạng `--opt=giá_trị` với chương trình nhận kiểu đó) được hiểu là tuỳ chọn, còn ImageMagick hiểu cả tiền tố như `msl:` trong tên file (argument injection). Thêm `--` trước tên file nếu chương trình hỗ trợ, kiểm định dạng tên, hoặc tự đặt tên file trên server."
+    },
+    {
+      "id": "authz-fail-open",
+      "kind": "single",
+      "prompt": "`boolean canView(user, order) { try { return policyClient.check(user, order); } catch (Exception e) { log.warn(...); return true; } }`. Dịch vụ policy chậm 30 giây trong giờ cao điểm. Điều gì xảy ra?",
+      "options": [
+        "Mọi kiểm tra lỗi timeout đều cho qua, ai cũng xem được đơn",
+        "Người dùng chờ lâu hơn nhưng quyền vẫn được kiểm như cũ",
+        "Request bị từ chối vì exception làm hỏng toàn bộ request",
+        "Spring Security tự chặn vì phát hiện exception ở bước này"
+      ],
+      "answer": 0,
+      "explanation": "Khối `catch` biến mọi lỗi (timeout, mất kết nối, lỗi parse) thành \"được phép\": đây là fail open, thuộc A10 Mishandling of Exceptional Conditions. Kẻ tấn công còn có thể chủ động làm dịch vụ policy quá tải để mở cửa. Kiểm tra bảo mật phải fail closed: trả từ chối hoặc lỗi `503`, kèm cảnh báo."
+    },
+    {
+      "id": "waf-limit",
+      "kind": "single",
+      "prompt": "Công ty đặt WAF với bộ luật OWASP Core Rule Set trước mọi API. Loại lỗi nào WAF gần như không chặn được?",
+      "options": [
+        "IDOR: đổi id đơn hàng trong URL để xem đơn của người khác",
+        "SQL injection kiểu `' OR 1=1--` trong tham số tìm kiếm",
+        "Reflected XSS với thẻ `<script>` trong query string",
+        "Path traversal với chuỗi `../../etc/passwd` trong tham số"
+      ],
+      "answer": 0,
+      "explanation": "Request đổi `/orders/1001` thành `/orders/1002` trông y hệt request hợp lệ; chỉ ứng dụng biết đơn 1002 có thuộc người gọi hay không. WAF bắt được mẫu chuỗi tấn công phổ biến như `' OR 1=1`, `<script>`, `../`, dù vẫn bị vượt bằng biến thể mã hoá. Lỗi phân quyền và logic nghiệp vụ phải sửa trong code."
+    }
+  ]
+}

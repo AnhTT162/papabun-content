@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "origin-vs-site", "front": "Origin và site khác nhau thế nào?", "back": "Origin là scheme + host + port. Site là scheme + tên miền đăng ký được (eTLD+1), nên các tên miền con cùng site nhưng khác origin." },
+    { "id": "sop-blocks-read", "front": "Same-origin policy chặn gì?", "back": "Chặn JavaScript đọc response của origin khác. Không chặn gửi request: form, `<img>`, `fetch` vẫn tới server." },
+    { "id": "cors-not-csrf", "front": "Vì sao CORS không chống được CSRF?", "back": "CORS chỉ nới lỏng việc đọc response. Request ghi dạng simple request vẫn tới server và được xử lý trước khi trình duyệt chặn đọc." },
+    { "id": "preflight", "front": "Khi nào trình duyệt gửi preflight `OPTIONS`?", "back": "Khi request không phải simple request: method khác `GET`/`HEAD`/`POST`, header tự đặt, hoặc `Content-Type` như `application/json`. Preflight không mang cookie." },
+    { "id": "samesite-values", "front": "`SameSite=Lax` gửi cookie khi nào?", "back": "Mọi request cùng site, và điều hướng `GET` cấp cao nhất từ site khác (bấm link). Không gửi với form `POST`, iframe, `fetch` từ site khác." },
+    { "id": "httponly-xss", "front": "`HttpOnly` có chống được XSS không?", "back": "Không. Nó chỉ ngăn script đọc cookie; script độc vẫn gửi request thay người dùng ngay trên trang đó." },
+    { "id": "host-prefix", "front": "Prefix `__Host-` của cookie đảm bảo gì?", "back": "Cookie phải `Secure`, `Path=/`, không có `Domain`, nên chỉ thuộc đúng host và tên miền con không ghi đè được." },
+    { "id": "spring-csrf-default", "front": "Spring Security chống CSRF mặc định thế nào?", "back": "Synchronizer token lưu trong session, request ghi phải gửi lại token (form `_csrf` hoặc header), thiếu thì `403`." },
+    { "id": "csp-nonce", "front": "CSP dùng nonce hoạt động thế nào?", "back": "Mỗi response sinh một nonce ngẫu nhiên, đặt trong header và thẻ `<script nonce>` hợp lệ; script chèn vào không có nonce nên không chạy." },
+    { "id": "frame-ancestors", "front": "Chống clickjacking bằng gì?", "back": "`X-Frame-Options: DENY` hoặc CSP `frame-ancestors` (cho phép liệt kê origin được nhúng, không dùng được trong thẻ `<meta>`)." }
+  ]
+}

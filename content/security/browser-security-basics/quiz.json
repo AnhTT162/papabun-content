@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "origin-patterns-output",
+      "kind": "output",
+      "prompt": "Chạy với spring-web 7.0.10. Dòng in ra là gì?",
+      "code": "var config = new CorsConfiguration();\nconfig.setAllowedOriginPatterns(List.of(\"*\"));\nconfig.setAllowCredentials(true);\nSystem.out.println(config.checkOrigin(\"https://evil.example.net\"));",
+      "options": [
+        "https://evil.example.net",
+        "null",
+        "*",
+        "Ném IllegalArgumentException"
+      ],
+      "answer": 0,
+      "explanation": "`allowedOriginPatterns(\"*\")` khớp mọi origin và trả về chính origin của request để đặt vào `Access-Control-Allow-Origin`, nên được dùng cùng `allowCredentials(true)` mà không lỗi (đã chạy thử). Lỗi `IllegalArgumentException` chỉ xảy ra với `allowedOrigins(\"*\")` kèm credentials, vì header không được là `*` khi có credentials. Kết quả là mọi trang đều đọc được response có cookie của người dùng."
+    },
+    {
+      "id": "json-fetch-cross-origin",
+      "kind": "single",
+      "prompt": "Trang `https://evil.example.net` gọi `fetch` tới `https://api.shop.example.com/transfer` với `method: 'POST'`, `credentials: 'include'`, `Content-Type: application/json`. API không cấu hình CORS. Server nhận được gì?",
+      "options": [
+        "Chỉ một request OPTIONS không cookie, POST không được gửi",
+        "Request POST có cookie, server chạy xong rồi trình duyệt chặn đọc",
+        "Request POST không có cookie vì trình duyệt bỏ cookie khi khác origin",
+        "Không nhận được gì vì trình duyệt chặn ngay trước khi gửi đi"
+      ],
+      "answer": 0,
+      "explanation": "`application/json` không thuộc simple request, nên trình duyệt gửi preflight `OPTIONS` trước, không kèm cookie. Server không trả header CORS cho phép, nên `POST` không bao giờ được gửi (đã tái hiện với Chrome 156). Nếu đổi body sang dạng form hay `text/plain` thì là simple request: `POST` tới server và được xử lý, trình duyệt chỉ chặn JavaScript đọc response."
+    },
+    {
+      "id": "samesite-subdomain",
+      "kind": "single",
+      "prompt": "Cookie session của `app.shop.example.com` khai `SameSite=Strict`. Trang `blog.shop.example.com` tự submit một form `POST` tới app. Cookie có được gửi không?",
+      "options": [
+        "Có, hai tên miền con cùng site nên Strict không chặn",
+        "Không, Strict chặn mọi request không đến từ đúng origin",
+        "Không, vì form POST từ tên miền khác luôn cần preflight",
+        "Có, nhưng chỉ khi cookie được đặt chưa quá hai phút"
+      ],
+      "answer": 0,
+      "explanation": "`SameSite` so site (scheme + tên miền đăng ký được), không so origin. `blog.shop.example.com` và `app.shop.example.com` cùng site nên cả `Strict` lẫn `Lax` đều được gửi (đã tái hiện với Chrome 156). Form `POST` dạng urlencoded là simple request, không có preflight. Ngoại lệ hai phút chỉ dành cho cookie không khai `SameSite` khi request đến từ site khác."
+    },
+    {
+      "id": "csp-nonce-unsafe-inline",
+      "kind": "single",
+      "prompt": "Response có header `Content-Security-Policy: script-src 'nonce-r4nd0m' 'unsafe-inline'`. Kẻ tấn công chèn được `<script>alert(1)</script>` vào trang. Trình duyệt hiện đại làm gì?",
+      "options": [
+        "Chặn script, vì có nonce thì 'unsafe-inline' bị bỏ qua",
+        "Chạy script, vì 'unsafe-inline' cho phép mọi script inline",
+        "Chạy script, vì nonce chỉ áp cho script nạp từ tệp bên ngoài",
+        "Chặn script, vì trình duyệt luôn chặn mọi script inline"
+      ],
+      "answer": 0,
+      "explanation": "Từ CSP Level 2, khi `script-src` có nonce hoặc hash, trình duyệt bỏ qua `'unsafe-inline'`; `'unsafe-inline'` chỉ còn để trình duyệt rất cũ không hiểu nonce vẫn chạy được trang. Script chèn vào không có nonce đúng nên bị chặn. Nonce áp cho cả script inline lẫn `<script src>`, và phải sinh mới cho mỗi response."
+    },
+    {
+      "id": "httponly-xss-impact",
+      "kind": "single",
+      "prompt": "Trang có lỗi stored XSS. Cookie session có `HttpOnly`. Kẻ tấn công còn làm được gì?",
+      "options": [
+        "Gửi request thay nạn nhân và đọc dữ liệu trên trang",
+        "Không còn làm được gì đáng kể vì không lấy được cookie",
+        "Chỉ đọc được cookie khác không có cờ HttpOnly trên trang",
+        "Chỉ đổi được giao diện, không gọi được API của ứng dụng"
+      ],
+      "answer": 0,
+      "explanation": "Script chạy trong chính origin của ứng dụng, nên same-origin policy không chặn nó: script gọi API (cookie tự đi kèm), đọc response, đọc cả CSRF token trên trang, rồi gửi dữ liệu ra ngoài. `HttpOnly` chỉ ngăn lấy cookie mang đi dùng ở máy khác. Phải chặn XSS từ gốc bằng escape đầu ra và CSP."
+    }
+  ]
+}

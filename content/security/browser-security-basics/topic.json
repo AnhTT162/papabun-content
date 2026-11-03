@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "browser-security-basics",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Bảo mật phía trình duyệt",
+  "summary": "Origin và site khác nhau thế nào; same-origin policy chặn đọc chứ không chặn gửi; CORS, simple request và preflight, các cấu hình CORS làm lộ dữ liệu; cờ cookie `HttpOnly`, `Secure`, `SameSite` và prefix `__Host-`; CSRF và cách Spring Security chống; CSP với nonce, clickjacking, header bảo mật mặc định; số đo thật với Chrome 156.",
+  "level": "junior",
+  "order": 3,
+  "minutes": 13,
+  "prerequisites": ["http-request-lifecycle", "authn-authz-basics"],
+  "terms": ["web-origin", "site", "same-origin-policy", "cors", "cors-preflight", "samesite", "cookie-prefix", "csrf", "xss", "csp", "clickjacking", "fetch-metadata", "third-party-cookie", "http-session", "hsts", "simple-request", "cookie-tossing", "csp-nonce"],
+  "references": [
+    { "title": "MDN: Cross-Origin Resource Sharing (CORS)", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS" },
+    { "title": "MDN: Set-Cookie", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie" },
+    { "title": "OWASP Cross-Site Request Forgery Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" },
+    { "title": "Spring Security Reference: Cross Site Request Forgery (Servlet)", "url": "https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html" },
+    { "title": "Spring Security Reference: Security HTTP Response Headers", "url": "https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html" },
+    { "title": "MDN: Content-Security-Policy script-src", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Trình duyệt hiện đại đã mặc định SameSite=Lax, còn cần CSRF token không?\" Vẫn cần, vì ba lý do. Một, `SameSite` tính theo site: mọi tên miền con cùng tên miền đăng ký (trang trợ giúp, blog, tên miền con bị chiếm) gửi được request kèm cookie `Lax`, thậm chí `Strict`. Hai, `Lax` vẫn gửi cookie khi người dùng điều hướng `GET` từ site khác, nên endpoint `GET` đổi dữ liệu vẫn bị khai thác; Chrome còn miễn 2 phút cho `POST` với cookie không khai `SameSite`. Ba, Firefox và Safari không mặc định `Lax` (tính đến Chrome 156). Coi `SameSite` là lớp thêm; lớp chính là token (hoặc kiểm `Origin`/`Sec-Fetch-Site`)." },
+    { "type": "callout", "style": "warning", "markdown": "Gặp lỗi `allowedOrigins cannot contain the special value \"*\"` khi bật `allowCredentials(true)`, đừng đổi sang `allowedOriginPatterns(\"*\")` cho hết lỗi. Đã chạy với spring-web 7.0.10: cấu hình đó trả `Access-Control-Allow-Origin` bằng đúng origin của trang gọi, tức trang nào trên internet cũng đọc được dữ liệu của người đang đăng nhập (miễn cookie được gửi). Liệt kê đúng các origin cần thiết, hoặc dùng pattern có tên miền như `https://*.shop.example.com`." }
+  ]
+}

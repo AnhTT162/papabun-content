@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "owasp-top10",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "OWASP Top 10 với Java/Spring",
+  "summary": "Mười nhóm rủi ro của OWASP Top 10:2025 và những gì đổi so với 2021; broken access control và IDOR trong Spring; injection ngoài SQL (JPQL, lệnh shell, SpEL, template, LDAP); XSS theo ngữ cảnh và vì sao API trả `String` lại thành `text/html`; SSRF và các cách vượt kiểm tra URL trong Java; misconfiguration, chuỗi cung ứng, fail open; bài nào sở hữu phần chi tiết.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 15,
+  "prerequisites": ["browser-security-basics", "authn-authz-basics", "jdbc-basics"],
+  "terms": ["owasp-top-10", "broken-access-control", "injection", "output-encoding", "idor", "ssrf", "xss", "csrf", "sql-injection", "fail-open", "dns-rebinding", "waf", "imds", "problem-detail", "log4shell", "sbom", "gadget-chain"],
+  "references": [
+    { "title": "OWASP Top 10:2025", "url": "https://owasp.org/Top10/2025/" },
+    { "title": "OWASP Cross Site Scripting Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html" },
+    { "title": "OWASP Server-Side Request Forgery Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html" },
+    { "title": "OWASP Application Security Verification Standard (ASVS)", "url": "https://owasp.org/www-project-application-security-verification-standard/" },
+    { "title": "Spring Framework Reference: Evaluation Context (SpEL)", "url": "https://docs.spring.io/spring-framework/reference/core/expressions/evaluation.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Ứng dụng đã dùng JPA, không có câu SQL tự viết, vậy là hết injection chưa?\" Chưa. JPA chỉ an toàn khi giá trị đi qua tham số: `createQuery` ghép chuỗi JPQL vẫn là injection, nối chuỗi `ORDER BY` từ request hay dùng `JpaSort.unsafe` cũng vậy (`Sort` thường thì Spring Data kiểm tên thuộc tính). Ngoài database còn lệnh shell, biểu thức SpEL, template, LDAP, header HTTP và HTML. Quy tắc chung là tìm mọi chỗ dữ liệu đi vào một trình thông dịch khác, và ở mỗi chỗ dùng API tách dữ liệu khỏi lệnh, phần còn lại chọn từ allowlist." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chống SSRF bằng cách so chuỗi URL với `169.254.169.254` hay `localhost`. Đã chạy trên JDK 27: `InetAddress.getByName(\"2852039166\")` ra `169.254.169.254`, `127.1` ra `127.0.0.1`, và host của `http://shop.example.com@169.254.169.254/` là `169.254.169.254`. Kiểm trên địa chỉ IP đã phân giải, kết nối tới đúng IP đã kiểm, không tự theo redirect, và ưu tiên allowlist đích." }
+  ]
+}
