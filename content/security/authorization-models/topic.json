@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "authorization-models",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Mô hình phân quyền",
+  "summary": "RBAC, ABAC, ReBAC và khi nào kết hợp; role explosion và gán role theo phạm vi; tách nhiệm; PEP/PDP, OPA, Cedar, Zanzibar với OpenFGA và SpiceDB, new enemy problem; lọc danh sách và tìm kiếm theo quyền; quyền trong token, cache quyết định; các dạng BOLA hay sót (lab: kiểm id trên URL nhưng ghi theo id trong body, đã chạy với Spring Security 7); cấp quyền và audit; test truy cập chéo, shadow mode khi đổi engine.",
+  "level": "senior",
+  "order": 10,
+  "minutes": 17,
+  "prerequisites": ["authn-authz-basics", "owasp-top10", "spring-security-architecture"],
+  "terms": ["rbac", "abac", "rebac", "role-explosion", "zanzibar", "policy-enforcement-point", "policy-decision-point", "opa", "bola", "idor", "separation-of-duties", "relationship-tuple", "new-enemy-problem", "policy-as-code", "row-level-security", "fail-open", "mass-assignment", "audit-log", "confused-deputy", "shadow-mode", "method-security", "jwt", "multi-tenancy"],
+  "references": [
+    { "title": "Zanzibar: Google's Consistent, Global Authorization System (USENIX ATC 2019)", "url": "https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/" },
+    { "title": "NIST SP 800-162: Guide to Attribute Based Access Control (ABAC)", "url": "https://csrc.nist.gov/pubs/sp/800/162/upd2/final" },
+    { "title": "OWASP API Security Top 10 2023: API1 Broken Object Level Authorization", "url": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/" },
+    { "title": "OpenFGA: Query Consistency", "url": "https://openfga.dev/docs/interacting/consistency" },
+    { "title": "Spring Security Reference: Method Security", "url": "https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html" },
+    { "title": "Open Policy Agent documentation", "url": "https://www.openpolicyagent.org/docs" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn có 30 microservice. Đặt logic phân quyền ở đâu: gateway, một service phân quyền trung tâm, hay trong từng service?\" Gateway chỉ kiểm thô (đã xác thực, scope, tenant khớp) vì nó không biết bản ghi thuộc về ai. Quyền trên bản ghi kiểm ở service sở hữu dữ liệu, gần truy vấn. Phần dùng chung (model quyền, quan hệ chia sẻ, policy) có thể tập trung vào một PDP như OpenFGA hay OPA, nhưng mỗi service vẫn là PEP và tự lọc danh sách trong database. Tập trung hoá quyết định thì dễ kiểm toán và nhất quán, đổi lại thêm một phụ thuộc trên đường đi của mọi request: chạy PDP gần service (sidecar, nhiều replica), cache có khoá đúng, và fail closed." },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "warning", "markdown": "Test \"user B đọc đơn của user A phải hỏng\" là cần nhưng chưa đủ. Lab trên vẫn xanh với test đó mà lỗ hổng còn nguyên, vì id được kiểm (URL) khác id được dùng (body). Viết test truy cập chéo cho mọi nguồn id: path, body, query, id lô `?ids=`, item lồng trong tài nguyên cha, và link tải file." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

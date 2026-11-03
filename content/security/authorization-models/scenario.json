@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Phân quyền cho SaaS hồ sơ công trình: role, chia sẻ và nhà thầu bên ngoài",
+  "prompt": "Bạn là kiến trúc sư của một SaaS quản lý hồ sơ công trình cho các công ty xây dựng: 300 công ty (tenant), 40.000 người dùng, 6 triệu tài liệu (bản vẽ, biên bản nghiệm thu, hợp đồng) trong khoảng 25.000 dự án. Hiện quyền là cột `role` trong bảng `users` (ADMIN, MANAGER, ENGINEER, VIEWER) và khoảng 140 chỗ `if (user.getRole() == ...)` rải trong code; tài liệu lọc theo `tenant_id`, ai trong công ty cũng thấy mọi dự án.\n\nYêu cầu mới từ khách hàng:\n\n- Quyền theo dự án: một người là quản lý ở dự án A nhưng chỉ xem ở dự án B.\n- Thư mục lồng nhau trong dự án; chia sẻ thư mục hoặc tài liệu cho người hoặc nhóm; quyền thư mục cha áp xuống con.\n- **Nhà thầu phụ** là người của công ty khác (có thể chính là một tenant khác trên nền tảng) chỉ thấy vài thư mục được chia sẻ. Khi hợp đồng chấm dứt, họ phải mất quyền **ngay**, kể cả với tài liệu thêm vào sau đó.\n- Kiểm toán viên xem toàn bộ một dự án trong 30 ngày.\n- Người tạo biên bản nghiệm thu không được tự duyệt biên bản đó.\n- Tìm kiếm toàn văn và danh sách tài liệu chỉ trả thứ người dùng được xem; p95 dưới 300 ms.\n- Quản trị công ty muốn trả lời \"ai đang xem được hợp đồng X\".\n\nĐề xuất mô hình phân quyền, nơi lưu và kiểm quyền, cách lọc danh sách và tìm kiếm, và kế hoạch thay 140 chỗ `if` mà không làm gãy hệ thống đang chạy.",
+  "hints": [
+    "Tách hai loại câu hỏi: \"được dùng chức năng gì\" (tạo dự án, quản lý thanh toán) và \"được làm gì trên tài liệu này\". Mô hình nào hợp với từng loại?",
+    "Quyền thừa hưởng từ thư mục cha, nhóm, và chia sẻ cho người ngoài tenant là một đồ thị. Trả lời \"ai xem được hợp đồng X\" trên đồ thị đó dễ hay khó với ABAC thuần?",
+    "Gỡ nhà thầu khỏi thư mục rồi ngay sau đó thêm tài liệu mật vào. Nếu check đọc dữ liệu quan hệ từ cache, chuyện gì xảy ra?",
+    "6 triệu tài liệu: không thể check từng tài liệu trong kết quả tìm kiếm. Tập nào nhỏ để lọc trước: dự án người dùng tham gia, hay tài liệu được chia sẻ trực tiếp?"
+  ],
+  "solution": "**1. Mô hình: kết hợp ba kiểu, mỗi kiểu một việc**\n\n| Câu hỏi | Mô hình | Ví dụ |\n|---|---|---|\n| Được dùng chức năng gì trong công ty | [[rbac|RBAC]] gán theo phạm vi tenant | `tenant_admin` quản lý người dùng, thanh toán |\n| Được làm gì trên dự án, thư mục, tài liệu | [[rebac|ReBAC]] | `manager` của dự án A, `viewer` của thư mục Kết cấu |\n| Điều kiện trên bản ghi và ngữ cảnh | [[abac|ABAC]] | người tạo biên bản không được duyệt nó; quyền kiểm toán hết hạn sau 30 ngày |\n\nModel ReBAC (cú pháp kiểu OpenFGA, rút gọn):\n\n- `project`: `manager`, `member`, `auditor` (có điều kiện hết hạn); `viewer` = `member` ∪ `manager` ∪ `auditor`.\n- `folder`: `parent` (project hoặc folder), `editor`, `viewer` trực tiếp; `viewer` = `viewer` trực tiếp ∪ `editor` ∪ `viewer` của `parent`.\n- `document`: `parent` (folder), `owner`; `can_view` = `viewer` của `parent` ∪ chia sẻ trực tiếp; `can_approve` = `manager` của dự án, rồi service kiểm thêm người duyệt khác `created_by` ([[separation-of-duties|tách nhiệm]] là luật trên bản ghi).\n- Nhóm: `group#member`; chia sẻ cho nhóm là tuple `folder:ket-cau#viewer@group:nha-thau-x#member`.\n- Nhà thầu là `user` bình thường, có thể thuộc tenant khác. Quyền của họ chỉ đến từ tuple chia sẻ; họ không có role nào trong tenant của chủ đầu tư.\n\nTenant vẫn là bộ lọc đầu tiên trong mọi truy vấn của tenant sở hữu dữ liệu; chia sẻ chéo tenant chỉ đi qua tuple chia sẻ và được ghi audit (bài Multi-tenancy).\n\n**2. Nơi lưu và kiểm**\n\n- Dùng một engine ReBAC (OpenFGA hoặc SpiceDB) làm [[policy-decision-point|PDP]] cho quyền trên tài nguyên. Tự viết bảng ACL + truy vấn đệ quy cũng được ở quy mô này, nhưng sẽ phải tự làm phần thừa hưởng, nhóm lồng, truy vấn ngược và nhất quán.\n- Service tài liệu là [[policy-enforcement-point|PEP]]: mỗi API gọi `check(user, relation, object)` qua một `AuthorizationManager` chung, không gọi engine rải rác.\n- Tuple sinh từ sự kiện của service (tạo thư mục, chia sẻ, thêm người vào dự án) qua outbox, không ghi kép trong request. Job đối soát hằng đêm so tuple với database.\n- Quyền chức năng (RBAC) giữ trong service người dùng, đưa vào token dạng role thô; quyền trên tài liệu không đưa vào token.\n- Engine lỗi thì từ chối (fail closed) và báo động; chạy nhiều replica gần service.\n\n**3. Thu hồi ngay cho nhà thầu**\n\n- Gỡ quyền là xoá tuple. Rủi ro là [[new-enemy-problem|new enemy]]: check ngay sau đó đọc từ cache cũ. Lưu token nhất quán (ZedToken của SpiceDB) cùng tài liệu và thư mục khi sửa chúng, check dùng token đó; hoặc với OpenFGA dùng `HIGHER_CONSISTENCY` cho thao tác đọc tài liệu mật và tải file.\n- URL ký sẵn của object storage không thu hồi được trước hạn. Tài liệu thường dùng link sống vài phút, cấp sau mỗi lần check, và chấp nhận khoảng hở bằng tuổi link. Tài liệu mật tải qua endpoint của app, check mỗi lần rồi stream file, không phát URL ký sẵn.\n- Chấm dứt hợp đồng là một thao tác: xoá thành viên nhóm nhà thầu, xoá cache quyền của họ, ghi audit.\n\n**4. Danh sách và tìm kiếm**\n\n- Hầu hết quyền đến qua dự án. Lấy tập dự án người dùng xem được (thường vài chục, `ListObjects` của engine; API này có giới hạn số kết quả và thời gian, nên chỉ dùng cho tập nhỏ như dự án). Cache tập này 30–60 giây và xoá ngay khi đổi thành viên hay gỡ chia sẻ, để thu hồi không phải chờ hết TTL, rồi lọc trong database và trong search index bằng `project_id IN (...)`.\n- Quyền hẹp hơn dự án (nhà thầu chỉ thấy thư mục Kết cấu): index lưu `folder_path` và tập `allowed_principals` cho thư mục có chia sẻ riêng; truy vấn lọc theo dự án được xem HOẶC thư mục được chia sẻ cho người dùng hay nhóm của họ.\n- Đổi chia sẻ thì cập nhật index qua cùng luồng sự kiện; trong lúc index chưa cập nhật, kết quả trang cuối vẫn qua `check` từng dòng (20 dòng mỗi trang) trước khi trả, để index cũ không làm lộ.\n- Không tải hết rồi lọc trong bộ nhớ (`@PostFilter`).\n\n**5. \"Ai xem được hợp đồng X\"**\n\n- Engine ReBAC trả lời trực tiếp bằng truy vấn ngược (`ListUsers` của OpenFGA, `LookupSubjects` của SpiceDB), kèm đường đi (qua dự án, qua thư mục, qua nhóm). Đây là lý do chính chọn ReBAC thay vì ABAC thuần, nơi câu hỏi này phải chạy policy trên mọi người.\n\n**6. Thay 140 chỗ `if`**\n\n- Bước 1: gom mọi chỗ kiểm về một interface `Authz.check(user, action, resource)`, cài đặt đầu tiên vẫn là logic cũ theo `role`. Không đổi hành vi.\n- Bước 2: nạp tuple từ dữ liệu hiện có (mọi người trong tenant là `member` của mọi dự án, để giữ hành vi cũ).\n- Bước 3: [[shadow-mode|shadow mode]]: mỗi lần check gọi cả hai, trả kết quả cũ, log chỗ lệch. Sửa model tới khi lệch bằng 0 trên một tuần lưu lượng thật.\n- Bước 4: bật engine mới theo tenant (cờ cấu hình), tenant thử nghiệm trước. Rồi mới cho khách hàng thu hẹp quyền theo dự án.\n- Song song: test truy cập chéo sinh tự động cho mọi endpoint nhận id (hai người, hai tenant, id trong path, body, query), chặn merge nếu thiếu.",
+  "tradeoffs": [
+    {
+      "option": "Tự viết: bảng ACL trong PostgreSQL + truy vấn đệ quy",
+      "pros": [
+        "Không thêm hệ thống; lọc danh sách bằng JOIN trong cùng database",
+        "Nhất quán theo transaction, không có new enemy problem"
+      ],
+      "cons": [
+        "Thừa hưởng thư mục, nhóm lồng nhau, truy vấn ngược đều tự làm và tự tối ưu",
+        "Logic quyền lẫn vào SQL ở nhiều service, khó kiểm toán và test"
+      ]
+    },
+    {
+      "option": "Engine ReBAC (OpenFGA, SpiceDB)",
+      "pros": [
+        "Model khai báo được, test được; có sẵn check, liệt kê, truy vấn ngược",
+        "Hợp với chia sẻ, thừa hưởng, nhóm và người ngoài tenant"
+      ],
+      "cons": [
+        "Thêm một hệ thống trên đường đi của mọi request; phải đồng bộ tuple từ database",
+        "Phải hiểu và chọn mức nhất quán; liệt kê tập lớn vẫn phải lọc trong database"
+      ]
+    },
+    {
+      "option": "OPA với policy Rego và dữ liệu nạp qua bundle",
+      "pros": [
+        "Linh hoạt cho luật thuộc tính, chạy cục bộ như sidecar, `opa test` cho policy",
+        "Dùng chung với policy hạ tầng (Kubernetes, Terraform)"
+      ],
+      "cons": [
+        "Không sinh ra để lưu hàng triệu quan hệ thay đổi liên tục",
+        "Truy vấn ngược \"ai xem được X\" không có sẵn"
+      ]
+    }
+  ]
+}

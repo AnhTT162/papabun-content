@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "rbac-abac-rebac", "front": "RBAC, ABAC, ReBAC khác nhau thế nào?", "back": "RBAC: quyền theo vai trò. ABAC: luật trên thuộc tính của người, tài nguyên, ngữ cảnh. ReBAC: quyền suy từ quan hệ như chủ, nhóm, thư mục cha." },
+    { "id": "role-explosion", "front": "Role explosion là gì và chữa thế nào?", "back": "Số role nhân lên theo phạm vi (chi nhánh × chức năng). Chữa bằng gán role kèm phạm vi, để phạm vi là dữ liệu chứ không phải tên role." },
+    { "id": "pep-pdp", "front": "PEP và PDP là gì?", "back": "PEP chặn request và hỏi; PDP ra quyết định theo policy và dữ liệu. Ví dụ PEP là @PreAuthorize, PDP là bean kiểm quyền hay OpenFGA." },
+    { "id": "bola-body-id", "front": "Dạng BOLA nào vượt qua được @PreAuthorize kiểm id trên URL?", "back": "Lệnh ghi dùng id trong body (hay query, hay item lồng nhau) khác id đã kiểm. Chỉ giữ một nguồn id và đưa điều kiện chủ sở hữu vào câu UPDATE." },
+    { "id": "new-enemy", "front": "New enemy problem là gì?", "back": "Gỡ quyền rồi thêm nội dung mới, nhưng check đọc dữ liệu quan hệ cũ nên người vừa bị gỡ vẫn thấy nội dung mới. Chặn bằng token nhất quán (zookie, ZedToken) hay đọc nhất quán cao." },
+    { "id": "list-filtering", "front": "Vì sao không tải hết rồi lọc quyền trong bộ nhớ?", "back": "Chậm với tập lớn, phân trang sai (trang thiếu dòng), và số tổng làm lộ có bao nhiêu bản ghi mình không được xem. Đưa điều kiện quyền vào truy vấn." },
+    { "id": "decision-cache-key", "front": "Khoá cache cho quyết định phân quyền phải gồm gì?", "back": "Người gọi, hành động, tài nguyên và phiên bản dữ liệu quyền. Thiếu người gọi là trả quyết định của người này cho người khác." },
+    { "id": "permissions-in-token", "front": "Có nên nhét quyền chi tiết vào JWT?", "back": "Không. Token phình và đổi quyền chỉ có hiệu lực khi token hết hạn. Token mang danh tính, tenant, scope, role thô; quyền chi tiết tra lúc kiểm." },
+    { "id": "opa-vs-rebac", "front": "Khi nào chọn OPA, khi nào chọn engine ReBAC?", "back": "OPA cho luật thuộc tính và policy hạ tầng, chạy cục bộ. ReBAC (OpenFGA, SpiceDB) cho chia sẻ, thừa hưởng, nhóm, cần lưu nhiều quan hệ và truy vấn ngược." },
+    { "id": "separation-of-duties", "front": "Tách nhiệm \"không tự duyệt phiếu mình tạo\" kiểm ở đâu?", "back": "Ở service khi duyệt, so người duyệt với created_by của bản ghi. Đây là luật trên bản ghi, role không diễn tả được." }
+  ]
+}

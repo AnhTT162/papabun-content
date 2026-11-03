@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã có @PreAuthorize kiểm chủ đơn, vẫn sửa được đơn của người khác",
+  "context": "Shop dùng Spring MVC 7 + Spring Security 7, bật `@EnableMethodSecurity`. Endpoint đổi địa chỉ giao hàng có `@PreAuthorize` gọi bean `orderAuthz` kiểm người gọi là chủ đơn. Test \"user B sửa đơn của user A phải bị chặn\" đang xanh. Pentest vẫn báo mức High: tài khoản khách hàng đổi được địa chỉ giao hàng của đơn bất kỳ.",
+  "buggyCode": "record OrderUpdate(long id, String shippingAddress) {}\n\n@Component(\"orderAuthz\")\nclass OrderAuthz {\n    public boolean isOwner(long orderId, Authentication auth) {\n        return orders.findById(orderId)\n                .map(o -> o.owner().equals(auth.getName()))\n                .orElse(false);\n    }\n}\n\n@RestController\n@RequestMapping(\"/orders\")\nclass OrderController {\n\n    @GetMapping(\"/{id}\")\n    @PreAuthorize(\"@orderAuthz.isOwner(#id, authentication)\")\n    Order get(@PathVariable long id) { return orders.findById(id).orElseThrow(); }\n\n    @PutMapping(\"/{id}\")\n    @PreAuthorize(\"@orderAuthz.isOwner(#id, authentication)\")\n    Order update(@PathVariable long id, @RequestBody OrderUpdate body) {\n        Order current = orders.findById(body.id()).orElseThrow();\n        return orders.save(new Order(current.id(), current.owner(), body.shippingAddress()));\n    }\n}",
+  "symptom": {
+    "description": "Tái hiện bằng MockMvc với hai khách hàng: alice có đơn 1001, bob có đơn 2001 (Spring Framework 7.0.10, Spring Security 7.0.5, đã chạy):",
+    "output": "bob GET /orders/1001 -> 403\nbob PUT /orders/1001 {\"id\":1001,\"shippingAddress\":\"kho của bob\"} -> 403\nbob PUT /orders/2001 {\"id\":2001,\"shippingAddress\":\"7 Trần Phú, Huế\"} -> 200 {\"id\":2001,\"owner\":\"bob\",\"shippingAddress\":\"7 Trần Phú, Huế\"}\nbob PUT /orders/2001 {\"id\":1001,\"shippingAddress\":\"kho của bob\"} -> 200 {\"id\":1001,\"owner\":\"alice\",\"shippingAddress\":\"kho của bob\"}\nalice GET /orders/1001 -> 200 {\"id\":1001,\"owner\":\"alice\",\"shippingAddress\":\"kho của bob\"}"
+  },
+  "diagnosis": {
+    "question": "Vì sao bob đổi được địa chỉ đơn 1001 của alice?",
+    "options": [
+      "Quyền kiểm theo id trên URL, còn lệnh ghi lấy đơn theo id trong body",
+      "@PreAuthorize bị bỏ qua vì controller không được gọi qua proxy Spring",
+      "Biểu thức #id đọc trường id của body nên kiểm nhầm sang đơn khác",
+      "Jackson ghi đè trường owner của đơn 1001 thành bob khi bind body"
+    ],
+    "answer": 0,
+    "explanation": "`@PreAuthorize` kiểm `#id`, tức tham số `id` của method lấy từ `/orders/2001`: bob là chủ đơn 2001 nên qua. Sau đó code tải đơn theo `body.id()` = 1001 và ghi. Hai id khác nhau, chỉ một cái được kiểm. Kiểm tra có chạy: request `PUT /orders/1001` của bob bị `403`, nên không phải chuyện proxy hay self-invocation. Nếu `#id` là id trong body (1001, của alice) thì bob đã bị chặn chứ không phải `200`. Trường `owner` vẫn là `alice`: body không có trường này và code giữ `current.owner()`. Test xanh vì nó chỉ thử kiểu tấn công đổi id trên URL. Đây là dạng [[bola|BOLA]] hay sót nhất: nhiều nguồn id (path, body, query, item lồng nhau) mà chỉ một nguồn được kiểm."
+  },
+  "fix": {
+    "code": "record AddressChange(String shippingAddress) {} // không có id: chỉ một nguồn sự thật là URL\n\n@PutMapping(\"/{id}/address\")\nResponseEntity<Void> changeAddress(@PathVariable long id,\n                                   @RequestBody AddressChange body,\n                                   Authentication auth) {\n    // UPDATE orders SET shipping_address = ? WHERE id = ? AND owner = ?\n    int updated = orders.updateAddress(id, auth.getName(), body.shippingAddress());\n    if (updated == 0) {\n        throw new ResponseStatusException(HttpStatus.NOT_FOUND); // không lộ đơn có tồn tại\n    }\n    return ResponseEntity.noContent().build();\n}\n\n// Kết quả (đã chạy):\n// bob PUT /orders/1001/address {\"id\":2001,...} -> 404\n// bob PUT /orders/2001/address {\"id\":1001,\"shippingAddress\":\"9 Hùng Vương, Huế\"} -> 204  (id trong body bị bỏ qua)\n// alice GET /orders/1001 -> địa chỉ không đổi",
+    "explanation": "Bỏ `id` khỏi DTO để chỉ còn một nguồn id là URL; Jackson 3 mặc định bỏ qua trường lạ (`FAIL_ON_UNKNOWN_PROPERTIES` tắt; Jackson 2 thì bật, nhưng Spring Boot tắt nó) nên body còn gửi `id` cũng vô tác dụng. Điều kiện quyền nằm ngay trong câu `UPDATE ... WHERE id = ? AND owner = ?`: không có khoảng hở giữa lúc kiểm và lúc ghi, và không thể kiểm một bản ghi rồi ghi bản ghi khác. Không khớp thì `404` để không lộ đơn tồn tại. Nếu vẫn dùng `@PreAuthorize`, thêm kiểm `body.id() == id` hoặc bỏ hẳn id khỏi body. Thêm biến thể vào test truy cập chéo: id lạ trong body, trong query, item thuộc đơn khác."
+  }
+}

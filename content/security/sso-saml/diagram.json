@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đăng nhập SAML vào app A, SSO sang app B, rồi đăng xuất",
+  "nodes": [
+    {"id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.5, "y": 0.05},
+    {"id": "app-a", "label": "App A (SAML SP)", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "app-b", "label": "App B (OIDC)", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "idp", "label": "IdP công ty", "kind": "service", "x": 0.5, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "browser-app-a", "from": "browser", "to": "app-a", "label": "mở app / ACS POST"},
+    {"id": "browser-idp", "from": "browser", "to": "idp", "label": "đăng nhập ở IdP"},
+    {"id": "browser-app-b", "from": "browser", "to": "app-b", "label": "mở app / callback"},
+    {"id": "idp-app-b", "from": "idp", "to": "app-b", "label": "back-channel logout"}
+  ],
+  "steps": [
+    {"caption": "Nhân viên mở app A, chưa có phiên. App A tạo AuthnRequest có ID _req42, lưu vào session, trả 302 sang IdP (redirect binding). Mũi tên trong sơ đồ chỉ chiều request.", "show": ["browser", "app-a", "browser-app-a"], "highlight": ["browser-app-a"]},
+    {"caption": "IdP đăng nhập người dùng bằng mật khẩu và MFA, đặt cookie phiên của chính IdP, rồi trả một trang có form ẩn chứa SAMLResponse đã ký.", "show": ["idp", "browser-idp"], "highlight": ["browser-idp"]},
+    {"caption": "Form tự POST tới ACS của app A. App A kiểm chữ ký trên đúng assertion sẽ đọc, Issuer, Destination, Audience, Recipient, thời hạn, InResponseTo là _req42, rồi tìm tài khoản theo (IdP, NameID) và tạo session của app A.", "show": [], "highlight": ["browser-app-a"]},
+    {"caption": "Nhân viên mở app B (client OIDC). App B chuyển sang /authorize của cùng IdP. IdP thấy cookie phiên của nó nên không hỏi mật khẩu, trả code ngay: đây là SSO. App B đổi code lấy token qua kênh sau và tạo session riêng.", "show": ["app-b", "browser-app-b"], "highlight": ["browser-app-b", "browser-idp"]},
+    {"caption": "Đăng xuất ở app A: app A xoá session của mình và chuyển trình duyệt sang IdP để kết thúc phiên IdP. Nếu chỉ xoá session app, bấm đăng nhập lại là vào luôn vì phiên IdP còn.", "show": [], "highlight": ["browser-app-a", "browser-idp"]},
+    {"caption": "IdP gửi logout_token (JWT có sid hoặc sub) thẳng tới server app B qua back-channel. App B tìm session theo sid và huỷ; liên kết sid–session phải lưu ở chỗ mọi instance cùng thấy.", "show": ["idp-app-b"], "highlight": ["idp-app-b"]}
+  ]
+}

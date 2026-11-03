@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "sso-saml",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "SSO doanh nghiệp & SAML",
+  "summary": "SSO qua IdP của công ty; SAML 2.0 (assertion, binding, luồng SP-initiated) so với OIDC; kiểm Response đúng cách, signature wrapping và comment trong NameID (đã chạy trên JDK 27), lỗi do hai parser; chứng chỉ ký và metadata; định danh bằng IdP + subject thay vì email; SameSite làm mất AuthnRequest; IdP-initiated; identity broker, home realm discovery, JIT và SCIM; đăng xuất: RP-initiated, front-channel, back-channel, SAML SLO; Spring Security saml2Login() và oidcLogout().",
+  "level": "senior",
+  "order": 9,
+  "minutes": 17,
+  "prerequisites": ["oauth2-oidc", "browser-security-basics", "cryptography-basics"],
+  "terms": ["sso", "identity-provider", "saml", "saml-assertion", "oidc", "saml-service-provider", "saml-metadata", "assertion-consumer-service", "identity-broker", "xml-signature-wrapping", "idp-initiated-sso", "jit-provisioning", "single-logout", "back-channel-logout", "scim", "home-realm-discovery", "break-glass-access", "id-token", "pkce", "mfa", "jwt", "jwks", "samesite"],
+  "references": [
+    { "title": "OASIS: Security Assertion Markup Language (SAML) V2.0 Technical Overview", "url": "https://docs.oasis-open.org/security/saml/Post2.0/sstc-saml-tech-overview-2.0.html" },
+    { "title": "Spring Security Reference: SAML 2.0 Login", "url": "https://docs.spring.io/spring-security/reference/servlet/saml2/login/overview.html" },
+    { "title": "OpenID Connect Back-Channel Logout 1.0", "url": "https://openid.net/specs/openid-connect-backchannel-1_0.html" },
+    { "title": "Spring Security Reference: OIDC Logout", "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/login/logout.html" },
+    { "title": "Somorovsky et al.: On Breaking SAML: Be Whoever You Want to Be (USENIX Security 2012)", "url": "https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/somorovsky" },
+    { "title": "RFC 7644: System for Cross-domain Identity Management: Protocol", "url": "https://www.rfc-editor.org/rfc/rfc7644.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khách hàng báo đã khoá tài khoản nhân viên nghỉ việc trong IdP, nhưng người đó vẫn dùng app được thêm vài giờ. Vì sao, và sửa thế nào?\" SSO chỉ quyết định lúc đăng nhập. Sau đó app có session riêng, có thể có refresh token sống nhiều ngày; khoá ở IdP không chạm tới chúng. Sửa theo lớp: [[scim|SCIM]] để IdP báo khoá và app huỷ session, token của người đó; back-channel logout nếu IdP hỗ trợ; với IdP không có cả hai, giới hạn tuổi phiên app và refresh token để buộc SSO lại định kỳ, lúc đó IdP từ chối tài khoản đã khoá. Single logout không giúp, vì người nghỉ việc không bấm đăng xuất." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tự parse và kiểm SAML Response bằng DOM và `javax.xml.crypto`. Hai lỗi đã tái hiện trên JDK 27 chỉ với vài dòng: chèn một assertion giả lên trước assertion đã ký thì `validate()` vẫn `true` mà code đọc ra `admin@`; chèn `<!---->` vào NameID thì chữ ký vẫn đúng mà `getFirstChild()` ra một email khác. Dùng thư viện (OpenSAML qua Spring Security, hay broker) và cập nhật nó như bản vá khẩn: các thư viện phổ biến vẫn có CVE vượt chữ ký tới tận 2024–2025." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

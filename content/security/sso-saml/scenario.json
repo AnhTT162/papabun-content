@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "SaaS quản lý kho nhận SSO của ba khách hàng doanh nghiệp",
+  "prompt": "Bạn là kiến trúc sư của một SaaS quản lý kho (WMS) có 120 công ty khách hàng (tenant), khoảng 9.000 người dùng. Hiện mọi người đăng nhập bằng email và mật khẩu do app tự quản; có web (Spring Boot, session) và app Android cho nhân viên kho (JWT do app tự cấp). Ba khách hàng lớn ký hợp đồng với điều kiện có SSO trong 3 tháng:\n\n- **Một ngân hàng** (kho tài liệu và thẻ) dùng AD FS, chỉ chấp nhận SAML, bắt buộc MFA, yêu cầu nhân viên nghỉ việc mất quyền trong 1 giờ.\n- **Một chuỗi bán lẻ** dùng Entra ID, muốn người dùng tự tạo khi đăng nhập lần đầu và được gán role theo group.\n- **Một tập đoàn sản xuất** dùng Okta, có 3 công ty con, mỗi công ty là một tenant riêng trong WMS nhưng chung một Okta.\n\nĐội có 4 backend. Tenant nhỏ vẫn đăng nhập bằng mật khẩu. Yêu cầu: kiến trúc tích hợp, cách định danh và tạo tài khoản, cách định tuyến người dùng tới đúng IdP, đáp ứng yêu cầu 1 giờ của ngân hàng, và các lỗi vận hành cần chặn trước.",
+  "hints": [
+    "App Android và API hiện dùng JWT do app tự cấp. Nếu mỗi khách hàng nối SAML thẳng vào web app, app Android đăng nhập bằng gì?",
+    "Người dùng của tập đoàn sản xuất có email cùng tên miền nhưng thuộc 3 tenant. Định tuyến theo tên miền email còn đủ không? Và ai được khai một tên miền?",
+    "Khoá tài khoản nào để nối người dùng: email, NameID hay thứ khác? Điều gì xảy ra nếu IdP của tenant A phát assertion có email thuộc tenant B?",
+    "AD FS không có SCIM. Với ngân hàng, thứ gì bảo đảm người nghỉ việc mất quyền trong 1 giờ: logout, JIT, hay thời hạn phiên?"
+  ],
+  "solution": "**1. Kiến trúc: một [[identity-broker|identity broker]] ở giữa**\n\n- Đặt broker (Keycloak tự host, hoặc dịch vụ quản lý như Auth0, Entra External ID, Cognito) làm authorization server duy nhất của WMS. Web dùng `oauth2Login()` với broker; app Android dùng authorization code + PKCE qua trình duyệt hệ thống; API thành resource server kiểm JWT của broker (bài OAuth2 & OpenID Connect).\n- Mỗi khách hàng là một IdP được cấu hình ở broker: ngân hàng nối [[saml|SAML]] với AD FS, chuỗi bán lẻ nối SAML hoặc OIDC với Entra ID, tập đoàn nối OIDC với Okta. Tenant nhỏ dùng tài khoản mật khẩu trong broker (chuyển hash cũ sang nếu broker đọc được định dạng hash, để không ai phải đặt lại).\n- Lý do: app chỉ hiểu một giao thức; SAML chỉ nằm ở broker, nơi thư viện đã được kiểm chứng và vá thường xuyên; app Android dùng chung luồng thay vì cần cách đăng nhập riêng.\n\n**2. Định danh và tạo tài khoản**\n\n- Bảng `external_identity(tenant_id, idp_alias, subject, user_id)`, khoá duy nhất `(tenant_id, idp_alias, subject)`. `subject` là NameID dạng persistent (AD FS), object ID (Entra), `sub` (Okta). Email chỉ là thuộc tính hiển thị, không bao giờ dùng để nối tài khoản giữa các IdP.\n- Mỗi IdP chỉ được tạo hay đăng nhập người dùng của tenant mà nó gắn vào. Assertion từ IdP của chuỗi bán lẻ có email `@bank.example` vẫn chỉ vào tenant chuỗi bán lẻ, không bao giờ vào tài khoản ngân hàng.\n- Chuỗi bán lẻ: [[jit-provisioning|JIT provisioning]] khi đăng nhập lần đầu, role lấy từ group trong claim theo bảng ánh xạ do tenant admin cấu hình (group ID, không phải tên group). Bật thêm [[scim|SCIM]] từ Entra để khoá tài khoản và cập nhật group; Entra đẩy theo chu kỳ nên khoá không tức thời, nói rõ với khách hàng.\n- Tập đoàn: một Okta nhưng 3 tenant. Dùng thuộc tính công ty (claim `company` hay group theo công ty con) trong token Okta để chọn tenant, hoặc 3 ứng dụng Okta riêng mỗi cái gắn một tenant. Một người làm ở hai công ty con có hai tài khoản WMS, cùng `subject` nhưng khác tenant; vì vậy khoá duy nhất có `tenant_id`.\n\n**3. Định tuyến tới IdP**\n\n- Trang đăng nhập hỏi email trước ([[home-realm-discovery|home realm discovery]]). Tên miền chỉ được gắn với IdP sau khi tenant chứng minh sở hữu bằng bản ghi DNS TXT; trước đó không định tuyến theo tên miền.\n- Tên miền dùng chung cho nhiều tenant (tập đoàn) thì định tuyến tới IdP, chọn tenant sau khi đăng nhập; người có nhiều tenant chọn ở màn hình chọn tổ chức.\n- Mỗi tenant SSO có URL đăng nhập riêng (`/login?org=bank`) để người dùng không phải gõ email, và để IdP-initiated không cần thiết.\n\n**4. Yêu cầu 1 giờ của ngân hàng**\n\n- AD FS không có SCIM, và [[single-logout|single logout]] không giúp gì: nhân viên nghỉ việc không bấm đăng xuất.\n- Thay vào đó giới hạn tuổi phiên với tenant này: session web và refresh token của app Android có thời hạn tuyệt đối 45 phút; hết hạn thì app đi lại luồng SSO. Nếu phiên AD FS còn, người dùng không thấy gì (chuyển hướng im lặng). Điểm phải xác nhận trong buổi test chung: AD FS có cookie SSO riêng, thường sống lâu hơn 1 giờ; nếu nó cấp assertion từ cookie đó mà không kiểm lại tài khoản AD thì việc đi lại SSO không chặn được ai. Khi đó yêu cầu ngân hàng rút ngắn tuổi phiên SSO của AD FS cho WMS, hoặc broker gửi `ForceAuthn=\"true\"` mỗi lần (người dùng phải nhập lại, kèm MFA, mỗi 45 phút: nặng về trải nghiệm, chỉ dùng nếu không còn cách khác).\n- Access token 10–15 phút, nên tính cả nó: 45 phút + 15 phút là quyền mất hẳn trong 1 giờ.\n- MFA: yêu cầu AD FS gửi `AuthnContextClassRef` cho biết đã MFA, broker kiểm nó và từ chối nếu thiếu. Không tin lời \"chúng tôi đã bật MFA\" mà không có bằng chứng trong assertion.\n\n**5. Lỗi vận hành cần chặn trước**\n\n- *Chứng chỉ ký của IdP hết hạn hoặc bị đổi*: broker nạp metadata của IdP theo URL và làm mới hằng ngày; nơi khách hàng chỉ gửi file, lưu ngày hết hạn và cảnh báo trước 30 ngày cho cả hai bên.\n- *Mất `AuthnRequest` khi IdP POST về*: cookie phiên của broker phải chạy được với POST khác site (`SameSite=None; Secure`); test với một người dùng ngồi ở màn hình MFA hơn 2 phút.\n- *Tắt IdP-initiated* nếu khách hàng không cần; nếu cần, để cổng IdP mở URL đăng nhập của tenant.\n- *Lệch giờ*: assertion có thời hạn tính bằng phút; đồng bộ NTP và đặt dung sai lệch giờ nhỏ (vài phút), đừng nới rộng để chữa lỗi.\n- *Broker ngừng*: API kiểm JWT tại chỗ bằng JWKS đã cache, nên chỉ đăng nhập mới bị ảnh hưởng; broker chạy nhiều instance, có sao lưu cấu hình IdP.\n- *IdP khách hàng hỏng*: mỗi tenant SSO giữ 1–2 tài khoản quản trị cục bộ có MFA mạnh ([[break-glass-access|break-glass]]), cảnh báo mỗi lần dùng.\n- *Tự onboarding*: tenant admin tự dán metadata thì đổi IdP phải xác nhận lại bằng một lần đăng nhập thử thành công trước khi áp dụng, để một cấu hình sai không khoá cả công ty.\n\n**6. Lộ trình 3 tháng**\n\n- Tháng 1: dựng broker, chuyển tài khoản mật khẩu, web và API chuyển sang broker; bảng `external_identity`; xác minh tên miền.\n- Tháng 2: Okta (OIDC, dễ nhất) rồi Entra ID với SCIM; test app Android với PKCE.\n- Tháng 3: AD FS của ngân hàng, kiểm MFA, tuổi phiên 45 phút, test khoá tài khoản thật trong AD khi người đó còn cookie AD FS; chạy song song đăng nhập mật khẩu tới khi ngân hàng nghiệm thu rồi tắt mật khẩu cho tenant đó.",
+  "tradeoffs": [
+    {
+      "option": "Tích hợp SAML thẳng vào web app bằng saml2Login() cho từng tenant",
+      "pros": [
+        "Không thêm thành phần, không thêm phụ thuộc lúc đăng nhập",
+        "Spring Security có sẵn `RelyingPartyRegistrationRepository` cho nhiều IdP"
+      ],
+      "cons": [
+        "App Android và API vẫn cần cách cấp token riêng; SAML không cho access token",
+        "Mỗi giao thức mới (OIDC của Okta) là một nhánh code nữa trong app",
+        "Đội 4 người tự vận hành phần nhạy cảm nhất: kiểm chữ ký XML, xoay chứng chỉ, OpenSAML lấy từ repo Shibboleth"
+      ]
+    },
+    {
+      "option": "Identity broker tự host (Keycloak)",
+      "pros": [
+        "App chỉ nói OIDC; thêm khách hàng là cấu hình",
+        "Không trả phí theo người dùng; dữ liệu ở hạ tầng của mình"
+      ],
+      "cons": [
+        "Phải vận hành, nâng cấp, sao lưu, chạy nhiều instance cho một thành phần mà mọi lần đăng nhập phụ thuộc vào",
+        "Cần người hiểu cấu hình federation, mapper và theme"
+      ]
+    },
+    {
+      "option": "Dịch vụ broker trả phí (Auth0, Entra External ID, Cognito...)",
+      "pros": [
+        "Nhanh nhất; có sẵn trang cấu hình SSO cho tenant admin, SCIM, cảnh báo chứng chỉ",
+        "Nhà cung cấp lo vá lỗ hổng SAML"
+      ],
+      "cons": [
+        "Giá thường theo MAU và tính riêng cho kết nối doanh nghiệp, tăng nhanh khi có nhiều tenant SSO",
+        "Lock-in: không phải dịch vụ nào cũng cho xuất hash mật khẩu (bài Build vs buy)"
+      ]
+    }
+  ]
+}

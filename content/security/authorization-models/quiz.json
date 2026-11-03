@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "decision-cache-output",
+      "kind": "output",
+      "prompt": "Để giảm tải, một service cache quyết định phân quyền theo id tài liệu. Chỉ alice được xem tài liệu 42. Dòng in ra là gì?",
+      "code": "static Map<Long, Set<String>> acl = Map.of(42L, Set.of(\"alice\"));\nstatic Map<Long, Boolean> decisions = new HashMap<>();\n\nstatic boolean canView(String user, long docId) {\n    return decisions.computeIfAbsent(docId,\n            id -> acl.getOrDefault(id, Set.of()).contains(user));\n}\n\nSystem.out.println(canView(\"bob\", 42) + \" \" + canView(\"alice\", 42) + \" \" + canView(\"bob\", 42));",
+      "options": [
+        "false false false",
+        "false true false",
+        "true true true",
+        "false true true"
+      ],
+      "answer": 0,
+      "explanation": "Khoá cache chỉ có `docId`. Lần gọi đầu là của bob, kết quả `false` được lưu cho tài liệu 42; alice gọi sau nhận lại `false` dù có quyền (đã chạy trên JDK 27). Nếu alice gọi trước thì ngược lại: bob nhận `true` và đọc được tài liệu, đó là lỗ hổng. Khoá cache quyết định phải gồm người gọi, hành động, tài nguyên, và phiên bản của dữ liệu quyền; TTL ngắn và xoá khi đổi quyền."
+    },
+    {
+      "id": "role-explosion",
+      "kind": "single",
+      "prompt": "Công ty có 30 chi nhánh, 6 chức năng (thủ kho, kế toán, ...). Mỗi người chỉ được thao tác trên dữ liệu chi nhánh mình. Đội đang tạo role `KHO_HUE`, `KHO_DANANG`... Cách nào tốt hơn?",
+      "options": [
+        "Giữ 6 role, gán role kèm phạm vi chi nhánh và lọc theo chi nhánh trong truy vấn",
+        "Tạo đủ 180 role, mỗi role một cặp chi nhánh và chức năng, gán bằng tay",
+        "Đưa 180 role vào claim của JWT để mọi service tự kiểm mà không cần tra cứu",
+        "Bỏ role, cho mọi người cùng quyền và chỉ ghi audit log để kiểm tra sau"
+      ],
+      "answer": 0,
+      "explanation": "Đây là role explosion: chi nhánh là dữ liệu, không phải loại người dùng. Gán role theo phạm vi (người + role + chi nhánh, giống role assignment có scope của Azure RBAC) giữ 6 role; mở chi nhánh mới không tạo role mới. Service lọc theo chi nhánh ngay trong truy vấn. 180 role vẫn chạy nhưng tăng theo mỗi chi nhánh và khó kiểm toán. Đưa vào JWT làm token phình và đổi quyền chỉ có hiệu lực khi token hết hạn. Audit log ghi lại sự việc, không ngăn được nó."
+    },
+    {
+      "id": "new-enemy",
+      "kind": "single",
+      "prompt": "Hệ dùng OpenFGA có bật cache. Nhà thầu không thuộc dự án, chỉ được chia sẻ một thư mục; quyền được tra từ OpenFGA mỗi lần mở tài liệu, không nằm trong token. Admin gỡ nhà thầu khỏi thư mục, một giây sau thêm bản vẽ mật vào thư mục đó. Nhà thầu vẫn mở được bản vẽ trong vài giây. Nguyên nhân và cách chặn?",
+      "options": [
+        "Check đọc kết quả cũ từ cache; dùng HIGHER_CONSISTENCY cho tài liệu mật",
+        "Tuple chưa được ghi vì OpenFGA ghi bất đồng bộ; phải gọi lại lệnh xoá",
+        "Token JWT của nhà thầu còn hạn nên mang quyền cũ; phải thu hồi token",
+        "Bản vẽ thừa hưởng quyền từ dự án; phải xoá nhà thầu khỏi cả dự án"
+      ],
+      "answer": 0,
+      "explanation": "Đây là new enemy problem trong bài báo Zanzibar: quyết định dựa trên dữ liệu quan hệ cũ hơn thay đổi gần nhất. Với OpenFGA, chế độ mặc định `MINIMIZE_LATENCY` dùng cache khi cache được bật; `HIGHER_CONSISTENCY` bỏ qua cache và đọc database, đổi lại chậm hơn. SpiceDB giải bằng ZedToken lưu cùng nội dung. Lệnh ghi tuple trả về khi đã ghi xong. Đề bài nói quyền không nằm trong token, và nhà thầu không thuộc dự án nên không có quyền thừa hưởng từ dự án."
+    },
+    {
+      "id": "list-filtering",
+      "kind": "single",
+      "prompt": "API `GET /documents?page=0&size=20` dùng `@PostFilter(\"@authz.canView(filterObject, authentication)\")` trên method trả về `List<Document>` của 6 triệu bản ghi trong tenant. Vấn đề chính là gì?",
+      "options": [
+        "Tải toàn bộ rồi lọc trong bộ nhớ: chậm, phân trang sai, số tổng làm lộ dữ liệu",
+        "@PostFilter chỉ chạy cho mảng, gặp List thì bị bỏ qua và trả hết bản ghi",
+        "@PostFilter chạy trước khi method trả về nên không thấy các bản ghi cần lọc",
+        "Biểu thức gọi bean authz cho mỗi phần tử nên bị chặn vì vượt giới hạn SpEL"
+      ],
+      "answer": 0,
+      "explanation": "`@PostFilter` chạy sau method, nhận collection hay mảng đã tải và bỏ phần tử không qua biểu thức. Với 6 triệu bản ghi là tải hết vào bộ nhớ và gọi check từng cái. Nếu phân trang trước rồi lọc, trang 20 dòng có thể còn 3, và tổng số trả cho client cho biết có bao nhiêu tài liệu mình không được xem. Cách đúng: đưa điều kiện quyền vào truy vấn (tenant, dự án được xem, thư mục được chia sẻ), engine chỉ trả tập nhỏ như danh sách dự án. SpEL không có giới hạn số lần gọi như vậy."
+    },
+    {
+      "id": "separation-of-duties",
+      "kind": "single",
+      "prompt": "Quy định: người tạo biên bản nghiệm thu không được duyệt biên bản đó. Kỹ sư A có cả quyền tạo và quyền duyệt ở dự án, và vẫn phải duyệt được biên bản do đồng nghiệp tạo. Đặt luật này ở đâu?",
+      "options": [
+        "Luật trên bản ghi khi duyệt: người duyệt phải khác created_by",
+        "Tách thành hai role CREATOR và APPROVER, không gán cả hai cho một người",
+        "Kiểm ở gateway: chặn khi cùng người gọi API tạo rồi API duyệt",
+        "Ẩn nút Duyệt trên giao diện với người đã tạo biên bản"
+      ],
+      "answer": 0,
+      "explanation": "Đây là tách nhiệm động: A vẫn được duyệt biên bản của người khác, chỉ không được duyệt biên bản của chính mình. Điều kiện phụ thuộc bản ghi (`created_by`) nên phải kiểm ở service khi duyệt, kiểu ABAC. Tách role là tách nhiệm tĩnh: A mất quyền duyệt mọi biên bản, trái với yêu cầu của đề. Gateway không biết biên bản do ai tạo. Ẩn nút chỉ là giao diện, gọi thẳng API vẫn qua."
+    }
+  ]
+}

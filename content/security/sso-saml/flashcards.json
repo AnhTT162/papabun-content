@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "saml-vs-oidc", "front": "SAML và OIDC khác nhau ở điểm nào khi chọn cho ứng dụng mới?", "back": "SAML là XML, assertion ký đi qua trình duyệt, chỉ lo đăng nhập web. OIDC là JSON, đổi code qua kênh sau, có access token và hợp app di động, SPA." },
+    { "id": "sp-initiated-flow", "front": "Luồng SAML SP-initiated gồm những bước nào?", "back": "SP gửi AuthnRequest có ID sang IdP qua redirect; IdP đăng nhập người dùng rồi POST SAMLResponse đã ký tới ACS; SP kiểm chữ ký, Issuer, Audience, thời hạn, InResponseTo rồi tạo session." },
+    { "id": "signature-wrapping", "front": "XML signature wrapping là gì?", "back": "Chèn một assertion giả không ký bên cạnh assertion thật đã ký. Chữ ký vẫn hợp lệ, nhưng code đọc nhầm assertion giả. Phải đọc đúng phần tử mà chữ ký tham chiếu." },
+    { "id": "comment-nameid", "front": "Vì sao chèn comment vào NameID không làm hỏng chữ ký SAML?", "back": "Exclusive C14N bỏ qua comment khi tính chữ ký. Code đọc node text đầu tiên sẽ lấy phần trước comment, tức một email khác." },
+    { "id": "account-key", "front": "Khoá nối tài khoản SSO nên là gì?", "back": "Cặp (IdP, subject bất biến) như NameID persistent hay object ID, gắn với tenant. Không dùng email: email đổi được và mỗi IdP tự quyết giá trị email." },
+    { "id": "samesite-saml", "front": "Vì sao cookie session SameSite=Lax làm đăng nhập SAML lỗi?", "back": "IdP trả response bằng form POST khác site, cookie Lax không đi kèm, nên SP không tìm thấy AuthnRequest đã lưu trong session để kiểm InResponseTo." },
+    { "id": "idp-initiated-risk", "front": "IdP-initiated SSO có rủi ro gì?", "back": "Response không có InResponseTo nên SP không gắn được với phiên nào: dễ bị login CSRF và phát lại assertion bị lộ trong thời hạn." },
+    { "id": "jit-vs-scim", "front": "JIT provisioning và SCIM khác nhau thế nào?", "back": "JIT tạo tài khoản lúc đăng nhập lần đầu nhưng không biết ai nghỉ việc. SCIM để IdP gọi API của app để tạo, cập nhật và khoá tài khoản." },
+    { "id": "back-channel-logout", "front": "Back-channel logout của OIDC hoạt động thế nào?", "back": "IdP POST logout_token (JWT có sub hoặc sid, không có nonce) thẳng tới server của app; app huỷ các session tương ứng và trả 200." },
+    { "id": "logout-session-registry", "front": "Bẫy khi bật back-channel logout của Spring Security trên nhiều instance?", "back": "Liên kết sid với session mặc định nằm trong bộ nhớ một instance. Logout token tới instance khác thì không ai bị đăng xuất; cần OidcSessionRegistry dùng chung." }
+  ]
+}

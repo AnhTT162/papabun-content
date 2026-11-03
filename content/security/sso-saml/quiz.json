@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "nameid-comment-output",
+      "kind": "output",
+      "prompt": "SP tự viết đọc NameID từ một assertion có chữ ký hợp lệ (đã kiểm bằng `XMLSignature.validate`). Text trong XML là `ceo@shop.example.com<!---->.evil.example`. Hai dòng in ra là gì?",
+      "code": "Element nameId = (Element) assertion\n        .getElementsByTagNameNS(SAML_NS, \"NameID\").item(0);\nSystem.out.println(nameId.getFirstChild().getNodeValue());\nSystem.out.println(nameId.getTextContent());",
+      "options": [
+        "ceo@shop.example.com\nceo@shop.example.com.evil.example",
+        "ceo@shop.example.com.evil.example\nceo@shop.example.com.evil.example",
+        "ceo@shop.example.com<!---->.evil.example\nceo@shop.example.com.evil.example",
+        "ceo@shop.example.com\nceo@shop.example.com"
+      ],
+      "answer": 0,
+      "explanation": "Parser giữ comment thành một node riêng, nên NameID có ba node con: text, comment, text. `getFirstChild().getNodeValue()` chỉ lấy node text đầu tiên là `ceo@shop.example.com`; `getTextContent()` nối mọi node text, bỏ comment, ra đủ chuỗi (đã chạy trên JDK 27). Chữ ký vẫn hợp lệ vì Exclusive C14N không tính comment. Kẻ tấn công có tài khoản `ceo@shop.example.com.evil.example` ở một IdP cho tự khai email thì đăng nhập được thành `ceo@shop.example.com`. Đây là lỗ hổng Duo công bố năm 2018 ở nhiều thư viện SAML."
+    },
+    {
+      "id": "wrapping-fix",
+      "kind": "single",
+      "prompt": "SP kiểm `XMLSignature.validate(ctx)` trả `true` rồi đọc NameID từ `getElementsByTagNameNS(SAML_NS, \"Assertion\").item(0)`. Cách sửa nào chặn được signature wrapping?",
+      "options": [
+        "Chỉ đọc phần tử mà Reference của chữ ký trỏ tới, và từ chối khi có nhiều assertion",
+        "Kiểm thêm thời hạn NotOnOrAfter rồi đọc assertion đầu tiên còn hạn trong response",
+        "Bật kiểm tra schema XSD rồi đọc assertion đầu tiên, vì assertion giả sai schema",
+        "Đổi thuật toán ký từ RSA-SHA1 sang RSA-SHA256 để chữ ký không bị giả được nữa"
+      ],
+      "answer": 0,
+      "explanation": "`validate` chỉ nói phần tử có ID mà Reference trỏ tới chưa bị sửa. Kẻ tấn công chèn assertion giả không ký lên trước, chữ ký của assertion thật vẫn đúng (đã chạy: `validate` = true, assertion đầu tiên mang `admin@`). Phải đọc đúng phần tử đã được chữ ký phủ và từ chối response có hơn một assertion. Kẻ tấn công tự viết assertion giả nên đặt thời hạn hợp lệ tuỳ ý; kiểm thời hạn không phân biệt được thật giả. Assertion giả có thể đúng schema hoàn toàn. Đổi thuật toán không liên quan, chữ ký không hề bị giả."
+    },
+    {
+      "id": "samesite-intermittent",
+      "kind": "single",
+      "prompt": "Đăng nhập SAML bằng Spring Security thỉnh thoảng lỗi do không tìm thấy AuthnRequest đã lưu. Cookie session không khai `SameSite`, người dùng chủ yếu dùng Chrome. Người dùng nào hay gặp lỗi nhất?",
+      "options": [
+        "Người mất hơn 2 phút ở IdP để làm MFA hay đặt lại mật khẩu",
+        "Người đã có phiên ở IdP và được chuyển về ngay không phải gõ gì",
+        "Người dùng Safari, vì Safari chặn mọi form POST đi tới site khác",
+        "Người mở app bằng hai tab cùng lúc nên có hai AuthnRequest"
+      ],
+      "answer": 0,
+      "explanation": "IdP trả response bằng form POST từ site khác. Cookie không khai `SameSite` được Chrome coi là `Lax`, nhưng có ngoại lệ: cookie mới đặt chưa quá 2 phút vẫn đi kèm POST cấp cao. Ai ở IdP lâu hơn thì cookie không đi, Spring không thấy request đã lưu. Người được chuyển về ngay rơi vào cửa sổ 2 phút nên ít lỗi nhất. Safari không chặn form POST, nó chặn cookie bên thứ ba. Hai tab cùng đăng nhập là trường hợp hiếm và không giải thích được vì sao lỗi đi theo thời gian chờ ở IdP. Sửa: `SameSite=None; Secure` cho cookie session, hoặc lưu request theo `RelayState`."
+    },
+    {
+      "id": "account-linking",
+      "kind": "single",
+      "prompt": "SaaS nhiều tenant cho mỗi tenant nối IdP riêng. Khi assertion tới, app tìm người dùng thế nào cho an toàn?",
+      "options": [
+        "Theo (tenant của IdP, IdP, NameID persistent), không theo email",
+        "Theo email trong assertion, vì email là duy nhất trên toàn app",
+        "Theo email, nhưng chỉ khi assertion có thuộc tính email_verified",
+        "Theo NameID trên toàn app, bất kể assertion tới từ IdP nào"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi IdP khách hàng tự quyết giá trị email và có thể phát assertion với email thuộc công ty khác; tìm theo email là để IdP của tenant A vào tài khoản của tenant B. Cờ xác minh email do chính IdP đó đặt nên cũng không chặn được. NameID chỉ duy nhất trong phạm vi một IdP, nên phải đi kèm IdP; và IdP chỉ được đăng nhập người dùng của tenant nó gắn vào. Email đổi khi người dùng đổi tên, nên cũng không ổn định."
+    },
+    {
+      "id": "deprovision-adfs",
+      "kind": "single",
+      "prompt": "Khách hàng dùng AD FS (không có SCIM) yêu cầu nhân viên nghỉ việc mất quyền trong 1 giờ. App dùng JIT provisioning. Cách nào đáp ứng được?",
+      "options": [
+        "Giới hạn tuổi phiên và refresh token dưới 1 giờ để buộc SSO lại",
+        "Bật SAML single logout để AD FS đăng xuất mọi app khi nghỉ việc",
+        "Chạy JIT ở mọi lần đăng nhập để cập nhật lại thuộc tính tài khoản",
+        "Đặt NotOnOrAfter của assertion là 1 giờ để phiên tự hết hạn"
+      ],
+      "answer": 0,
+      "explanation": "Người nghỉ việc không bấm đăng xuất, nên single logout không chạy. JIT chỉ chạy khi có đăng nhập, mà người đang có phiên thì không đăng nhập lại. `NotOnOrAfter` giới hạn thời gian SP được nhận assertion, không giới hạn session app tạo ra sau đó. Phiên app có tuổi tối đa thì hết hạn là phải đi lại SSO; nếu tài khoản đã bị khoá trong AD, AD FS không cấp assertion mới. Người còn làm việc có phiên AD FS nên không thấy gì. Tính cả thời hạn access token khi chọn con số."
+    }
+  ]
+}
