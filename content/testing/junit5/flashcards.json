@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-parts", "front": "JUnit 5 gồm những phần nào?", "back": "Platform (Launcher và API cho engine, nơi build tool và IDE gọi vào), Jupiter (API viết test và engine của nó), Vintage (engine chạy test JUnit 4)." },
+    { "id": "junit6", "front": "Lên JUnit 6 có phải viết lại test Jupiter không?", "back": "Không; API Jupiter giữ nguyên, thay đổi chính là baseline Java 17 và một số phiên bản chung cho Platform, Jupiter, Vintage." },
+    { "id": "junit6-build", "front": "Lên JUnit 6 cần kiểm gì ở build?", "back": "Surefire/Failsafe từ 3.0.0 trở lên, và chuyển test JUnit 4 vì Vintage đã deprecated." },
+    { "id": "instance-lifecycle", "front": "Mặc định JUnit tạo instance class test thế nào?", "back": "Một instance mới cho mỗi method test (`PER_METHOD`), nên field không chia sẻ và `@BeforeAll` phải `static`; `@TestInstance(PER_CLASS)` đổi điều này." },
+    { "id": "junit4-import", "front": "Test viết bằng `org.junit.Test` trong dự án chỉ có Jupiter thì sao?", "back": "Không engine nào nhận nó: test không chạy, không có cảnh báo, build xanh." },
+    { "id": "csv-null", "front": "Trong `@CsvSource`, ô trống và `''` khác nhau thế nào?", "back": "Ô trống là `null`, `''` là chuỗi rỗng." },
+    { "id": "extension-state", "front": "Extension nên giữ state ở đâu?", "back": "Trong `ExtensionContext.Store`, vì một instance extension có thể phục vụ nhiều test, kể cả chạy song song." },
+    { "id": "parallel-default", "front": "Bật `parallel.enabled=true` là test chạy song song chưa?", "back": "Chưa; `mode.default` vẫn là `same_thread`, phải đặt `concurrent` hoặc dùng `@Execution(CONCURRENT)`." },
+    { "id": "preemptive", "front": "`assertTimeout` và `assertTimeoutPreemptively` khác nhau thế nào?", "back": "`assertTimeout` chạy cùng thread và chỉ báo quá giờ sau khi chạy xong; `assertTimeoutPreemptively` chạy ở thread khác để ngắt được, nên mất `ThreadLocal` và transaction." },
+    { "id": "surefire-failsafe", "front": "Surefire và Failsafe chạy class test nào?", "back": "Surefire: `Test*`, `*Test`, `*Tests`, `*TestCase` ở phase `test`; Failsafe: `IT*`, `*IT`, `*ITCase` ở phase `integration-test`." }
+  ]
+}

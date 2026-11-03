@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Bộ e2e 95 phút mà bug vẫn lọt ra production",
+  "prompt": "Một shop online có 6 service Spring Boot (Order, Pricing, Inventory, Payment, Notification, Gateway), PostgreSQL, Kafka, và gọi một cổng thanh toán bên ngoài. Bộ test hiện có: 1.100 test e2e bằng Selenium chạy trên môi trường staging dùng chung, mất 95 phút, khoảng 8% lần chạy đỏ mà rerun lại xanh; 240 unit test, phần lớn mock repository và kiểm `verify(repo).save(...)`; không có integration test với database. Team muốn deploy hằng ngày nhưng hiện chỉ release hai tuần một lần. Ba bug production gần nhất: giá khuyến mãi tính sai khi đơn có hai mã giảm giá, câu SQL tìm đơn quá hạn bỏ sót đơn ở múi giờ khác, và consumer Kafka xử lý trùng event khi rebalance. Đề xuất chiến lược test mới và lộ trình chuyển đổi trong một quý.",
+  "hints": [
+    "Mỗi bug trong ba bug kia lẽ ra bị bắt ở mức test nào rẻ nhất?",
+    "Unit test hiện tại kiểm cái gì: kết quả nghiệp vụ hay việc gọi đúng method?",
+    "Cái gì có thể thay việc dựng cả 6 service để kiểm chúng nói chuyện được với nhau?",
+    "Bộ e2e đang chập chờn: giữ lại bao nhiêu, chạy lúc nào, và làm gì với số còn lại?"
+  ],
+  "solution": "**Đối chiếu bug với tầng test**: giá sai khi chồng hai mã giảm giá là logic thuần, bắt bằng unit test có bảng dữ liệu (parameterized) cho Pricing, chạy mili giây. SQL bỏ sót đơn theo múi giờ chỉ lộ ra với PostgreSQL thật: integration test cho repository bằng Testcontainers, dữ liệu mẫu có các `timestamptz` quanh nửa đêm. Xử lý trùng khi rebalance: rebalance làm event được giao lại, nên integration test cho consumer với Kafka thật gửi cùng event hai lần và kiểm kết quả chỉ ghi một lần (kiểm tính idempotent); muốn tái hiện chính rebalance thì thêm test dừng một consumer giữa lúc xử lý và kiểm offset được commit. Không bug nào cần e2e để bắt.\n\n**Mục tiêu mỗi service**: unit test cho logic nghiệp vụ (Pricing, chuyển trạng thái đơn) kiểm kết quả, không kiểm `verify(save)`; integration test cho mọi adapter: repository, consumer/producer Kafka, client HTTP với stub (WireMock cho cổng thanh toán); một vài test `@SpringBootTest` kiểm cấu hình (security, transaction). Bộ chạy mỗi commit dưới 10 phút.\n\n**Giữa các service**: consumer-driven contract test cho các API và event giữa 6 service, chạy trong CI của cả hai bên, thay cho phần lớn e2e đang kiểm \"service A gọi được service B\".\n\n**E2E**: giữ khoảng 15–25 hành trình sống còn (đăng ký, tìm hàng, đặt hàng, thanh toán, huỷ đơn), chạy sau mỗi lần deploy staging làm smoke và chạy định kỳ ở production dưới dạng synthetic monitoring với tài khoản test. Mỗi test e2e chập chờn bị cách ly (tag `quarantine`, không chặn merge) và có hạn sửa hoặc xoá trong 2 tuần.\n\n**Lộ trình một quý**: tháng 1, dựng Testcontainers và WireMock trong template, viết regression test cho ba bug trên, mọi bug mới phải kèm test ở mức thấp nhất bắt được. Tháng 2, thêm contract test cho các cặp service gọi nhau nhiều nhất, xoá dần e2e mà contract và integration test đã phủ (đối chiếu từng test, không xoá mù). Tháng 3, rút e2e còn khoảng 20, CI mỗi commit dưới 10 phút, bật deploy hằng ngày cho service đã đạt.\n\n**Đo**: thời gian CI, tỉ lệ đỏ do flaky, số bug production theo tầng lẽ ra bắt được nó. Không đặt mục tiêu coverage phần trăm.",
+  "tradeoffs": [
+    {
+      "option": "Dồn trọng tâm vào integration test với hạ tầng thật (trophy/honeycomb)",
+      "pros": [
+        "Bắt được lỗi SQL, mapping, cấu hình mà unit test mock không thấy",
+        "Ít vỡ khi refactor vì kiểm hành vi qua biên của service"
+      ],
+      "cons": [
+        "Chậm hơn unit test, cần Docker trên máy dev và CI",
+        "Khó chỉ ra dòng code lỗi bằng unit test nhỏ"
+      ]
+    },
+    {
+      "option": "Giữ pyramid cổ điển: thật nhiều unit test mock mọi phụ thuộc",
+      "pros": [
+        "Chạy rất nhanh, không cần hạ tầng",
+        "Hợp với phần logic tính toán thuần như Pricing"
+      ],
+      "cons": [
+        "Với code chủ yếu đọc ghi database, test kiểm mock chứ không kiểm hệ thống",
+        "Vỡ khi đổi cài đặt dù hành vi không đổi"
+      ]
+    },
+    {
+      "option": "Sửa bộ e2e cho ổn định rồi giữ làm lưới chính",
+      "pros": [
+        "Gần với trải nghiệm người dùng nhất",
+        "Không phải viết lại nhiều test"
+      ],
+      "cons": [
+        "95 phút cho mỗi lần chạy, không deploy hằng ngày được",
+        "Độ chập chờn tăng theo số thành phần, khó về 0"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sql-timezone-bug",
+      "kind": "single",
+      "prompt": "Câu SQL native tìm đơn quá hạn bỏ sót các đơn tạo gần nửa đêm ở múi giờ khác. Repository đã có unit test với repository được mock trả về danh sách cố định. Test nào rẻ nhất mà bắt được lỗi này?",
+      "options": [
+        "Integration test repository với PostgreSQL thật và dữ liệu quanh nửa đêm",
+        "Thêm unit test, mock repository trả về đơn ở múi giờ khác",
+        "Một test e2e qua UI tạo đơn rồi chờ job quét đơn quá hạn chạy",
+        "Viết thêm test để coverage của class repository lên 100%"
+      ],
+      "answer": 0,
+      "explanation": "Lỗi nằm trong câu SQL, nên chỉ test chạy câu SQL đó trên database thật mới thấy. Mock repository bỏ qua đúng phần bị lỗi. E2E cũng bắt được nhưng chậm, phụ thuộc lịch job và khó chỉ ra chỗ sai. Coverage của interface repository không chạy câu SQL nào."
+    },
+    {
+      "id": "trophy-when",
+      "kind": "single",
+      "prompt": "Service nào hợp nhất với cách dồn phần lớn test vào integration test (testing trophy)?",
+      "options": [
+        "Service CRUD đọc ghi PostgreSQL và phát event Kafka, ít tính toán",
+        "Thư viện tính thuế với hàng trăm quy tắc và trường hợp biên",
+        "Bộ parser định dạng ngày giờ dùng chung cho nhiều team khác",
+        "Module tính giá khuyến mãi khi chồng nhiều mã giảm giá lên nhau"
+      ],
+      "answer": 0,
+      "explanation": "Rủi ro của service CRUD nằm ở chỗ nối với hạ tầng: SQL, mapping, cấu hình, serialize. Unit test mock hết các thứ đó kiểm được rất ít. Ba lựa chọn còn lại là logic thuần nhiều nhánh, nơi unit test chạy mili giây với bảng dữ liệu là cách rẻ và đầy đủ nhất."
+    },
+    {
+      "id": "unit-test-verify-save",
+      "kind": "single",
+      "prompt": "Một unit test cho `OrderService.place()` mock repository và chỉ kiểm `verify(orderRepository).save(any())`. Vấn đề chính của test này là gì?",
+      "options": [
+        "Kiểm việc gọi method chứ không kiểm kết quả nghiệp vụ",
+        "Mockito không verify được method có giá trị trả về",
+        "Unit test không được dùng mock dưới bất kỳ hình thức nào",
+        "Mock repository vẫn mở kết nối database nên test chậm"
+      ],
+      "answer": 0,
+      "explanation": "`save(any())` đúng với mọi object được lưu, kể cả đơn tính sai tiền. Đổi sang `saveAll` khi refactor thì test đỏ dù hành vi đúng. Mock không mở kết nối, và dùng mock cho phụ thuộc chậm là hợp lý; vấn đề là test không kiểm điều nghiệp vụ quan tâm."
+    },
+    {
+      "id": "e2e-role",
+      "kind": "single",
+      "prompt": "Team có 900 test e2e chập chờn, chạy 80 phút. Hướng đi nào hợp lý nhất?",
+      "options": [
+        "Giữ vài chục hành trình sống còn, chuyển phần còn lại xuống tầng dưới",
+        "Bật tự động rerun 3 lần cho mọi test đỏ để CI luôn xanh",
+        "Chạy song song 900 test trên nhiều máy để còn khoảng 10 phút",
+        "Xoá toàn bộ e2e vì unit test hiện có đã đủ để bắt lỗi"
+      ],
+      "answer": 0,
+      "explanation": "E2E chập chờn theo số thành phần, nên chỉ giữ cho những hành trình không kiểm được ở tầng thấp hơn. Rerun che lỗi thật lẫn lỗi môi trường. Chạy song song giảm thời gian nhưng không giảm độ chập chờn, và môi trường dùng chung thường không chịu nổi. Xoá hết thì mất kiểm tra hệ thống đã deploy chạy được thật."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "test-strategy",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Test pyramid & chiến lược test",
+  "summary": "Unit, integration, end-to-end khác nhau ở tốc độ, chi phí và khả năng chỉ ra lỗi; test pyramid, testing trophy, honeycomb và phản mẫu ice cream cone; sociable và solitary; phân loại theo kích thước của Google; vì sao e2e chập chờn theo số thành phần; nên test gì, không cần test gì; bắt mỗi rủi ro ở mức rẻ nhất; đo chiến lược bằng thời gian CI, flaky và bug lọt.",
+  "level": "foundation",
+  "order": 1,
+  "minutes": 11,
+  "prerequisites": [],
+  "terms": ["unit-test", "integration-test", "end-to-end-test", "test-pyramid", "testing-trophy", "ice-cream-cone", "sociable-test", "flaky-test", "smoke-test", "synthetic-monitoring", "consumer-driven-contract", "mutation-testing", "regression-test", "canary-release", "feature-flag", "testing-honeycomb"],
+  "references": [
+    { "title": "Ham Vocke: The Practical Test Pyramid (martinfowler.com)", "url": "https://martinfowler.com/articles/practical-test-pyramid.html" },
+    { "title": "Google Testing Blog: Just Say No to More End-to-End Tests", "url": "https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html" },
+    { "title": "Kent C. Dodds: The Testing Trophy and Testing Classifications", "url": "https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications" },
+    { "title": "Spotify Engineering: Testing of Microservices", "url": "https://engineering.atspotify.com/2018/01/testing-of-microservices" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Unit test mock hết mọi thứ thì có giá trị không?\" Trả lời: có, khi phần được test là logic thuần (tính giá, chuyển trạng thái). Với code chủ yếu đọc ghi database hay gọi service khác, test mock hết chỉ chứng minh code gọi đúng mock; lỗi thật nằm ở SQL, mapping, cấu hình, nên cần integration test với hạ tầng thật. Hỏi tiếp \"bạn đặt mục tiêu coverage bao nhiêu\": không đặt con số cứng; dùng coverage để tìm vùng chưa được chạy, và mutation testing để xem test có thực sự kiểm gì." },
+    { "type": "callout", "style": "warning", "markdown": "Bật tự động rerun cho test đỏ làm CI xanh nhưng che cả bug thật lẫn lỗi môi trường. Test chập chờn nên bị cách ly (không chặn merge), có người chịu trách nhiệm và hạn sửa hoặc xoá; chi tiết ở bài Test chập chờn." }
+  ]
+}

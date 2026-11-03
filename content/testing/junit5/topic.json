@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "junit5",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "JUnit 5 & 6 chuyên sâu",
+  "summary": "Platform, Jupiter, Vintage và test engine; JUnit 6 đổi gì; instance mỗi method và `@TestInstance`; thứ tự method; parameterized test và bẫy `@CsvSource`; extension model và `ExtensionContext.Store`; chạy song song (`mode.default`, `@ResourceLock`, `@Isolated`) và `forkCount`; `assertTimeoutPreemptively` mất `ThreadLocal`; discovery issue; test JUnit 4 lặng lẽ không chạy; Surefire, Failsafe và tag.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 13,
+  "prerequisites": ["test-strategy"],
+  "terms": ["junit-platform", "junit-jupiter", "junit-vintage", "test-engine", "parameterized-test", "junit-extension", "bom", "flaky-test", "thread-local", "transitive-dependency"],
+  "references": [
+    { "title": "JUnit User Guide", "url": "https://docs.junit.org/current/user-guide/" },
+    { "title": "JUnit 6.0.0 Release Notes", "url": "https://docs.junit.org/6.0.0/release-notes/" },
+    { "title": "JUnit wiki: Upgrading to JUnit 6.0", "url": "https://github.com/junit-team/junit-framework/wiki/Upgrading-to-JUnit-6.0" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"JUnit 5 khác JUnit 4 ở kiến trúc thế nào?\" Trả lời: JUnit 4 là một khối, IDE và build tool gọi thẳng runner. JUnit 5 tách Platform (Launcher, API cho engine) khỏi Jupiter (API viết test); nhiều engine chạy chung một lần (Jupiter, Vintage, Cucumber). `@RunWith` và `@Rule` được thay bằng extension có thể ghép nhiều cái cùng lúc. Hỏi tiếp \"lên JUnit 6 có phải viết lại test không\": không, API Jupiter giữ nguyên; việc chính là Java 17, Surefire ≥ 3.0.0, bỏ `junit-platform-runner`, và chuyển nốt test JUnit 4 vì Vintage đã deprecated." },
+    { "type": "callout", "style": "warning", "markdown": "Số test chạy được trên CI có thể giảm mà không ai thấy: import nhầm `org.junit.Test`, tên class không khớp mẫu của Surefire, method `private`, thiếu `@Nested`. Theo dõi tổng số test mỗi lần build (báo cáo Surefire), và từ JUnit 5.13 (Spring Boot 3.5 mặc định còn 5.12) đặt `junit.platform.discovery.issue.severity.critical=WARNING` để discovery issue làm build đỏ." }
+  ]
+}

@@ -3061,7 +3061,7 @@
       "meaning": "Bill of Materials: một pom chỉ khai báo version cho một nhóm thư viện, để các thư viện đó luôn đi cùng nhau đúng phiên bản và dependency không phải ghi version.",
       "example": "Import `spring-boot-dependencies` rồi khai báo `jackson-databind` không cần `<version>`.",
       "related": ["spring-boot-starter"],
-      "topics": ["spring-overview", "maven-gradle"]
+      "topics": ["spring-overview", "maven-gradle", "junit5"]
     },
     {
       "id": "application-context",
@@ -3285,7 +3285,7 @@
       "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
       "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
       "related": ["transaction"],
-      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom", "memory-leak", "classloading"]
+      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom", "memory-leak", "classloading", "junit5"]
     },
     {
       "id": "aop-proxy",
@@ -3909,7 +3909,7 @@
       "meaning": "Test lúc xanh lúc đỏ dù code không đổi. Với code đồng thời, nguyên nhân thường là bug thật chỉ lộ ra khi các thread xen nhau theo một lịch nhất định.",
       "example": "Test đếm từ hai thread đỏ khoảng 3% số lần chạy vì `hits++` không atomic; bật rerun chỉ che lỗi.",
       "related": ["race-condition", "jcstress"],
-      "topics": ["testing-concurrency"]
+      "topics": ["testing-concurrency", "test-strategy", "junit5"]
     },
     {
       "id": "coupling",
@@ -4437,7 +4437,7 @@
       "meaning": "Kỹ thuật kiểm tra chất lượng test bằng cách cố tình sửa code (mutant) và xem test có đỏ không; công cụ Java phổ biến là PIT.",
       "example": "PIT đổi `amount > 0` thành `amount >= 0`, test vẫn xanh: thiếu test cho giá trị 0.",
       "related": ["characterization-test"],
-      "topics": ["refactoring-tech-debt", "evolutionary-architecture"]
+      "topics": ["refactoring-tech-debt", "evolutionary-architecture", "test-strategy"]
     },
     {
       "id": "code-smell",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy"]
     },
     {
       "id": "dora-metrics",
@@ -4869,7 +4869,7 @@
       "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
       "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
       "related": ["contract-test", "microservices"],
-      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture"]
+      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture", "test-strategy"]
     },
     {
       "id": "sidecar",
@@ -5029,7 +5029,7 @@
       "meaning": "Đưa phiên bản mới cho một phần nhỏ lưu lượng (1%, 10%) trước, theo dõi lỗi và latency rồi mới tăng dần; có vấn đề thì chuyển lưu lượng về bản cũ.",
       "example": "Mesh gửi 5% request tới `orders-v2`, tỉ lệ `5xx` tăng thì chuyển hết về `orders-v1`.",
       "related": ["service-mesh", "feature-flag"],
-      "topics": ["api-gateway-service-mesh", "load-testing"]
+      "topics": ["api-gateway-service-mesh", "load-testing", "test-strategy"]
     },
     {
       "id": "retry-storm",
@@ -7445,7 +7445,7 @@
       "meaning": "Dependency trung gian: thư viện được kéo vào vì một dependency khác cần nó, không phải vì project khai báo trực tiếp.",
       "example": "Khai báo `spring-boot-starter-web` kéo theo Jackson, Tomcat và hàng chục jar khác.",
       "related": ["dependency-mediation", "bom"],
-      "topics": ["maven-gradle", "secure-sdlc"]
+      "topics": ["maven-gradle", "secure-sdlc", "junit5"]
     },
     {
       "id": "dependency-mediation",
@@ -13254,6 +13254,142 @@
       "example": "`cosign verify` tìm bản ghi Rekor của chữ ký image để biết nó được ký trong 10 phút chứng chỉ còn hạn.",
       "related": ["sigstore"],
       "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "unit-test",
+      "term": "Unit test",
+      "meaning": "Test kiểm một đơn vị hành vi (một hàm, một class hay vài class cùng làm một việc) chạy hoàn toàn trong bộ nhớ, không I/O, mất vài mili giây.",
+      "example": "Test `PriceCalculator` với 20 bộ mã giảm giá khác nhau, không cần database.",
+      "related": ["integration-test", "test-pyramid"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "integration-test",
+      "term": "Integration test",
+      "meaning": "Test kiểm code của mình làm việc đúng với hạ tầng thật hoặc thành phần thật khác: database, broker, HTTP, framework.",
+      "example": "Test repository chạy câu SQL native trên PostgreSQL thật khởi động bằng Testcontainers.",
+      "related": ["unit-test", "end-to-end-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "end-to-end-test",
+      "term": "End-to-end test",
+      "meaning": "Test kiểm cả hệ thống đã deploy qua giao diện người dùng hoặc API công khai, đi qua mọi service và hạ tầng thật. Gọi tắt là e2e.",
+      "example": "Selenium mở trang, đăng nhập, đặt hàng và kiểm email xác nhận trên môi trường staging.",
+      "related": ["integration-test", "smoke-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "test-pyramid",
+      "term": "Test pyramid",
+      "meaning": "Mô hình của Mike Cohn (2009): nhiều unit test ở đáy, ít integration test ở giữa, rất ít e2e ở đỉnh, vì test càng cao càng chậm, đắt và dễ chập chờn.",
+      "example": "Google Testing Blog (2015) gợi ý khởi đầu với tỉ lệ 70% unit, 20% integration, 10% e2e.",
+      "related": ["testing-trophy", "ice-cream-cone"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "testing-trophy",
+      "term": "Testing trophy",
+      "meaning": "Mô hình của Kent C. Dodds: tầng đáy là phân tích tĩnh, phần lớn nhất là integration test, ít unit test và e2e hơn; hợp với code chủ yếu nối các thành phần lại.",
+      "example": "Service CRUD đặt phần lớn test ở mức gọi API với database thật thay vì mock repository.",
+      "related": ["test-pyramid", "integration-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "ice-cream-cone",
+      "term": "Ice cream cone",
+      "meaning": "Phản mẫu ngược với test pyramid: phần lớn là e2e và test tay, rất ít unit test; suite chậm, chập chờn và dần bị bỏ qua.",
+      "example": "1.100 test Selenium chạy 95 phút, 240 unit test, không có integration test.",
+      "related": ["test-pyramid", "flaky-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "sociable-test",
+      "term": "Sociable test",
+      "meaning": "Unit test dùng các class thật mà đơn vị được test gọi tới, chỉ thay phụ thuộc chậm hoặc dùng chung; ngược lại, solitary test mock mọi class cộng tác.",
+      "example": "Test `OrderService` dùng `PriceCalculator` thật và repository giả trong bộ nhớ.",
+      "related": ["unit-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "smoke-test",
+      "term": "Smoke test",
+      "meaning": "Bộ test nhỏ, nhanh, chạy ngay sau deploy để kiểm các chức năng sống còn còn chạy được, trước khi mở traffic hay chạy test sâu hơn.",
+      "example": "Sau deploy staging, 15 test kiểm đăng nhập, tìm hàng, đặt hàng, thanh toán thử.",
+      "related": ["end-to-end-test", "synthetic-monitoring"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "synthetic-monitoring",
+      "term": "Synthetic monitoring",
+      "meaning": "Chạy định kỳ các kịch bản giả lập người dùng trên production bằng tài khoản test, để phát hiện hỏng trước khi người dùng thật báo.",
+      "example": "Mỗi 5 phút, một script đăng nhập bằng tài khoản test và đặt đơn ở cửa hàng thử; lỗi hai lần liên tiếp thì báo động.",
+      "related": ["smoke-test", "end-to-end-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "regression-test",
+      "term": "Regression test",
+      "meaning": "Test được viết để bảo đảm một bug đã sửa không quay lại; tốt nhất viết trước khi sửa, tái hiện đúng bug.",
+      "example": "Bug giá sai khi chồng hai mã giảm giá có một test với đúng hai mã đó, đỏ trước khi sửa và xanh sau khi sửa.",
+      "related": ["unit-test"],
+      "topics": ["test-strategy"]
+    },
+    {
+      "id": "junit-platform",
+      "term": "JUnit Platform",
+      "meaning": "Phần nền của JUnit 5/6: Launcher mà IDE và build tool gọi vào, cùng API để các test engine tìm và chạy test.",
+      "example": "Surefire gọi Launcher; Launcher giao cho engine Jupiter và Vintage tìm test trên classpath.",
+      "related": ["test-engine", "junit-jupiter"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "junit-jupiter",
+      "term": "JUnit Jupiter",
+      "meaning": "API viết test của JUnit 5/6 (`@Test`, `@ParameterizedTest`, `@Nested`, extension) cùng engine chạy các test đó.",
+      "example": "`import org.junit.jupiter.api.Test;` là annotation của Jupiter, khác `org.junit.Test` của JUnit 4.",
+      "related": ["junit-platform", "junit-extension"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "junit-vintage",
+      "term": "JUnit Vintage",
+      "meaning": "Test engine chạy test JUnit 3/4 trên JUnit Platform; deprecated từ JUnit 6, chỉ nên dùng tạm trong lúc chuyển test sang Jupiter.",
+      "example": "Thêm `junit-vintage-engine` để test `@org.junit.Test` cũ vẫn chạy chung với test Jupiter.",
+      "related": ["junit-platform", "test-engine"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "test-engine",
+      "term": "Test engine",
+      "meaning": "Thành phần cắm vào JUnit Platform, tự tìm và chạy test theo mô hình của riêng nó; thiếu engine thì test loại đó không chạy.",
+      "example": "Jupiter, Vintage, Cucumber, Spock đều là engine; Platform chạy chúng trong cùng một lần build.",
+      "related": ["junit-platform"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "parameterized-test",
+      "term": "Parameterized test",
+      "meaning": "Một method test chạy nhiều lần với các bộ dữ liệu khác nhau, mỗi bộ hiện thành một test riêng trong báo cáo.",
+      "example": "`@ParameterizedTest @CsvSource({\"100000,true,90000\", \"100000,false,100000\"})` kiểm giảm giá cho cả khách VIP và thường.",
+      "related": ["junit-jupiter"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "junit-extension",
+      "term": "JUnit extension",
+      "meaning": "Cơ chế mở rộng của Jupiter thay cho `@RunWith` và `@Rule`: class cài các callback (trước/sau test, cấp tham số, xử lý exception) và đăng ký bằng `@ExtendWith` hay `@RegisterExtension`.",
+      "example": "`SpringExtension` dựng `ApplicationContext` và tiêm bean vào tham số của method test.",
+      "related": ["junit-jupiter"],
+      "topics": ["junit5"]
+    },
+    {
+      "id": "testing-honeycomb",
+      "term": "Testing honeycomb",
+      "meaning": "Mô hình test cho microservice của Spotify (2018): phần lớn là integration test kiểm service qua biên của nó, ít test chi tiết cài đặt và ít integrated test chạy nhiều service cùng lúc.",
+      "example": "Service Order được test chủ yếu bằng cách gọi API thật của nó với database thật và stub cho service khác.",
+      "related": ["testing-trophy", "test-pyramid"],
+      "topics": ["test-strategy"]
     }
   ]
 }

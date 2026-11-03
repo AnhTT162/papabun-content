@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "instance-per-method",
+      "kind": "output",
+      "prompt": "Class test dưới đây chạy với cấu hình mặc định của JUnit 5/6. Mỗi test in ra gì?",
+      "code": "class CartTest {\n    private int added = 0;\n\n    @Test void addOne() {\n        added++;\n        System.out.println(\"addOne: \" + added);\n    }\n\n    @Test void addTwo() {\n        added += 2;\n        System.out.println(\"addTwo: \" + added);\n    }\n}",
+      "options": [
+        "`addOne: 1` và `addTwo: 2`, theo thứ tự nào cũng vậy",
+        "`addOne: 1` và `addTwo: 3`, vì field được giữ giữa hai test",
+        "Tuỳ thứ tự chạy: test chạy sau in tổng của cả hai",
+        "Không biên dịch được vì field phải là `static`"
+      ],
+      "answer": 0,
+      "explanation": "Mặc định (`PER_METHOD`) JUnit tạo một instance mới của `CartTest` cho mỗi method test, nên `added` luôn bắt đầu từ 0. Chỉ khi đánh dấu `@TestInstance(PER_CLASS)` thì hai test mới dùng chung field và kết quả phụ thuộc thứ tự chạy."
+    },
+    {
+      "id": "csv-empty-null",
+      "kind": "output",
+      "prompt": "Test parameterized sau in ra gì cho hai dòng dữ liệu?",
+      "code": "@ParameterizedTest\n@CsvSource({\"a,\", \"b,''\"})\nvoid note(String key, String value) {\n    System.out.println(key + \" -> [\" + value + \"]\");\n}",
+      "options": [
+        "`a -> [null]` và `b -> []`",
+        "`a -> []` và `b -> []`",
+        "`a -> []` và `b -> ['']`",
+        "`a -> [null]` và `b -> [null]`"
+      ],
+      "answer": 0,
+      "explanation": "Trong `@CsvSource`, ô trống không có dấu nháy được hiểu là `null`; muốn chuỗi rỗng phải viết `''` (dấu nháy đơn là ký tự quote mặc định). Test kiểm validate chuỗi rỗng mà viết ô trống sẽ thực ra đang kiểm `null`."
+    },
+    {
+      "id": "parallel-enabled-only",
+      "kind": "single",
+      "prompt": "Team thêm `junit.jupiter.execution.parallel.enabled=true` vào `junit-platform.properties` và không đổi gì khác. Suite chạy nhanh hơn không?",
+      "options": [
+        "Không: `mode.default` vẫn là `same_thread`, cần đặt `concurrent`",
+        "Có: mọi method test chạy song song, số thread bằng số core",
+        "Có, nhưng chỉ các class chạy song song, method vẫn tuần tự",
+        "Không: phải bật thêm `forkCount` của Surefire thì cờ mới có tác dụng"
+      ],
+      "answer": 0,
+      "explanation": "Cờ `enabled` chỉ bật cơ chế. `junit.jupiter.execution.parallel.mode.default` mặc định là `same_thread`, nên các test vẫn chạy lần lượt (chỉ chuyển sang thread của pool). Chạy song song class nhưng tuần tự method là cấu hình riêng `mode.classes.default=concurrent` với `mode.default=same_thread`. `forkCount` là cơ chế nhiều JVM của Surefire, độc lập với song song của JUnit."
+    },
+    {
+      "id": "preemptive-transaction",
+      "kind": "single",
+      "prompt": "Test Spring có `@Transactional` (rollback sau mỗi test) bọc lời gọi `orderService.place(...)` trong `assertTimeoutPreemptively(Duration.ofSeconds(2), ...)`. Sau khi suite chạy, database còn đơn hàng của test này. Vì sao?",
+      "options": [
+        "Code chạy ở thread khác, ngoài transaction gắn với thread của test",
+        "Timeout làm Spring commit transaction sớm để trả connection",
+        "`@Transactional` trên test chỉ rollback khi test bị fail",
+        "Preemptive tắt mọi extension, kể cả `SpringExtension`"
+      ],
+      "answer": 0,
+      "explanation": "Transaction của Spring gắn với thread qua `ThreadLocal`. `assertTimeoutPreemptively` chạy executable trên thread `junit-timeout-thread-N` để có thể ngắt nó, nên code bên trong mở transaction riêng và commit. Dùng `assertTimeout` (cùng thread, đo thời gian sau khi chạy xong) hoặc `@Timeout`. Test `@Transactional` rollback cả khi test pass."
+    },
+    {
+      "id": "private-test-method",
+      "kind": "single",
+      "prompt": "Một method được viết `@Test private void rejectsNegativeAmount()` trong JUnit 6.1. Điều gì xảy ra khi chạy `mvn test` với cấu hình mặc định?",
+      "options": [
+        "Method không được chạy, log có một dòng WARNING, build vẫn xanh",
+        "JUnit dùng reflection gọi method private bình thường",
+        "Build hỏng ngay ở bước discovery vì method private",
+        "Lỗi biên dịch vì `@Test` không được đặt trên method private"
+      ],
+      "answer": 0,
+      "explanation": "Từ JUnit 5.13, Jupiter báo discovery issue mức WARNING: \"must not be private. It will not be executed\". Mặc định chỉ mức ERROR mới làm hỏng build; đặt `junit.platform.discovery.issue.severity.critical=WARNING` để các lỗi này làm build đỏ. Java không cấm đặt annotation lên method private."
+    }
+  ]
+}

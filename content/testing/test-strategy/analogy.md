@@ -1,0 +1,5 @@
+Bếp trưởng quán phở kiểm chất lượng theo ba cách. Mỗi sáng nếm nồi nước dùng: mất vài giây, sai thì biết ngay sai ở nồi nào. Trước giờ mở cửa, làm thử một tô đủ bánh, thịt, rau, nước để xem các thứ hợp nhau không: lâu hơn, nhưng bắt được lỗi mà nếm riêng từng nồi không thấy, như bánh phở trụng quá làm nước dùng đục. Thỉnh thoảng mời một người quen vào ăn cả bữa như khách thật, từ lúc gọi món tới lúc trả tiền.
+
+Bữa ăn thử cả quy trình cho nhiều tự tin nhất, nhưng tốn nhất, và khi khách chê thì khó biết lỗi ở đâu: nước dùng, phục vụ chậm, hay máy quẹt thẻ hỏng. Không quán nào kiểm chất lượng chỉ bằng cách mời khách ăn thử mỗi ngày trăm lần. Họ nếm thật nhiều thứ rẻ, thử vài tô, và để dành bữa ăn thử cho những gì chỉ lộ ra khi mọi thứ chạy cùng nhau.
+
+Ba cách nếm đó là [[unit-test|unit test]], [[integration-test|integration test]] và [[end-to-end-test|end-to-end test]]. Chia số lượng giữa chúng sao cho phản hồi nhanh mà vẫn đáng tin là bài toán mà [[test-pyramid|test pyramid]] và [[testing-trophy|testing trophy]] trả lời theo hai cách khác nhau.

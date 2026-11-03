@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-levels", "front": "Unit, integration và end-to-end test khác nhau thế nào?", "back": "Unit chạy trong bộ nhớ, không I/O, mili giây; integration kiểm code với hạ tầng thật (database, Kafka, HTTP); e2e kiểm cả hệ thống đã deploy." },
+    { "id": "pyramid-why", "front": "Vì sao test pyramid khuyên ít e2e?", "back": "Càng lên cao test càng chậm, đắt, dễ chập chờn và khó chỉ ra chỗ hỏng." },
+    { "id": "trophy", "front": "Testing trophy khác pyramid ở điểm nào?", "back": "Đặt nhiều test nhất ở mức integration và có tầng đáy là phân tích tĩnh, vì với code chủ yếu nối hạ tầng, integration test cho nhiều tự tin nhất trên mỗi phút chạy." },
+    { "id": "ice-cream", "front": "Ice cream cone là gì?", "back": "Phản mẫu ngược với pyramid: phần lớn là e2e và test tay, ít unit test; suite chậm, chập chờn và bị bỏ qua." },
+    { "id": "not-test", "front": "Kể ba thứ thường không cần test trực tiếp.", "back": "Getter/setter, code của chính framework, method private (test qua API public)." },
+    { "id": "sociable", "front": "Sociable và solitary unit test khác nhau thế nào?", "back": "Sociable dùng các class thật mà unit gọi tới, chỉ thay phụ thuộc chậm; solitary mock mọi class cộng tác, nên dễ vỡ khi refactor." },
+    { "id": "e2e-flaky-math", "front": "10 thành phần, mỗi thành phần ổn định 99,5%: một lần chạy e2e xanh bao nhiêu phần trăm?", "back": "Khoảng 0,995¹⁰ ≈ 95%, tức cứ 20 lần thì một lần đỏ dù code đúng." },
+    { "id": "regression-first", "front": "Gặp bug production, viết test thế nào?", "back": "Trước khi sửa, viết regression test tái hiện bug ở mức thấp nhất bắt được nó, rồi mới sửa cho test xanh." }
+  ]
+}

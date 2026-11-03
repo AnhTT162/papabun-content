@@ -217,8 +217,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 
 | # | id | Bài | Level | Trọng tâm chuyên sâu | Block | |
 |---|---|---|---|---|---|---|
-| 1 | `test-strategy` | Test pyramid & chiến lược test | foundation | Unit, integration, e2e; testing trophy; test gì, không test gì | A L Sc | ⬜ |
-| 2 | `junit5` | JUnit 5 chuyên sâu | junior | Lifecycle, parameterized, extension, chạy song song | L B | ⬜ |
+| 1 | `test-strategy` | Test pyramid & chiến lược test | foundation | Unit, integration, e2e; testing trophy; test gì, không test gì | A L Sc | ✅ |
+| 2 | `junit5` | JUnit 5 & 6 chuyên sâu | junior | Lifecycle, parameterized, extension, chạy song song | L B | ✅ |
 | 3 | `mockito` | Mockito & test double | mid | Mock, stub, spy, fake; strict stubbing; khi nào không nên mock | L B | ⬜ |
 | 4 | `test-design` | Thiết kế test tốt | mid | AAA, test smell, mutation testing (PIT), mức coverage | L B | ⬜ |
 | 5 | `testcontainers` | Testcontainers | mid | DB thật, singleton container, reuse, chạy trên CI | L B | ⬜ |
