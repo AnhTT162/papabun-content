@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "review-purpose", "front": "Mục tiêu của một buổi review kiến trúc là gì?", "back": "Tìm rủi ro khiến thiết kế không đạt quality attribute mà business cần, khi còn sửa rẻ, và đưa ra kết luận đi tiếp, đi tiếp có điều kiện hay làm lại phần nào." },
+    { "id": "review-types", "front": "Design review khác production readiness review ở đâu?", "back": "Design review trước khi xây, hỏi thiết kế có đạt mục tiêu không. Production readiness review trước khi lên production, hỏi đã có SLO, cảnh báo, runbook, rollback và capacity chưa." },
+    { "id": "atam-phases", "front": "ATAM đầy đủ chia thành những pha nào?", "back": "Phase 0 chuẩn bị; Phase 1 với người ra quyết định (business driver, kiến trúc, utility tree, phân tích); Phase 2 thêm stakeholder rộng để brainstorm scenario và phân tích lại; Phase 3 báo cáo và theo dõi." },
+    { "id": "atam-outputs", "front": "Năm loại phát hiện của ATAM?", "back": "Rủi ro, non-risk, sensitivity point, tradeoff point, và risk theme gom các rủi ro cùng gốc." },
+    { "id": "risk-format", "front": "Viết một rủi ro thế nào cho dùng được?", "back": "Dạng \"nếu ... thì ...\", nêu hậu quả cho quality attribute hay mục tiêu nào, kèm mức (chặn, nên sửa, cân nhắc), người xử lý và hạn." },
+    { "id": "non-risk", "front": "Vì sao ghi lại non-risk?", "back": "Để lý do của một quyết định tốt không bị quên rồi bị đổi, và để báo cáo cho thấy phần nào của kiến trúc đã ổn." },
+    { "id": "risk-storming", "front": "Bốn bước của risk storming?", "back": "Vẽ sơ đồ ở vài mức; mỗi người tự viết và chấm rủi ro trong im lặng; dán lên gần chỗ liên quan trên sơ đồ; xem lại, tóm tắt và chọn cách xử lý." },
+    { "id": "evidence", "front": "Vì sao hỏi \"có load test chưa\" là câu hỏi kém?", "back": "Câu trả lời gần như luôn là có. Hỏi số: chạy ở bao nhiêu request/s, chặng nào bão hoà trước, kết quả ngày nào." },
+    { "id": "existing-system", "front": "Review hệ thống đang chạy có gì hơn review bản thiết kế?", "back": "Có dữ liệu thật: lịch sử sự cố và postmortem, mức tiêu error budget, tỉ lệ deploy lỗi, hoá đơn cloud, hotspot trong code. Sự cố lặp cùng gốc là risk theme rõ nhất." }
+  ]
+}

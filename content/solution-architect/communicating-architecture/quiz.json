@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "honest-payback",
+      "kind": "single",
+      "prompt": "Dự án 1,8 tỷ đ tiết kiệm 842 triệu đ/tháng so với giữ nguyên. Một thay đổi cấu hình gần như miễn phí được ước tính giảm một nửa vấn đề; so với nó, dự án chỉ tiết kiệm thêm khoảng 249 triệu đ/tháng. Nên trình bày thời gian hoàn vốn thế nào?",
+      "options": [
+        "Khoảng 7 tháng so với thay đổi cấu hình, nêu cả hai phương án",
+        "Khoảng 2 tháng so với giữ nguyên, vì đó là hiện trạng thật",
+        "Khoảng 2 tháng, và nhắc thay đổi cấu hình như một rủi ro phụ",
+        "Không nêu con số hoàn vốn để tránh bị tài chính hỏi vặn lại"
+      ],
+      "answer": 0,
+      "explanation": "Thay đổi cấu hình là phương án rẻ mà người nghe sẽ tự nghĩ ra; lợi ích thật của dự án là phần thêm so với nó: 1,8 tỷ / 249 triệu ≈ 7,2 tháng. Nêu 2 tháng so với giữ nguyên là đúng số học nhưng che phương án rẻ; khi bị phát hiện, mọi con số khác bị nghi. Không nêu hoàn vốn thì giám đốc tài chính không có cơ sở để duyệt."
+    },
+    {
+      "id": "opening",
+      "kind": "single",
+      "prompt": "Bạn có 20 phút trước ban điều hành để xin duyệt một dự án. Phần mở đầu nào tốt nhất?",
+      "options": [
+        "Đề nghị, số tiền, lợi ích và quyết định cần có trong buổi họp hôm nay",
+        "Lịch sử vấn đề và quá trình team đã khảo sát, thử nghiệm ra sao",
+        "Kiến trúc mục tiêu và các công nghệ chính sẽ được dùng trong dự án",
+        "Tổng quan xu hướng ngành và các đối thủ đã chuyển đổi như thế nào"
+      ],
+      "answer": 0,
+      "explanation": "Theo pyramid principle và BLUF, câu đầu là kết luận và việc người nghe cần làm; lý do và số liệu đi sau. Kể theo trình tự đã làm khiến quyết định rơi vào cuối buổi, thường là lúc hết giờ. Công nghệ không phải điều ban điều hành quyết. Xu hướng ngành có thể là bối cảnh nhưng không cho biết cần quyết gì."
+    },
+    {
+      "id": "objection-handling",
+      "kind": "single",
+      "prompt": "Giữa buổi trình bày, giám đốc chuỗi cửa hàng nói: \"Tôi không muốn thêm hệ thống mới.\" Phản ứng nào tốt nhất?",
+      "options": [
+        "Nhắc lại mối lo bằng lời mình và hỏi điều anh lo phía sau là gì",
+        "Giải thích ngay hệ thống mới dùng công nghệ ổn định, đã có bản thử",
+        "Ghi nhận ý kiến và đi tiếp phần còn lại để giữ đúng thời gian họp",
+        "Đề nghị CTO trả lời thay vì đây là câu hỏi thuộc phần kỹ thuật"
+      ],
+      "answer": 0,
+      "explanation": "Phản đối về \"hệ thống mới\" thường là lo về người: nhân viên quầy phải học thêm, thêm thao tác lúc đông khách. Hỏi ra mối lo đó mới trả lời đúng chỗ (ở đây: quầy không đổi gì). Nói về độ ổn định của công nghệ là trả lời câu không ai hỏi. Bỏ qua thì người có quyền phủ quyết giữ phản đối tới lúc biểu quyết. Đẩy sang CTO biến một mối lo vận hành thành tranh luận kỹ thuật."
+    },
+    {
+      "id": "diagram-choice",
+      "kind": "single",
+      "prompt": "Bạn trình bày cùng một thay đổi kiến trúc cho bộ phận bảo mật và pháp chế. Sơ đồ nào nên mang theo?",
+      "options": [
+        "Luồng dữ liệu: dữ liệu nào đi đâu, qua ranh giới tin cậy nào, lưu ở đâu",
+        "Sơ đồ C4 container đầy đủ kèm công nghệ của từng container trong hệ",
+        "Hình trước và sau có 4–6 hộp và một con số về lợi ích kinh doanh",
+        "Sơ đồ deployment với số node, vùng sẵn sàng và cách scale khi tải"
+      ],
+      "answer": 0,
+      "explanation": "Bảo mật và pháp chế hỏi dữ liệu nào đi đâu, ai đọc được, lưu ở quốc gia nào và bao lâu; sơ đồ luồng dữ liệu trả lời đúng câu đó. C4 container là cho team dev, có nhiều chi tiết họ không cần. Hình trước và sau là cho lãnh đạo business. Deployment là cho vận hành; nó có thể bổ sung, nhưng không cho thấy dữ liệu nhạy cảm đi qua đâu."
+    }
+  ]
+}

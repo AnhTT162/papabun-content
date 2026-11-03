@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns", "architecture-review"]
     },
     {
       "id": "orm",
@@ -1685,7 +1685,7 @@
       "meaning": "Change Data Capture: đọc log thay đổi của database (WAL, binlog) để phát ra từng thay đổi dưới dạng sự kiện cho hệ khác, không cần sửa code ghi.",
       "example": "Debezium đọc WAL của PostgreSQL và đẩy mỗi thay đổi của bảng `orders` vào Kafka.",
       "related": ["dual-write", "trigger"],
-      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns", "data-architecture", "migration-modernization"]
+      "topics": ["views-procedures-triggers", "data-modeling", "nosql-overview", "sharding-strategies", "search-elasticsearch", "cache-patterns", "event-schema-evolution", "data-consistency-services", "event-driven-architecture", "outbox-cdc", "cqrs-event-sourcing", "sd-building-blocks", "design-id-generator", "olap-doris", "adr-c4", "integration-patterns", "data-architecture", "migration-modernization", "communicating-architecture"]
     },
     {
       "id": "security-definer",
@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization", "evolutionary-architecture"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization", "evolutionary-architecture", "architecture-review"]
     },
     {
       "id": "replication-slot",
@@ -1901,7 +1901,7 @@
       "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
       "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
       "related": ["pitr"],
-      "topics": ["backup-restore", "replication-ha", "multi-region-active-active", "nfr-quality-attributes", "well-architected"]
+      "topics": ["backup-restore", "replication-ha", "multi-region-active-active", "nfr-quality-attributes", "well-architected", "architecture-review"]
     },
     {
       "id": "table-lock",
@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset", "design-rate-limiter"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset", "design-rate-limiter", "architecture-review"]
     },
     {
       "id": "chunk-processing",
@@ -4829,7 +4829,7 @@
       "meaning": "Thêm độ ngẫu nhiên vào thời gian chờ giữa các lần retry, để các client lỗi cùng lúc không retry cùng nhịp và dồn tải thành đợt.",
       "example": "Full jitter: chờ ngẫu nhiên trong `[0, min(2000, 100 × 2^n)]` ms.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols", "design-notification", "design-job-scheduler"]
+      "topics": ["resilience-patterns", "rate-limiting", "tail-latency", "realtime-rpc-protocols", "design-notification", "design-job-scheduler", "architecture-review"]
     },
     {
       "id": "fallback",
@@ -5037,7 +5037,7 @@
       "meaning": "Lưu lượng tăng vọt do nhiều client hoặc nhiều tầng cùng retry khi một service đang lỗi, làm nó càng khó hồi phục.",
       "example": "Gateway, mesh và app mỗi tầng thử 3 lần: một request lỗi thành 27 lời gọi tới service đang quá tải.",
       "related": ["retry-backoff", "retry-budget"],
-      "topics": ["api-gateway-service-mesh", "tail-latency", "load-testing"]
+      "topics": ["api-gateway-service-mesh", "tail-latency", "load-testing", "architecture-review"]
     },
     {
       "id": "slo",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre", "evolutionary-architecture"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre", "evolutionary-architecture", "architecture-review"]
     },
     {
       "id": "compensating-transaction",
@@ -8661,7 +8661,7 @@
       "meaning": "Single point of failure: thành phần mà khi nó hỏng thì cả hệ thống ngừng, vì không có bản dự phòng.",
       "example": "Một database không có replica, hay một Nginx duy nhất đứng trước mọi service.",
       "related": ["failover", "vertical-scaling"],
-      "topics": ["sd-building-blocks", "design-id-generator"]
+      "topics": ["sd-building-blocks", "design-id-generator", "architecture-review"]
     },
     {
       "id": "read-replica",
@@ -8717,7 +8717,7 @@
       "meaning": "Yêu cầu phi chức năng: hệ thống phải tốt tới mức nào, như quy mô, latency, availability, độ nhất quán, bảo mật, chi phí. Phải có số đo được.",
       "example": "p99 đọc dưới 200 ms, availability 99,9%, chịu 1 triệu ghi mỗi ngày.",
       "related": ["functional-requirement", "availability", "slo"],
-      "topics": ["sd-framework", "sa-role", "nfr-quality-attributes"]
+      "topics": ["sd-framework", "sa-role", "nfr-quality-attributes", "architecture-review"]
     },
     {
       "id": "back-of-envelope-estimation",
@@ -9893,7 +9893,7 @@
       "meaning": "Lớp đứng trước hệ thống, giữ người dùng trong hàng và chỉ cho vào theo tốc độ phần phía sau chịu được, thay vì để mọi người cùng đập vào backend.",
       "example": "Checkout chịu 3.000 phiên, mỗi phiên 3 phút: phòng chờ cho vào khoảng 1.000 người mỗi phút và cấp token vào cửa.",
       "related": ["admission-token", "load-shedding", "littles-law"],
-      "topics": ["design-flash-sale"]
+      "topics": ["design-flash-sale", "architecture-review"]
     },
     {
       "id": "admission-token",
@@ -10101,7 +10101,7 @@
       "meaning": "Người hoặc nhóm có quyền lợi hay ảnh hưởng tới một hệ thống: business, người dùng, team dev, vận hành, bảo mật, pháp lý, tài chính. Mỗi nhóm quan tâm một điều khác nhau.",
       "example": "Tài chính hỏi chi phí mỗi tháng, bộ phận bảo mật hỏi dữ liệu nằm ở vùng nào, team vận hành hỏi ai trực sự cố.",
       "related": ["solution-architect", "raci"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4", "requirements-estimation"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "requirements-estimation", "communicating-architecture"]
     },
     {
       "id": "adr",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles", "build-vs-buy", "enterprise-architecture"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles", "build-vs-buy", "enterprise-architecture", "architecture-review", "communicating-architecture"]
     },
     {
       "id": "proof-of-concept",
@@ -10165,7 +10165,7 @@
       "meaning": "Nói rõ bất đồng khi đang bàn, nhưng khi đã quyết thì cam kết làm theo hết sức, kể cả khi không đồng ý.",
       "example": "Anh B muốn dùng Redis lock, team chọn ràng buộc database; anh B ghi lý do vào ADR rồi vẫn viết phần cache thật tốt và hẹn điều kiện xem lại.",
       "related": ["behavioral-interview"],
-      "topics": ["project-storytelling", "architecture-tradeoffs"]
+      "topics": ["project-storytelling", "architecture-tradeoffs", "communicating-architecture"]
     },
     {
       "id": "code-review",
@@ -10181,7 +10181,7 @@
       "meaning": "Tài liệu mô tả thiết kế và kế hoạch cho một thay đổi lớn trước khi code: bối cảnh, mục tiêu và những gì không làm, phương án chọn và bị loại, rủi ro, cách triển khai và rollback.",
       "example": "Design doc tích hợp ví điện tử 4 trang, team góp ý trong một tuần, sinh ra hai ADR về idempotency và đối soát.",
       "related": ["adr", "tech-lead"],
-      "topics": ["tech-lead-role", "adr-c4"]
+      "topics": ["tech-lead-role", "adr-c4", "architecture-review", "communicating-architecture"]
     },
     {
       "id": "spike",
@@ -10213,7 +10213,7 @@
       "meaning": "Số người phải vắng mặt để một vùng của hệ thống không còn ai sửa được. Bằng 1 là rủi ro cho cả giao hàng lẫn trực sự cố.",
       "example": "Chỉ một người hiểu job đối soát; người đó nghỉ phép đúng tuần file đối soát đổi định dạng.",
       "related": ["delegation", "runbook"],
-      "topics": ["tech-lead-role", "team-topologies"]
+      "topics": ["tech-lead-role", "team-topologies", "architecture-review"]
     },
     {
       "id": "incident-commander",
@@ -10245,7 +10245,7 @@
       "meaning": "Cách vẽ kiến trúc phần mềm của Simon Brown theo bốn mức phóng to: System Context, Container, Component, Code; kèm các sơ đồ bổ trợ như deployment và dynamic.",
       "example": "Sơ đồ context cho business, sơ đồ container cho team dev và vận hành, sơ đồ component cho người sửa Order API.",
       "related": ["c4-container", "adr", "arc42"],
-      "topics": ["adr-c4", "enterprise-architecture"]
+      "topics": ["adr-c4", "enterprise-architecture", "communicating-architecture"]
     },
     {
       "id": "c4-container",
@@ -10261,7 +10261,7 @@
       "meaning": "Sơ đồ thể hiện các bên trao đổi message theo thứ tự thời gian, phân biệt gọi đồng bộ và bất đồng bộ. Hợp cho luồng có retry, timeout, nhánh lỗi.",
       "example": "Sơ đồ luồng thanh toán vẽ cả nhánh webhook tới trước response của lời gọi tạo giao dịch.",
       "related": ["c4-model"],
-      "topics": ["adr-c4"]
+      "topics": ["adr-c4", "communicating-architecture"]
     },
     {
       "id": "arc42",
@@ -10357,7 +10357,7 @@
       "meaning": "Thuộc tính chất lượng: hệ thống tốt tới mức nào về performance, availability, bảo mật, khả năng sửa đổi, chi phí. Là cách gọi NFR trong kiến trúc, dùng để so các phương án.",
       "example": "Availability 99,9% cho luồng tạo đơn; thêm một phương thức thanh toán không quá 2 tuần-người.",
       "related": ["non-functional-requirement", "quality-attribute-scenario", "utility-tree"],
-      "topics": ["nfr-quality-attributes", "architecture-styles"]
+      "topics": ["nfr-quality-attributes", "architecture-styles", "architecture-review"]
     },
     {
       "id": "quality-attribute-scenario",
@@ -10365,7 +10365,7 @@
       "meaning": "Cách viết một quality attribute thành câu kiểm được, gồm sáu phần: nguồn, kích thích, môi trường, thành phần, phản hồi và thước đo (theo SEI).",
       "example": "Người mua gửi 320 đơn/giây trong 15 phút đầu đợt sale tới API tạo đơn; p99 dưới 800 ms, lỗi dưới 0,5%.",
       "related": ["quality-attribute", "utility-tree", "non-functional-requirement"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "architecture-review"]
     },
     {
       "id": "utility-tree",
@@ -10373,7 +10373,7 @@
       "meaning": "Cây ưu tiên quality attribute: gốc là utility, nhánh là thuộc tính và tinh chỉnh, lá là scenario chấm theo hai trục quan trọng với business và khó đạt (H/M/L).",
       "example": "Lá (H, H) \"chịu mất một AZ, phục hồi trong 5 phút\" được dành PoC; lá (L, H) là ứng viên để thương lượng bỏ.",
       "related": ["quality-attribute-scenario", "atam", "architecturally-significant-requirement"],
-      "topics": ["nfr-quality-attributes"]
+      "topics": ["nfr-quality-attributes", "architecture-review"]
     },
     {
       "id": "architecturally-significant-requirement",
@@ -10389,7 +10389,7 @@
       "meaning": "Architecture Tradeoff Analysis Method của SEI: phương pháp đánh giá kiến trúc theo các quality attribute scenario đã ưu tiên, để tìm rủi ro, điểm nhạy và điểm đánh đổi.",
       "example": "Buổi đánh giá dựng utility tree, rồi xem kiến trúc đáp ứng các lá (H, H) thế nào và ở đâu một quyết định làm lợi thuộc tính này nhưng hại thuộc tính khác.",
       "related": ["utility-tree", "quality-attribute-scenario"],
-      "topics": ["nfr-quality-attributes", "architecture-tradeoffs"]
+      "topics": ["nfr-quality-attributes", "architecture-tradeoffs", "architecture-review"]
     },
     {
       "id": "iso-25010",
@@ -10421,7 +10421,7 @@
       "meaning": "Bộ nguyên tắc, câu hỏi và best practice của AWS để đánh giá một workload theo sáu trụ cột: operational excellence, security, reliability, performance efficiency, cost optimization, sustainability.",
       "example": "Review workload hoá đơn điện tử, tìm ra database Single-AZ và root không MFA là high risk issue.",
       "related": ["well-architected-tool", "high-risk-issue", "wa-lens"],
-      "topics": ["well-architected"]
+      "topics": ["well-architected", "architecture-review"]
     },
     {
       "id": "wa-workload",
@@ -10485,7 +10485,7 @@
       "meaning": "Cách chia quyết định theo khả năng đảo ngược: cửa một chiều gần như không quay lại được hoặc quay lại rất đắt, cửa hai chiều sai thì sửa rẻ. Jeff Bezos gọi là quyết định loại 1 và loại 2.",
       "example": "Chọn thư viện log là cửa hai chiều; chỉ lưu số dư mà bỏ lịch sử giao dịch là cửa một chiều.",
       "related": ["decision-matrix", "adr", "last-responsible-moment"],
-      "topics": ["architecture-tradeoffs", "enterprise-architecture"]
+      "topics": ["architecture-tradeoffs", "enterprise-architecture", "architecture-review", "communicating-architecture"]
     },
     {
       "id": "decision-matrix",
@@ -10509,7 +10509,7 @@
       "meaning": "Buổi làm việc trước khi cam kết: mọi người tưởng tượng quyết định đã thất bại và tự viết lý do, độc lập, rồi mới chia sẻ. Gary Klein mô tả trên Harvard Business Review năm 2007.",
       "example": "\"Một năm nữa dự án điểm thưởng hoá ra sai, vì sao?\" cho ra rủi ro team khác đọc thẳng bảng.",
       "related": ["risk-register", "postmortem"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "architecture-review"]
     },
     {
       "id": "risk-register",
@@ -10517,7 +10517,7 @@
       "meaning": "Danh sách rủi ro, mỗi dòng có mô tả \"nếu ... thì ...\", xác suất, tác động, người sở hữu, cách xử lý (tránh, giảm, chuyển, chấp nhận) và dấu hiệu sớm.",
       "example": "Rủi ro \"tải vượt dự báo sớm\", xác suất thấp, tác động cao, dấu hiệu sớm là ghi đỉnh theo tháng.",
       "related": ["pre-mortem", "raid-log"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "architecture-review"]
     },
     {
       "id": "last-responsible-moment",
@@ -10533,7 +10533,7 @@
       "meaning": "Thuật ngữ của ATAM: một quyết định đồng thời là sensitivity point của nhiều quality attribute, thường theo hướng ngược nhau. Sensitivity point là quyết định mà một thuộc tính phụ thuộc mạnh vào nó.",
       "example": "Replication đồng bộ tăng độ bền dữ liệu nhưng giảm throughput ghi.",
       "related": ["atam", "quality-attribute"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "architecture-review"]
     },
     {
       "id": "advice-process",
@@ -11205,7 +11205,7 @@
       "meaning": "Buổi kiểm tra trước khi service lên production hoặc được đội SRE nhận trực: SLO, alert, runbook, capacity, cách rollout/rollback, backup đã restore thử, danh sách dependency.",
       "example": "Service mới chưa có runbook và chưa restore thử backup nên chưa được nhận vào vòng trực chung.",
       "related": ["sre", "runbook", "slo"],
-      "topics": ["reliability-sre"]
+      "topics": ["reliability-sre", "architecture-review"]
     },
     {
       "id": "static-stability",
@@ -11950,6 +11950,94 @@
       "example": "Quét dependency báo thư viện dính một CVE mức Critical; pipeline chặn build tới khi nâng phiên bản.",
       "related": ["sbom", "software-composition-analysis"],
       "topics": ["enterprise-architecture", "evolutionary-architecture"]
+    },
+    {
+      "id": "risk-storming",
+      "term": "Risk storming",
+      "meaning": "Kỹ thuật tìm rủi ro kiến trúc theo nhóm của Simon Brown: vẽ sơ đồ ở vài mức, mỗi người tự viết và chấm rủi ro trong im lặng, dán lên gần chỗ liên quan trên sơ đồ, rồi cùng xem lại và chọn cách xử lý.",
+      "example": "Dev, vận hành, bảo mật mỗi người viết rủi ro trong 10 phút; năm tờ giấy dán dồn quanh hộp gọi hệ thống đối tác cho thấy đó là điểm nóng.",
+      "related": ["atam", "pre-mortem", "c4-model", "risk-register"],
+      "topics": ["architecture-review"]
+    },
+    {
+      "id": "sensitivity-point",
+      "term": "Sensitivity point",
+      "meaning": "Thuật ngữ của ATAM: một quyết định hay tham số mà một quality attribute phụ thuộc mạnh vào nó.",
+      "example": "Chu kỳ làm mới cache số slot trống quyết định người dùng thấy số liệu cũ bao lâu.",
+      "related": ["tradeoff-point", "atam", "quality-attribute"],
+      "topics": ["architecture-review"]
+    },
+    {
+      "id": "non-risk",
+      "term": "Non-risk",
+      "meaning": "Kết quả của ATAM: một quyết định kiến trúc tốt, ghi kèm lý do, để không bị đổi vì quên lý do.",
+      "example": "Service không giữ trạng thái sau API gateway managed: thêm pod là chịu thêm tải, ghi là non-risk.",
+      "related": ["atam", "risk-theme"],
+      "topics": ["architecture-review"]
+    },
+    {
+      "id": "risk-theme",
+      "term": "Risk theme",
+      "meaning": "Kết quả của ATAM: nhóm các rủi ro có cùng gốc, gắn với mục tiêu business mà chúng đe doạ. Báo cáo review nên mở đầu bằng theme.",
+      "example": "Ba rủi ro về giờ bảo trì, trần tải và giờ hỗ trợ của đối tác gom thành theme “đường đặt lịch phụ thuộc đồng bộ vào đối tác”.",
+      "related": ["atam", "non-risk", "risk-register"],
+      "topics": ["architecture-review"]
+    },
+    {
+      "id": "two-way-door",
+      "term": "Two-way door",
+      "meaning": "Quyết định đảo ngược được với chi phí thấp; nên quyết nhanh, ở cấp gần việc, với quy trình nhẹ. Đối lập với one-way door.",
+      "example": "Đổi thư viện log trong một service, bật một feature flag: thử, đo, đổi lại nếu sai.",
+      "related": ["one-way-door"],
+      "topics": ["architecture-review", "architecture-tradeoffs"]
+    },
+    {
+      "id": "pyramid-principle",
+      "term": "Pyramid principle",
+      "meaning": "Cách cấu trúc văn bản và bài trình bày của Barbara Minto (McKinsey): ý chính ở đầu, các lý do đỡ nó ở dưới, số liệu ở dưới cùng; phần mở đầu theo Situation, Complication, Question.",
+      "example": "Câu đầu: “Đề nghị duyệt 900 triệu cho giai đoạn 1 để giảm đơn huỷ vì hết hàng”; sau đó ba lý do và số liệu.",
+      "related": ["bluf", "narrative-memo"],
+      "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "bluf",
+      "term": "BLUF",
+      "meaning": "Bottom line up front: câu đầu tiên của văn bản là kết luận và việc người đọc cần làm, chi tiết đi sau. Quen dùng trong văn bản quân đội.",
+      "example": "Email mở đầu: “Cần anh duyệt trước thứ Sáu: chuyển DB sang Multi-AZ, thêm 12 triệu mỗi tháng.”",
+      "related": ["pyramid-principle"],
+      "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "pre-wiring",
+      "term": "Pre-wiring",
+      "meaning": "Gặp riêng từng người quyết định và người có thể phản đối trước buổi họp chính để nghe phản đối và sửa đề xuất; người Nhật gọi là nemawashi.",
+      "example": "Gặp giám đốc tài chính trước ba ngày, biết họ cần điểm dừng, thêm tiêu chí dừng vào trang tóm tắt.",
+      "related": ["stakeholder", "steelman"],
+      "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "steelman",
+      "term": "Steelman",
+      "meaning": "Trình bày quan điểm đối lập ở dạng mạnh nhất của nó trước khi phản bác; ngược với strawman (bóp méo cho dễ đánh).",
+      "example": "“Mua module của vendor có lợi là ít tự vận hành và vendor chịu trách nhiệm; điều kiện của nó là phải nâng cấp ERP 14 tháng.”",
+      "related": ["pre-wiring", "disagree-and-commit"],
+      "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "narrative-memo",
+      "term": "Narrative memo",
+      "meaning": "Bản đề xuất viết dạng văn xuôi thay cho slide, người dự đọc trước hoặc đọc im lặng đầu buổi họp. Amazon dùng bản sáu trang thay PowerPoint.",
+      "example": "Đề xuất 4 trang: tóm tắt, vấn đề có số, phương án, khuyến nghị, rủi ro, giai đoạn; mọi người đọc 10 phút đầu rồi mới bàn.",
+      "related": ["pyramid-principle", "design-doc"],
+      "topics": ["communicating-architecture"]
+    },
+    {
+      "id": "kill-criteria",
+      "term": "Kill criteria",
+      "meaning": "Tiêu chí dừng đặt trước khi bắt đầu một giai đoạn: nếu không đạt thì dừng, không chi phần còn lại. Giới hạn rủi ro cho người quyết.",
+      "example": "“Nếu sau giai đoạn 1 tỉ lệ huỷ ở 40 cửa hàng không dưới 1% thì dừng ở 900 triệu.”",
+      "related": ["one-way-door", "proof-of-concept"],
+      "topics": ["communicating-architecture"]
     }
   ]
 }

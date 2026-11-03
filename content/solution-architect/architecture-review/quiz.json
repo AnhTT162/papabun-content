@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "chain-availability",
+      "kind": "single",
+      "prompt": "Luồng đặt lịch gọi đồng bộ qua gateway 99,99%, service 99,95%, database 99,9% và hệ thống đối tác 99,5%. Mục tiêu 99,9%. Nhận định nào đúng?",
+      "options": [
+        "Chuỗi chỉ đạt khoảng 99,34%; phải bỏ đối tác khỏi đường đồng bộ",
+        "Chuỗi đạt 99,5% vì availability là của thành phần yếu nhất",
+        "Chuỗi đạt 99,9% nếu thêm pod cho service và bật cache ở gateway",
+        "Chuỗi đạt khoảng 99,84% vì SLA đối tác không tính khi có retry"
+      ],
+      "answer": 0,
+      "explanation": "Các chặng nối tiếp, đồng bộ: request chỉ thành công khi mọi chặng đều chạy, nên availability là tích, khoảng 99,34%, chứ không phải bằng chặng yếu nhất. Thêm pod chỉ cải thiện một chặng, đối tác 99,5% vẫn nằm trong tích. Retry không cứu được khi đối tác ngừng 30 phút. Cách đúng là đưa đối tác ra khỏi đường đồng bộ (giữ dữ liệu cần thiết tại chỗ, ghi sang đối tác bất đồng bộ)."
+    },
+    {
+      "id": "finding-type",
+      "kind": "single",
+      "prompt": "Trong buổi ATAM, nhóm thấy rằng chọn replication đồng bộ cho database tăng độ bền dữ liệu nhưng giảm throughput ghi. Đây là loại phát hiện nào?",
+      "options": [
+        "Tradeoff point: một quyết định ảnh hưởng ngược chiều hai thuộc tính",
+        "Sensitivity point: một tham số mà chỉ một thuộc tính phụ thuộc mạnh",
+        "Risk theme: nhóm nhiều rủi ro cùng gốc ảnh hưởng mục tiêu business",
+        "Non-risk: quyết định đúng nên chỉ cần ghi lại lý do để không bị đổi"
+      ],
+      "answer": 0,
+      "explanation": "Quyết định là sensitivity point của hai thuộc tính theo hai hướng ngược nhau (độ bền lên, throughput xuống) thì là tradeoff point. Sensitivity point chỉ nói một thuộc tính phụ thuộc mạnh vào một quyết định. Risk theme là nhóm rủi ro cùng gốc, không phải một quyết định. Non-risk là đánh giá quyết định đó có ổn không, không mô tả cơ chế ảnh hưởng hai thuộc tính; câu hỏi hỏi về cơ chế, nên đáp án là tradeoff point."
+    },
+    {
+      "id": "evidence-question",
+      "kind": "single",
+      "prompt": "Câu hỏi nào trong buổi review cho nhiều thông tin nhất về khả năng khôi phục?",
+      "options": [
+        "Lần restore thử gần nhất là khi nào, mất bao lâu, mất bao nhiêu dữ liệu?",
+        "Hệ thống có backup database hằng ngày và có kế hoạch khôi phục chưa?",
+        "Đội có tài liệu runbook khôi phục database đã được duyệt chưa vậy?",
+        "Nhà cung cấp cloud có cam kết SLA cho dịch vụ backup đang dùng không?"
+      ],
+      "answer": 0,
+      "explanation": "Câu hỏi có hay không gần như luôn được trả lời là có, và không nói gì về RPO/RTO thật. Có backup không có nghĩa là restore được; runbook chưa từng chạy thì chưa phải bằng chứng; SLA của dịch vụ backup không nói gì về việc team khôi phục được bao lâu. Hỏi lần thử gần nhất cho thời gian và lượng dữ liệu mất thật."
+    },
+    {
+      "id": "retry-amplify",
+      "kind": "single",
+      "prompt": "100 lượt đặt lịch mỗi giây, mỗi lượt gọi đối tác 2 lần, trần của đối tác 40 request/s. App tự gửi lại tối đa 3 lần khi chờ quá 5 giây. Khi đối tác bắt đầu chậm, tải tối đa lên đối tác là bao nhiêu?",
+      "options": [
+        "Khoảng 800 request/s",
+        "Khoảng 600 request/s",
+        "Khoảng 200 request/s",
+        "Khoảng 40 request/s"
+      ],
+      "answer": 0,
+      "explanation": "Không lỗi thì 100 × 2 = 200 request/s, đã gấp 5 lần trần. Tối đa 3 lần gửi lại nghĩa là mỗi lượt có tới 4 lần thử, nên 200 × 4 = 800 request/s; 600 là quên tính lần gửi đầu. Con số 40 là trần của đối tác, không phải tải đổ vào. Đây là retry storm: retry làm hệ thống đang chậm sập hẳn; cần giới hạn retry, backoff có jitter, circuit breaker và idempotency key."
+    },
+    {
+      "id": "review-verdict",
+      "kind": "single",
+      "prompt": "Review tìm ra 3 risk theme đe doạ mục tiêu business, nhưng phần lớn kiến trúc ổn. Kết luận nào hợp lý nhất?",
+      "options": [
+        "Đi tiếp có điều kiện: sửa ba theme có chủ, có hạn, review lại phần đó",
+        "Cho đi tiếp như thiết kế, ghi rủi ro vào backlog để sửa sau go-live",
+        "Yêu cầu làm lại toàn bộ để sửa mọi điểm trong cùng một lần thiết kế",
+        "Gửi danh sách toàn bộ góp ý cho team tự chọn sửa những điểm cần thiết"
+      ],
+      "answer": 0,
+      "explanation": "Rủi ro chặn cần xử lý trước khi đi tiếp, nhưng phần ổn không cần làm lại. Đẩy vào backlog sau go-live thường có nghĩa là sửa khi đã sự cố và đã có dữ liệu thật, đắt hơn nhiều. Làm lại toàn bộ bỏ phí phần tốt và lấy mất quyền sở hữu thiết kế của team. Gửi danh sách không phân mức thì team sửa cái dễ trước, không phải cái nguy hiểm nhất."
+    }
+  ]
+}

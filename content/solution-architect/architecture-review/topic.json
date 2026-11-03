@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "architecture-review",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Review một kiến trúc",
+  "summary": "Review kiến trúc để tìm rủi ro khi còn sửa rẻ: phân biệt design review với review board, Well-Architected review và production readiness review; ATAM đầy đủ và bản rút gọn một ngày; phân tích theo quality attribute scenario; rủi ro, non-risk, sensitivity point, tradeoff point và risk theme; risk storming; nhóm câu hỏi cần hỏi và cách đòi bằng chứng; review hệ thống đang chạy; viết kết luận có mức chặn và điều kiện.",
+  "level": "architect",
+  "order": 21,
+  "minutes": 17,
+  "prerequisites": ["nfr-quality-attributes", "architecture-tradeoffs", "adr-c4", "well-architected"],
+  "terms": ["atam", "risk-storming", "quality-attribute", "design-doc", "non-functional-requirement", "utility-tree", "rpo-rto", "sensitivity-point", "tradeoff-point", "non-risk", "risk-theme", "well-architected-framework", "production-readiness-review", "quality-attribute-scenario", "pre-mortem", "bus-factor", "one-way-door", "two-way-door", "circuit-breaker", "single-point-of-failure", "idempotency-key", "risk-register", "adr", "retry-storm", "outbox", "waiting-room", "jitter", "slo", "architecture-board", "postmortem", "error-budget", "hotspot", "proof-of-concept", "c4-model", "stakeholder", "sla", "pitr"],
+  "references": [
+    { "title": "SEI: ATAM: Method for Architecture Evaluation", "url": "https://insights.sei.cmu.edu/library/atam-method-for-architecture-evaluation/" },
+    { "title": "Simon Brown: Risk-storming", "url": "https://riskstorming.com/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team không đồng ý với rủi ro anh nêu thì sao?\" Tôi hỏi họ đã thấy gì mà tôi chưa thấy: có số đo, có kết quả thử thì rủi ro có thể đã được xử lý. Nếu vẫn bất đồng, tôi không ép cách sửa mà ghi rủi ro, hậu quả và người chấp nhận nó vào risk register; người có thẩm quyền ký nhận rủi ro là một kết luận hợp lệ, miễn là có chủ và được xem lại." },
+    { "type": "callout", "style": "warning", "markdown": "Review chỉ trên slide sẽ thấy kiến trúc như người vẽ mong muốn. Đòi bằng chứng: kết quả load test có số, lần restore thử gần nhất, dashboard đang chạy, giới hạn thật của API đối tác. Không có bằng chứng thì ghi là giả định chưa kiểm, đừng ghi là rủi ro đã đóng." },
+    { "type": "callout", "style": "tip", "markdown": "Mở đầu báo cáo bằng kết luận và 2–3 risk theme gắn với mục tiêu business, mỗi phát hiện có mức chặn, nên sửa hoặc cân nhắc. Lãnh đạo đọc trang đầu để quyết; team đọc phụ lục để sửa." }
+  ]
+}

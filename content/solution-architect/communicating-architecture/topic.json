@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "communicating-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Trình bày kiến trúc cho stakeholder",
+  "summary": "Trình bày kiến trúc để người nghe ra quyết định: hiểu từng stakeholder lo gì, pyramid principle và BLUF, nói bằng tiền, rủi ro và thời gian, phương án có so sánh trung thực với phương án rẻ nhất, giai đoạn có tiêu chí dừng, sơ đồ theo người nghe, đề xuất viết dạng văn bản gửi trước, pre-wiring, xử lý phản biện, báo tin xấu, và trình bày case kiến trúc trong phỏng vấn.",
+  "level": "architect",
+  "order": 22,
+  "minutes": 16,
+  "prerequisites": ["sa-role", "adr-c4", "architecture-tradeoffs", "architecture-review"],
+  "terms": ["pyramid-principle", "bluf", "c4-model", "pre-wiring", "stakeholder", "kill-criteria", "one-way-door", "sequence-diagram", "narrative-memo", "design-doc", "adr", "steelman", "disagree-and-commit", "cdc"],
+  "references": [
+    { "title": "Amazon: 2017 Letter to Shareholders", "url": "https://www.aboutamazon.com/news/company-news/2017-letter-to-shareholders" },
+    { "title": "Simon Brown: The C4 model, notation", "url": "https://c4model.com/diagrams/notation" },
+    { "title": "Barbara Minto: The Pyramid Principle", "url": "https://www.barbaraminto.com/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kể một lần anh thuyết phục lãnh đạo không theo phương án họ muốn.\" Kể cách anh tìm mối lo phía sau phương án đó, con số anh đưa ra, ai anh gặp riêng trước, và kết quả, kể cả khi họ vẫn chọn khác. Một câu chuyện mà anh không thuyết phục được nhưng đã ghi rõ rủi ro, rồi rủi ro xảy ra đúng như ghi và được xử lý theo kế hoạch, cũng là một câu trả lời tốt." },
+    { "type": "callout", "style": "warning", "markdown": "Con số hoàn vốn so với việc không làm gì là cái bẫy: người nghe giỏi sẽ tìm ra phương án rẻ hơn mà bạn không nhắc, và từ đó nghi mọi con số khác. Luôn đưa phương án rẻ nhất vào bảng và tính lợi ích của khuyến nghị so với nó." },
+    { "type": "callout", "style": "tip", "markdown": "Viết câu đầu tiên của bản trình bày trước khi vẽ bất kỳ sơ đồ nào: đề nghị gì, tốn bao nhiêu, được gì, cần ai quyết gì hôm nay. Không viết được câu đó thì chưa sẵn sàng trình bày." }
+  ]
+}

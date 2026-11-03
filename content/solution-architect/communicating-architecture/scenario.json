@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "20 phút trước ban điều hành: xin 1,8 tỷ để hết bán quá tồn kho",
+  "prompt": "Một chuỗi bán lẻ điện máy có 140 cửa hàng và kênh online. Tồn kho trên web lấy từ ERP, đồng bộ theo lô mỗi 15 phút. Cửa hàng bán tại quầy trong khoảng đó, nên web vẫn nhận đơn cho hàng đã hết.\n\nSố liệu bạn đã có:\n\n| Hạng mục | Số liệu |\n|---|---|\n| Đơn online mỗi tháng | 380.000 |\n| Tỉ lệ đơn huỷ vì hết hàng | 2,6% (9.880 đơn/tháng) |\n| Chi phí mỗi đơn huỷ | Voucher xin lỗi 100.000 đ + chăm sóc khách hàng 20.000 đ |\n| Phân tích đơn huỷ | Khoảng một nửa rơi vào mã chỉ còn 1–2 sản phẩm trong kho |\n| Bản thử đồng bộ gần thời gian thực ở 12 cửa hàng, 6 tuần | Tỉ lệ huỷ ở các cửa hàng này 2,7% → 0,6% |\n| Dự án đầy đủ | 6 kỹ sư × 6 tháng × 50 triệu đ ≈ 1,8 tỷ đ; hạ tầng thêm khoảng 70 triệu đ/tháng |\n| Module tồn kho thời gian thực của vendor ERP | Cần nâng cấp ERP lên bản mới trước, vendor ước 14 tháng |\n\nKỹ sư trong team đã soạn bản trình bày: 34 slide. Slide 1 tên \"Kiến trúc event-driven với Debezium, Kafka và Kubernetes\"; slide 2–20 giải thích công nghệ; slide 21 là sơ đồ 41 hộp; chi phí ở slide 31; slide 34 ghi \"Hoàn vốn trong 2 tháng\". Chỉ có một phương án.\n\nBạn có 20 phút trong buổi họp ban điều hành tuần sau và được gửi trước một trang. Người dự: CEO; giám đốc tài chính (năm ngoái duyệt một dự án hạ tầng không đạt lợi ích như hứa); giám đốc khối online; giám đốc chuỗi cửa hàng (lo nhân viên quầy phải thêm thao tác); CTO (hỏi vì sao không mua module của vendor ERP).\n\nHãy: chỉ ra bản trình bày hiện tại sai ở đâu, viết lại đoạn tóm tắt mở đầu của trang gửi trước, dựng bảng phương án với con số trung thực, chọn sơ đồ cho từng người, lên kế hoạch gặp trước buổi họp, chuẩn bị trả lời các phản biện, và chia 20 phút.",
+  "hints": [
+    "Ban điều hành cần quyết định gì ở cuối 20 phút? Câu đó nên nằm ở slide nào?",
+    "\"Hoàn vốn trong 2 tháng\" đang so với phương án nào? Một nửa đơn huỷ rơi vào mã còn 1–2 sản phẩm gợi ý phương án nào rẻ hơn nhiều?",
+    "Mỗi người trong phòng sợ điều gì? Giám đốc tài chính đã bị hứa gì năm ngoái, và điều gì làm họ yên tâm hơn một con số lớn?",
+    "Phản đối nào nên được nghe trước buổi họp, không phải lần đầu trong phòng họp?"
+  ],
+  "solution": "**1. Bản trình bày hiện tại sai ở đâu**\n\n- Mở đầu bằng công nghệ: ban điều hành không quyết Kafka hay không, họ quyết có chi 1,8 tỷ hay không.\n- Quyết định cần có nằm ở slide 34, chi phí ở slide 31: hết 20 phút trước khi tới phần quan trọng.\n- Sơ đồ 41 hộp: không người nghe nào trong phòng cần nó.\n- Một phương án: người nghe sẽ tự hỏi \"sao không ẩn hàng khi còn ít\" hay \"sao không mua của vendor\" và đề xuất trông như đã bỏ sót.\n- \"Hoàn vốn 2 tháng\" so với không làm gì: tiết kiệm (2,6% − 0,6%) × 380.000 × 120.000 đ ≈ 912 triệu/tháng, trừ 70 triệu hạ tầng còn 842 triệu, 1,8 tỷ / 842 triệu ≈ 2,1 tháng. Nhưng có một phương án gần như miễn phí giải quyết được một nửa vấn đề; so với nó con số khác hẳn. Giám đốc tài chính sẽ thấy điều này, và cả đề xuất mất uy tín.\n\n**2. Đoạn tóm tắt mở đầu (trang gửi trước)**\n\n> *Đề nghị*: duyệt hai bước để giảm đơn online bị huỷ vì hết hàng, hiện 9.880 đơn mỗi tháng, tốn khoảng 1,19 tỷ đ tiền voucher và chăm sóc khách hàng. *Bước 1* (2 tuần, gần như không tốn tiền): web ẩn sản phẩm khi kho chỉ còn 1–2 cái; ước giảm một nửa số đơn huỷ. *Bước 2* (1,8 tỷ đ, 6 tháng, chia hai giai đoạn): đồng bộ tồn kho từ quầy lên web trong vài giây; bản thử ở 12 cửa hàng giảm tỉ lệ huỷ từ 2,7% xuống 0,6%. So với bước 1, bước 2 tiết kiệm thêm khoảng 250 triệu đ mỗi tháng, hoàn vốn khoảng 7 tháng sau khi chạy đủ. Có điểm dừng sau giai đoạn 1 nếu kết quả không đạt. Nhân viên cửa hàng không phải thêm thao tác nào. *Quyết định cần hôm nay*: duyệt bước 1 và giai đoạn 1 của bước 2 (khoảng 900 triệu đ).\n\nĐây là [[bluf|BLUF]]: đề nghị, số tiền, lợi ích, quyết định cần, trong một đoạn. Chi tiết ở phần sau và phụ lục.\n\n**3. Bảng phương án**\n\n| Phương án | Chi phí | Đơn huỷ còn lại mỗi tháng | Ghi chú |\n|---|---|---|---|\n| A. Giữ nguyên | 0 | 9.880 (≈ 1,19 tỷ đ) | Tiếp tục mất tiền và khách |\n| B. Ẩn sản phẩm khi còn 1–2 cái | Gần 0, 2 tuần | ≈ 4.940 (≈ 593 triệu đ) | Mất một phần doanh thu vì ẩn hàng còn bán được; chưa đo, sẽ đo trong 2 tuần |\n| C. B rồi đồng bộ gần thời gian thực | 1,8 tỷ đ + 70 triệu đ/tháng | ≈ 2.280 (≈ 274 triệu đ) | So với B: tiết kiệm thêm (1,3% − 0,6%) × 380.000 × 120.000 đ ≈ 319 triệu/tháng, trừ hạ tầng còn ≈ 249 triệu; hoàn vốn ≈ 7,2 tháng. Bỏ được ngưỡng ẩn hàng của B |\n| D. Module của vendor ERP | Chưa có báo giá đủ | Tương tự C | Phải nâng cấp ERP trước, khoảng 14 tháng; đánh giá như một quyết định mua (bài Build hay buy) |\n\n*Khuyến nghị*: B ngay, C theo hai giai đoạn. Ghi rõ đâu là số đo (tỉ lệ huỷ, bản thử 12 cửa hàng), đâu là ước lượng (B giảm một nửa, dựa trên phân tích mã còn 1–2 sản phẩm), đâu là giả định (kết quả 12 cửa hàng lặp lại trên 140 cửa hàng; chi phí mỗi đơn huỷ không đổi). Con số 7 tháng kém hấp dẫn hơn 2 tháng, nhưng nó đứng vững khi bị hỏi. Một giả định nữa cần đo ở giai đoạn 1: bản thử 0,6% chạy khi chưa có B; có B rồi, hai biện pháp chồng nhau ở nhóm mã còn 1–2 sản phẩm, phần tiết kiệm thêm có thể khác.\n\n*Giai đoạn và [[kill-criteria|tiêu chí dừng]]*: giai đoạn 1 (3 tháng, khoảng 900 triệu) đưa 40 cửa hàng bán nhiều nhất lên đồng bộ mới. Nếu tỉ lệ huỷ ở 40 cửa hàng này không xuống dưới 1% thì dừng, không chi phần còn lại.\n\n**4. Sơ đồ cho từng người**\n\n- *CEO, ban điều hành*: một hình trước và sau. Trước: quầy → ERP → (15 phút) → web. Sau: quầy → ERP → (vài giây) → web. Tiêu đề: \"Web biết hàng hết trong vài giây thay vì 15 phút\". Kèm một con số: đơn huỷ mỗi tháng.\n- *Giám đốc tài chính*: bảng phương án ở trên và bảng chi phí theo giai đoạn, dòng tiền tích luỹ theo tháng.\n- *Giám đốc chuỗi cửa hàng*: quy trình bán tại quầy trước và sau, giống hệt nhau, chỉ khác phần nằm sau ERP.\n- *CTO*: [[c4-model|C4]] container (ERP, luồng [[cdc|CDC]], dịch vụ tồn kho, web), sơ đồ deployment và cách đồng bộ khi luồng sự kiện chậm hoặc ngừng. Sơ đồ 41 hộp chuyển vào [[design-doc|design doc]] cho team.\n\n**5. [[pre-wiring|Pre-wiring]] trong tuần**\n\n- *Giám đốc tài chính*: gặp trước tiên. Hỏi dự án năm ngoái hứa gì và sai ở đâu. Cho xem cách tính 7,2 tháng, bản thử 12 cửa hàng, điểm dừng. Hỏi họ cần thấy gì để đồng ý.\n- *Giám đốc chuỗi cửa hàng*: xác nhận nhân viên quầy không làm gì khác; hỏi về các trường hợp đặc biệt (hàng trưng bày, hàng đổi trả) để không bị hỏi bất ngờ.\n- *CTO*: xem lại phương án vendor cùng nhau; thống nhất ai vận hành luồng mới và trực ngoài giờ.\n- *Giám đốc khối online*: xác nhận số đơn huỷ và chi phí mỗi đơn là số của họ; rủi ro ẩn hàng làm giảm doanh thu ở bước B.\n\nSửa trang tóm tắt theo những gì nghe được trước khi gửi.\n\n**6. Phản biện dự kiến**\n\n- *\"Năm ngoái cũng hứa thế\"* (tài chính): không cãi. \"Đúng, nên đề xuất này chỉ xin giai đoạn 1 và có điểm dừng đo bằng tỉ lệ huỷ của chính bộ phận online. Nếu không đạt dưới 1% ở 40 cửa hàng, chúng ta dừng ở 900 triệu.\"\n- *\"Nhân viên có phải làm gì thêm không?\"* (chuỗi cửa hàng): \"Không. Quầy vẫn bán trên ERP như cũ; phần thay đổi nằm sau ERP.\" Nếu có trường hợp chưa rõ (hàng trưng bày), nói chưa rõ và hẹn ngày trả lời.\n- *\"Sao không mua module của vendor?\"* (CTO): trình bày nó ở dạng mạnh nhất ([[steelman|steelman]]): ít tự vận hành, vendor chịu trách nhiệm. Rồi nêu điều kiện: phải nâng cấp ERP trước, khoảng 14 tháng, trong thời gian đó vẫn mất khoảng 593 triệu mỗi tháng sau bước B. Đề xuất: xin vendor báo giá đầy đủ song song với giai đoạn 1; nếu báo giá tốt hơn, dừng ở điểm dừng.\n- *\"Ẩn hàng thì mất doanh thu\"* (online): đúng, chưa đo. Bước B chạy 2 tuần có đo doanh thu của các mã bị ẩn; nếu mất nhiều hơn tiết kiệm, tắt bằng một cấu hình.\n- Câu hỏi không có số: \"Tôi chưa có số đó, tôi sẽ gửi trước thứ Sáu.\" Không đoán.\n\n**7. Chia 20 phút**\n\n1. 2 phút: đề nghị và quyết định cần (đoạn tóm tắt).\n2. 3 phút: vấn đề bằng số và hình trước và sau.\n3. 5 phút: bảng phương án, khuyến nghị, vì sao 7 tháng chứ không 2.\n4. 3 phút: giai đoạn, điểm dừng, rủi ro chính.\n5. 7 phút: hỏi đáp và quyết định. Kết buổi bằng việc nhắc lại điều đã quyết, ai làm gì, ngày báo lại; ghi vào [[adr|ADR]] và gửi biên bản trong ngày.",
+  "tradeoffs": [
+    {
+      "option": "Giữ bản 34 slide, chỉ rút gọn phần công nghệ",
+      "pros": [
+        "Ít công chuẩn bị, team đã quen nội dung",
+        "Thể hiện được độ sâu kỹ thuật của thiết kế"
+      ],
+      "cons": [
+        "Quyết định và chi phí vẫn ở cuối, hết giờ trước khi tới",
+        "Chỉ một phương án và con số hoàn vốn dễ bị bác khi bị hỏi"
+      ]
+    },
+    {
+      "option": "Chỉ đề xuất bước ẩn hàng, bỏ dự án đồng bộ",
+      "pros": [
+        "Gần như không tốn tiền, dễ được duyệt ngay",
+        "Có kết quả sau 2 tuần"
+      ],
+      "cons": [
+        "Vẫn còn khoảng 4.940 đơn huỷ mỗi tháng",
+        "Mất doanh thu ở hàng còn bán được; ngưỡng ẩn là giải pháp tạm"
+      ]
+    },
+    {
+      "option": "Một trang gửi trước, phương án có so sánh trung thực, giai đoạn có điểm dừng",
+      "pros": [
+        "Ban điều hành quyết được trong buổi họp, phản đối đã nghe trước",
+        "Con số 7 tháng đứng vững khi bị hỏi, giai đoạn giới hạn rủi ro tiền"
+      ],
+      "cons": [
+        "Tốn một tuần gặp riêng và viết lại",
+        "Con số hoàn vốn kém hấp dẫn hơn bản cũ"
+      ]
+    }
+  ]
+}

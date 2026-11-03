@@ -428,8 +428,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 18 | `team-topologies` | ✚ Conway's law & cấu trúc team | architect | Kiến trúc theo team, Team Topologies, ranh giới sở hữu | L Sc | ✅ |
 | 19 | `enterprise-architecture` | ✚ Enterprise architecture & governance | architect | TOGAF ở mức đủ dùng, tech radar, chuẩn hoá công nghệ, review board | L Sc | ✅ |
 | 20 | `evolutionary-architecture` | ✚ Kiến trúc tiến hoá & fitness function | architect | Fitness function, kiểm tra kiến trúc tự động, thay đổi dần thay vì viết lại | L Sc | ✅ |
-| 21 | `architecture-review` | Review một kiến trúc | architect | Risk storming, ATAM rút gọn, câu hỏi cần hỏi | L Sc | ⬜ |
-| 22 | `communicating-architecture` | Trình bày kiến trúc cho stakeholder | architect | Sơ đồ theo người nghe, xử lý phản biện, viết đề xuất | L Sc | ⬜ |
+| 21 | `architecture-review` | Review một kiến trúc | architect | Risk storming, ATAM rút gọn, câu hỏi cần hỏi | L Sc | ✅ |
+| 22 | `communicating-architecture` | Trình bày kiến trúc cho stakeholder | architect | Sơ đồ theo người nghe, xử lý phản biện, viết đề xuất | L Sc | ✅ |
 
 ## 7. Tổng quan
 

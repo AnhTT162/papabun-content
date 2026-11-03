@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-questions", "front": "Ba câu cần trả lời trước khi chuẩn bị bản trình bày kiến trúc?", "back": "Cần quyết định gì, ai quyết, và mỗi người trong phòng lo điều gì." },
+    { "id": "pyramid", "front": "Pyramid principle nói gì?", "back": "Ý chính (kết luận, đề nghị) ở đầu, các lý do đỡ nó ở dưới, rồi tới số liệu; không kể theo trình tự đã làm." },
+    { "id": "scq", "front": "SCQ trong phần mở đầu là gì?", "back": "Situation (bối cảnh người nghe đã đồng ý), Complication (điều thay đổi hay đang hỏng), Question (câu hỏi sinh ra), rồi tới Answer." },
+    { "id": "compare-cheapest", "front": "Lợi ích của phương án khuyến nghị nên so với cái gì?", "back": "Với phương án tốt nhất còn lại, thường là phương án rẻ và nhanh; không so với việc không làm gì." },
+    { "id": "diagram-audience", "front": "Lãnh đạo business cần sơ đồ thế nào?", "back": "Hình trước và sau với 4–6 hộp, tiêu đề là một câu thông điệp, kèm một con số họ quan tâm." },
+    { "id": "pre-wiring", "front": "Pre-wiring là gì và để làm gì?", "back": "Gặp riêng người quyết định và người có thể phản đối trước buổi họp chính, để nghe phản đối thật và sửa đề xuất khi còn rẻ; trong phòng họp không ai bất ngờ." },
+    { "id": "objection-types", "front": "Ba loại phản biện và cách trả lời?", "back": "Hiểu lầm: giải thích bằng ví dụ. Thiếu dữ liệu: hẹn ngày trả lời và giữ hẹn. Khác ưu tiên: nói rõ trade-off và để người có thẩm quyền quyết." },
+    { "id": "memo-vs-slides", "front": "Vì sao quyết định lớn nên có văn bản gửi trước thay vì chỉ slide?", "back": "Văn xuôi buộc lập luận liền mạch, slide gạch đầu dòng che các bước còn hở; đọc trước giúp mọi người bàn trên cùng thông tin." },
+    { "id": "kill-criteria", "front": "Tiêu chí dừng giúp gì khi xin duyệt dự án lớn?", "back": "Người quyết chỉ cam kết một giai đoạn và biết trước khi nào dừng, nên rủi ro tiền có giới hạn và đề xuất dễ được duyệt hơn." }
+  ]
+}
