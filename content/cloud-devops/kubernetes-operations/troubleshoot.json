@@ -1,0 +1,132 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Bản mới vào CrashLoopBackOff, bản cũ vẫn chạy tốt",
+  "symptom": "Service `catalog` (Spring Boot 4.1, JDK 21) deploy bản 3.8. Rolling update dừng giữa chừng: 2 pod mới liên tục restart, 4 pod cũ vẫn phục vụ. Bản 3.8 thêm việc nạp sẵn cache danh mục lúc khởi động. Ở staging (node lớn, ít pod) bản này chạy được.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "$ kubectl get pods -l app=catalog\nNAME                       READY   STATUS             RESTARTS      AGE\ncatalog-5f7c9-abcde        1/1     Running            0             3d\ncatalog-5f7c9-fghij        1/1     Running            0             3d\ncatalog-5f7c9-lmnop        1/1     Running            0             3d\ncatalog-5f7c9-rstuv        1/1     Running            0             3d\ncatalog-7d4b2-k2m9p        0/1     CrashLoopBackOff   5 (82s ago)   11m\ncatalog-7d4b2-q8r4t        0/1     CrashLoopBackOff   5 (75s ago)   11m",
+      "evidenceFormat": "monospace",
+      "question": "Xem gì trước?",
+      "choices": [
+        {
+          "label": "`kubectl describe pod` của pod lỗi: Last State, exit code, event",
+          "quality": "good",
+          "feedback": "Đúng. CrashLoopBackOff chỉ nói container thoát lặp lại; lý do thoát nằm ở Last State, exit code và event (probe thất bại, OOMKilled, lỗi cấu hình).",
+          "next": "describe"
+        },
+        {
+          "label": "`kubectl logs` của pod lỗi (không `--previous`)",
+          "quality": "ok",
+          "feedback": "Hữu ích, nhưng không có `--previous` thì thường chỉ thấy log của lần chạy hiện tại, mới vài giây. Và log không cho biết container bị ai giết.",
+          "next": "logs-current"
+        },
+        {
+          "label": "Rollback về 3.7 ngay rồi tính sau",
+          "quality": "ok",
+          "feedback": "Người dùng chưa bị ảnh hưởng vì rolling update đã dừng và pod cũ vẫn phục vụ, nên không cần vội. Rollback xong vẫn phải biết vì sao 3.8 không chạy được trên production.",
+          "next": "describe"
+        }
+      ]
+    },
+    {
+      "id": "logs-current",
+      "evidence": "$ kubectl logs catalog-7d4b2-k2m9p\n... Starting CatalogApplication v3.8.0 using Java 21.0.9\n... (log dừng ở đây, container vừa khởi động lại 6 giây trước)",
+      "evidenceFormat": "monospace",
+      "question": "Chỉ thấy phần đầu của lần chạy mới. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem `describe pod` để biết container bị giết thế nào",
+          "quality": "good",
+          "feedback": "Đúng: cần Last State và event của lần chạy trước.",
+          "next": "describe"
+        }
+      ]
+    },
+    {
+      "id": "describe",
+      "evidence": "$ kubectl describe pod catalog-7d4b2-k2m9p\n    Last State:     Terminated\n      Reason:       Error\n      Exit Code:    143\n      Started:      10:41:05\n      Finished:     10:41:58\n    Restart Count:  5\n    Limits:   cpu: 500m, memory: 1536Mi\n    Requests: cpu: 500m, memory: 1536Mi\n    Liveness:   http-get :8080/actuator/health delay=30s timeout=1s period=10s #failure=3\n    Readiness:  http-get :8080/actuator/health delay=30s timeout=1s period=10s #failure=3\nEvents:\n  Warning  Unhealthy  Liveness probe failed: Get \"http://10.42.1.23:8080/actuator/health\": dial tcp 10.42.1.23:8080: connect: connection refused\n  Normal   Killing    Container catalog failed liveness probe, will be restarted\n  Warning  BackOff    Back-off restarting failed container catalog",
+      "evidenceFormat": "monospace",
+      "question": "Container sống khoảng 53 giây, thoát mã 143 sau khi liveness thất bại. Giả thuyết nào khớp nhất?",
+      "choices": [
+        {
+          "label": "App chưa mở port khi liveness bắt đầu kiểm ở giây 30, ba lần thất bại là bị giết trước khi khởi động xong",
+          "quality": "good",
+          "feedback": "Đúng. `connection refused` nghĩa là Tomcat chưa nghe port. Liveness bắt đầu ở giây 30, kiểm mỗi 10 giây, thất bại 3 lần (giây 30, 40, 50) là kubelet giết. Exit 143 cho thấy JVM nhận SIGTERM, không phải tự crash hay OOM.",
+          "next": "startup-log"
+        },
+        {
+          "label": "JVM bị OOMKilled vì cache mới chiếm thêm bộ nhớ",
+          "quality": "ok",
+          "feedback": "Hợp lý khi biết bản mới nạp cache, nhưng OOMKilled sẽ hiện `Reason: OOMKilled` và exit 137. Ở đây là 143 sau event liveness thất bại.",
+          "next": "oom-check"
+        },
+        {
+          "label": "Cấu hình sai làm Spring Boot không khởi động được",
+          "quality": "poor",
+          "feedback": "Lỗi cấu hình thường làm app tự thoát với exit 1 và stack trace, không bị kubelet giết vì liveness. Hãy để bằng chứng dẫn đường.",
+          "next": "startup-log"
+        }
+      ]
+    },
+    {
+      "id": "oom-check",
+      "evidence": "$ kubectl top pod catalog-7d4b2-q8r4t --containers\nPOD                    NAME      CPU(cores)   MEMORY(bytes)\ncatalog-7d4b2-q8r4t    catalog   500m         842Mi\n\ncontainer_memory_working_set_bytes lúc bị giết: khoảng 900 MiB / 1536 MiB",
+      "evidenceFormat": "monospace",
+      "question": "Bộ nhớ còn xa limit, nhưng CPU đang đúng 500m. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Xem log của lần chạy trước để biết app đang ở bước nào khi bị giết",
+          "quality": "good",
+          "feedback": "Đúng. Không phải OOM; CPU kịch limit lúc khởi động là manh mối cần đối chiếu với thời gian khởi động.",
+          "next": "startup-log"
+        }
+      ]
+    },
+    {
+      "id": "startup-log",
+      "evidence": "$ kubectl logs catalog-7d4b2-k2m9p --previous | cut -c1-90\n10:41:06.9  Starting CatalogApplication v3.8.0 using Java 21.0.9\n10:41:31.4  Tomcat initialized with port 8080\n10:41:33.0  Warming catalog cache: 0 / 180000 products\n10:41:51.2  Warming catalog cache: 90000 / 180000 products\n10:41:57.1  Commencing graceful shutdown. Waiting for active requests to complete\n\n$ kubectl logs catalog-5f7c9-abcde | grep Started   (bản 3.7)\n  Started CatalogApplication in 34.8 seconds\n\nCPU throttling của pod mới (cpu.stat): nr_throttled / nr_periods = 71% trong 60 giây đầu\nStaging: limit 2 CPU",
+      "evidenceFormat": "monospace",
+      "question": "Bản 3.8 cần khoảng 65–70 giây để khởi động với 0,5 CPU, trong khi liveness giết nó ở khoảng giây 50. Cách sửa nào đúng nhất?",
+      "choices": [
+        {
+          "label": "Thêm startup probe có ngân sách rộng, tách liveness/readiness sang endpoint riêng, và xem lại CPU lúc khởi động",
+          "quality": "good",
+          "feedback": "Đúng. Startup probe che liveness cho tới khi app khởi động xong; liveness và readiness dùng `/actuator/health/liveness` và `/readiness`. CPU 0,5 bị throttle 71% lúc khởi động: nâng CPU request hoặc bỏ CPU limit giúp khởi động nhanh hơn, còn nạp cache nên chạy nền sau khi Ready hoặc lười.",
+          "next": "verify"
+        },
+        {
+          "label": "Tăng `initialDelaySeconds` của liveness lên 180 giây",
+          "quality": "ok",
+          "feedback": "Pod sẽ sống được, nhưng mọi pod treo trong 3 phút đầu không bị phát hiện, và mỗi lần khởi động chậm hơn sẽ lại phải tăng tiếp. Startup probe làm đúng việc này mà không làm liveness chậm vĩnh viễn.",
+          "next": "verify"
+        },
+        {
+          "label": "Bỏ liveness probe đi cho khỏi bị giết",
+          "quality": "poor",
+          "feedback": "App khởi động được, nhưng pod deadlock hay treo sau này sẽ không bao giờ được restart.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "evidence": "Cấu hình sau khi sửa:\n  startupProbe:   httpGet /actuator/health/liveness, period 5s, failureThreshold 36  (ngân sách 180s)\n  livenessProbe:  httpGet /actuator/health/liveness, period 10s, timeout 3s, failureThreshold 3\n  readinessProbe: httpGet /actuator/health/readiness, period 5s, timeout 2s\n  resources: requests cpu 1, memory 1536Mi; limits memory 1536Mi (không đặt CPU limit)\n  cache: nạp nền sau ApplicationReadyEvent theo lô nhỏ (tránh mọi pod mới cùng dồn tải vào database), endpoint trả dữ liệu từ database khi cache chưa đầy\n\nKết quả:\n  Started CatalogApplication in 41.2 seconds\n  rolling update hoàn tất, Restarts: 0",
+      "evidenceFormat": "monospace",
+      "question": "Đã ổn. Tổng kết?",
+      "choices": [
+        {
+          "label": "Xem kết luận",
+          "quality": "good",
+          "feedback": "Ghi lại để các service khác cùng mẫu không lặp lại.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: bản 3.8 thêm việc nạp cache lúc khởi động, kéo thời gian khởi động với 0,5 CPU (bị throttle 71%) lên khoảng 65–70 giây. Liveness kiểm từ giây 30, ba lần thất bại là giết container ở khoảng giây 50, nên container không bao giờ khởi động xong: CrashLoopBackOff. Staging có 2 CPU nên khởi động kịp.\n\n**Bài học**:\n- Dùng startup probe cho app khởi động chậm, không dùng `initialDelaySeconds` lớn cho liveness.\n- Liveness và readiness là hai endpoint khác nhau, liveness không phụ thuộc dependency.\n- Việc nặng lúc khởi động làm chậm mọi lần scale và deploy; đưa ra nền hoặc làm lười.\n- Staging phải có requests/limits giống production, nếu không lỗi theo tài nguyên không lộ ra.\n\n**Phòng ngừa**: cảnh báo khi rolling update không tiến (`ProgressDeadlineExceeded`) và khi restart count tăng; đo thời gian khởi động trong CI bằng đúng limit của production.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

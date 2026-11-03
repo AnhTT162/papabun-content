@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đổi cách tính phí ship cho service đơn hàng đang chạy 24/7",
+  "prompt": "Service đơn hàng (Spring Boot, 12 pod trên Kubernetes, 1.500 request/giây giờ cao điểm, SLO 99,95%) cần ra bản mới:\n- Phí ship tính theo khoảng cách thay vì theo tỉnh. Bảng `orders` thêm cột `shipping_distance_km` và bỏ cột `shipping_zone` (đang được báo cáo tài chính đọc).\n- Response `GET /orders/{id}` của API công khai đổi trường `shippingFee` từ số nguyên VND sang object `{ amount, currency }`. App mobile phiên bản cũ còn 35% người dùng.\n- Sự kiện `OrderPlaced` trên Kafka thêm trường `distanceKm`; consumer kho và consumer tài chính do hai đội khác sở hữu.\nĐội muốn deploy trong một lần, rollback được trong vòng 5 phút nếu có vấn đề. Đề xuất chiến lược deploy và trình tự phát hành.",
+  "hints": [
+    "Trong lúc rollout và lúc rollback, phiên bản nào của code chạy trên phiên bản nào của schema?",
+    "App mobile cũ còn 35% người dùng: đổi kiểu của một trường trong response thì chuyện gì xảy ra với họ?",
+    "Hai đội consumer sẽ đọc message có trường mới ngay từ lúc canary; cần xác nhận gì với họ trước?",
+    "Cần bao nhiêu lần deploy để mỗi lần đều rollback được?"
+  ],
+  "solution": "**Không làm trong một lần.** Gói ba thay đổi phá vỡ vào một bản thì không lần rollback nào an toàn: bỏ cột làm bản cũ lỗi, đổi kiểu trường làm app cũ lỗi. Tách thành nhiều bản, mỗi bản tương thích với bản trước nó.\n\n**Bản 1 (expand)**: migration thêm cột `shipping_distance_km` cho phép NULL và nới `shipping_zone` sang cho phép NULL (để bản sau ngừng ghi được), không xoá gì. Code mới tính phí theo khoảng cách nhưng vẫn ghi cả `shipping_zone`. API giữ `shippingFee` là số nguyên và thêm trường mới `shippingFeeDetail: { amount, currency }`. Sự kiện thêm `distanceKm` là trường tuỳ chọn; xác nhận trước với hai đội consumer rằng họ bỏ qua trường lạ (schema registry ở chế độ tương thích), vì họ là bên đọc message bản mới ghi kể cả khi service này rollback. Phần tính phí mới nằm sau feature flag tắt mặc định. Bản này deploy bằng canary 5% → 25% → 50% → 100%, so tỉ lệ lỗi, p99 và số đơn tạo thành công với baseline; rollback trong vài giây vì bản cũ vẫn chạy được trên schema mới.\n\n**Bật dần tính năng**: bật flag tính phí theo khoảng cách cho 1%, 10%, 100% người dùng, theo dõi phí ship trung bình, tỉ lệ bỏ giỏ hàng. Có vấn đề thì tắt flag, không cần deploy.\n\n**Backfill**: job tính `shipping_distance_km` cho đơn cũ theo lô nhỏ, ngoài giờ cao điểm.\n\n**Bản 2**: đội tài chính chuyển báo cáo và consumer sang đọc trường mới; app mobile mới đọc `shippingFeeDetail`. Theo dõi lượng request từ app cũ và các truy vấn còn đọc `shipping_zone`.\n\n**Bản 3 (contract)**: khi app cũ dưới ngưỡng đã thoả thuận và không còn ai đọc cột cũ (kiểm bằng log truy vấn hay `pg_stat_statements` nếu là PostgreSQL; truy vấn `SELECT *` làm khó thấy ai còn đọc cột), bỏ ghi `shipping_zone`, rồi ở bản sau nữa mới xoá cột. Trường `shippingFee` kiểu cũ chỉ bỏ ở phiên bản API mới (`/v2`), không bao giờ đổi kiểu tại chỗ.\n\n**Vì sao canary chứ không blue-green**: tải lớn và đều nên canary có đủ số liệu sau vài phút; 12 pod gấp đôi cho blue-green cũng được nhưng chuyển một lần thì mọi người dùng cùng gặp lỗi nếu có. Blue-green hợp hơn cho thay đổi hạ tầng lớn cần kiểm tra toàn bộ trước khi mở.\n\n**Kế hoạch rollback ghi trước**: bản 1, 2, 3 rollback code tự do (bản 3 chỉ ngừng ghi một cột cho phép NULL); điểm không quay lại là migration `DROP COLUMN`, sau đó chỉ sửa tiến. Message `OrderPlaced` có `distanceKm` vẫn đọc được bởi consumer cũ (đã xác nhận ở bản 1), nên rollback không làm hỏng consumer.",
+  "tradeoffs": [
+    {
+      "option": "Một bản, rolling update",
+      "pros": [
+        "Nhanh, ít việc phối hợp giữa các đội"
+      ],
+      "cons": [
+        "Rollback hỏng vì cột đã bị xoá",
+        "App mobile cũ lỗi ngay khi đổi kiểu trường"
+      ]
+    },
+    {
+      "option": "Nhiều bản expand/contract + canary + feature flag",
+      "pros": [
+        "Mỗi bước rollback được trong vài giây, trừ bước xoá cột cuối cùng",
+        "Bật tính năng độc lập với deploy"
+      ],
+      "cons": [
+        "Kéo dài nhiều tuần, cần theo dõi việc dọn dẹp",
+        "Code tạm thời phải xử lý cả hai định dạng"
+      ]
+    },
+    {
+      "option": "Blue-green cho từng bản",
+      "pros": [
+        "Kiểm tra toàn bộ bản mới trước khi mở, chuyển lại tức thì"
+      ],
+      "cons": [
+        "Gấp đôi tài nguyên lúc chuyển",
+        "Không giảm được yêu cầu tương thích schema vì database dùng chung"
+      ]
+    }
+  ]
+}

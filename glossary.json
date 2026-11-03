@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning", "jvm-containers", "docker"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning", "jvm-containers", "docker", "kubernetes-operations"]
     },
     {
       "id": "full-gc",
@@ -2229,7 +2229,7 @@
       "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
       "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
       "related": ["schema-migration", "backfill", "rolling-deployment"],
-      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic", "architecture-tradeoffs", "evolutionary-architecture"]
+      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic", "architecture-tradeoffs", "evolutionary-architecture", "deployment-strategies"]
     },
     {
       "id": "rolling-deployment",
@@ -2237,7 +2237,7 @@
       "meaning": "Cách deploy thay dần từng instance cũ bằng instance mới, nên trong lúc rollout có cả hai phiên bản code cùng phục vụ.",
       "example": "Kubernetes `RollingUpdate` với `maxUnavailable: 1` thay 12 pod lần lượt trong vài phút.",
       "related": ["expand-contract"],
-      "topics": ["schema-migration", "kubernetes-core"]
+      "topics": ["schema-migration", "kubernetes-core", "deployment-strategies"]
     },
     {
       "id": "online-ddl",
@@ -2989,7 +2989,7 @@
       "meaning": "Nguyên tắc consumer chỉ đọc trường mình cần và bỏ qua trường lạ, để producer thêm trường không làm vỡ consumer.",
       "example": "Jackson tắt `FAIL_ON_UNKNOWN_PROPERTIES`.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution", "rest-api-design", "integration-patterns"]
+      "topics": ["event-schema-evolution", "rest-api-design", "integration-patterns", "deployment-strategies"]
     },
     {
       "id": "consumer-lag",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy", "git-workflow", "ci-cd-pipeline"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy", "git-workflow", "ci-cd-pipeline", "deployment-strategies"]
     },
     {
       "id": "dora-metrics",
@@ -5029,7 +5029,7 @@
       "meaning": "Đưa phiên bản mới cho một phần nhỏ lưu lượng (1%, 10%) trước, theo dõi lỗi và latency rồi mới tăng dần; có vấn đề thì chuyển lưu lượng về bản cũ.",
       "example": "Mesh gửi 5% request tới `orders-v2`, tỉ lệ `5xx` tăng thì chuyển hết về `orders-v1`.",
       "related": ["service-mesh", "feature-flag"],
-      "topics": ["api-gateway-service-mesh", "load-testing", "test-strategy"]
+      "topics": ["api-gateway-service-mesh", "load-testing", "test-strategy", "deployment-strategies"]
     },
     {
       "id": "retry-storm",
@@ -5909,7 +5909,7 @@
       "meaning": "Trạng thái Kubernetes báo khi kernel giết container vì tổng bộ nhớ vượt memory limit. Process bị SIGKILL ngay (exit code 137), không kịp ghi log hay heap dump.",
       "example": "`kubectl describe pod` hiện `Reason: OOMKilled`, `Exit Code: 137` dù log không có `OutOfMemoryError`.",
       "related": ["out-of-memory-error", "rss"],
-      "topics": ["memory-growth-oom", "os-process-memory", "jvm-memory-areas", "jvm-containers"]
+      "topics": ["memory-growth-oom", "os-process-memory", "jvm-memory-areas", "jvm-containers", "kubernetes-operations"]
     },
     {
       "id": "rss",
@@ -6093,7 +6093,7 @@
       "meaning": "Horizontal Pod Autoscaler của Kubernetes: định kỳ (mặc định 15 giây) tính số replica = ceil(số pod × metric hiện tại / mục tiêu) rồi chỉnh Deployment.",
       "example": "4 pod ở CPU 90%, mục tiêu 60%: ceil(4 × 90 / 60) = 6 pod.",
       "related": ["autoscaling", "keda"],
-      "topics": ["capacity-planning", "startup-native", "kubernetes-core"]
+      "topics": ["capacity-planning", "startup-native", "kubernetes-core", "kubernetes-operations"]
     },
     {
       "id": "keda",
@@ -6109,7 +6109,7 @@
       "meaning": "Thành phần thêm node khi có pod không xếp được chỗ (Pending) và bớt node rảnh. Thêm node thường mất vài phút.",
       "example": "HPA tạo 10 pod mới nhưng chỉ đủ chỗ cho 6; 4 pod chờ node mới khoảng 3 phút.",
       "related": ["hpa", "autoscaling"],
-      "topics": ["capacity-planning"]
+      "topics": ["capacity-planning", "kubernetes-operations"]
     },
     {
       "id": "universal-scalability-law",
@@ -8253,7 +8253,7 @@
       "meaning": "Kiểm tra định kỳ của Kubernetes xem container còn sống; thất bại liên tiếp `failureThreshold` lần thì kubelet restart container.",
       "example": "`periodSeconds: 10`, `failureThreshold: 3`: JVM dừng khoảng 30 giây (ví dụ khi heap dump) là bị restart.",
       "related": ["health-check"],
-      "topics": ["jvm-diagnostic-tools", "jvm-containers"]
+      "topics": ["jvm-diagnostic-tools", "jvm-containers", "kubernetes-operations"]
     },
     {
       "id": "parallel-gc",
@@ -8538,10 +8538,10 @@
     {
       "id": "pod-qos-class",
       "term": "QoS class (Kubernetes)",
-      "meaning": "Hạng của pod theo `requests` và `limits`: Guaranteed (requests bằng limits cho mọi container), Burstable, BestEffort. Quyết định thứ tự bị trục xuất và `oom_score_adj` khi node thiếu RAM.",
+      "meaning": "Hạng của pod theo `requests` và `limits`: Guaranteed (requests bằng limits cho mọi container), Burstable, BestEffort. Ảnh hưởng tới thứ tự bị trục xuất (cùng với mức dùng so với requests và priority) và `oom_score_adj` khi node thiếu RAM.",
       "example": "Pod JVM đặt memory `requests` bằng `limits` và CPU cũng vậy thì là Guaranteed, `oom_score_adj` −997.",
       "related": ["oom-killer", "cgroup"],
-      "topics": ["jvm-containers"]
+      "topics": ["jvm-containers", "kubernetes-operations"]
     },
     {
       "id": "class-data-sharing",
@@ -8613,7 +8613,7 @@
       "meaning": "Probe của Kubernetes chỉ chạy lúc container khởi động; trong lúc nó chưa thành công, liveness và readiness probe chưa được kiểm. Cho app khởi động chậm đủ thời gian mà không phải nới liveness.",
       "example": "`failureThreshold: 30`, `periodSeconds: 2` cho container tối đa 60 giây để khởi động.",
       "related": ["liveness-probe"],
-      "topics": ["startup-native"]
+      "topics": ["startup-native", "kubernetes-operations"]
     },
     {
       "id": "object-storage",
@@ -13989,7 +13989,7 @@
       "meaning": "Kiểm tra định kỳ của kubelet xem container đã sẵn sàng nhận traffic chưa. Thất bại thì pod bị rút khỏi danh sách endpoint của Service, nhưng không bị restart.",
       "example": "`/actuator/health/readiness` trả 503 (`OUT_OF_SERVICE`) khi app chưa sẵn sàng nhận traffic lúc khởi động.",
       "related": ["liveness-probe", "startup-probe", "endpointslice"],
-      "topics": ["kubernetes-core", "graceful-shutdown"]
+      "topics": ["kubernetes-core", "graceful-shutdown", "kubernetes-operations"]
     },
     {
       "id": "configmap",
@@ -14366,6 +14366,22 @@
       "example": "Giữ sẵn 20 môi trường cho API đặt hàng từ 8 giờ tới 22 giờ bằng scheduled scaling.",
       "related": ["cold-start", "reserved-concurrency"],
       "topics": ["serverless"]
+    },
+    {
+      "id": "blue-green-deployment",
+      "term": "Blue-green deployment",
+      "meaning": "Dựng toàn bộ phiên bản mới (green) bên cạnh phiên bản đang chạy (blue), kiểm tra rồi chuyển traffic một lần; rollback là chuyển lại. Tốn gấp đôi tài nguyên lúc chuyển.",
+      "example": "Đổi listener của ALB từ target group blue sang green, giữ blue 1 giờ để quay lại nếu cần.",
+      "related": ["canary-release", "rolling-deployment"],
+      "topics": ["deployment-strategies"]
+    },
+    {
+      "id": "pod-disruption-budget",
+      "term": "PodDisruptionBudget (PDB)",
+      "meaning": "Ràng buộc số pod tối thiểu phải sẵn sàng (hoặc tối đa được vắng) khi có trục xuất tự nguyện qua Eviction API như drain node hay cluster autoscaler rút node.",
+      "example": "`maxUnavailable: 1` cho Deployment 6 replica: drain chỉ lấy đi từng pod một.",
+      "related": ["hpa", "cluster-autoscaler"],
+      "topics": ["kubernetes-operations"]
     }
   ]
 }

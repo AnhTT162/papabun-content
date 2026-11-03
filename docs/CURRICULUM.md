@@ -373,8 +373,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 12 | `infrastructure-as-code` | Infrastructure as Code & GitOps | mid | Terraform state, module, drift, Argo CD | L B | ✅ |
 | 13 | `incident-management` | Alerting, on-call & postmortem | mid | Alert theo SLO, runbook, postmortem không đổ lỗi | L T | ✅ |
 | 14 | `serverless` | Serverless | mid | Lambda, cold start, giới hạn, khi nào phù hợp | L Sc | ✅ |
-| 15 | `deployment-strategies` | Rolling, blue-green, canary | mid | Rollback, tương thích schema và API khi deploy | L S Sc | ⬜ |
-| 16 | `kubernetes-operations` | Vận hành ứng dụng trên Kubernetes | senior | Probe, requests/limits, HPA, rolling update, PDB, CrashLoopBackOff, OOMKilled | L T | ⬜ |
+| 15 | `deployment-strategies` | Rolling, blue-green, canary | mid | Rollback, tương thích schema và API khi deploy | L S Sc | ✅ |
+| 16 | `kubernetes-operations` | Vận hành ứng dụng trên Kubernetes | senior | Probe, requests/limits, HPA, rolling update, PDB, CrashLoopBackOff, OOMKilled | L T | ✅ |
 | 17 | `cloud-networking` | Network trên cloud | senior | Subnet, NAT, security group, PrivateLink, DNS nội bộ, LB L4 và L7, VPN/Direct Connect/Transit Gateway | L D T | ⬜ |
 | 18 | `cloud-security-iam` | ✚ Bảo mật trên cloud & IAM | senior | Least privilege, role và policy, phân tách tài khoản, network segmentation, KMS | L B Sc | ⬜ |
 | 19 | `high-availability-dr` | High availability & disaster recovery | senior | Multi-AZ, multi-region, RPO/RTO, diễn tập | L D Sc | ⬜ |

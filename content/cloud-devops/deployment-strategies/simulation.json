@@ -1,0 +1,168 @@
+{
+  "$schema": "../../../schema/blocks/simulation.schema.json",
+  "engine": "stateMachine",
+  "title": "Canary có phân tích tự động",
+  "instructions": "Bấm \"Deploy v2\" rồi lần lượt \"Phân tích đạt\" để đi qua các bậc 5%, 25%, 50%. Thử \"Phân tích trượt\" ở một bậc bất kỳ, và thử \"Promote tay\" khi chưa đủ bậc để thấy rủi ro bỏ qua phân tích.",
+  "config": {
+    "states": [
+      {
+        "id": "stable",
+        "label": "v1 100%",
+        "x": 0.5,
+        "y": 0.5,
+        "note": "Chỉ có v1 phục vụ. Mỗi bản mới bắt đầu từ đây; `Phân tích` so số liệu của bản mới với bản ổn định đang chạy song song."
+      },
+      {
+        "id": "c5",
+        "label": "Canary 5%",
+        "x": 0.1,
+        "y": 0.05,
+        "note": "5% traffic vào v2. Đợi đủ thời gian và đủ request để số liệu có ý nghĩa (ví dụ 10 phút, ít nhất vài nghìn request), rồi so tỉ lệ lỗi, p99, lỗi nghiệp vụ với v1 **trong cùng khoảng thời gian**."
+      },
+      {
+        "id": "c25",
+        "label": "Canary 25%",
+        "x": 0.9,
+        "y": 0.05,
+        "note": "25% traffic. Lỗi chỉ lộ ra khi tải đủ lớn (hết pool kết nối, cache lạnh, khoá database) thường xuất hiện ở bậc này chứ không ở 5%."
+      },
+      {
+        "id": "c50",
+        "label": "Canary 50%",
+        "x": 0.9,
+        "y": 0.5,
+        "note": "50% traffic. Bậc cuối trước khi thay hoàn toàn; vẫn quay lại được trong vài giây vì v1 còn chạy."
+      },
+      {
+        "id": "promoted",
+        "label": "v2 100%",
+        "x": 0.9,
+        "y": 0.95,
+        "note": "v2 phục vụ toàn bộ. Giữ bản v1 (ReplicaSet cũ, target group cũ) thêm một thời gian để rollback nhanh. Rollback chỉ an toàn nếu schema và message vẫn tương thích với v1."
+      },
+      {
+        "id": "aborted",
+        "label": "Huỷ, v1 100%",
+        "x": 0.1,
+        "y": 0.95,
+        "note": "Phân tích trượt: toàn bộ traffic về v1 trong vài giây, chỉ một phần người dùng từng gặp v2. Ghi lại số liệu để điều tra, rồi deploy bản sửa từ đầu."
+      }
+    ],
+    "initial": "stable",
+    "events": [
+      {
+        "id": "deploy",
+        "label": "Deploy v2"
+      },
+      {
+        "id": "pass",
+        "label": "Phân tích đạt"
+      },
+      {
+        "id": "fail",
+        "label": "Phân tích trượt"
+      },
+      {
+        "id": "force",
+        "label": "Promote tay"
+      },
+      {
+        "id": "rollback",
+        "label": "Rollback"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "start",
+        "from": "stable",
+        "event": "deploy",
+        "to": "c5",
+        "label": "5% vào v2",
+        "note": "Tạo bản v2 bên cạnh v1 và chia 5% traffic (theo trọng số target group, Ingress hay service mesh)."
+      },
+      {
+        "id": "s1",
+        "from": "c5",
+        "event": "pass",
+        "to": "c25",
+        "label": "đạt, lên 25%"
+      },
+      {
+        "id": "s2",
+        "from": "c25",
+        "event": "pass",
+        "to": "c50",
+        "label": "đạt, lên 50%"
+      },
+      {
+        "id": "s3",
+        "from": "c50",
+        "event": "pass",
+        "to": "promoted",
+        "label": "đạt, lên 100%"
+      },
+      {
+        "id": "f1",
+        "from": "c5",
+        "event": "fail",
+        "to": "aborted",
+        "label": "trượt"
+      },
+      {
+        "id": "f2",
+        "from": "c25",
+        "event": "fail",
+        "to": "aborted",
+        "label": "trượt"
+      },
+      {
+        "id": "f3",
+        "from": "c50",
+        "event": "fail",
+        "to": "aborted",
+        "label": "trượt"
+      },
+      {
+        "id": "force5",
+        "from": "c5",
+        "event": "force",
+        "to": "promoted",
+        "label": "bỏ qua phân tích",
+        "note": "Promote tay sau vài phút ở 5% là đặt cược: lỗi theo tải, theo nhóm người dùng ít gặp hay rò rỉ chậm chưa kịp lộ ra. Nếu có lỗi, giờ nó ảnh hưởng 100% người dùng."
+      },
+      {
+        "id": "force25",
+        "from": "c25",
+        "event": "force",
+        "to": "promoted",
+        "label": "bỏ qua phân tích",
+        "note": "Bỏ qua bậc còn lại: tiết kiệm vài chục phút, đổi lại mất lớp bảo vệ ở mức tải cao nhất trước khi thay hoàn toàn."
+      },
+      {
+        "id": "redeploy",
+        "from": "aborted",
+        "event": "deploy",
+        "to": "c5",
+        "label": "bản sửa",
+        "note": "Bản sửa đi lại từ bậc đầu, không bắt đầu ở bậc đã dừng."
+      },
+      {
+        "id": "next",
+        "from": "promoted",
+        "event": "deploy",
+        "to": "c5",
+        "label": "bản tiếp theo",
+        "note": "Bản tiếp theo bắt đầu canary so với bản vừa ổn định."
+      },
+      {
+        "id": "rb",
+        "from": "promoted",
+        "event": "rollback",
+        "to": "aborted",
+        "label": "quay về v1",
+        "note": "Chỉ nhanh và an toàn khi bản v1 còn giữ (ReplicaSet, target group) và schema, message, cache v2 đã ghi vẫn đọc được bởi v1. Nếu v2 đã xoá cột hay ghi định dạng mới, rollback gây sự cố thứ hai: tắt flag hoặc sửa tiến."
+      }
+    ],
+    "invalidNote": "Sự kiện này không áp dụng ở trạng thái hiện tại."
+  }
+}

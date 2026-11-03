@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-probes", "front": "Liveness, readiness, startup probe thất bại thì mỗi cái dẫn tới gì?", "back": "Liveness: restart container. Readiness: rút khỏi traffic, không restart. Startup: chưa xong thì hai probe kia chưa chạy; quá ngân sách thì restart." },
+    { "id": "liveness-no-deps", "front": "Vì sao liveness không được kiểm database?", "back": "Database lỗi làm mọi pod cùng bị restart, biến sự cố của dependency thành sự cố toàn service." },
+    { "id": "probe-defaults", "front": "Mặc định của probe?", "back": "period 10 giây, timeout 1 giây, failureThreshold 3, successThreshold 1." },
+    { "id": "requests-vs-limits", "front": "Requests và limits khác nhau thế nào?", "back": "Requests dùng để xếp lịch, tính HPA và thứ tự trục xuất. Limits là trần: vượt bộ nhớ thì OOMKilled, chạm CPU thì bị throttle." },
+    { "id": "qos", "front": "Ba hạng QoS của pod?", "back": "Guaranteed (requests = limits cho CPU và bộ nhớ ở mọi container), Burstable (không đạt Guaranteed nhưng có requests hoặc limits nào đó), BestEffort (không đặt gì)." },
+    { "id": "pdb-scope", "front": "PodDisruptionBudget bảo vệ khỏi gì và không bảo vệ khỏi gì?", "back": "Bảo vệ khỏi trục xuất tự nguyện qua Eviction API (drain, autoscaler). Không bảo vệ khỏi node chết, OOMKilled, trục xuất do thiếu tài nguyên, rolling update." },
+    { "id": "crashloop-backoff", "front": "CrashLoopBackOff chờ bao lâu giữa các lần chạy lại?", "back": "10, 20, 40 giây… tối đa 300 giây; đặt lại khi container chạy ổn 10 phút." },
+    { "id": "exit-codes", "front": "Exit 143 và 137 sau restart nói gì?", "back": "143: nhận SIGTERM rồi thoát (thường do liveness thất bại hay bị xoá). 137: bị SIGKILL, kèm `OOMKilled` nếu do vượt bộ nhớ." },
+    { "id": "pending", "front": "Pod `Pending` thì xem ở đâu?", "back": "Event `FailedScheduling` trong `kubectl describe pod`: thiếu CPU/bộ nhớ theo requests, affinity không khớp, taint chưa tolerate." },
+    { "id": "hard-eviction", "front": "Trục xuất theo ngưỡng cứng của kubelet có tôn trọng PDB và grace period không?", "back": "Không: kubelet giết ngay để giải phóng tài nguyên node." }
+  ]
+}

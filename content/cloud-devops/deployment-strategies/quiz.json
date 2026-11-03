@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "bluegreen-db",
+      "kind": "single",
+      "prompt": "Team dùng blue-green để \"không bao giờ phải lo tương thích\": green chạy bản mới, chuyển ALB một lần, có lỗi thì chuyển lại blue. Bản mới có migration đổi tên cột `phone` thành `phone_number` trên database dùng chung. Chuyện gì xảy ra?",
+      "options": [
+        "Blue lỗi ngay khi migration chạy, chuyển lại cũng không cứu",
+        "Blue và green dùng hai bản sao database nên không ảnh hưởng nhau",
+        "ALB chỉ gửi traffic tới green nên blue không cần tương thích",
+        "Migration tự rollback khi chuyển ALB về blue"
+      ],
+      "answer": 0,
+      "explanation": "Hai môi trường của blue-green gần như luôn dùng chung database. Đổi tên cột là thay đổi phá vỡ: blue đang phục vụ sẽ lỗi ngay khi migration chạy (trước cả khi chuyển ALB), và chuyển về blue sau đó vẫn gặp cột đã đổi tên. Migration không tự đảo khi đổi traffic. Blue-green chỉ giải quyết chuyện chuyển traffic nhanh; tương thích schema vẫn phải làm theo expand/contract."
+    },
+    {
+      "id": "canary-baseline",
+      "kind": "single",
+      "prompt": "Canary 5% chạy lúc 21:00. Tool phân tích so tỉ lệ lỗi của canary (0,8%) với tỉ lệ lỗi trung bình của bản cũ trong 7 ngày qua (0,3%) và đánh trượt. Vấn đề của cách so này?",
+      "options": [
+        "Baseline khác thời điểm, chênh do giờ cao điểm bị tính cho bản mới",
+        "Canary 5% quá ít traffic nên phải so với 7 ngày để đủ số liệu",
+        "Tỉ lệ lỗi không phải chỉ số hợp lệ để đánh giá canary",
+        "Phải so p50 latency của canary thay vì so tỉ lệ lỗi"
+      ],
+      "answer": 0,
+      "explanation": "Tỉ lệ lỗi thay đổi theo giờ, theo tải, theo đối tác. So canary với trung bình 7 ngày thì lúc 21:00 đông khách có thể trượt dù bản mới tốt (hoặc đạt dù bản mới tệ). So với baseline chạy song song cùng lúc, cùng loại traffic, và yêu cầu số request tối thiểu. Tỉ lệ lỗi là chỉ số chính đáng; p99 thường có ích hơn p50."
+    },
+    {
+      "id": "sticky-canary",
+      "kind": "single",
+      "prompt": "Canary chia 10% request ngẫu nhiên sang bản mới. Bản mới đổi định dạng dữ liệu giỏ hàng lưu trong Redis. Người dùng báo giỏ hàng lúc có lúc mất. Vì sao?",
+      "options": [
+        "Cùng người dùng nhảy giữa hai phiên bản đọc ghi hai định dạng",
+        "Redis không chịu được hai phiên bản ghi cùng lúc",
+        "10% là quá nhiều cho canary, chỉ nên chia dưới 1%",
+        "Bản mới bị lỗi bộ nhớ nên xoá giỏ hàng ngẫu nhiên"
+      ],
+      "answer": 0,
+      "explanation": "Chia theo request khiến cùng người dùng gặp cả v1 và v2; v2 ghi định dạng mới mà v1 không đọc được (và ngược lại), nên giỏ hàng lúc có lúc không. Hai cách sửa: dính phiên bản theo người dùng (hash user id, cookie), và quan trọng hơn là làm dữ liệu tương thích hai chiều (đọc được cả hai định dạng, hoặc key có phiên bản). Tỉ lệ canary không phải nguyên nhân."
+    },
+    {
+      "id": "low-traffic",
+      "kind": "single",
+      "prompt": "Service quản trị nội bộ phải chạy 24/7, không được có downtime, và có khoảng 20 request mỗi phút. Team muốn áp dụng canary có phân tích tự động như service chính. Nhận định nào đúng?",
+      "options": [
+        "Không đủ số liệu cho canary; dùng blue-green kèm smoke test",
+        "Canary vẫn tốt nhất, chỉ cần giữ ở 5% trong 10 phút",
+        "Không cần chiến lược gì, tắt hẳn service rồi bật bản mới",
+        "Tăng canary lên 50% ngay từ đầu để có đủ traffic"
+      ],
+      "answer": 0,
+      "explanation": "Phân tích canary cần đủ request để phân biệt lỗi thật với nhiễu; 1 request mỗi phút thì một lỗi đơn lẻ đã là 100%. Với service ít traffic, blue-green có smoke test (hoặc rolling kèm feature flag) cho cùng mức an toàn với ít phức tạp hơn. Tắt hẳn rồi bật (recreate) gây downtime không cần thiết; 50% ngay từ đầu bỏ mất ý nghĩa của canary."
+    }
+  ]
+}

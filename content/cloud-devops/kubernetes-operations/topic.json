@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "kubernetes-operations",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Vận hành ứng dụng trên Kubernetes",
+  "summary": "Ba probe và cách cấu hình cho app Java khởi động chậm; requests, limits, QoS và thứ tự trục xuất; HPA cần requests; PodDisruptionBudget và bẫy chặn drain; phân bố pod qua AZ; đọc CrashLoopBackOff, OOMKilled, Pending, ImagePullBackOff, Evicted.",
+  "level": "senior",
+  "order": 16,
+  "minutes": 16,
+  "prerequisites": ["kubernetes-core", "jvm-containers", "graceful-shutdown"],
+  "terms": ["liveness-probe", "readiness-probe", "startup-probe", "pod-qos-class", "oomkilled", "cpu-throttling", "pod-disruption-budget", "hpa", "cluster-autoscaler"],
+  "references": [
+    { "title": "Kubernetes: Configure Liveness, Readiness and Startup Probes", "url": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/" },
+    { "title": "Kubernetes: Disruptions (PodDisruptionBudget)", "url": "https://kubernetes.io/docs/concepts/workloads/pods/disruptions/" },
+    { "title": "Kubernetes: Node-pressure Eviction", "url": "https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" },
+    { "title": "Spring Boot: Kubernetes Probes", "url": "https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Có nên đặt CPU limit cho service Java không?\" Trả lời hai mặt: không đặt thì pod tận dụng CPU dư của node, khởi động và GC nhanh hơn, không bị throttle làm p99 xấu; khi tranh chấp, CPU vẫn chia theo tỉ lệ requests nên hàng xóm có requests đúng không bị lấy phần, nhưng hiệu năng thay đổi theo node và theo mức rảnh của node. Bỏ CPU limit thì JVM thấy toàn bộ CPU của node: đặt `-XX:ActiveProcessorCount` cho số thread GC và pool hợp lý. Đặt thì dễ đoán và cô lập, nhưng throttle theo chu kỳ 100 ms làm latency giật, JVM tính số thread theo limit. Cách hay dùng: luôn đặt CPU request đúng (để xếp lịch và HPA), bỏ hoặc nới CPU limit cho service nhạy latency, giữ memory limit bằng request. Chi tiết đo throttle ở bài JVM trong container." },
+    { "type": "callout", "style": "warning", "markdown": "Probe mặc định `timeoutSeconds: 1` cộng endpoint `/actuator/health` gom nhiều health indicator (database, Redis, disk) là công thức cho restart dây chuyền: một GC pause hay một Redis chậm làm probe quá 1 giây ba lần liên tiếp, kubelet giết pod, tải dồn sang pod còn lại, pod đó cũng chậm và bị giết. Dùng nhóm `liveness` chỉ gồm trạng thái nội bộ của app và timeout vài giây." }
+  ]
+}

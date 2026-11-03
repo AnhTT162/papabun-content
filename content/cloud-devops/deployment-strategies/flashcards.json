@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "rolling", "front": "Rolling update có ưu và nhược gì?", "back": "Không tốn thêm nhiều tài nguyên; nhưng có lúc hai phiên bản phục vụ xen kẽ và rollback cũng là một lần rolling, mất vài phút." },
+    { "id": "blue-green", "front": "Blue-green đổi lại được gì và tốn gì?", "back": "Chuyển và chuyển lại traffic trong vài giây. Tốn gấp đôi tài nguyên lúc chuyển; database dùng chung vẫn phải tương thích." },
+    { "id": "canary", "front": "Canary bảo vệ thế nào?", "back": "Cho phần nhỏ traffic vào bản mới, so số liệu với bản cũ, đạt mới tăng dần; trượt thì quay về, chỉ một phần người dùng bị ảnh hưởng." },
+    { "id": "canary-baseline", "front": "Canary phải so với gì?", "back": "Với baseline chạy song song cùng thời điểm, cùng loại traffic, đủ số request tối thiểu; không so với hôm qua hay trung bình tuần." },
+    { "id": "sticky", "front": "Vì sao nên dính phiên bản theo người dùng khi canary?", "back": "Để một người không nhảy qua lại giữa hai phiên bản có thể đọc ghi dữ liệu, giao diện khác nhau." },
+    { "id": "rollback-condition", "front": "Rollback code chỉ an toàn khi nào?", "back": "Khi schema, API, message và dữ liệu cache vẫn tương thích với bản cũ." },
+    { "id": "recreate", "front": "Khi nào dùng Recreate thay vì rolling?", "back": "Khi hai phiên bản không thể chạy cùng lúc và chấp nhận downtime, ví dụ ứng dụng nội bộ có cửa sổ bảo trì." },
+    { "id": "shadow", "front": "Shadow traffic là gì và hạn chế ra sao?", "back": "Nhân bản request thật sang bản mới nhưng bỏ response; chỉ an toàn với request không có hiệu ứng phụ." },
+    { "id": "canary-vs-ab", "front": "Canary khác A/B test thế nào?", "back": "Canary hỏi bản mới có hỏng không (chỉ số kỹ thuật, vài chục phút); A/B test hỏi tính năng nào tốt hơn (chỉ số sản phẩm, cỡ mẫu lớn)." }
+  ]
+}

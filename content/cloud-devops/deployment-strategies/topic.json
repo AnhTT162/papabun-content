@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "deployment-strategies",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Rolling, blue-green, canary",
+  "summary": "Rolling, recreate, blue-green, canary và shadow: hai phiên bản cùng tồn tại thế nào, rollback mất bao lâu; phân tích canary so với baseline và dính phiên bản theo người dùng; tương thích schema, API, message, cache khi deploy và khi rollback; chọn chiến lược theo rủi ro và lưu lượng.",
+  "level": "mid",
+  "order": 15,
+  "minutes": 15,
+  "prerequisites": ["kubernetes-core", "ci-cd-pipeline", "schema-migration"],
+  "terms": ["rolling-deployment", "blue-green-deployment", "canary-release", "expand-contract", "tolerant-reader", "feature-flag"],
+  "references": [
+    { "title": "Martin Fowler: BlueGreenDeployment", "url": "https://martinfowler.com/bliki/BlueGreenDeployment.html" },
+    { "title": "Martin Fowler: CanaryRelease", "url": "https://martinfowler.com/bliki/CanaryRelease.html" },
+    { "title": "Argo Rollouts: Canary", "url": "https://argoproj.github.io/argo-rollouts/features/canary/" },
+    { "title": "Martin Fowler: ParallelChange", "url": "https://martinfowler.com/bliki/ParallelChange.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "simulation", "file": "simulation.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bản mới đã lên 100% được hai giờ thì phát hiện lỗi, rollback được không?\" Trả lời theo những gì đã thay đổi từ lúc deploy: schema chỉ mở rộng thì rollback code được; dữ liệu đã ghi theo định dạng mới (cột mới, message mới, cache mới) thì bản cũ có đọc được không; có job hay migration dữ liệu nào đã chạy không. Nếu bản cũ không xử lý được những gì bản mới đã ghi, rollback sẽ gây sự cố thứ hai; khi đó tắt feature flag hoặc sửa tiến. Kế hoạch rollback phải được viết trước khi deploy." },
+    { "type": "callout", "style": "warning", "markdown": "Canary chỉ an toàn bằng chỉ số nó nhìn. Phân tích chỉ xem tỉ lệ 5xx của chính service thì không thấy lỗi trả 200 với dữ liệu sai, lỗi làm service phía trước chậm đi, hay số đơn thành công giảm. Thêm ít nhất một chỉ số nghiệp vụ (đơn tạo thành công, thanh toán thành công) và latency của luồng người dùng vào tiêu chí đạt." }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "liveness-dependency",
+      "kind": "single",
+      "prompt": "Liveness probe của 12 pod trỏ vào `/actuator/health` mặc định, gồm cả kiểm tra kết nối database. Database failover mất 90 giây. Chuyện gì xảy ra với service?",
+      "options": [
+        "Cả 12 pod cùng bị restart, kéo dài sự cố sau khi database hồi phục",
+        "Các pod chỉ bị rút khỏi traffic, tự quay lại khi database hồi phục",
+        "Kubernetes tự nhận ra lỗi do database nên không restart pod",
+        "Chỉ pod đang giữ kết nối hỏng bị restart, các pod khác không sao"
+      ],
+      "answer": 0,
+      "explanation": "Liveness thất bại thì kubelet giết và chạy lại container. Mọi pod cùng thấy database lỗi nên cùng bị restart; khi database lên lại, cả 12 pod đang khởi động (cold start, cache trống, CrashLoopBackOff có thể kéo dài thêm), biến 90 giây thành nhiều phút. Rút khỏi traffic là việc của readiness. Liveness chỉ nên kiểm process, ví dụ `/actuator/health/liveness`."
+    },
+    {
+      "id": "qos-eviction",
+      "kind": "single",
+      "prompt": "Node thiếu bộ nhớ. Trên node có: pod A (requests = limits = 2Gi, dùng 1,8Gi), pod B (requests 512Mi, limits 2Gi, dùng 1,5Gi), pod C (không đặt requests/limits, dùng 300Mi). Cùng priority. Kubelet trục xuất pod nào trước?",
+      "options": [
+        "B trước, rồi C, A sau cùng",
+        "A trước, vì đang dùng nhiều bộ nhớ nhất",
+        "C trước, vì BestEffort luôn bị trục xuất đầu",
+        "Cả ba cùng lúc, vì có cùng priority"
+      ],
+      "answer": 0,
+      "explanation": "Kubelet xếp trước những pod dùng vượt requests, cùng priority thì xét mức vượt: B vượt khoảng 1Gi (1,5Gi so với 512Mi), C vượt 300Mi (không có requests nên mọi mức dùng đều là vượt), nên B trước rồi C. A dùng dưới requests nên bị trục xuất sau cùng. BestEffort không tự động đi đầu; lượng dùng tuyệt đối cũng không phải tiêu chí chính, mức vượt so với requests mới là."
+    },
+    {
+      "id": "pdb-blocks-drain",
+      "kind": "single",
+      "prompt": "Deployment 3 replica có PDB `minAvailable: 3`. Đội platform chạy `kubectl drain` để nâng cấp node. Chuyện gì xảy ra?",
+      "options": [
+        "Drain treo vì không pod nào được phép trục xuất mà vẫn giữ đủ 3",
+        "Drain chạy bình thường vì PDB chỉ áp dụng cho rolling update",
+        "Kubernetes tạm thời tạo pod thứ tư để có thể trục xuất một pod",
+        "PDB bị bỏ qua khi người chạy drain là quản trị cluster"
+      ],
+      "answer": 0,
+      "explanation": "Drain dùng Eviction API, và PDB chặn mọi lần trục xuất làm số pod sẵn sàng dưới 3. Với 3 replica thì không lần nào hợp lệ: drain chờ mãi (hoặc tới timeout), nâng cấp node bị chặn. PDB không áp dụng cho rolling update của Deployment, không tự tạo thêm pod, và không phân biệt người chạy. Dùng `maxUnavailable: 1`."
+    },
+    {
+      "id": "startup-vs-delay",
+      "kind": "single",
+      "prompt": "App khởi động mất 40–120 giây tuỳ node. Cách cấu hình probe nào tốt nhất?",
+      "options": [
+        "Startup probe ngân sách khoảng 180 giây, liveness bình thường sau đó",
+        "Liveness với `initialDelaySeconds: 120` và các thông số mặc định",
+        "Liveness với `failureThreshold: 20` và chu kỳ 10 giây",
+        "Không dùng liveness, chỉ dùng readiness cho mọi trường hợp"
+      ],
+      "answer": 0,
+      "explanation": "Startup probe chạy tới khi app khởi động xong (tối đa ngân sách của nó), sau đó liveness mới bắt đầu với ngưỡng nhạy bình thường. `initialDelaySeconds: 120` phải đoán đúng thời gian khởi động: node chậm cần hơn 120 giây thì vẫn bị giết, còn node nhanh thì app treo trong 2 phút đầu không bị phát hiện. `failureThreshold: 20` thì suốt đời pod phải mất tới 200 giây mới phát hiện được treo. Bỏ liveness thì pod treo không bao giờ được restart."
+    }
+  ]
+}
