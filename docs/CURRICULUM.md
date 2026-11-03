@@ -221,8 +221,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 2 | `junit5` | JUnit 5 & 6 chuyên sâu | junior | Lifecycle, parameterized, extension, chạy song song | L B | ✅ |
 | 3 | `mockito` | Mockito & test double | mid | Mock, stub, spy, fake; strict stubbing; khi nào không nên mock | L B | ✅ |
 | 4 | `test-design` | Thiết kế test tốt | mid | AAA, test smell, mutation testing (PIT), mức coverage | L B | ✅ |
-| 5 | `testcontainers` | Testcontainers | mid | DB thật, singleton container, reuse, chạy trên CI | L B | ⬜ |
-| 6 | `spring-boot-test` | Spring Boot Test | mid | Test slice, context caching, `@MockBean` làm chậm suite | L B T | ⬜ |
+| 5 | `testcontainers` | Testcontainers | mid | DB thật, singleton container, reuse, chạy trên CI | L B | ✅ |
+| 6 | `spring-boot-test` | Spring Boot Test | mid | Test slice, context caching, `@MockBean` làm chậm suite | L B T | ✅ |
 | 7 | `http-stubbing` | ✚ Test HTTP client với WireMock | mid | Stub downstream, test timeout và retry, lỗi mạng giả lập | L B | ⬜ |
 | 8 | `flaky-tests` | Test chập chờn | mid | Thời gian, thứ tự, đồng thời, `Clock`, Awaitility | L T | ⬜ |
 | 9 | `contract-testing` | Contract testing | senior | Consumer-driven, Pact, Spring Cloud Contract | L D Sc | ⬜ |

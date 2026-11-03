@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "context-count",
+      "kind": "output",
+      "prompt": "Bốn class test trong cùng một lần chạy, mỗi class một method. Log thống kê cache context cuối suite báo `size` bằng bao nhiêu?",
+      "code": "@SpringBootTest class ATest { @MockitoBean OrderRepository repo; @Test void a() {} }\n@SpringBootTest class BTest { @MockitoBean OrderController ctrl; @Test void b() {} }\n@SpringBootTest class CTest { @MockitoBean Clock clock; @Test void c() {} }\n@SpringBootTest class DTest { @MockitoBean OrderRepository repo; @Test void d() {} }",
+      "options": [
+        "`size = 3`",
+        "`size = 1`",
+        "`size = 4`",
+        "`size = 2`"
+      ],
+      "answer": 0,
+      "explanation": "Danh sách bean bị thay là một phần khoá cache. `ATest` và `DTest` cùng thay `OrderRepository` nên dùng chung một context; `BTest` và `CTest` mỗi class một context. Tổng là 3 context. Đã chạy trên Spring Boot 4.1.2: hai class cùng `@MockitoBean OrderRepository` dùng chung một context, class có bộ mock khác thì `missCount` tăng thêm 1."
+    },
+    {
+      "id": "webmvctest-security",
+      "kind": "single",
+      "prompt": "`SecurityConfig` (`@Configuration`) khai báo `SecurityFilterChain` cho phép `GET /products` không cần đăng nhập. Test `@WebMvcTest(ProductController.class)` gọi `GET /products` và nhận `401`. Vì sao?",
+      "options": [
+        "Slice không nạp `@Configuration` của bạn, bảo mật mặc định áp dụng",
+        "`@WebMvcTest` tắt hẳn Spring Security nên mọi request bị chặn",
+        "MockMvc không gửi được `GET` khi thiếu header `Authorization`",
+        "`SecurityFilterChain` chỉ có hiệu lực khi chạy với `RANDOM_PORT`"
+      ],
+      "answer": 0,
+      "explanation": "Slice web chỉ nạp controller, advice, filter, converter và các loại bean liên quan tới MVC; class `@Configuration` của bạn bị loại. Auto-configuration bảo mật mặc định của Boot vẫn bật và đòi xác thực mọi request. Thêm `@Import(SecurityConfig.class)` để test kiểm đúng luật production."
+    },
+    {
+      "id": "flush-hides",
+      "kind": "single",
+      "prompt": "Test `@DataJpaTest` lưu hai khách hàng cùng email (cột có unique constraint) bằng `repository.save(...)` rồi kết thúc, và test xanh. Vì sao?",
+      "options": [
+        "Insert chưa được flush trước khi transaction rollback",
+        "H2 không kiểm unique constraint ở chế độ nhúng trong bộ nhớ",
+        "`@DataJpaTest` tắt mọi constraint của schema để chạy nhanh",
+        "Spring Data `save` tự bỏ qua bản ghi trùng giá trị unique"
+      ],
+      "answer": 0,
+      "explanation": "Với id sinh theo sequence (mặc định của `@GeneratedValue` trên H2 và PostgreSQL), Hibernate giữ câu INSERT trong persistence context tới khi flush; test kết thúc, transaction rollback, INSERT thứ hai không bao giờ chạy. Đã chạy trên Spring Boot 4.1.2: không flush thì test xanh, thêm `TestEntityManager.flush()` thì `ConstraintViolationException` (\"Unique index or primary key violation\")."
+    },
+    {
+      "id": "mockbean-boot4",
+      "kind": "single",
+      "prompt": "Nâng dự án từ Spring Boot 3.5 lên 4.0, các test dùng `@MockBean` không biên dịch được. Thay bằng gì?",
+      "options": [
+        "`@MockitoBean` của Spring Framework 6.2+",
+        "`@Mock` của Mockito, Spring tự đăng ký làm bean",
+        "`@MockBean` trong module mới `spring-boot-mockito`",
+        "`@InjectMocks` đặt trên class test Spring"
+      ],
+      "answer": 0,
+      "explanation": "`@MockBean` và `@SpyBean` deprecated từ Boot 3.4 và bị gỡ ở 4.0; thay bằng `@MockitoBean` và `@MockitoSpyBean` (package `org.springframework.test.context.bean.override.mockito`) có từ Spring Framework 6.2. `@Mock` và `@InjectMocks` của Mockito không đưa mock vào `ApplicationContext`. Không có module `spring-boot-mockito`."
+    }
+  ]
+}

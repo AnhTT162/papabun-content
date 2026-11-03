@@ -1,0 +1,88 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Suite test tăng từ 8 lên 31 phút, thỉnh thoảng hết connection",
+  "symptom": "Service đơn hàng Spring Boot có 412 class test, chạy trên CI trong một JVM, PostgreSQL 17 trong container dùng chung (`max_connections = 100`), HikariCP mặc định (`maximumPoolSize` 10, `minimumIdle` bằng `maximumPoolSize`). Bốn tháng trước cả suite chạy 8 phút; nay 31 phút, và khoảng một phần ba số lần chạy có vài test lỗi `Connection is not available, request timed out after 30000ms`. Chạy lại riêng các test lỗi thì xanh. Không ai đổi cấu hình CI.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Bật log `org.springframework.test.context.cache` mức `DEBUG` và đếm số lần dựng `ApplicationContext` trong log build",
+          "quality": "good",
+          "feedback": "Thời gian tăng dần theo số test mới, cộng lỗi connection, gợi ý suite đang dựng và giữ nhiều context. Log thống kê cache cho biết ngay số context, số lần hit và miss.",
+          "next": "cache"
+        },
+        {
+          "label": "Tăng `max_connections` của PostgreSQL test lên 500",
+          "quality": "ok",
+          "feedback": "Có thể hết lỗi connection, nhưng không giải thích vì sao suite cần nhiều connection như vậy, và không giảm được 23 phút tăng thêm.",
+          "next": "cache"
+        },
+        {
+          "label": "Bật rerun 2 lần cho test lỗi trong Surefire",
+          "quality": "poor",
+          "feedback": "Rerun che triệu chứng và còn làm suite dài thêm; mỗi test chờ connection mất trọn 30 giây trước khi lỗi.",
+          "next": "cache"
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "evidence": "$ grep -c 'Started .* in' build.log\n57\n$ grep 'Started .* in' build.log | awk '{s+=$(NF-5)} END {print s/NR}'\n14.6                       <- giây trung bình mỗi lần dựng context\n$ grep -c 'Connection is not available' build.log\n18\n$ grep 'cache statistics' build.log | tail -1\nSpring test ApplicationContext cache statistics: [DefaultContextCache@2b9e1f3a size = 32, maxSize = 32,\n  contextUsageCount = 1, parentContextCount = 0, hitCount = 355, missCount = 57, failureCount = 0]\n\nPostgreSQL log:  FATAL:  sorry, too many clients already   (31 lần)",
+      "evidenceFormat": "monospace",
+      "question": "Số liệu nói gì?",
+      "choices": [
+        {
+          "label": "57 context được dựng, cache đầy; context trong cache giữ pool nên vượt 100 connection",
+          "quality": "good",
+          "feedback": "Đúng. 57 × 14,6 giây ≈ 14 phút chỉ để dựng context, và 18 test chờ connection × 30 giây = 9 phút; hai khoản này khớp với 23 phút tăng thêm. Cache đầy 32 nên phải bỏ bớt và dựng lại. Context nằm trong cache không đóng pool HikariCP 10 connection của nó, nên khoảng mười context là đã chạm `max_connections`.",
+          "next": "configs"
+        },
+        {
+          "label": "Cache quá nhỏ, cần tăng `spring.test.context.cache.maxSize` lên 64",
+          "quality": "poor",
+          "feedback": "Giữ nhiều context hơn thì giữ nhiều pool hơn: lỗi connection tăng. Vấn đề là vì sao có tới 57 cấu hình khác nhau.",
+          "next": "configs"
+        },
+        {
+          "label": "PostgreSQL trong container quá chậm, nên mỗi context khởi động mất 14 giây",
+          "quality": "poor",
+          "feedback": "Số liệu không cho thấy database chậm: lỗi là thiếu connection chứ không phải query lâu. Thời gian dựng context phần lớn là dựng bean, JPA, migration; và dù mỗi lần nhanh gấp đôi thì 57 lần vẫn là con số cần giảm.",
+          "next": "configs"
+        }
+      ]
+    },
+    {
+      "id": "configs",
+      "evidence": "Thống kê cấu hình context (gom theo @MockitoBean, @ActiveProfiles, properties):\n\n  số class   khác biệt so với cấu hình chung\n     118     (không mock gì)\n      74     @MockitoBean PaymentClient\n      31     @MockitoBean PaymentClient, Clock\n      19     @MockitoBean NotificationSender\n     115     10 tổ hợp khác, mỗi tổ hợp 6–20 class\n      41     41 tổ hợp khác nhau, mỗi tổ hợp đúng 1 class\n       9     @DirtiesContext(classMode = AFTER_CLASS)\n       6     @SpringBootTest(properties = \"feature.<tên>=true\"), 6 giá trị khác nhau\n\n@MockitoBean thêm trong 4 tháng qua: 38 class mới, phần lớn mỗi class tự chọn một bộ mock.",
+      "evidenceFormat": "monospace",
+      "question": "Cách sửa nào giảm thời gian và số connection hiệu quả nhất?",
+      "choices": [
+        {
+          "label": "Gom mock vào vài class cha, dùng slice, bỏ `@DirtiesContext` thừa",
+          "quality": "good",
+          "feedback": "Mỗi class cha cố định một bộ mock nghĩa là một context dùng chung. Test controller chuyển sang `@WebMvcTest`, test repository sang `@DataJpaTest`: context nhỏ, dựng nhanh. Mục tiêu là vài context cho cả suite thay vì 57.",
+          "next": "root"
+        },
+        {
+          "label": "Thêm `@DirtiesContext` cho mọi class để context cũ đóng lại và trả connection",
+          "quality": "poor",
+          "feedback": "Hết lỗi connection nhưng mỗi class dựng một context mới: 412 lần × 14,6 giây, suite dài hơn nhiều.",
+          "next": "root"
+        },
+        {
+          "label": "Đặt `maximum-pool-size=2` và `minimum-idle=0` cho profile test",
+          "quality": "ok",
+          "feedback": "Nên làm, vì test hiếm khi cần nhiều connection song song: hết lỗi chờ connection. Nhưng 57 lần dựng context vẫn còn; cần làm cùng việc gom cấu hình.",
+          "next": "root"
+        }
+      ]
+    },
+    {
+      "id": "root",
+      "evidence": "**Nguyên nhân gốc**: mỗi class test tự chọn bộ `@MockitoBean`, profile và property riêng, nên Spring TestContext phải dựng một `ApplicationContext` cho mỗi tổ hợp (57 lần, khoảng 14 phút). Context nằm trong cache vẫn giữ pool HikariCP, nên số connection vượt `max_connections` của database test và nhiều test chờ 30 giây rồi lỗi.\n\n**Sửa**: vài class cha cố định bộ mock; slice cho test một tầng; xoá `@DirtiesContext` không cần; gom property thành vài profile chuẩn; profile test đặt `spring.datasource.hikari.maximum-pool-size=2` và `minimum-idle=0`.\n\n**Phòng ngừa**: CI đọc dòng thống kê cache cuối suite và cảnh báo khi `missCount` vượt ngưỡng (ví dụ 8); quy ước review: thêm `@MockitoBean` mới vào class cha thay vì vào từng class; theo dõi thời gian suite theo tuần để thấy xu hướng trước khi nó thành 31 phút.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

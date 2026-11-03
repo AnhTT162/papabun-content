@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "slice", "front": "Test slice là gì?", "back": "Annotation như `@WebMvcTest`, `@DataJpaTest` chỉ nạp bean của một tầng, nên context nhỏ và dựng nhanh hơn `@SpringBootTest`." },
+    { "id": "cache-key", "front": "Khoá cache `ApplicationContext` trong test gồm gì?", "back": "Class cấu hình, profile, property, initializer, các bean bị thay (`@MockitoBean`)...; khác một trong số đó là một context mới." },
+    { "id": "cache-size", "front": "Cache context mặc định giữ bao nhiêu context?", "back": "32 (`spring.test.context.cache.maxSize`); khi đầy bỏ context lâu nhất chưa được dùng (LRU)." },
+    { "id": "random-port-tx", "front": "Vì sao `@Transactional` trên test với `RANDOM_PORT` không rollback dữ liệu do API tạo ra?", "back": "Request chạy trên thread của server thật, ngoài transaction gắn với thread test, nên được commit." },
+    { "id": "mockitobean", "front": "Boot 4 thay `@MockBean` bằng gì?", "back": "`@MockitoBean` của Spring Framework 6.2+; `@MockBean` deprecated từ Boot 3.4 và bị gỡ ở 4.0." },
+    { "id": "dirties", "front": "`@DirtiesContext` có giá gì?", "back": "Đóng context và bỏ khỏi cache, nên test sau phải dựng lại context từ đầu." },
+    { "id": "pool-per-context", "front": "Vì sao nhiều context trong cache làm hết connection database?", "back": "Mỗi context giữ connection pool của nó (HikariCP mặc định 10) dù đang không chạy test nào." },
+    { "id": "boot4-modules", "front": "Spring Boot 4 đổi gì với test slice?", "back": "Chuyển sang module theo công nghệ, như `spring-boot-data-jpa-test`, `spring-boot-webmvc-test`, kèm package mới; phải đổi dependency và import." }
+  ]
+}

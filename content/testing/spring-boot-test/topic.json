@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "spring-boot-test",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Spring Boot Test",
+  "summary": "`@SpringBootTest` và `webEnvironment`; test slice (`@WebMvcTest`, `@DataJpaTest`) và cái chúng không nạp; cache `ApplicationContext`: khoá, giới hạn 32, `@DirtiesContext`, context pausing của Spring Framework 7; `@MockitoBean` thay `@MockBean`; vì sao suite chậm và hết connection; `@Transactional` trên test không rollback với `RANDOM_PORT` (đo trên Boot 4.1.2); flush và lazy loading bị transaction che; Spring Boot 4 tách test theo module.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 15,
+  "prerequisites": ["junit5", "mockito", "testcontainers"],
+  "terms": ["test-slice", "context-caching", "test-double", "integration-test", "thread-local"],
+  "references": [
+    { "title": "Spring Boot: Testing Spring Boot Applications", "url": "https://docs.spring.io/spring-boot/reference/testing/spring-boot-applications.html" },
+    { "title": "Spring Framework: Context Caching", "url": "https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/ctx-management/caching.html" },
+    { "title": "Spring Framework: Bean Overriding in Tests", "url": "https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/bean-overriding.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Khi nào dùng `@SpringBootTest`, khi nào dùng slice?\" Trả lời: slice cho câu hỏi về một tầng (mapping request và validate ở controller, query của repository), vì nạp ít và nhanh; `@SpringBootTest` cho vài luồng chính cần mọi tầng nối với nhau và cấu hình thật (security, transaction, serialize). Hỏi tiếp \"suite của bạn có bao nhiêu context\": biết con số từ log thống kê cache và giữ nó nhỏ là dấu hiệu team hiểu cơ chế." },
+    { "type": "callout", "style": "warning", "markdown": "`@Transactional` trên test làm mọi thứ chạy trong một transaction dài và rollback cuối: không flush thì constraint chưa được kiểm, session luôn mở nên không thấy `LazyInitializationException`. Luôn có vài test chạy như production: không có transaction của test, tự dọn dữ liệu." }
+  ]
+}

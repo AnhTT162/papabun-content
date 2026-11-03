@@ -3285,7 +3285,7 @@
       "meaning": "Biến mà mỗi thread có bản giá trị riêng. Spring dùng nó để gắn transaction, SecurityContext, request vào thread đang xử lý; code ở thread khác không thấy.",
       "example": "`TransactionSynchronizationManager` giữ connection của transaction hiện tại trong một ThreadLocal.",
       "related": ["transaction"],
-      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom", "memory-leak", "classloading", "junit5"]
+      "topics": ["transactional-basics", "threadlocal", "memory-growth-oom", "memory-leak", "classloading", "junit5", "spring-boot-test"]
     },
     {
       "id": "aop-proxy",
@@ -13269,7 +13269,7 @@
       "meaning": "Test kiểm code của mình làm việc đúng với hạ tầng thật hoặc thành phần thật khác: database, broker, HTTP, framework.",
       "example": "Test repository chạy câu SQL native trên PostgreSQL thật khởi động bằng Testcontainers.",
       "related": ["unit-test", "end-to-end-test"],
-      "topics": ["test-strategy"]
+      "topics": ["test-strategy", "testcontainers", "spring-boot-test"]
     },
     {
       "id": "end-to-end-test",
@@ -13397,7 +13397,7 @@
       "meaning": "Tên chung cho mọi object đứng thay một phụ thuộc thật trong test (Gerard Meszaros): dummy, stub, spy, mock, fake.",
       "example": "Repository trong bộ nhớ thay PostgreSQL, hay mock của cổng thanh toán, đều là test double.",
       "related": ["test-stub", "mock-object", "fake-object"],
-      "topics": ["mockito"]
+      "topics": ["mockito", "spring-boot-test"]
     },
     {
       "id": "test-stub",
@@ -13502,6 +13502,54 @@
       "example": "Tính chất `decode(encode(text)).equals(text)` với mọi chuỗi Unicode bắt được lỗi ký tự ngoài BMP.",
       "related": ["parameterized-test"],
       "topics": ["test-design"]
+    },
+    {
+      "id": "testcontainers",
+      "term": "Testcontainers",
+      "meaning": "Thư viện khởi động phụ thuộc thật (database, broker, cache) trong container Docker ngay từ code test, map cổng ngẫu nhiên và tự dọn khi test xong.",
+      "example": "`new PostgreSQLContainer(\"postgres:17.6\")` cho test repository chạy trên đúng PostgreSQL production.",
+      "related": ["integration-test", "ryuk"],
+      "topics": ["testcontainers"]
+    },
+    {
+      "id": "wait-strategy",
+      "term": "Wait strategy",
+      "meaning": "Điều kiện Testcontainers chờ trước khi coi container là sẵn sàng: cổng mở, một dòng log, health check hay HTTP trả 200.",
+      "example": "Container PostgreSQL chờ log \"database system is ready to accept connections\" xuất hiện hai lần.",
+      "related": ["testcontainers"],
+      "topics": ["testcontainers"]
+    },
+    {
+      "id": "ryuk",
+      "term": "Ryuk",
+      "meaning": "Container phụ do Testcontainers chạy kèm, xoá các container, network, volume của phiên test khi JVM test kết thúc, kể cả khi bị kill.",
+      "example": "Build bị huỷ giữa chừng trên máy dev mà không còn container PostgreSQL mồ côi nào, nhờ Ryuk.",
+      "related": ["testcontainers"],
+      "topics": ["testcontainers"]
+    },
+    {
+      "id": "singleton-container",
+      "term": "Singleton container",
+      "meaning": "Mẫu dùng một container cho mọi class test trong JVM: start trong khối `static` của class cha, không stop thủ công, Ryuk dọn khi suite xong.",
+      "example": "`abstract class IntegrationTest { static final PostgreSQLContainer DB = ...; static { DB.start(); } }`.",
+      "related": ["testcontainers", "context-caching"],
+      "topics": ["testcontainers"]
+    },
+    {
+      "id": "test-slice",
+      "term": "Test slice",
+      "meaning": "Annotation test của Spring Boot chỉ nạp bean của một tầng, như `@WebMvcTest` (controller, filter, converter) hay `@DataJpaTest` (JPA, repository).",
+      "example": "`@WebMvcTest(OrderController.class)` không nạp service, nên service phải là `@MockitoBean`.",
+      "related": ["context-caching"],
+      "topics": ["spring-boot-test"]
+    },
+    {
+      "id": "context-caching",
+      "term": "Context caching",
+      "meaning": "Spring TestContext giữ `ApplicationContext` đã dựng trong cache, dùng lại cho mọi test có cùng cấu hình; mỗi cấu hình khác nhau là một context mới.",
+      "example": "Bốn class với bốn bộ `@MockitoBean` khác nhau làm log báo `size = 4, missCount = 4`.",
+      "related": ["test-slice"],
+      "topics": ["spring-boot-test"]
     }
   ]
 }

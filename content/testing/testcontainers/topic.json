@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "testcontainers",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Testcontainers",
+  "summary": "Vì sao không thay PostgreSQL bằng H2 (đo thật: thứ tự NULL khác cả ở MODE=PostgreSQL); Testcontainers chạy thế nào (Docker API, cổng ngẫu nhiên, wait strategy, Ryuk); vòng đời theo class, method, singleton; `@ServiceConnection`; cô lập dữ liệu; bẫy cache context của Spring; reuse; Testcontainers 2.0 đổi gì; ghim image; tăng tốc; Docker trên CI.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 13,
+  "prerequisites": ["test-strategy", "junit5"],
+  "terms": ["testcontainers", "wait-strategy", "ryuk", "singleton-container", "integration-test"],
+  "references": [
+    { "title": "Testcontainers for Java: JUnit 5 integration", "url": "https://java.testcontainers.org/test_framework_integration/junit_5/" },
+    { "title": "Testcontainers for Java: Reusable Containers", "url": "https://java.testcontainers.org/features/reuse/" },
+    { "title": "Spring Boot: Testcontainers", "url": "https://docs.spring.io/spring-boot/reference/testing/testcontainers.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Testcontainers làm suite chậm, bạn tối ưu thế nào?\" Trả lời: start một lần cho cả suite (singleton hoặc container là bean để dùng chung qua cache context), giữ ít cấu hình context khác nhau, cô lập dữ liệu thay vì tạo container mới, cache image trên CI, tắt `fsync` của database test. Hỏi tiếp \"CI không có Docker thì sao\": DinD với runner privileged, Docker từ xa (Testcontainers Cloud), hoặc tách integration test sang job có Docker; không lùi về H2 cho phần SQL đặc thù." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng ghi `latest` hay để thư viện chọn image. Image khác phiên bản production làm test xanh với tính năng hay cú pháp production chưa có, hoặc ngược lại." }
+  ]
+}

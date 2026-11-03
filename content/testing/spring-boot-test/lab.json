@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "`@Transactional` trên test mà dữ liệu vẫn rò sang test sau",
+  "context": "Spring Boot 4.1.2, JPA, database test dùng chung cho cả suite. Team chuyển test API sang chạy với server thật (`RANDOM_PORT`) và `RestTestClient` để kiểm cả filter, serialize JSON. Để không phải dọn dữ liệu, cả class được đánh dấu `@Transactional`, vì \"test transaction tự rollback\".",
+  "buggyCode": "@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)\n@AutoConfigureRestTestClient\n@Transactional   // \"để mỗi test tự rollback\"\n@TestMethodOrder(MethodOrderer.OrderAnnotation.class)\nclass OrderApiTest {\n    @Autowired RestTestClient client;\n    @Autowired OrderRepository orders;\n\n    @Test @Order(1)\n    void createOrder() {\n        client.post().uri(\"/orders?sku=PHO-01\").exchange().expectStatus().isOk();\n    }\n\n    @Test @Order(2)\n    void listIsEmptyAtStart() {\n        assertEquals(0, orders.count());\n    }\n}",
+  "symptom": {
+    "description": "Chạy riêng từng test thì xanh; chạy cả class (hoặc cả suite) thì đỏ. `mvn test`:",
+    "output": "[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 1.911 s <<< FAILURE! -- in shop.OrderApiTest\n[ERROR] shop.OrderApiTest.listIsEmptyAtStart -- Time elapsed: 0.115 s <<< FAILURE!\norg.opentest4j.AssertionFailedError: expected: <0> but was: <1>"
+  },
+  "diagnosis": {
+    "question": "Vì sao đơn tạo ở `createOrder` không bị rollback?",
+    "options": [
+      "Request chạy trên thread của Tomcat thật, ngoài transaction mà Spring mở cho test, nên lần lưu đơn được commit thật",
+      "`@Transactional` đặt ở mức class không áp dụng cho method test, phải đặt trên từng method thì mới có tác dụng",
+      "JPA chưa flush khi test kết thúc, nên rollback bỏ qua và dữ liệu ở lại trong cache cấp một của Hibernate",
+      "Spring chỉ rollback khi test fail; test `createOrder` pass nên transaction của nó được commit theo mặc định"
+    ],
+    "answer": 0,
+    "explanation": "Transaction của Spring gắn với thread. Với `RANDOM_PORT`, test gọi qua HTTP tới Tomcat, controller chạy trên thread của server, và lời gọi `save` của repository mở transaction riêng rồi commit. Transaction của test bao quanh thread test, không bao quanh request, nên rollback cuối test không chạm tới đơn đã commit. `@Transactional` ở class áp dụng cho mọi method; test transaction mặc định rollback dù pass hay fail; vấn đề không phải flush vì dữ liệu đã nằm trong database."
+  },
+  "fix": {
+    "code": "// Cách 1: chạy trong MockMvc, controller chạy trên cùng thread nên rollback được\n@SpringBootTest\n@AutoConfigureMockMvc\n@Transactional\nclass OrderApiTest {\n    @Autowired MockMvc mvc;\n    @Autowired OrderRepository orders;\n\n    @Test\n    void createOrder() throws Exception {\n        mvc.perform(post(\"/orders\").param(\"sku\", \"PHO-01\")).andExpect(status().isOk());\n        assertEquals(1, orders.count());\n    }\n\n    @Test\n    void listIsEmptyAtStart() {\n        assertEquals(0, orders.count());\n    }\n}\n\n// Cách 2: giữ server thật, bỏ @Transactional và tự dọn dữ liệu\n@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)\n@AutoConfigureRestTestClient\nclass OrderApiServerTest {\n    @Autowired OrderRepository orders;\n\n    @BeforeEach\n    void cleanDatabase() {\n        orders.deleteAllInBatch();\n    }\n    ...\n}",
+    "explanation": "Với MockMvc (`webEnvironment` mặc định `MOCK`), request đi qua DispatcherServlet trên chính thread test, nên tham gia transaction của test và được rollback; đã chạy lại với Spring Boot 4.1.2, cả hai test xanh. Nếu cần server thật (kiểm filter của container, HTTP/2, timeout), bỏ `@Transactional` vì nó tạo cảm giác an toàn giả, và dọn dữ liệu trước mỗi test, hoặc cho mỗi test dùng dữ liệu riêng. Cách 2 cũng giống production hơn: lỗi chỉ lộ lúc commit (constraint trì hoãn, trigger) sẽ hiện ra."
+  }
+}

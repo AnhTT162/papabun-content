@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "why-not-h2", "front": "Vì sao test repository trên H2 chưa đủ?", "back": "H2 khác PostgreSQL ở thứ tự NULL, collation, `jsonb`, `SKIP LOCKED`, cách khoá; kể cả `MODE=PostgreSQL` cũng không bù hết." },
+    { "id": "ryuk", "front": "Ryuk làm gì?", "back": "Container phụ của Testcontainers, xoá các container của phiên test khi JVM kết thúc, kể cả khi JVM bị kill." },
+    { "id": "static-vs-instance", "front": "`@Container` trên field `static` và field thường khác nhau thế nào?", "back": "`static`: một container cho cả class; field thường: start và stop cho mỗi method test." },
+    { "id": "singleton", "front": "Singleton container là gì?", "back": "Container start trong khối `static` của class cha, dùng chung cho mọi class test trong JVM, Ryuk dọn khi suite xong." },
+    { "id": "service-connection", "front": "`@ServiceConnection` thay cho việc gì?", "back": "Thay `@DynamicPropertySource` viết tay: Spring Boot tự lấy URL, user, password từ container để cấu hình datasource, Kafka, Redis." },
+    { "id": "tc2", "front": "Testcontainers 2.0 đổi gì đáng chú ý?", "back": "Bỏ JUnit 4, đổi tên artifact module (`testcontainers-postgresql`), class mới theo package module, constructor bắt buộc truyền image." },
+    { "id": "reuse", "front": "Bật reuse container thế nào và dùng ở đâu?", "back": "`withReuse(true)` cộng `testcontainers.reuse.enable=true` trong `~/.testcontainers.properties`; chỉ cho máy dev, không cho CI." },
+    { "id": "pin-image", "front": "Nên chọn image cho container test thế nào?", "back": "Ghim đúng phiên bản production, như `postgres:17.6`; không dùng `latest`." }
+  ]
+}

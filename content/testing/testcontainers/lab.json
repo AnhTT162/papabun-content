@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Test repository xanh trên H2, production trả đơn chưa giao",
+  "context": "Màn hình \"Đơn giao gần đây\" của app hiển thị 3 đơn giao gần nhất. Production chạy PostgreSQL 17. Test repository chạy trên H2 2.5 ở chế độ tương thích PostgreSQL cho nhanh, không cần Docker. Bảng `orders` có cột `delivered_at` (`NULL` khi đơn chưa giao).",
+  "buggyCode": "public interface OrderRepository extends JpaRepository<Order, Long> {\n    @Query(value = \"\"\"\n            select * from orders\n            where customer_id = :customerId\n            order by delivered_at desc\n            limit 3\"\"\", nativeQuery = true)\n    List<Order> recentDeliveries(long customerId);\n}\n\n// src/test/resources/application-test.properties\n// spring.datasource.url=jdbc:h2:mem:shop;MODE=PostgreSQL\n\n@DataJpaTest\n@AutoConfigureTestDatabase(replace = Replace.NONE)\n@ActiveProfiles(\"test\")\nclass OrderRepositoryTest {\n    @Autowired OrderRepository orders;\n\n    @Test\n    void recentDeliveriesNewestFirst() {\n        // id 1: giao 01/10, id 2: chưa giao, id 3: giao 03/10, id 4: chưa giao, id 5: giao 02/10\n        saveOrders(7L);\n        assertThat(orders.recentDeliveries(7L))\n                .extracting(Order::getId)\n                .containsExactly(3L, 5L, 1L);\n    }\n}",
+  "symptom": {
+    "description": "Test xanh trên CI. Trên production, khách thấy đơn chưa giao đứng đầu danh sách \"Đơn giao gần đây\". Chạy cùng câu SQL với cùng dữ liệu trên hai database:",
+    "output": "H2 2.5.252 (MODE=PostgreSQL)\n  id | delivered_at\n   3 | 2026-10-03 09:00:00\n   5 | 2026-10-02 08:00:00\n   1 | 2026-10-01 10:00:00\n  DEFAULT_NULL_ORDERING = LOW\n\nPostgreSQL 17.6\n  id | delivered_at\n   2 | null\n   4 | null\n   3 | 2026-10-03 09:00:00"
+  },
+  "diagnosis": {
+    "question": "Vì sao test xanh mà production sai?",
+    "options": [
+      "PostgreSQL coi `NULL` lớn hơn mọi giá trị nên `DESC` đưa đơn chưa giao lên đầu; H2 kể cả ở `MODE=PostgreSQL` vẫn coi `NULL` nhỏ nhất",
+      "`@DataJpaTest` rollback dữ liệu trước khi query chạy, nên test chỉ thấy các đơn có sẵn trong script khởi tạo",
+      "Hibernate tự thêm `NULLS LAST` khi chạy trên H2 nhưng bỏ đi khi dialect là PostgreSQL ở môi trường production",
+      "H2 không hỗ trợ `LIMIT` trong native query nên trả toàn bộ bảng, và assert chỉ so ba phần tử đầu tiên"
+    ],
+    "answer": 0,
+    "explanation": "Chuẩn SQL để mỗi hệ tự chọn chỗ đặt `NULL` khi sắp xếp. PostgreSQL coi `NULL` lớn hơn mọi giá trị: `ASC` đặt cuối, `DESC` đặt đầu. H2 mặc định `DEFAULT_NULL_ORDERING = LOW`, và `MODE=PostgreSQL` không đổi thiết lập này (đã kiểm với H2 2.5.252). Câu SQL giống hệt, dữ liệu giống hệt, kết quả khác. `@DataJpaTest` rollback **sau** mỗi test, không phải trước query. Đây là native query nên Hibernate không sửa câu SQL. H2 hỗ trợ `LIMIT`, và `containsExactly` kiểm cả số phần tử."
+  },
+  "fix": {
+    "code": "@Query(value = \"\"\"\n        select * from orders\n        where customer_id = :customerId\n          and delivered_at is not null\n        order by delivered_at desc\n        limit 3\"\"\", nativeQuery = true)\nList<Order> recentDeliveries(long customerId);\n\n// Test chạy trên PostgreSQL thật, cùng phiên bản production\n@TestConfiguration(proxyBeanMethods = false)\nclass PostgresTestConfig {\n    @Bean\n    @ServiceConnection\n    PostgreSQLContainer postgres() {\n        return new PostgreSQLContainer(\"postgres:17.6\");\n    }\n}\n\n// Cần spring-boot-testcontainers và org.testcontainers:testcontainers-postgresql.\n// Schema: Flyway chạy migration lên container khi context khởi động\n// (với database không nhúng, Boot không tự tạo bảng bằng ddl-auto).\n@DataJpaTest\n@Import(PostgresTestConfig.class)\nclass OrderRepositoryTest {\n    @Autowired OrderRepository orders;\n\n    @Test\n    void recentDeliveriesSkipsUndeliveredOrders() {\n        saveOrders(7L);\n        assertThat(orders.recentDeliveries(7L))\n                .extracting(Order::getId)\n                .containsExactly(3L, 5L, 1L);\n    }\n}",
+    "explanation": "Sửa nghiệp vụ trước: \"đơn giao gần đây\" thì loại đơn chưa giao bằng `delivered_at is not null` (với PostgreSQL 17, câu sửa trả 3, 5, 1). Nếu muốn giữ đơn chưa giao ở cuối thì ghi rõ `NULLS LAST`, đừng dựa vào mặc định của từng database. Quan trọng hơn là cho test chạy trên PostgreSQL thật: container khai báo là `@Bean @ServiceConnection` thì Spring Boot tự cấu hình datasource từ nó, vòng đời container gắn với context nên không lệch với cache context, và `@DataJpaTest` (mặc định `Replace.NON_TEST`) không thay datasource này bằng H2. Ghim image `postgres:17.6` cho trùng production. Với PostgreSQL thật, Boot không tự `create-drop` schema như với H2, nên bảng phải đến từ migration (Flyway, Liquibase): đó cũng là cách kiểm luôn migration trên đúng engine."
+  }
+}
