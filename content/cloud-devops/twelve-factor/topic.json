@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "twelve-factor",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Twelve-Factor App",
+  "summary": "12 quy tắc để app chạy tốt trên cloud: build một lần và cấu hình theo môi trường, process stateless, khởi động và tắt nhanh, log ra stdout, dev giống prod; các vi phạm hay gặp trong app Spring Boot và vì sao chúng chỉ lộ khi chạy nhiều replica.",
+  "level": "junior",
+  "order": 2,
+  "minutes": 12,
+  "prerequisites": ["cloud-fundamentals", "spring-boot-autoconfig"],
+  "terms": ["twelve-factor-app", "stateless", "release-twelve-factor", "backing-service", "disposability", "sticky-session", "port-binding", "dev-prod-parity", "fat-jar", "object-storage", "presigned-url", "testcontainers"],
+  "references": [
+    { "title": "The Twelve-Factor App", "url": "https://12factor.net/" },
+    { "title": "Twelve-Factor App Methodology is now Open Source (2024)", "url": "https://12factor.net/blog/open-source-announcement" },
+    { "title": "Spring Boot: Externalized Configuration", "url": "https://docs.spring.io/spring-boot/reference/features/external-config.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao biết một service đã sẵn sàng chạy nhiều replica?\" Kiểm từng nơi giữ trạng thái: session, file ghi ra ổ cục bộ, cache dùng như nguồn đúng, counter trong bộ nhớ, job `@Scheduled`, WebSocket gắn với một instance. Rồi chứng minh bằng thử nghiệm: chạy staging với ít nhất 2 replica, xoá ngẫu nhiên một pod giữa lúc chạy test end-to-end, và deploy lại giữa chừng. Lỗi nào chỉ xuất hiện lúc đó là trạng thái cục bộ bị bỏ sót." },
+    { "type": "callout", "style": "warning", "markdown": "\"Cấu hình trong môi trường\" không có nghĩa là mọi secret nên là biến môi trường. Biến môi trường được process con kế thừa, hiện trong `/proc/<pid>/environ`, `docker inspect` và đôi khi trong crash report. Giữ tinh thần (cấu hình nằm ngoài artifact) nhưng với secret thì mount file hoặc đọc từ secret manager." }
+  ]
+}

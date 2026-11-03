@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "iaas-vs-paas", "front": "Chạy app trên EC2 và trên dịch vụ PaaS, ai vá hệ điều hành?", "back": "EC2 là IaaS: bạn vá hệ điều hành khách và runtime. PaaS hay dịch vụ managed: nhà cung cấp vá, bạn lo code, cấu hình và dữ liệu." },
+    { "id": "of-vs-in", "front": "\"Security of the cloud\" và \"security in the cloud\" khác nhau thế nào?", "back": "Of: phần nhà cung cấp lo (data center, phần cứng, ảo hoá, dịch vụ). In: phần khách hàng lo (cấu hình, dữ liệu, IAM, mã hoá, security group)." },
+    { "id": "region-az", "front": "Region và Availability Zone khác nhau thế nào?", "back": "Region là một vùng địa lý, ở AWS có ít nhất ba AZ. Mỗi AZ là một hay nhiều data center có điện, mạng riêng, cách nhau nhiều km nhưng trong 100 km." },
+    { "id": "ebs-zonal", "front": "Instance ở AZ-a hỏng, có gắn volume EBS của nó vào máy mới ở AZ-b được không?", "back": "Không. EBS là tài nguyên zonal, chỉ gắn vào instance cùng AZ. Phải tạo volume mới từ snapshot (snapshot là tài nguyên regional)." },
+    { "id": "az-name-id", "front": "Vì sao đối chiếu AZ giữa hai tài khoản AWS phải dùng AZ ID thay vì tên như `us-east-1a`?", "back": "Ở các region lâu đời, tài khoản tạo trước 11/2025 có tên AZ được ánh xạ ngẫu nhiên theo tài khoản. AZ ID (`use1-az1`) chỉ cùng một vị trí vật lý ở mọi tài khoản." },
+    { "id": "pay-provisioned", "front": "Instance EC2 đã dừng còn tính tiền gì?", "back": "Không tính giờ máy, nhưng vẫn tính volume EBS theo GB đã cấp và Elastic IP đang giữ. IPv4 public tự gán bị trả lại khi dừng." },
+    { "id": "data-transfer", "front": "Truyền dữ liệu nào trên AWS miễn phí, cái nào mất tiền?", "back": "Vào AWS miễn phí. Giữa hai AZ tính phí cả hai chiều; ra Internet và qua NAT gateway tính theo GB." },
+    { "id": "elasticity", "front": "Elasticity khác scalability thế nào?", "back": "Scalability là chịu được tải lớn hơn khi thêm tài nguyên. Elasticity là tự thêm và bớt theo tải, cần app stateless và autoscaling." },
+    { "id": "quota-dr", "front": "Vì sao phải xin tăng service quota ở region DR từ trước?", "back": "Quota tính theo tài khoản và theo region. Lúc failover mới xin thì có thể không mở đủ máy ở region DR." }
+  ]
+}

@@ -79,7 +79,7 @@
       "meaning": "Thành phần nhận request và phân phối tới nhiều instance backend còn khoẻ theo health check. L4 chuyển tiếp theo IP/port, L7 hiểu HTTP.",
       "example": "AWS ALB phân phối request `/orders` cho 3 instance của service đơn hàng.",
       "related": ["reverse-proxy", "tls-termination"],
-      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api", "proxy-nginx", "sd-building-blocks"]
+      "topics": ["http-request-lifecycle", "load-balancing", "api-gateway-service-mesh", "slow-api", "proxy-nginx", "sd-building-blocks", "cloud-fundamentals"]
     },
     {
       "id": "reverse-proxy",
@@ -2133,7 +2133,7 @@
       "meaning": "Chuyển vai primary sang một replica khi primary chết: phát hiện, chọn replica mới nhất, promote, rồi chuyển ứng dụng sang.",
       "example": "Patroni promote replica có LSN mới nhất sau khi khoá leader của primary cũ hết hạn (mặc định 30 giây).",
       "related": ["split-brain", "patroni"],
-      "topics": ["replication-ha", "redis-ha-cluster"]
+      "topics": ["replication-ha", "redis-ha-cluster", "cloud-fundamentals"]
     },
     {
       "id": "split-brain",
@@ -3053,7 +3053,7 @@
       "meaning": "Executable jar chứa cả code ứng dụng lẫn mọi thư viện. Fat jar của Spring Boot để các jar thư viện lồng trong `BOOT-INF/lib` và dùng launcher riêng để nạp chúng.",
       "example": "`java -jar app.jar` chạy `JarLauncher` trước, launcher mới gọi `main()` của ứng dụng.",
       "related": ["embedded-server", "spring-boot"],
-      "topics": ["spring-overview", "maven-gradle", "classpath-modules", "classloading", "startup-native"]
+      "topics": ["spring-overview", "maven-gradle", "classpath-modules", "classloading", "startup-native", "twelve-factor"]
     },
     {
       "id": "bom",
@@ -4773,7 +4773,7 @@
       "meaning": "Load balancer gắn một client với cùng một instance (thường qua cookie), để dùng session lưu trong bộ nhớ instance đó.",
       "example": "Cookie `AWSALB` khiến người dùng luôn về instance B; B chết thì mất giỏ hàng trong `HttpSession`.",
       "related": ["load-balancer"],
-      "topics": ["load-balancing", "realtime-rpc-protocols", "sd-building-blocks", "authn-authz-basics"]
+      "topics": ["load-balancing", "realtime-rpc-protocols", "sd-building-blocks", "authn-authz-basics", "twelve-factor"]
     },
     {
       "id": "causal-consistency",
@@ -6085,7 +6085,7 @@
       "meaning": "Tự động thêm hay bớt instance theo một metric (CPU, số request, độ dài queue) hoặc theo lịch.",
       "example": "HPA tăng từ 6 lên 12 pod khi CPU trung bình vượt mục tiêu 50%.",
       "related": ["hpa", "cluster-autoscaler"],
-      "topics": ["capacity-planning"]
+      "topics": ["capacity-planning", "cloud-fundamentals"]
     },
     {
       "id": "hpa",
@@ -8621,7 +8621,7 @@
       "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
       "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
       "related": ["presigned-url", "multipart-upload", "cdn"],
-      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage", "design-metrics-logging"]
+      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage", "design-metrics-logging", "twelve-factor"]
     },
     {
       "id": "source-of-truth",
@@ -8637,7 +8637,7 @@
       "meaning": "Service không giữ trạng thái của người dùng giữa các request trên chính instance đó (session, file, job); mọi trạng thái nằm ở kho dùng chung. Nhờ vậy instance nào cũng xử lý được request nào.",
       "example": "Session lưu trong Redis thay vì `HttpSession` trong bộ nhớ, nên load balancer gửi request tới instance nào cũng được.",
       "related": ["horizontal-scaling", "sticky-session", "load-balancer"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "cloud-fundamentals", "twelve-factor"]
     },
     {
       "id": "horizontal-scaling",
@@ -8645,7 +8645,7 @@
       "meaning": "Tăng năng lực bằng cách thêm máy hay instance chạy song song (scale out). Cần service stateless hoặc dữ liệu được chia.",
       "example": "Tăng từ 3 lên 6 instance app sau load balancer khi lượng request gấp đôi.",
       "related": ["vertical-scaling", "stateless", "autoscaling"],
-      "topics": ["sd-building-blocks"]
+      "topics": ["sd-building-blocks", "cloud-fundamentals"]
     },
     {
       "id": "vertical-scaling",
@@ -8677,7 +8677,7 @@
       "meaning": "URL tới một object trong object storage, đã được ký sẵn bằng quyền của server và có thời hạn, cho phép client tải lên hay tải về thẳng mà không cần credential và không đi qua app server.",
       "example": "App trả về URL PUT hết hạn sau 15 phút; trình duyệt upload ảnh thẳng lên S3 bằng URL đó.",
       "related": ["object-storage", "multipart-upload"],
-      "topics": ["sd-building-blocks", "design-file-storage"]
+      "topics": ["sd-building-blocks", "design-file-storage", "twelve-factor"]
     },
     {
       "id": "multipart-upload",
@@ -8765,7 +8765,7 @@
       "meaning": "Một hay nhiều data center tách biệt về điện, mạng và làm mát trong cùng một region của cloud. Chạy qua nhiều AZ để một data center hỏng không làm ngừng hệ thống.",
       "example": "Ba instance app đặt ở ba AZ `ap-southeast-1a/b/c`; mất một AZ vẫn còn hai.",
       "related": ["single-point-of-failure", "availability"],
-      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue", "well-architected"]
+      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue", "well-architected", "cloud-fundamentals"]
     },
     {
       "id": "oltp",
@@ -10477,7 +10477,7 @@
       "meaning": "Cách chia trách nhiệm giữa nhà cung cấp cloud và khách hàng: nhà cung cấp lo phần của cloud (hạ tầng vật lý, dịch vụ), khách hàng lo phần trong cloud (cấu hình, dữ liệu, quyền truy cập). AWS dùng mô hình này cho cả security và sustainability.",
       "example": "AWS bảo vệ trung tâm dữ liệu; bucket S3 để public do khách hàng cấu hình là lỗi của khách hàng.",
       "related": ["least-privilege", "well-architected-framework"],
-      "topics": ["well-architected"]
+      "topics": ["well-architected", "cloud-fundamentals"]
     },
     {
       "id": "one-way-door",
@@ -11389,7 +11389,7 @@
       "meaning": "Dịch vụ NAT quản lý của AWS cho máy trong subnet private ra ngoài. Tính phí theo giờ và theo mỗi GB xử lý, kể cả khi đích là dịch vụ AWS cùng region.",
       "example": "32 TB đi qua NAT mỗi tháng tốn khoảng 1.475 USD phí xử lý; chuyển phần đi S3 sang gateway endpoint thì gần như hết.",
       "related": ["nat", "vpc-endpoint"],
-      "topics": ["cost-finops"]
+      "topics": ["cost-finops", "cloud-fundamentals"]
     },
     {
       "id": "cost-allocation-tag",
@@ -11421,7 +11421,7 @@
       "meaning": "Cam kết của AWS: chi một mức USD mỗi giờ trong 1 hoặc 3 năm để được giá thấp hơn on-demand. Giờ nào dùng ít hơn mức cam kết thì phần thiếu mất luôn.",
       "example": "Compute Savings Plans 1 năm không trả trước cho m7g.large là 0,0599 USD/giờ so với 0,0816 on-demand.",
       "related": ["reserved-instance", "spot-instance"],
-      "topics": ["cost-finops"]
+      "topics": ["cost-finops", "cloud-fundamentals"]
     },
     {
       "id": "reserved-instance",
@@ -11429,7 +11429,7 @@
       "meaning": "Cam kết dùng một loại instance (EC2, RDS, ElastiCache...) trong 1 hoặc 3 năm để được giảm giá. Với database, đây là cách cam kết có kỳ hạn 3 năm và giảm sâu hơn Database Savings Plans.",
       "example": "Mua RI 1 năm cho db.r7g.xlarge Multi-AZ của database production đã chạy ổn định một năm.",
       "related": ["savings-plan"],
-      "topics": ["cost-finops"]
+      "topics": ["cost-finops", "cloud-fundamentals"]
     },
     {
       "id": "spot-instance",
@@ -11437,7 +11437,7 @@
       "meaning": "Instance dùng capacity thừa của AWS với giá giảm tới khoảng 90%, có thể bị thu hồi với thông báo trước 2 phút.",
       "example": "Runner CI và worker đọc hàng đợi chạy trên spot; phần capacity cần cho SLO giữ on-demand.",
       "related": ["savings-plan"],
-      "topics": ["cost-finops"]
+      "topics": ["cost-finops", "cloud-fundamentals"]
     },
     {
       "id": "multi-tenancy",
@@ -11509,7 +11509,7 @@
       "meaning": "Software as a Service: phần mềm do vendor vận hành, dùng qua Internet và trả phí định kỳ theo người dùng hoặc lượng dùng.",
       "example": "Dùng dịch vụ định danh SaaS thay vì tự vận hành identity provider.",
       "related": ["tco", "cots"],
-      "topics": ["build-vs-buy"]
+      "topics": ["build-vs-buy", "cloud-fundamentals"]
     },
     {
       "id": "cots",
@@ -13509,7 +13509,7 @@
       "meaning": "Thư viện khởi động phụ thuộc thật (database, broker, cache) trong container Docker ngay từ code test, map cổng ngẫu nhiên và tự dọn khi test xong.",
       "example": "`new PostgreSQLContainer(\"postgres:17.6\")` cho test repository chạy trên đúng PostgreSQL production.",
       "related": ["integration-test", "ryuk"],
-      "topics": ["testcontainers"]
+      "topics": ["testcontainers", "twelve-factor"]
     },
     {
       "id": "wait-strategy",
@@ -13614,6 +13614,118 @@
       "example": "`pact-broker can-i-deploy --pacticipant inventory --version 9f8e7d --to-environment production`.",
       "related": ["pact-broker"],
       "topics": ["contract-testing"]
+    },
+    {
+      "id": "iaas",
+      "term": "IaaS",
+      "meaning": "Infrastructure as a Service: thuê máy ảo, mạng, ổ đĩa theo giờ. Nhà cung cấp lo phần cứng và ảo hoá; bạn lo hệ điều hành, vá lỗi, runtime và ứng dụng.",
+      "example": "Chạy app trên EC2: bạn tự cài JDK và vá hệ điều hành.",
+      "related": ["paas", "saas", "shared-responsibility-model"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "paas",
+      "term": "PaaS",
+      "meaning": "Platform as a Service: nền tảng chạy code hoặc dịch vụ managed; nhà cung cấp lo hệ điều hành, runtime, vá lỗi, bạn lo code, cấu hình và dữ liệu.",
+      "example": "Deploy jar lên Elastic Beanstalk hay dùng RDS thay vì tự cài PostgreSQL trên máy ảo.",
+      "related": ["iaas", "saas", "faas"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "faas",
+      "term": "FaaS",
+      "meaning": "Function as a Service: chạy từng function theo sự kiện, nền tảng tự scale và tính tiền theo lần gọi và thời gian chạy.",
+      "example": "AWS Lambda chạy một function mỗi khi có file mới trong bucket S3.",
+      "related": ["serverless", "paas"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "cloud-region",
+      "term": "Region",
+      "meaning": "Một vùng địa lý của nhà cung cấp cloud, gồm nhiều Availability Zone. Phần lớn tài nguyên (VPC, bucket S3, queue) thuộc về một region.",
+      "example": "`ap-southeast-1` là region Singapore của AWS.",
+      "related": ["availability-zone", "local-zone"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "az-id",
+      "term": "AZ ID",
+      "meaning": "Định danh cố định của một Availability Zone, chỉ cùng một vị trí vật lý ở mọi tài khoản AWS, khác với tên AZ có thể được ánh xạ khác nhau giữa các tài khoản.",
+      "example": "`use1-az1` là cùng một AZ ở mọi tài khoản, còn `us-east-1a` thì có thể không.",
+      "related": ["availability-zone"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "local-zone",
+      "term": "Local Zone",
+      "meaning": "Điểm hạ tầng AWS đặt gần người dùng ở một thành phố, gắn với một region mẹ, có một phần dịch vụ (compute, storage) để giảm latency.",
+      "example": "Local Zone Hà Nội gắn với region Singapore.",
+      "related": ["cloud-region", "availability-zone", "edge-location"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "service-quota",
+      "term": "Service quota",
+      "meaning": "Giới hạn số lượng tài nguyên hoặc tốc độ gọi API cho mỗi tài khoản trong mỗi region. Nhiều quota xin tăng được, một số là giới hạn cứng.",
+      "example": "Quota vCPU on-demand của tài khoản mới không đủ để mở 50 máy lớn trong ngày khuyến mãi nếu không xin trước.",
+      "related": ["cloud-region", "autoscaling"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "elasticity",
+      "term": "Elasticity",
+      "meaning": "Khả năng tự thêm và bớt tài nguyên theo tải, để vừa chịu được đỉnh vừa không trả tiền cho máy nhàn rỗi.",
+      "example": "Ban ngày chạy 12 instance, ban đêm autoscaling giảm còn 3.",
+      "related": ["autoscaling", "horizontal-scaling", "stateless"],
+      "topics": ["cloud-fundamentals"]
+    },
+    {
+      "id": "twelve-factor-app",
+      "term": "Twelve-Factor App",
+      "meaning": "Bộ 12 quy tắc do Heroku viết năm 2011 để xây app chạy tốt trên cloud: cấu hình ngoài artifact, process stateless, khởi động và tắt nhanh, log ra stdout, dev giống prod.",
+      "example": "Một app Spring Boot đọc URL database từ biến môi trường và ghi log ra stdout.",
+      "related": ["stateless", "backing-service", "dev-prod-parity"],
+      "topics": ["twelve-factor"]
+    },
+    {
+      "id": "release-twelve-factor",
+      "term": "Release (Twelve-Factor)",
+      "meaning": "Tổ hợp bất biến của một artifact đã build và cấu hình của một môi trường, có id riêng. Rollback là chạy lại release cũ.",
+      "example": "Image `orders:3f9c2e1` cộng ConfigMap của prod là release v42.",
+      "related": ["twelve-factor-app", "reproducible-build"],
+      "topics": ["twelve-factor"]
+    },
+    {
+      "id": "backing-service",
+      "term": "Backing service",
+      "meaning": "Dịch vụ app dùng qua mạng như database, queue, cache, SMTP; được gắn vào qua URL và credential trong cấu hình nên đổi được mà không sửa code.",
+      "example": "Đổi PostgreSQL tự chạy sang RDS chỉ bằng cách đổi `SPRING_DATASOURCE_URL`.",
+      "related": ["twelve-factor-app", "stateless"],
+      "topics": ["twelve-factor"]
+    },
+    {
+      "id": "disposability",
+      "term": "Disposability",
+      "meaning": "Process có thể được tạo và huỷ bất kỳ lúc nào: khởi động nhanh, tắt êm khi nhận SIGTERM, và chết đột ngột cũng không mất việc.",
+      "example": "Worker nhận SIGTERM thì ngừng lấy message mới, xử lý xong message đang cầm rồi thoát.",
+      "related": ["twelve-factor-app", "graceful-degradation"],
+      "topics": ["twelve-factor"]
+    },
+    {
+      "id": "port-binding",
+      "term": "Port binding",
+      "meaning": "App tự mở port để phục vụ HTTP thay vì được deploy vào một web server hay application server có sẵn.",
+      "example": "Fat jar Spring Boot chứa Tomcat nhúng và tự nghe port 8080.",
+      "related": ["fat-jar", "twelve-factor-app"],
+      "topics": ["twelve-factor"]
+    },
+    {
+      "id": "dev-prod-parity",
+      "term": "Dev/prod parity",
+      "meaning": "Giữ dev, staging và prod giống nhau về thời gian (deploy thường xuyên), con người (người viết code cũng deploy) và công cụ (cùng loại backing service).",
+      "example": "Test dùng PostgreSQL qua Testcontainers thay vì H2 vì prod chạy PostgreSQL.",
+      "related": ["twelve-factor-app", "testcontainers"],
+      "topics": ["twelve-factor"]
     }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "config-test", "front": "Phép thử của Twelve-Factor để biết cấu hình đã tách khỏi code chưa?", "back": "Có thể mở mã nguồn ngay bây giờ mà không lộ credential nào không. Mọi thứ khác nhau giữa các lần deploy phải nằm ngoài artifact." },
+    { "id": "release", "front": "Release trong Twelve-Factor gồm những gì?", "back": "Artifact đã build cộng cấu hình của một môi trường, có id riêng và bất biến. Rollback là chạy lại release cũ, không build lại." },
+    { "id": "sticky-violation", "front": "Vì sao sticky session vi phạm Twelve-Factor?", "back": "Nó giữ trạng thái người dùng trên một process. Process chết, scale xuống hay deploy là mất trạng thái, và tải chia không đều." },
+    { "id": "backing-service", "front": "Backing service là gì và gắn vào app thế nào?", "back": "Dịch vụ app dùng qua mạng (database, queue, cache, SMTP). Gắn qua URL và credential trong cấu hình, đổi dịch vụ không cần sửa code." },
+    { "id": "disposability", "front": "Disposability đòi hỏi gì ở process?", "back": "Khởi động nhanh, nhận SIGTERM thì ngừng nhận việc mới và làm xong việc dở, và chết đột ngột cũng không mất việc (job nằm trong queue)." },
+    { "id": "parity-gaps", "front": "Ba khoảng cách mà dev/prod parity muốn thu hẹp?", "back": "Thời gian (deploy sau vài giờ), con người (người viết code cũng deploy) và công cụ (cùng loại backing service ở mọi môi trường)." },
+    { "id": "logs-stream", "front": "Twelve-Factor muốn app xử lý log thế nào?", "back": "Ghi dòng sự kiện ra stdout, không tự mở hay xoay file. Nền tảng gom, định tuyến và lưu log." },
+    { "id": "port-binding", "front": "Port binding nghĩa là gì với app Spring Boot?", "back": "App tự mở port HTTP nhờ Tomcat nhúng trong fat jar, thay vì đóng WAR deploy vào application server có sẵn." },
+    { "id": "one-instance-dev", "front": "Vì sao lỗi giữ trạng thái cục bộ thường không lộ ở dev và staging?", "back": "Môi trường đó hay chỉ chạy một instance, nên mọi request đều tới đúng nơi giữ trạng thái. Chạy staging ít nhất 2 replica để bắt lỗi này." }
+  ]
+}

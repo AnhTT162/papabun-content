@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "rds-responsibility",
+      "kind": "single",
+      "prompt": "Team dùng RDS PostgreSQL. Snapshot database bị chia sẻ công khai do một lệnh sai, dữ liệu khách hàng bị tải về. Theo shared responsibility model, đây là trách nhiệm của ai?",
+      "options": [
+        "Khách hàng, vì quyền chia sẻ snapshot là cấu hình trong cloud",
+        "AWS, vì RDS là dịch vụ managed nên AWS lo bảo mật dữ liệu",
+        "Cả hai chia đôi, vì snapshot nằm trên hạ tầng của AWS",
+        "AWS, vì đáng lẽ AWS phải chặn mọi snapshot công khai"
+      ],
+      "answer": 0,
+      "explanation": "Dịch vụ managed chỉ chuyển cho AWS việc vận hành engine, vá lỗi, phần cứng. Ai được đọc dữ liệu, snapshot chia sẻ cho ai, mã hoá bằng khoá nào vẫn là cấu hình phía khách hàng, tức \"security in the cloud\". Dữ liệu nằm trên hạ tầng AWS không làm trách nhiệm cấu hình chuyển sang AWS."
+    },
+    {
+      "id": "az-failure-impact",
+      "kind": "single",
+      "prompt": "Hệ thống gồm load balancer, 4 instance app chia đều 2 AZ (mỗi instance chạy ở khoảng 60% CPU), RDS Multi-AZ và **một** NAT gateway ở AZ-a cho app gọi API thanh toán bên ngoài. AZ-a sập. Điều gì sẽ hỏng?",
+      "options": [
+        "Load balancer ngừng nhận request vì có node ở AZ-a",
+        "Database mất dữ liệu đã commit vì primary ở AZ-a",
+        "App ở AZ-b không gọi được API thanh toán và quá tải",
+        "Không có gì hỏng vì mọi thành phần đều đã Multi-AZ"
+      ],
+      "answer": 2,
+      "explanation": "NAT gateway là tài nguyên zonal: route của subnet ở AZ-b trỏ vào NAT ở AZ-a thì mất đường ra Internet. 2 instance còn lại phải gánh tải của 4, tức khoảng 120% CPU mỗi instance. Load balancer managed có node ở các AZ khác nên vẫn chạy. RDS Multi-AZ ghi đồng bộ sang standby nên dữ liệu đã commit còn nguyên; chỉ mất 60–120 giây failover. Cách đúng: mỗi AZ một NAT gateway, và tính capacity sao cho mất một AZ vẫn đủ."
+    },
+    {
+      "id": "pricing-stopped",
+      "kind": "single",
+      "prompt": "Môi trường dev gồm 10 instance EC2, mỗi instance một volume gp3 500 GB và một Elastic IP. Team dừng (stop) toàn bộ instance ngoài giờ để tiết kiệm. Khoản nào **vẫn** tính tiền trong lúc dừng?",
+      "options": [
+        "Không còn khoản nào vì instance đã dừng",
+        "Chỉ giờ chạy instance, tính ở mức giảm",
+        "Volume EBS theo GB đã cấp và các Elastic IP",
+        "Chỉ phần dung lượng thực sự đã ghi trên volume"
+      ],
+      "answer": 2,
+      "explanation": "Cloud tính theo tài nguyên đã cấp. Instance dừng không tính giờ máy, nhưng volume EBS vẫn tính theo 500 GB đã cấp (không theo dung lượng đã ghi), và mỗi Elastic IP đang giữ vẫn tính theo giờ (IPv4 public tự gán thì bị trả lại khi dừng). Muốn tiết kiệm thật cho môi trường tạm: tạo lại bằng IaC khi cần, xoá khi xong."
+    },
+    {
+      "id": "region-choice",
+      "kind": "single",
+      "prompt": "Một ứng dụng thương mại điện tử cho người dùng ở Việt Nam chọn region AWS. Lý do nào **không** phải là tiêu chí chọn region?",
+      "options": [
+        "Latency từ người dùng tới region",
+        "Quy định về lưu trữ dữ liệu cá nhân",
+        "Region đó đã có đủ dịch vụ cần dùng",
+        "Region có tên gần thành phố của người dùng"
+      ],
+      "answer": 3,
+      "explanation": "Tên region chỉ là nhãn; thứ cần đo là latency thật từ mạng của người dùng tới region, có khi region xa hơn trên bản đồ lại nhanh hơn nhờ tuyến cáp. Latency, quy định lưu trữ dữ liệu cá nhân, dịch vụ có sẵn ở region đó và giá mới là tiêu chí chọn region."
+    }
+  ]
+}

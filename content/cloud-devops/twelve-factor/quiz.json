@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "in-memory-limit-output",
+      "kind": "output",
+      "prompt": "Service giới hạn mỗi người dùng 100 request (đếm trong bộ nhớ của app). Prod chạy 3 pod sau load balancer chia luân phiên. Đoạn mô phỏng sau gửi 400 request của cùng một người dùng. Chương trình in ra gì?",
+      "code": "static class Pod {\n    private final Map<String, Integer> counts = new HashMap<>();   // bộ đếm của từng pod\n    boolean allow(String user) { return counts.merge(user, 1, Integer::sum) <= 100; }\n}\n\npublic static void main(String[] args) {\n    List<Pod> pods = List.of(new Pod(), new Pod(), new Pod());\n    int accepted = 0;\n    for (int i = 0; i < 400; i++) {\n        Pod pod = pods.get(i % pods.size());          // chia luân phiên\n        if (pod.allow(\"user-42\")) accepted++;\n    }\n    System.out.println(\"accepted=\" + accepted);\n}",
+      "options": [
+        "accepted=100",
+        "accepted=300",
+        "accepted=400",
+        "accepted=133"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi pod có bộ đếm riêng và nhận khoảng 133 request, nên mỗi pod cho qua 100: tổng 300, gấp ba giới hạn mong muốn. Trên máy dev chạy một instance thì kết quả là 100 nên test không bắt được. Trạng thái cần đúng trên toàn hệ thống (counter, session, file) phải nằm ở backing service dùng chung như Redis; thuật toán ở bài Rate limiting."
+    },
+    {
+      "id": "build-once",
+      "kind": "single",
+      "prompt": "Pipeline build jar bằng `mvn package -Pstaging` cho staging, sau khi test xong thì chạy lại `mvn package -Pprod` cho prod; profile Maven lọc resource để nhúng URL database và cờ tính năng vào jar. Vấn đề chính theo Twelve-Factor là gì?",
+      "options": [
+        "Artifact chạy prod không phải artifact đã được test ở staging",
+        "Build hai lần làm pipeline chậm gấp đôi so với cần thiết",
+        "Maven profile không hỗ trợ lọc file YAML của Spring Boot",
+        "URL database phải nằm trong `application.yml` thay vì profile"
+      ],
+      "answer": 0,
+      "explanation": "Cấu hình nằm trong artifact nên mỗi môi trường cần một lần build, và jar lên prod chưa từng được test: dependency có thể được resolve khác, code có thể đã đổi giữa hai lần build. Twelve-Factor tách build (một artifact) khỏi release (artifact + cấu hình của môi trường). Build một lần, cấu hình từ biến môi trường, ConfigMap hay secret manager. Tốc độ pipeline chỉ là hệ quả phụ."
+    },
+    {
+      "id": "logs-stdout",
+      "kind": "single",
+      "prompt": "App chạy trong Kubernetes. Cấu hình Logback chỉ có một `RollingFileAppender` ghi vào `/app/logs/app.log` trong container (không còn appender console), xoay vòng 100 MB × 30 file. Hậu quả nào **không** đến từ cách làm này?",
+      "options": [
+        "`kubectl logs` chỉ thấy vài dòng lúc khởi động",
+        "Pod bị evict khi ổ tạm của node bị log lấp đầy",
+        "Log mất hết khi pod bị thay trong lần deploy sau",
+        "Mỗi dòng log ghi xuống đĩa nên request chậm hẳn"
+      ],
+      "answer": 3,
+      "explanation": "Runtime và agent gom log của Kubernetes đọc stdout/stderr; log ghi vào file trong container thì `kubectl logs` và agent không thấy, file nằm trên filesystem có thể ghi của container (tính vào ephemeral storage của pod, có thể bị evict) và mất khi pod bị thay. Appender file của Logback mặc định `immediateFlush=true`: đẩy từng dòng xuống hệ điều hành nhưng không fsync, nên không làm request chậm hẳn; vấn đề là log không đi đâu cả. Twelve-Factor: app chỉ ghi dòng sự kiện ra stdout, nền tảng lo gom và lưu."
+    },
+    {
+      "id": "migration-admin",
+      "kind": "single",
+      "prompt": "Deployment 6 replica chạy Flyway lúc khởi động. Một migration mới thêm index trên bảng 200 triệu dòng, mất khoảng 25 phút. Liveness probe bắt đầu sau 60 giây. Cách xử lý nào hợp lý nhất?",
+      "options": [
+        "Tăng `initialDelaySeconds` của liveness probe lên 30 phút",
+        "Tách migration thành Job chạy trước deploy, cùng image",
+        "Giảm Deployment còn 1 replica để chỉ một pod chạy migration",
+        "Tắt khoá của Flyway để 6 pod cùng chạy migration cho nhanh"
+      ],
+      "answer": 1,
+      "explanation": "Đây là admin process: chạy một lần, cùng release, nhưng không nên chặn mọi pod khởi động. Trong lúc một pod giữ khoá chạy migration, 5 pod kia chờ, và liveness probe giết pod trước khi xong, có thể giữa chừng migration. Job chạy trước deploy tách hai việc. Tăng delay 30 phút làm pod treo thật cũng không bị phát hiện suốt nửa giờ (khởi động chậm thì `startupProbe` mới là công cụ đúng, nhưng vẫn không giải quyết việc 5 pod ngồi chờ); giảm replica làm mất capacity; bỏ khoá thì hai pod cùng chạy một migration. Với PostgreSQL, index trên bảng lớn nên tạo bằng `CREATE INDEX CONCURRENTLY` để không khoá ghi."
+    }
+  ]
+}

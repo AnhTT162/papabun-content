@@ -1,0 +1,155 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Web app chạy trên hai AZ, mất một AZ",
+  "nodes": [
+    {
+      "id": "users",
+      "label": "Người dùng",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "alb",
+      "label": "Load balancer (region)",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "app-a",
+      "label": "App AZ-a",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "app-b",
+      "label": "App AZ-b",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "db-a",
+      "label": "DB primary AZ-a",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "db-b",
+      "label": "DB standby AZ-b",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "from": "users",
+      "to": "alb",
+      "label": "HTTPS"
+    },
+    {
+      "id": "alb-app-a",
+      "from": "alb",
+      "to": "app-a",
+      "label": "health check OK"
+    },
+    {
+      "id": "alb-app-b",
+      "from": "alb",
+      "to": "app-b"
+    },
+    {
+      "id": "app-a-db",
+      "from": "app-a",
+      "to": "db-a"
+    },
+    {
+      "id": "app-b-db",
+      "from": "app-b",
+      "to": "db-a",
+      "label": "qua AZ: tính phí"
+    },
+    {
+      "id": "db-repl",
+      "from": "db-a",
+      "to": "db-b",
+      "label": "ghi đồng bộ"
+    },
+    {
+      "id": "app-b-db-b",
+      "from": "app-b",
+      "to": "db-b",
+      "label": "DNS trỏ sang đây"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Người dùng gọi vào load balancer. Load balancer managed là tài nguyên của region, có node ở mọi AZ đã bật.",
+      "show": [
+        "users",
+        "alb",
+        "users-alb"
+      ],
+      "highlight": [
+        "users-alb"
+      ]
+    },
+    {
+      "caption": "App chạy ở hai AZ. Load balancer chỉ gửi request tới instance qua được health check.",
+      "show": [
+        "app-a",
+        "app-b",
+        "alb-app-a",
+        "alb-app-b"
+      ],
+      "highlight": [
+        "alb-app-a"
+      ]
+    },
+    {
+      "caption": "Database Multi-AZ: mọi app ghi vào primary. Request từ app ở AZ-b sang primary ở AZ-a là traffic giữa AZ, tính phí mỗi GB.",
+      "show": [
+        "db-a",
+        "app-a-db",
+        "app-b-db"
+      ],
+      "highlight": [
+        "app-b-db"
+      ]
+    },
+    {
+      "caption": "RDS Multi-AZ DB instance: primary ghi đồng bộ sang standby ở AZ khác trước khi trả commit. Standby không nhận đọc, chỉ chờ thay thế.",
+      "show": [
+        "db-b",
+        "db-repl"
+      ],
+      "highlight": [
+        "db-repl"
+      ]
+    },
+    {
+      "caption": "AZ-a mất điện: health check của app AZ-a thất bại, load balancer dồn hết traffic sang AZ-b. AZ-b phải đủ sức gánh toàn bộ tải.",
+      "show": [],
+      "highlight": [
+        "app-a",
+        "alb-app-b"
+      ]
+    },
+    {
+      "caption": "Failover: standby thành primary, DNS endpoint đổi sang nó, thường mất 60–120 giây. Kết nối tới primary cũ đứt; app kết nối lại theo tên DNS, không giữ IP cũ.",
+      "show": [
+        "app-b-db-b"
+      ],
+      "highlight": [
+        "app-b-db-b",
+        "db-b",
+        "db-a"
+      ]
+    }
+  ]
+}
