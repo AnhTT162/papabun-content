@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "page-or-not",
+      "kind": "single",
+      "prompt": "Alert nào nên gọi người trực lúc 3 giờ sáng?",
+      "options": [
+        "Tỉ lệ checkout thành công tụt khiến burn rate vượt 14,4 trong cả 1 giờ và 5 phút",
+        "CPU của một node Kubernetes vượt 90% trong 10 phút liên tục",
+        "Chứng chỉ TLS của API công khai sẽ hết hạn sau 14 ngày nữa",
+        "Một pod của service đặt hàng restart 3 lần trong đêm"
+      ],
+      "answer": 0,
+      "explanation": "Gọi người khi người dùng đang bị ảnh hưởng và cần hành động ngay: burn rate nhanh trên SLO checkout đúng là như vậy. CPU cao của một node và pod restart là nguyên nhân có thể có, hệ thống thường tự bù (pod khác gánh tải); để trên dashboard hoặc ticket. Chứng chỉ hết hạn sau 14 ngày cần xử lý trong giờ làm việc: tạo ticket."
+    },
+    {
+      "id": "mitigate-first",
+      "kind": "single",
+      "prompt": "Lỗi checkout tăng ngay sau khi deploy một bản có migration chỉ thêm cột (tương thích ngược). Bạn đã nghi một đoạn code mới gây lỗi nhưng chưa chắc. Nên làm gì trước?",
+      "options": [
+        "Rollback về bản trước, giữ lại bằng chứng, rồi điều tra",
+        "Đọc diff của bản mới để tìm dòng gây lỗi rồi sửa tiến",
+        "Thêm log chi tiết vào đoạn nghi ngờ rồi deploy lại",
+        "Rollback ngay, không cần giữ log hay dump vì đã có bản cũ"
+      ],
+      "answer": 0,
+      "explanation": "Cầm máu trước, tìm nguyên nhân sau: rollback về bản đã chạy tốt là thao tác nhanh và đã biết, và an toàn vì migration chỉ thêm cột. Rollback nhầm thì tốn vài phút, còn mỗi phút chờ xác định chắc thì người dùng tiếp tục lỗi. Sửa tiến hay thêm log đều cần build, review, deploy, lâu hơn nhiều. Chụp lại log, metric, dump trước khi rollback để còn điều tra. Rollback mà không chụp lại bằng chứng thì sau này không biết lỗi do đâu."
+    },
+    {
+      "id": "roles",
+      "kind": "single",
+      "prompt": "Sự cố SEV1, 9 người vào kênh, ai cũng đề xuất và thử lệnh trên production. Cách tổ chức nào đúng nhất?",
+      "options": [
+        "Một incident commander điều phối, một người thao tác, một người liên lạc",
+        "Người giỏi nhất về hệ thống vừa điều phối vừa tự gõ mọi lệnh",
+        "Người trực chính tự xử lý, những người khác rời kênh",
+        "Mỗi người thử một giả thuyết, báo kết quả cho cả kênh"
+      ],
+      "answer": 0,
+      "explanation": "Tách vai: incident commander giữ bức tranh chung và quyết định, một người duy nhất thao tác lên hệ thống để không có thay đổi chồng chéo, một người cập nhật stakeholder để người xử lý không bị gián đoạn. Người giỏi nhất nên làm việc kỹ thuật, không vừa điều phối vừa gõ lệnh. Thử song song trên production tạo thêm thay đổi khó lần ngược; bỏ phiếu thì chậm."
+    },
+    {
+      "id": "postmortem-human-error",
+      "kind": "single",
+      "prompt": "Một kỹ sư chạy nhầm script xoá dữ liệu trên production thay vì staging. Kết luận postmortem nào hữu ích nhất?",
+      "options": [
+        "Vì sao script chạy được trên prod không cần xác nhận",
+        "Kỹ sư thiếu cẩn thận, cần đào tạo lại và nhắc cả đội",
+        "Thêm cảnh báo in đậm trong script rồi cho cả đội đọc lại",
+        "Chỉ người trưởng nhóm được chạy script trên production"
+      ],
+      "answer": 0,
+      "explanation": "Postmortem không đổ lỗi hỏi hệ thống đã cho phép lỗi xảy ra thế nào: cùng thông tin đăng nhập cho hai môi trường, prompt không phân biệt, không có dry-run hay xác nhận, không có backup đã thử restore. Mỗi câu trả lời là một việc phòng ngừa có thể kiểm chứng. Đào tạo lại, thêm dòng cảnh báo hay giới hạn cho một người đều dựa vào con người không bao giờ sai, và người trưởng nhóm cũng có lúc gõ nhầm."
+    },
+    {
+      "id": "oncall-staffing",
+      "kind": "single",
+      "prompt": "Một đội 4 người trực 24/7 theo tuần, mỗi tuần nhận trung bình 15 lần gọi, phần lớn ban đêm. Theo hướng dẫn của sách SRE (Google), nhận định nào đúng nhất?",
+      "options": [
+        "Quá tải: cần thêm người hoặc giảm số lần gọi bằng sửa alert và hệ thống",
+        "Ổn: 15 lần mỗi tuần chỉ khoảng 2 lần mỗi ngày",
+        "Ổn nếu trả phụ cấp trực đủ cao cho người trực",
+        "Quá tải: nên tắt alert ban đêm và xử lý vào sáng hôm sau"
+      ],
+      "answer": 0,
+      "explanation": "Sách SRE đặt trần khoảng 25% thời gian cho on-call; với trực chính và trực phụ theo tuần, một đội một địa điểm cần ít nhất 8 người, nên 4 người là mỗi người trực một nửa thời gian. Mỗi sự cố kèm việc theo sau tốn khoảng 6 giờ, nên tối đa khoảng 2 sự cố mỗi ca 12 giờ; 15 lần gọi mỗi tuần, dồn vào ban đêm, là dấu hiệu alert ồn hoặc hệ thống cần sửa. Phụ cấp không làm người trực ngủ đủ; tắt alert ban đêm bỏ mặc người dùng."
+    }
+  ]
+}

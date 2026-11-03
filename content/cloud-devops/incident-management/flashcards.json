@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "page-criteria", "front": "Alert nào đáng gọi người?", "back": "Người dùng đang hoặc sắp bị ảnh hưởng và cần hành động trong vài phút. Còn lại là ticket hoặc dashboard." },
+    { "id": "symptom-vs-cause", "front": "Vì sao alert theo triệu chứng tốt hơn theo nguyên nhân?", "back": "Triệu chứng (lỗi, chậm với người dùng) luôn đáng quan tâm; nguyên nhân (CPU cao, pod restart) nhiều khi hệ thống tự bù được và gây báo động giả." },
+    { "id": "alert-quality", "front": "Bốn thông số đánh giá một luật alert theo SRE Workbook?", "back": "Precision, recall, thời gian phát hiện, thời gian alert tắt sau khi hết lỗi." },
+    { "id": "oncall-load", "front": "Kỹ sư SRE nên dành tối đa bao nhiêu thời gian cho on-call theo sách SRE của Google?", "back": "Khoảng 25%; với trực chính và phụ theo tuần, đội một địa điểm cần ít nhất 8 người." },
+    { "id": "incidents-per-shift", "front": "Tối đa bao nhiêu sự cố mỗi ca trực 12 giờ, và vì sao?", "back": "Khoảng 2, vì mỗi sự cố cùng việc theo sau (phân tích, sửa, postmortem) tốn khoảng 6 giờ." },
+    { "id": "incident-roles", "front": "Các vai khi xử lý sự cố lớn?", "back": "Incident commander điều phối và quyết định, operations thao tác hệ thống, communications cập nhật stakeholder, planning lo việc dài hạn." },
+    { "id": "mitigation-first", "front": "Vì sao cầm máu trước, tìm nguyên nhân sau?", "back": "Rollback, tắt flag, chuyển traffic khôi phục người dùng trong vài phút; tìm nguyên nhân có thể mất hàng giờ." },
+    { "id": "severity", "front": "Mức độ sự cố nên định nghĩa theo gì?", "back": "Theo ảnh hưởng tới người dùng và dữ liệu. Mức độ quyết định ai được gọi, nhịp cập nhật và có cần postmortem không." },
+    { "id": "blameless", "front": "Postmortem không đổ lỗi hỏi câu gì?", "back": "Vì sao hệ thống cho phép lỗi xảy ra, vì sao phát hiện muộn, vì sao khôi phục chậm; không hỏi ai có lỗi." },
+    { "id": "action-items", "front": "Việc phòng ngừa sau postmortem cần gì để có tác dụng?", "back": "Cụ thể, có người phụ trách, có hạn, được theo dõi tới khi xong." }
+  ]
+}

@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre", "evolutionary-architecture", "architecture-review"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre", "evolutionary-architecture", "architecture-review", "incident-management"]
     },
     {
       "id": "compensating-transaction",
@@ -5661,7 +5661,7 @@
       "meaning": "Cầm máu: hành động khôi phục dịch vụ cho người dùng trước khi biết nguyên nhân gốc, như rollback, tắt feature flag, chuyển hệ dự phòng.",
       "example": "Bật flag chuyển thanh toán sang provider dự phòng trong lúc provider chính chậm.",
       "related": ["feature-flag", "runbook"],
-      "topics": ["troubleshooting-mindset"]
+      "topics": ["troubleshooting-mindset", "incident-management"]
     },
     {
       "id": "blast-radius",
@@ -5685,7 +5685,7 @@
       "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
       "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
       "related": ["mitigation", "postmortem"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre", "team-topologies"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre", "team-topologies", "incident-management"]
     },
     {
       "id": "postmortem",
@@ -5693,7 +5693,7 @@
       "meaning": "Bản phân tích sau sự cố: dòng thời gian, ảnh hưởng, nguyên nhân và các yếu tố góp phần, hành động phòng ngừa có người phụ trách. Viết theo tinh thần không đổ lỗi cho cá nhân.",
       "example": "Hành động: thêm bulkhead cho lời gọi provider, hạn hai tuần, người phụ trách: đội Payment.",
       "related": ["runbook"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre", "incident-management"]
     },
     {
       "id": "distributed-tracing",
@@ -5749,7 +5749,7 @@
       "meaning": "Phần được phép hỏng theo SLO: 1 trừ mục tiêu SLO, tính trên cửa sổ thời gian. Dùng để alert và để quyết định nên đẩy tính năng hay ưu tiên độ ổn định.",
       "example": "SLO 99,9% trong 30 ngày: được hỏng 0,1% request, tương đương khoảng 43 phút.",
       "related": ["slo", "burn-rate"],
-      "topics": ["observability", "nfr-quality-attributes", "reliability-sre"]
+      "topics": ["observability", "nfr-quality-attributes", "reliability-sre", "incident-management"]
     },
     {
       "id": "burn-rate",
@@ -5757,7 +5757,7 @@
       "meaning": "Tốc độ tiêu error budget so với mức tiêu đều vừa hết budget đúng cuối cửa sổ SLO. Burn rate 1 là vừa đủ, 10 là cạn sau một phần mười thời gian.",
       "example": "SLO 99,9%, tỉ lệ lỗi 1%: burn rate 10, budget 30 ngày cạn sau 3 ngày.",
       "related": ["error-budget", "slo"],
-      "topics": ["observability", "reliability-sre", "evolutionary-architecture"]
+      "topics": ["observability", "reliability-sre", "evolutionary-architecture", "incident-management"]
     },
     {
       "id": "structured-logging",
@@ -8581,7 +8581,7 @@
       "meaning": "Coordinated Restore at Checkpoint: chụp tiến trình JVM đang chạy (heap, mã JIT) xuống file bằng CRIU rồi restore trong vài chục mili giây. Chỉ có trên Linux, ở các bản JDK có kèm CRaC; ứng dụng phải đóng và mở lại kết nối quanh lúc chụp.",
       "example": "`jcmd <pid> JDK.checkpoint` với JVM chạy `-XX:CRaCCheckpointTo=/snap`; sau đó `java -XX:CRaCRestoreFrom=/snap`.",
       "related": ["cold-start", "jit-warmup"],
-      "topics": ["startup-native"]
+      "topics": ["startup-native", "serverless"]
     },
     {
       "id": "closed-world-assumption",
@@ -8605,7 +8605,7 @@
       "meaning": "Thời gian từ lúc nền tảng tạo instance mới (pod, function) tới khi nó trả lời request đầu tiên, gồm cả khởi động runtime và ứng dụng. Quan trọng nhất khi scale to zero.",
       "example": "Function Java trên JVM có cold start vài giây; bản native image hay có snapshot thì dưới một giây.",
       "related": ["native-image", "crac"],
-      "topics": ["startup-native", "architecture-styles"]
+      "topics": ["startup-native", "architecture-styles", "serverless"]
     },
     {
       "id": "startup-probe",
@@ -9533,7 +9533,7 @@
       "meaning": "Cách chạy quy trình nhiều bước mà engine ghi lại kết quả từng bước, nên process chết thì chạy tiếp từ bước dở chứ không làm lại từ đầu; quy trình có thể chờ nhiều ngày. Temporal là ví dụ.",
       "example": "Quy trình hoàn tiền: gọi cổng thanh toán, chờ tối đa 3 ngày để đối soát, rồi gửi thông báo, vẫn đúng dù worker khởi động lại giữa chừng.",
       "related": ["saga"],
-      "topics": ["design-job-scheduler"]
+      "topics": ["design-job-scheduler", "serverless"]
     },
     {
       "id": "url-frontier",
@@ -10221,7 +10221,7 @@
       "meaning": "Người điều phối khi có sự cố: phân vai, quyết định cầm máu (rollback, tắt tính năng), đảm bảo có cập nhật định kỳ cho stakeholder. Thường không tự cầm terminal debug.",
       "example": "IC giao một senior debug, một người cập nhật cho chăm sóc khách hàng mỗi 30 phút, và quyết rollback lúc 14:20.",
       "related": ["mitigation", "postmortem", "runbook"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "incident-management"]
     },
     {
       "id": "engineering-manager",
@@ -10709,7 +10709,7 @@
       "meaning": "Mô hình không tự quản lý server: FaaS (function chạy theo sự kiện, như AWS Lambda) và BaaS (dịch vụ managed như S3, DynamoDB). Trả tiền theo lần chạy và thời gian chạy.",
       "example": "Message vào SQS kích hoạt một Lambda xuất hoá đơn; không có máy nào chạy khi không có vé bán ra.",
       "related": ["cold-start", "reserved-concurrency"],
-      "topics": ["architecture-styles"]
+      "topics": ["architecture-styles", "serverless"]
     },
     {
       "id": "data-grid",
@@ -10725,7 +10725,7 @@
       "meaning": "Số concurrent execution dành riêng và đồng thời là trần cho một Lambda function. Với nguồn SQS nên dùng maximum concurrency của event source mapping để tránh throttle đẩy message vào DLQ.",
       "example": "Reserved concurrency 100 với mỗi lần 2 giây giới hạn khoảng 50 lần gọi mỗi giây.",
       "related": ["serverless", "littles-law"],
-      "topics": ["architecture-styles"]
+      "topics": ["architecture-styles", "serverless"]
     },
     {
       "id": "enterprise-integration-patterns",
@@ -13637,7 +13637,7 @@
       "meaning": "Function as a Service: chạy từng function theo sự kiện, nền tảng tự scale và tính tiền theo lần gọi và thời gian chạy.",
       "example": "AWS Lambda chạy một function mỗi khi có file mới trong bucket S3.",
       "related": ["serverless", "paas"],
-      "topics": ["cloud-fundamentals"]
+      "topics": ["cloud-fundamentals", "serverless"]
     },
     {
       "id": "cloud-region",
@@ -14334,6 +14334,38 @@
       "example": "Application `orders-prod` trỏ tới `deploy/orders/overlays/prod` với `selfHeal: true`.",
       "related": ["gitops", "kustomize", "helm"],
       "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "alert-fatigue",
+      "term": "Alert fatigue",
+      "meaning": "Tình trạng người trực nhận quá nhiều alert vô ích tới mức quen bỏ qua, kể cả alert thật.",
+      "example": "Kênh nhận 60 alert mỗi ngày, 55 cái tự tắt; khi checkout sập thật, không ai nhìn thấy trong 20 phút.",
+      "related": ["on-call", "runbook"],
+      "topics": ["incident-management"]
+    },
+    {
+      "id": "on-call",
+      "term": "On-call",
+      "meaning": "Lịch trực để luôn có người nhận alert và phản ứng trong thời gian đã cam kết, thường gồm người trực chính, trực phụ và đường escalation.",
+      "example": "Trực theo tuần, phản hồi trong 5 phút với dịch vụ trực tiếp người dùng.",
+      "related": ["incident-commander", "alert-fatigue"],
+      "topics": ["incident-management"]
+    },
+    {
+      "id": "incident-severity",
+      "term": "Mức độ sự cố (SEV)",
+      "meaning": "Phân loại sự cố theo ảnh hưởng tới người dùng và dữ liệu; quyết định ai được gọi, nhịp cập nhật và có cần postmortem hay không.",
+      "example": "SEV1: checkout ngừng với đa số người dùng; SEV3: một báo cáo nội bộ chậm, có cách vòng.",
+      "related": ["incident-commander", "postmortem"],
+      "topics": ["incident-management"]
+    },
+    {
+      "id": "provisioned-concurrency",
+      "term": "Provisioned concurrency",
+      "meaning": "Số execution environment của một Lambda function được khởi tạo sẵn và giữ nóng, nên lời gọi trong giới hạn đó không gặp cold start; tính tiền theo giờ cả khi không có lời gọi.",
+      "example": "Giữ sẵn 20 môi trường cho API đặt hàng từ 8 giờ tới 22 giờ bằng scheduled scaling.",
+      "related": ["cold-start", "reserved-concurrency"],
+      "topics": ["serverless"]
     }
   ]
 }

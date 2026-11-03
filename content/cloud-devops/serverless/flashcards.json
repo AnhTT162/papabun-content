@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "one-at-a-time", "front": "Một execution environment của Lambda xử lý bao nhiêu lời gọi cùng lúc?", "back": "Một. 200 lời gọi đồng thời là 200 môi trường, và 200 kết nối database nếu mỗi môi trường mở một kết nối." },
+    { "id": "cold-start", "front": "Cold start của Lambda gồm những gì?", "back": "Pha Init: tạo môi trường, tải code, khởi động runtime, chạy phần khởi tạo ngoài handler. Với Java gồm cả JVM và framework." },
+    { "id": "reuse", "front": "Vì sao tạo client SDK và kết nối ngoài handler?", "back": "Môi trường được giữ lại và tái dùng cho lời gọi sau, nên khởi tạo một lần dùng nhiều lần." },
+    { "id": "limits", "front": "Ba giới hạn Lambda hay chặn thiết kế?", "back": "Timeout 15 phút, payload đồng bộ 6 MB, concurrency mặc định 1.000 mỗi region cho cả tài khoản." },
+    { "id": "memory-cpu", "front": "Bộ nhớ của Lambda liên quan CPU thế nào?", "back": "CPU tỉ lệ với bộ nhớ; 1.769 MB tương đương một vCPU. Tăng bộ nhớ thường làm chạy và khởi động nhanh hơn." },
+    { "id": "snapstart", "front": "SnapStart làm gì và bẫy chính là gì?", "back": "Chụp môi trường sau Init và khôi phục cho môi trường mới. Bẫy: mọi bản khôi phục cùng seed, ID, token; kết nối mở lúc Init đã chết." },
+    { "id": "provisioned", "front": "Provisioned concurrency khác reserved concurrency thế nào?", "back": "Provisioned giữ sẵn môi trường đã Init, tính tiền cả lúc rảnh. Reserved chỉ giữ chỗ và đặt trần concurrency, không làm nóng gì." },
+    { "id": "async-retry", "front": "Lời gọi bất đồng bộ lỗi thì Lambda làm gì?", "back": "Tự thử lại 2 lần, giữ sự kiện tối đa 6 giờ, rồi gửi tới destination khi thất bại hoặc DLQ. Handler phải idempotent." },
+    { "id": "cost-crossover", "front": "Khi nào Lambda đắt hơn container?", "back": "Khi tải đều và cao: với API 80 ms ở 1 GB, trên khoảng 26 request/giây trung bình đã đắt hơn 3 task Fargate arm64 1 vCPU/2 GB." },
+    { "id": "long-jobs", "front": "Việc dài hơn 15 phút làm thế nào trên AWS?", "back": "Chia nhỏ qua SQS, điều phối bằng Step Functions hoặc Lambda durable functions, hoặc chạy task Fargate theo lịch." }
+  ]
+}

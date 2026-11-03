@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "incident-management",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Alerting, on-call & postmortem",
+  "summary": "Alert theo triệu chứng và SLO, gọi người hay tạo ticket, đo chất lượng alert; on-call bền vững; mức độ sự cố và vai trò khi xử lý; cầm máu trước, tìm nguyên nhân sau; postmortem không đổ lỗi với việc phòng ngừa được theo dõi tới khi xong.",
+  "level": "mid",
+  "order": 13,
+  "minutes": 14,
+  "prerequisites": ["observability", "troubleshooting-mindset"],
+  "terms": ["slo", "burn-rate", "runbook", "alert-fatigue", "on-call", "incident-severity", "incident-commander", "mitigation", "postmortem", "error-budget"],
+  "references": [
+    { "title": "Google SRE Book: Being On-Call", "url": "https://sre.google/sre-book/being-on-call/" },
+    { "title": "Google SRE Book: Managing Incidents", "url": "https://sre.google/sre-book/managing-incidents/" },
+    { "title": "Google SRE Book: Postmortem Culture", "url": "https://sre.google/sre-book/postmortem-culture/" },
+    { "title": "Google SRE Workbook: Alerting on SLOs", "url": "https://sre.google/workbook/alerting-on-slos/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Kể một sự cố bạn từng xử lý.\" Trả lời theo khung: bối cảnh và ảnh hưởng (bao nhiêu người, bao lâu, đo thế nào); phát hiện ra sao và có muộn không; bạn đã cầm máu thế nào và vì sao chọn cách đó; nguyên nhân trực tiếp và các yếu tố góp phần; việc phòng ngừa đã làm và kết quả đo được sau đó (sự cố cùng loại có lặp lại không, thời gian phát hiện giảm bao nhiêu). Người phỏng vấn chú ý cách bạn nói về người khác: không đổ lỗi, nói về hệ thống." },
+    { "type": "callout", "style": "warning", "markdown": "Kênh alert mà ai cũng mute là tệ hơn không có alert: mọi người tưởng đã được giám sát. Dấu hiệu: hàng chục alert mỗi ngày, phần lớn tự tắt, không ai phản ứng. Mỗi tuần lấy alert ồn nhất, sửa nguồn gốc hoặc xoá, và yêu cầu mọi alert gọi người phải có runbook và chủ sở hữu." }
+  ]
+}

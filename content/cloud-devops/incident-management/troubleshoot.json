@@ -1,0 +1,132 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "20:05 tối thứ Sáu, alert checkout gọi bạn dậy",
+  "symptom": "Bạn trực chính tuần này cho nhóm thanh toán. 20:05 điện thoại báo alert: `CheckoutAvailabilityBurnRateFast` (burn rate SLO 99,9% của checkout vượt 14,4 trong cả cửa sổ 1 giờ và 5 phút). Giờ cao điểm mua sắm tối thứ Sáu. Trực phụ là một đồng nghiệp ở nhóm khác.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Alert: CheckoutAvailabilityBurnRateFast  SEV: chưa phân\n  checkout success rate (5m): 91,8%  (SLO 99,9%)\n  bắt đầu xấu từ khoảng 19:53\n  runbook: link tới \"checkout-errors.md\"\n\nKênh #deploys:\n  19:52  pricing-service v4.12 deployed to prod (auto, canary passed)\n  18:30  checkout-web v2.40 deployed to prod",
+      "evidenceFormat": "monospace",
+      "question": "Việc đầu tiên?",
+      "choices": [
+        {
+          "label": "Xác nhận alert, mở kênh sự cố, đối chiếu thời điểm xấu đi với thay đổi gần nhất",
+          "quality": "good",
+          "feedback": "Đúng. Xác nhận để hệ thống ngừng gọi tiếp và người khác biết đã có người nhận. Hỏi \"cái gì vừa đổi\" trước: deploy pricing-service lúc 19:52 khớp với lúc tỉ lệ thành công tụt lúc 19:53. Phân luôn mức độ (đây là SEV2: một phần đáng kể người dùng không thanh toán được) và nhận vai incident commander cho tới khi có người khác.",
+          "next": "triage"
+        },
+        {
+          "label": "Mở log của checkout từ đầu buổi tối để tìm exception",
+          "quality": "ok",
+          "feedback": "Sẽ ra manh mối nhưng chậm: log buổi tối có hàng triệu dòng. Bắt đầu từ dòng thời gian thay đổi và metric theo dependency nhanh hơn nhiều.",
+          "next": "triage"
+        },
+        {
+          "label": "Chờ 15 phút xem alert có tự tắt không, vì có thể chỉ là đỉnh tải",
+          "quality": "poor",
+          "feedback": "Alert burn rate nhiều cửa sổ đã lọc đỉnh ngắn: cửa sổ 1 giờ cũng vượt ngưỡng. Ở 8% lỗi với SLO 99,9%, burn rate khoảng 80, tức mỗi giờ đốt gần 12% error budget 28 ngày, và hàng trăm đơn thất bại.",
+          "next": "wait"
+        }
+      ]
+    },
+    {
+      "id": "wait",
+      "evidence": "20:20, alert vẫn bật:\n  checkout success rate (5m): 90,4%\n  error budget 28 ngày: đã tiêu thêm khoảng 7% trong 30 phút qua\n  2 khách hàng doanh nghiệp đã gửi ticket",
+      "evidenceFormat": "monospace",
+      "question": "Đã mất 15 phút. Làm gì bây giờ?",
+      "choices": [
+        {
+          "label": "Xác nhận, mở kênh sự cố và đối chiếu với thay đổi gần nhất",
+          "quality": "good",
+          "feedback": "Muộn hơn nhưng đúng hướng.",
+          "next": "triage"
+        }
+      ]
+    },
+    {
+      "id": "triage",
+      "evidence": "Dashboard checkout, phân theo dependency:\n  pricing-service  p99 latency: 180 ms -> 4.200 ms   timeout của checkout: 3 s\n  inventory        bình thường\n  payment-gateway  bình thường\n\npricing-service:\n  pod: 12/12 Ready, CPU 35%\n  database pricing: CPU 96%, top query mới từ 19:52:\n    SELECT ... FROM price_rules WHERE region = $1 AND sku = ANY($2) ...  (Seq Scan, 1,8 s)",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi đến từ pricing-service v4.12 vừa deploy. Làm gì trước?",
+      "choices": [
+        {
+          "label": "Rollback pricing-service về v4.11, rồi mới điều tra query",
+          "quality": "good",
+          "feedback": "Đúng. Cầm máu trước: bản trước chạy tốt cả tuần, rollback là thao tác đã biết và nhanh nhất. Chụp lại plan của query và metric trước khi rollback để còn bằng chứng.",
+          "next": "comms"
+        },
+        {
+          "label": "Viết migration thêm index cho price_rules rồi deploy hotfix",
+          "quality": "poor",
+          "feedback": "Có thể là bản sửa đúng, nhưng viết, review, tạo index trên bảng lớn giữa giờ cao điểm mất cả giờ và thêm rủi ro, trong khi khách đang lỗi.",
+          "next": "hotfix"
+        },
+        {
+          "label": "Tăng instance của database pricing lên cỡ lớn hơn",
+          "quality": "ok",
+          "feedback": "Có thể giảm triệu chứng nhưng đổi cỡ RDS gây failover vài phút và query vẫn quét toàn bảng; vẫn chậm hơn rollback.",
+          "next": "hotfix"
+        }
+      ]
+    },
+    {
+      "id": "hotfix",
+      "evidence": "30 phút sau: bản sửa chưa lên (hotfix còn đang review, hoặc database đổi cỡ đã gây 2 phút lỗi hoàn toàn lúc failover mà query vẫn quét toàn bảng).\n  checkout success rate (5m): vẫn quanh 90%\n  trưởng nhóm sản phẩm hỏi trong kênh chung: \"có ai đang xử lý không?\"",
+      "evidenceFormat": "monospace",
+      "question": "Sự cố kéo dài và stakeholder không biết gì. Làm gì?",
+      "choices": [
+        {
+          "label": "Rollback pricing-service ngay, và cử người lo liên lạc",
+          "quality": "good",
+          "feedback": "Đúng. Rollback là đường nhanh nhất về trạng thái tốt đã biết; và cần ai đó cập nhật stakeholder để người xử lý không bị hỏi liên tục.",
+          "next": "comms"
+        }
+      ]
+    },
+    {
+      "id": "comms",
+      "evidence": "Rollback pricing-service về v4.11 mất 5 phút; ngay sau đó checkout success rate (5m): 99,6% và đang tăng.\nKênh #incident-checkout có 7 người tham gia; 3 người vẫn đang chạy truy vấn thử trên database pricing để \"tìm nguyên nhân\", trong khi chưa ai cập nhật trang trạng thái.",
+      "evidenceFormat": "monospace",
+      "question": "Dịch vụ đang hồi phục. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Phân SEV2, chỉ định incident commander, một người thao tác, một người cập nhật trang trạng thái; ghi dòng thời gian",
+          "quality": "good",
+          "feedback": "Đúng. Nhiều người cùng chạy lệnh trên database đang yếu là cách tạo sự cố thứ hai. Một người ra quyết định, một người thao tác, một người liên lạc; dòng thời gian là nguyên liệu cho postmortem. Lý tưởng là phân SEV và vai trò ngay khi xác nhận alert; làm muộn vẫn hơn không làm.",
+          "next": "resolve"
+        },
+        {
+          "label": "Tắt kênh sự cố vì tỉ lệ thành công đã gần SLO",
+          "quality": "poor",
+          "feedback": "Chưa chắc ổn định, chưa báo stakeholder, chưa giữ bằng chứng. Theo dõi thêm một khoảng thời gian rồi mới tuyên bố đã khôi phục.",
+          "next": "resolve"
+        }
+      ]
+    },
+    {
+      "id": "resolve",
+      "evidence": "Dòng thời gian theo đường xử lý nhanh nhất (rollback bắt đầu 20:14, xong 20:19; đi nhánh chậm hơn thì ảnh hưởng kéo dài tương ứng):\n  Ảnh hưởng: 19:53–20:19, khoảng 8% checkout lỗi, ước tính 3.100 lượt thất bại, khoảng 5% error budget 28 ngày.\n  20:45 tuyên bố khôi phục sau 25 phút ổn định; cập nhật trang trạng thái.\n\nThông tin thêm:\n  - v4.12 thêm điều kiện lọc theo region; index cũ (sku) không dùng được\n  - staging có 2.000 dòng price_rules, prod có 48 triệu\n  - canary 5% chỉ so tỉ lệ 5xx của pricing-service, không so latency;\n    pricing trả 200 chậm nên canary pass\n  - alert gọi người lúc 20:05, 12 phút sau khi bắt đầu",
+      "evidenceFormat": "monospace",
+      "question": "Viết postmortem. Kết luận nguyên nhân nào phù hợp nhất?",
+      "choices": [
+        {
+          "label": "Nhiều yếu tố: query thiếu index, staging không có dữ liệu cỡ thật, canary không so latency",
+          "quality": "good",
+          "feedback": "Đúng. Mỗi yếu tố là một chỗ hệ thống có thể chặn lỗi mà đã không chặn; mỗi yếu tố sinh một việc phòng ngừa.",
+          "next": "root-cause"
+        },
+        {
+          "label": "Lỗi của kỹ sư viết query không kiểm plan",
+          "quality": "poor",
+          "feedback": "Đổ lỗi không ngăn lần sau: kỹ sư khác sẽ viết query khác. Câu hỏi đúng là vì sao quy trình để một query quét 48 triệu dòng lên tới prod mà không bị bắt.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân trực tiếp**: pricing-service v4.12 thêm điều kiện `region` mà index hiện có không phục vụ được; trên 48 triệu dòng, query quét toàn bảng mất 1,8 giây, đẩy p99 của pricing lên 4,2 giây, quá timeout 3 giây của checkout.\n\n**Yếu tố góp phần**: staging chỉ có 2.000 dòng nên không lộ; canary chỉ so tỉ lệ 5xx của chính service, không so latency và lỗi ở service gọi nó; review không yêu cầu `EXPLAIN` cho query mới trên bảng lớn.\n\n**Việc phòng ngừa** (mỗi việc có người phụ trách và hạn): canary so p99 latency và lỗi của checkout so với bản cũ, tự rollback; dữ liệu staging cỡ gần prod cho bảng lớn, hoặc kiểm plan tự động trong CI; alert latency của pricing theo SLO riêng để phát hiện trước 12 phút.\n\n**Điều làm tốt**: rollback một lệnh, khôi phục trong 5 phút sau khi quyết định.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

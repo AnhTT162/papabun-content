@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Bốn workload, cái nào nên chạy trên Lambda?",
+  "prompt": "Một sàn thương mại điện tử nhỏ muốn \"chuyển hết sang serverless\" để giảm công vận hành. Đội đề xuất đưa bốn workload sau lên AWS Lambda (Java 21, arm64, region us-east-1 để dễ so giá):\n1. Webhook nhận kết quả thanh toán từ đối tác: khoảng 200.000 lời gọi/ngày, dồn vào giờ đối soát, mỗi lời gọi 120 ms ở 512 MB. Đối tác retry nếu không nhận 200 trong 10 giây.\n2. API danh mục sản phẩm cho app: 300 request/giây đều cả ngày, mỗi request 80 ms ở 1 GB, yêu cầu p99 dưới 150 ms. Hiện chạy 3 task Fargate arm64 (1 vCPU, 2 GB) qua 3 AZ.\n3. Resize ảnh sản phẩm khi upload: 50.000 ảnh/ngày, mỗi ảnh khoảng 2 giây ở 2 GB.\n4. Job đối soát hằng đêm: đọc 8 triệu giao dịch, mất khoảng 40 phút trên một máy.\nĐơn giá Lambda arm64: 0,20 USD mỗi triệu lời gọi và 0,0000133334 USD mỗi GB-giây; Fargate arm64: 0,03238 USD mỗi vCPU-giờ, 0,00356 USD mỗi GB-giờ, 730 giờ mỗi tháng. Bạn khuyên gì cho từng workload?",
+  "hints": [
+    "Tính tiền Lambda theo tháng: số lời gọi × đơn giá cộng số lời gọi × thời gian × GB × đơn giá GB-giây.",
+    "Với tải đều cao, so tiền Lambda với tiền giữ vài task chạy 24/7; điểm hoà vốn nằm ở bao nhiêu request/giây?",
+    "Cold start của Java có làm vỡ yêu cầu p99 nào không, và cái giá của việc giữ sẵn môi trường là gì?",
+    "Giới hạn nào của Lambda loại ngay một workload, và có cách chia nhỏ không?"
+  ],
+  "solution": "**1. Webhook**: Lambda hợp. 6 triệu lời gọi/tháng × (0,2 USD/triệu + 0,12 s × 0,5 GB × giá GB-giây) ≈ 6,00 USD, rẻ hơn cả 2 task Fargate nhỏ nhất chạy 24/7 (≈ 14,42 USD) và không phải lo scale khi dồn giờ đối soát. Handler chỉ kiểm chữ ký, ghi sự kiện vào SQS (hoặc bảng có khoá chống trùng theo id giao dịch) rồi trả 200 ngay; xử lý phía sau từ queue. Đối tác retry và Lambda có thể chạy lại nên mọi bước phải idempotent. Cold start Java vài giây vẫn dưới 10 giây đối tác chờ; bật SnapStart cho chắc.\n\n**2. API danh mục**: giữ Fargate. 300 request/giây × 30 ngày là 777,6 triệu lời gọi, Lambda tốn ≈ 984,96 USD/tháng so với ≈ 86,51 USD cho 3 task Fargate. Điểm hoà vốn với 3 task là khoảng 26 request/giây trung bình; trên đó container rẻ hơn. Lý do chính là chi phí; ngoài ra cold start Java khi Lambda thêm môi trường (lúc tải tăng hay deploy) có thể chạm p99,9 và đôi khi p99, muốn chắc phải trả thêm provisioned concurrency. Phép so giả định 80 ms chủ yếu là chờ I/O (nên 3 task 1 vCPU gánh được 300 request/giây, cần đo lại bằng load test) và chưa tính ALB hay API Gateway, log, truyền dữ liệu; API Gateway thường làm phía Lambda tốn thêm đáng kể. Nếu tải tăng giảm mạnh theo giờ, autoscaling của ECS là đủ.\n\n**3. Resize ảnh**: Lambda hợp. 1,5 triệu ảnh/tháng × 2 s × 2 GB ≈ 80,30 USD, không tốn gì khi không có ảnh, scale theo đợt upload. S3 gửi sự kiện vào SQS, Lambda đọc SQS với maximum concurrency vừa phải, ghi ảnh ra một bucket khác (tránh vòng lặp kích hoạt chính nó), DLQ cho ảnh hỏng. Tăng bộ nhớ thường làm nhanh hơn vì có thêm CPU; đo để chọn mức có tổng GB-giây thấp nhất.\n\n**4. Đối soát hằng đêm**: không chạy nguyên khối trên Lambda vì vượt giới hạn 15 phút mỗi lời gọi. Hai lựa chọn: chạy một task Fargate theo lịch (EventBridge Scheduler), đơn giản nhất cho một job tuần tự 40 phút; hoặc chia 8 triệu giao dịch thành các lô theo khoảng id, Step Functions (hay Lambda durable functions) chạy song song từng lô và gộp kết quả, có checkpoint để chạy lại lô lỗi. Chọn Fargate nếu job khó chia; chọn chia lô nếu cần xong nhanh hơn.\n\n**Kết luận cho đội**: \"serverless\" không có nghĩa mọi thứ là Lambda. Fargate cũng không có máy để vá. Chọn Lambda cho việc theo sự kiện, thất thường; container cho tải đều và yêu cầu latency chặt; tính tiền trước bằng số liệu thật.",
+  "tradeoffs": [
+    {
+      "option": "Lambda cho mọi workload",
+      "pros": [
+        "Không có cluster hay task để định cỡ",
+        "Scale tới 0, trả theo lần chạy"
+      ],
+      "cons": [
+        "Đắt gấp nhiều lần với tải đều cao",
+        "Cold start Java, giới hạn 15 phút, kết nối database bùng nổ"
+      ]
+    },
+    {
+      "option": "Fargate cho mọi workload",
+      "pros": [
+        "Latency ổn định, không giới hạn thời gian chạy",
+        "Một mô hình triển khai cho cả đội"
+      ],
+      "cons": [
+        "Trả tiền cả khi rảnh, kể cả workload chỉ chạy vài phút mỗi ngày",
+        "Phải tự lo scale theo đợt sự kiện"
+      ]
+    },
+    {
+      "option": "Kết hợp theo đặc điểm tải",
+      "pros": [
+        "Mỗi workload chạy ở nơi rẻ và phù hợp nhất",
+        "Lambda làm keo nối sự kiện, container cho service chính"
+      ],
+      "cons": [
+        "Hai mô hình vận hành, hai bộ công cụ quan sát và deploy",
+        "Cần quy tắc rõ để đội không chọn theo thói quen"
+      ]
+    }
+  ]
+}

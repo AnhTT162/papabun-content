@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "serverless",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Serverless",
+  "summary": "Mô hình chạy của Lambda (một lời gọi mỗi môi trường, Init, tái dùng), cold start của Java và cách giảm (SnapStart, provisioned concurrency), giới hạn, kết nối database, gọi bất đồng bộ và idempotency, chi phí so với container (tính có số liệu), việc dài và durable functions; khi nào serverless là lựa chọn sai.",
+  "level": "mid",
+  "order": 14,
+  "minutes": 14,
+  "prerequisites": ["aws-managed-services", "startup-native"],
+  "terms": ["serverless", "faas", "cold-start", "provisioned-concurrency", "reserved-concurrency", "durable-execution", "crac"],
+  "references": [
+    { "title": "AWS Lambda quotas", "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html" },
+    { "title": "AWS Lambda: execution environment lifecycle", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html" },
+    { "title": "AWS Lambda SnapStart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html" },
+    { "title": "AWS Lambda durable functions", "url": "https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Lambda Java của bạn có p99 3 giây vì cold start, làm sao giảm?\" Đo trước: `Init Duration` trong log `REPORT` (với SnapStart là `Restore Duration`) cho biết cold start chiếm bao nhiêu và xảy ra bao thường xuyên. Rồi theo chi phí tăng dần: bớt việc lúc Init (ít reflection, framework nhẹ, khởi tạo lười phần ít dùng), tăng bộ nhớ để có thêm CPU, bật SnapStart (xử lý seed, kết nối sau khôi phục), hoặc thay vào đó provisioned concurrency cho phần tải nền (tốn tiền cả lúc rảnh, không dùng cùng SnapStart), hoặc native image. Nếu p99 chặt và tải đều, câu trả lời có thể là chuyển sang container." },
+    { "type": "callout", "style": "warning", "markdown": "Lambda gọi một API bên ngoài chậm hay database bị khoá thì thời gian chờ vẫn bị tính tiền và vẫn chiếm một môi trường. Một dependency chậm từ 100 ms lên 10 giây có thể làm concurrency tăng 100 lần, chạm trần 1.000 của cả tài khoản và làm throttle cả những function không liên quan. Đặt timeout ngắn cho client, reserved concurrency cho function quan trọng, và cảnh báo trên `ConcurrentExecutions`." }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "lambda-cost-output",
+      "kind": "output",
+      "prompt": "Đoạn tính chi phí Lambda (đơn giá arm64, us-east-1) cho một API 300 request/giây đều cả tháng, mỗi request 80 ms ở 1 GB. Chương trình in ra gì (làm tròn)?",
+      "code": "static final double GBS_ARM = 0.0000133334, REQ = 0.20 / 1_000_000;\n\nstatic double lambda(double reqPerMonth, double seconds, double gb) {\n    return reqPerMonth * REQ + reqPerMonth * seconds * gb * GBS_ARM;\n}\n\npublic static void main(String[] args) {\n    double catalog = 300.0 * 86_400 * 30;\n    System.out.printf(\"%.0f USD%n\", lambda(catalog, 0.08, 1));\n}",
+      "options": [
+        "985 USD",
+        "156 USD",
+        "829 USD",
+        "87 USD"
+      ],
+      "answer": 0,
+      "explanation": "777,6 triệu lời gọi: phí lời gọi 155,52 USD cộng 62,2 triệu GB-giây × 0,0000133334 ≈ 829,44 USD, tổng ≈ 984,96 USD (đã chạy với JDK 27). 156 là chỉ phí lời gọi, 829 là chỉ phí compute, 87 là tiền 3 task Fargate arm64 1 vCPU/2 GB chạy cả tháng. Với tải đều cao, container rẻ hơn khoảng 11 lần."
+    },
+    {
+      "id": "connection-storm",
+      "kind": "single",
+      "prompt": "Lambda Java đọc RDS PostgreSQL, mỗi môi trường tạo một HikariCP pool 10 kết nối ngoài handler. Đợt khuyến mãi làm concurrency lên 300. Chuyện gì xảy ra?",
+      "options": [
+        "Có thể tới 3.000 kết nối, vượt `max_connections`, lời gọi lỗi",
+        "Lambda dùng chung một pool cho mọi môi trường nên chỉ có 10",
+        "HikariCP tự giảm pool xuống 1 khi phát hiện chạy trong Lambda",
+        "Kết nối được Lambda đóng sau mỗi lời gọi nên không tích luỹ"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi môi trường là một process riêng, xử lý một lời gọi tại một thời điểm; 300 môi trường × pool 10 là tới 3.000 kết nối, trong khi mỗi môi trường chỉ cần một. Lambda không chia sẻ bộ nhớ giữa môi trường, không đóng kết nối sau lời gọi (môi trường được đóng băng và tái dùng). Đặt pool 1, dùng RDS Proxy để gom kết nối, và giới hạn concurrency của function."
+    },
+    {
+      "id": "snapstart-uniqueness",
+      "kind": "single",
+      "prompt": "Bật SnapStart cho Lambda Java. Phần khởi tạo tạo một `Random` với seed theo thời gian và một ID phiên cho function. Sau khi bật, log cho thấy nhiều môi trường sinh cùng chuỗi \"ngẫu nhiên\". Vì sao?",
+      "options": [
+        "Mọi môi trường khôi phục từ cùng ảnh chụp nên cùng trạng thái",
+        "SnapStart dùng chung một JVM cho mọi môi trường của function",
+        "SnapStart tắt bộ sinh số ngẫu nhiên để tăng tốc khởi động",
+        "Lambda chạy các môi trường trên cùng một máy nên trùng đồng hồ"
+      ],
+      "answer": 0,
+      "explanation": "SnapStart chạy Init một lần khi publish phiên bản rồi chụp bộ nhớ; mỗi môi trường mới khôi phục từ đúng ảnh chụp đó, nên seed, ID, token, cache tạo lúc Init giống hệt nhau. Mỗi môi trường vẫn là JVM riêng, chạy trên máy khác nhau. Sinh giá trị cần duy nhất bên trong handler hoặc trong hook sau khi khôi phục (`afterRestore`), dùng `SecureRandom`; xem trang Handling uniqueness with Lambda SnapStart."
+    },
+    {
+      "id": "fit-or-not",
+      "kind": "single",
+      "prompt": "Workload nào ít phù hợp nhất với Lambda?",
+      "options": [
+        "API 2.000 request/giây đều cả ngày, p99 yêu cầu dưới 50 ms",
+        "Xử lý file CSV đối tác upload lên S3 vài lần mỗi ngày",
+        "Webhook nhận sự kiện thanh toán, dồn vào giờ đối soát",
+        "Job dọn dữ liệu chạy 3 phút mỗi giờ theo lịch"
+      ],
+      "answer": 0,
+      "explanation": "Tải đều cao làm Lambda đắt hơn container nhiều lần, và mỗi lần thêm môi trường là một cold start phá p99 50 ms trừ khi trả thêm provisioned concurrency. Ba workload còn lại thất thường hoặc ngắn theo lịch, đúng chỗ mạnh của Lambda: không tốn gì lúc rảnh, scale theo sự kiện."
+    },
+    {
+      "id": "async-retry-idempotent",
+      "kind": "single",
+      "prompt": "S3 gọi Lambda bất đồng bộ khi có file hoá đơn mới; handler ghi hoá đơn vào database rồi gửi email. Lần chạy đầu ghi database xong thì timeout khi gửi email. Chuyện gì xảy ra mặc định?",
+      "options": [
+        "Lambda thử lại tối đa 2 lần, hoá đơn có thể bị ghi và gửi email trùng",
+        "Lambda không thử lại lời gọi bất đồng bộ, sự kiện bị bỏ",
+        "S3 gửi lại sự kiện mỗi phút cho tới khi handler thành công",
+        "Lambda chỉ thử lại phần gửi email vì phần ghi database đã xong"
+      ],
+      "answer": 0,
+      "explanation": "Với lời gọi bất đồng bộ, Lambda tự thử lại 2 lần (giữ sự kiện tối đa 6 giờ), chạy lại cả handler từ đầu, nên phần đã làm (ghi database) bị làm lại. Handler phải idempotent: khoá chống trùng theo tên file hay id hoá đơn, ghi trạng thái từng bước. S3 không tự gửi lại; Lambda không biết handler đã làm tới đâu."
+    }
+  ]
+}
