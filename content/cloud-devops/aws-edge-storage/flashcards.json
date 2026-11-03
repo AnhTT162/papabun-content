@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "routing-policies", "front": "Route 53 có những routing policy nào?", "back": "Simple, weighted, latency, failover, geolocation, geoproximity, IP-based, multivalue answer. Có thể lồng nhau, ví dụ latency giữa region rồi weighted trong region." },
+    { "id": "alias-vs-cname", "front": "Vì sao dùng alias record thay CNAME cho tên miền gốc?", "back": "CNAME không đặt được ở apex; alias đặt được và trả thẳng IP của tài nguyên AWS, tự cập nhật khi IP đổi." },
+    { "id": "alias-cost-ttl", "front": "Alias record tới tài nguyên AWS tính phí và TTL thế nào?", "back": "Không tính phí truy vấn; TTL do tài nguyên đích quyết định, không chỉnh được." },
+    { "id": "dns-failover-time", "front": "Failover bằng Route 53 mất bao lâu?", "back": "Thời gian health check phát hiện (chu kỳ × ngưỡng) cộng TTL cộng cache DNS của resolver và client, như JVM cache 30 giây." },
+    { "id": "private-health-check", "front": "Health check của Route 53 cho endpoint chỉ có trong VPC private làm thế nào?", "back": "Checker ở Internet không gọi tới được; dùng health check theo trạng thái một CloudWatch alarm." },
+    { "id": "cf-policies", "front": "Cache policy và origin request policy của CloudFront khác nhau thế nào?", "back": "Cache policy quyết định cache key và TTL; origin request policy quyết định gửi gì tới origin mà không đưa vào cache key." },
+    { "id": "oac", "front": "Làm sao cho CloudFront đọc bucket S3 mà bucket không public?", "back": "Origin access control: CloudFront ký request bằng SigV4, bucket policy chỉ cho đúng distribution đó. OAI là cách cũ." },
+    { "id": "acm-us-east-1", "front": "Chứng chỉ ACM cho CloudFront phải ở region nào?", "back": "`us-east-1`, bất kể origin chạy ở đâu." },
+    { "id": "ebs-efs-s3", "front": "EBS, EFS, S3 khác nhau về kiểu truy cập thế nào?", "back": "EBS: ổ khối của một máy trong một AZ. EFS: thư mục NFS dùng chung, nhiều AZ. S3: object qua HTTP, gần như vô hạn, không rename hay sửa giữa file." },
+    { "id": "s3-consistency", "front": "S3 có nhất quán ngay sau khi ghi không?", "back": "Có: nhất quán mạnh read-after-write cho PUT, DELETE và LIST ở mọi region từ 12/2020." },
+    { "id": "s3-prefix", "front": "Giới hạn tốc độ request của S3 tính theo gì?", "back": "Theo prefix: ít nhất 3.500 ghi và 5.500 đọc mỗi giây mỗi prefix, S3 tự chia prefix khi tải tăng dần." }
+  ]
+}

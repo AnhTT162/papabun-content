@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "ci-definition", "front": "Continuous integration thực sự đòi hỏi gì?", "back": "Mọi người tích hợp vào mainline ít nhất mỗi ngày, mỗi lần được build và test tự động, main đỏ thì sửa ngay trước mọi việc khác." },
+    { "id": "delivery-vs-deployment", "front": "Continuous delivery khác continuous deployment thế nào?", "back": "Delivery: main luôn deploy được, bấm nút lên prod có thể còn là quyết định nghiệp vụ. Deployment: mọi commit xanh tự lên prod." },
+    { "id": "build-once", "front": "Vì sao phải build artifact một lần rồi promote?", "back": "Build lại cho từng môi trường có thể ra sản phẩm khác (dependency, base image, plugin), nên thứ chạy prod chưa từng được test." },
+    { "id": "commit-stage", "front": "Stage commit nên chứa gì và nhanh cỡ nào?", "back": "Compile, unit test, kiểm tĩnh, quét secret và dependency, đóng gói artifact; dưới khoảng 10 phút để người viết code còn chờ kết quả." },
+    { "id": "deploy-release", "front": "Tách deploy khỏi release nghĩa là gì?", "back": "Code lên production nhưng tính năng còn tắt sau feature flag; bật cho người dùng là quyết định riêng, bật dần và tắt được ngay." },
+    { "id": "toggle-types", "front": "Bốn loại feature toggle theo Pete Hodgson?", "back": "Release (ẩn tính năng dở), experiment (A/B), ops (kill switch), permission (theo nhóm khách hàng)." },
+    { "id": "flag-debt", "front": "Vì sao release toggle phải có ngày gỡ?", "back": "Mỗi flag sống lâu nhân đôi số tổ hợp cần test và để lại nhánh code chết; gỡ sau khi đã bật hết." },
+    { "id": "dora-five", "front": "Năm chỉ số DORA hiện nay?", "back": "Throughput: change lead time, deployment frequency, failed deployment recovery time. Instability: change fail rate, deployment rework rate." },
+    { "id": "auto-rollback", "front": "Tự rollback sau deploy dựa trên gì, và khi nào không an toàn?", "back": "So tỉ lệ lỗi, latency của bản mới với bản cũ trong vài phút đầu. Không an toàn nếu bản mới đã đổi schema hay định dạng dữ liệu mà bản cũ không đọc được." },
+    { "id": "ci-oidc", "front": "CI nên đăng nhập cloud thế nào?", "back": "Qua OIDC: nhận role tạm thời giới hạn theo repo và nhánh, không lưu access key dài hạn trong secret của CI." }
+  ]
+}

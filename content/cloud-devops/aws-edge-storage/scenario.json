@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Nền tảng học trực tuyến: chọn DNS, CDN và chỗ lưu cho từng loại dữ liệu",
+  "prompt": "Nền tảng học trực tuyến cho học sinh Việt Nam, chạy ở region Singapore. Hiện tất cả nằm trên 4 EC2 sau ALB, và một ổ EBS 2 TB gắn vào máy số 1 chia sẻ cho 3 máy kia qua NFS tự dựng; máy số 1 chết là mất bài giảng. Dữ liệu và tải:\n- Video bài giảng 40 TB, xem nhiều vào buổi tối, mỗi video vài trăm MB.\n- Ảnh đại diện, tài liệu PDF giáo viên tải lên: 3 triệu file, 2 KB tới 20 MB.\n- Bài nộp của học sinh phải giữ 5 năm theo quy định, sau 6 tháng gần như không ai mở.\n- PostgreSQL tự chạy trên EC2 với 600 GB dữ liệu, đỉnh 6.000 IOPS.\n- Một công cụ chấm bài cũ chỉ đọc file từ một thư mục POSIX, không sửa được code.\n- Trang web và API, 80% người dùng ở Việt Nam; nhà trường muốn tên miền gốc `example.org` (không có `www`) trỏ thẳng vào trang.\nĐề xuất DNS, CDN và lưu trữ cho từng loại, kèm những bẫy cần tránh khi chuyển.",
+  "hints": [
+    "Thứ gì hiện đang là điểm hỏng duy nhất, và mỗi loại dữ liệu có thật sự cần một filesystem không?",
+    "Tên miền gốc không có www thì không đặt CNAME được; Route 53 có gì thay thế?",
+    "Video và tài liệu nên đi qua đâu để người dùng ở Việt Nam không phải kéo từ Singapore mỗi lần?",
+    "Database 600 GB chuyển từ snapshot sang máy mới thì lần đọc đầu tiên có gì bất thường?"
+  ],
+  "solution": "**DNS**: hosted zone `example.org` trên Route 53, alias record ở apex trỏ vào CloudFront (CNAME không đặt được ở apex; alias tới tài nguyên AWS không tính phí truy vấn). API đi theo path `/api/*` trên cùng distribution, nên chỉ cần một tên miền và một chứng chỉ. Trang bảo trì khi origin hỏng làm bằng origin group của CloudFront (ALB là origin chính, S3 chứa trang tĩnh là dự phòng) và custom error response, không cần đổi DNS.\n\n**CDN**: một distribution, chứng chỉ ACM ở `us-east-1`. Behavior `/videos/*` và `/files/*` đọc S3 qua origin access control, cache dài; video dùng HLS và signed cookie để chỉ học sinh đã đăng nhập xem được (bài Thiết kế lưu trữ file / video). Behavior `/api/*` tắt cache, gửi đủ header cần cho origin bằng origin request policy, gắn WAF. Bật origin shield ở Singapore để giờ cao điểm buổi tối các edge không cùng kéo một video từ S3.\n\n**Video, ảnh, PDF**: S3, không phải EFS hay EBS. Upload trực tiếp từ trình duyệt bằng presigned URL (multipart với file lớn), app chỉ lưu metadata trong database. Khoá object theo cấu trúc có ý nghĩa (`courses/{id}/...`, `submissions/{năm}/...`) để lifecycle rule theo prefix dùng được; tải đọc đi qua CloudFront nên không gần giới hạn request của S3.\n\n**Bài nộp giữ 5 năm**: S3 với lifecycle: Standard → Standard-IA sau 30 ngày → Glacier Instant Retrieval sau 6 tháng (vẫn mở ngay được khi cần), xoá sau 5 năm; bật Object Lock chế độ compliance nếu quy định cấm sửa xoá. Giá các lớp ở bài Ước tính chi phí & FinOps.\n\n**PostgreSQL**: tốt nhất chuyển sang RDS Multi-AZ. Nếu buộc tự chạy: EBS gp3 600 GB mua thêm IOPS lên khoảng 8.000 (dư so với đỉnh 6.000), kiểm instance chịu được băng thông EBS đó, replication sang máy ở AZ khác. Khi dựng máy mới từ snapshot, khởi tạo trước volume (đọc hết) hoặc bật Fast Snapshot Restore, nếu không truy vấn đầu tiên chạm block chưa tải sẽ chậm hẳn đúng lúc mở lại cho người dùng.\n\n**Công cụ chấm bài cũ**: nó chỉ đọc file, nên thử Mountpoint for S3 trước (mount bucket thành thư mục chỉ đọc, đọc tuần tự tốt, không phải chép dữ liệu); nếu công cụ cần thao tác POSIX mà Mountpoint không hỗ trợ (khoá file, đổi tên, ghi đè giữa file) thì dùng EFS mount vào các máy hay pod chạy công cụ. Chỉ để đúng thư mục bài cần chấm trên EFS (đồng bộ từ S3 khi cần chấm), không đưa toàn bộ 3 triệu file vào: thao tác metadata trên EFS chậm với nhiều file nhỏ.\n\n**Chuyển đổi**: chép file hiện có lên S3 (DataSync hoặc `aws s3 sync`), kiểm số lượng và checksum, ghi kép trong thời gian chuyển, rồi đổi app đọc từ S3. Hạ TTL DNS trước ngày chuyển để có thể quay lại nhanh.",
+  "tradeoffs": [
+    {
+      "option": "S3 + CloudFront cho file người dùng",
+      "pros": [
+        "Bền, rẻ, gần như vô hạn, không gắn với máy nào",
+        "Edge ở gần người dùng, giảm tải origin"
+      ],
+      "cons": [
+        "App phải đổi sang API object, không rename hay sửa giữa file",
+        "Cần thiết kế quyền truy cập: OAC, signed URL hay cookie"
+      ]
+    },
+    {
+      "option": "EFS làm thư mục dùng chung",
+      "pros": [
+        "Không sửa code: app vẫn đọc ghi file như cũ",
+        "Nhiều AZ, nhiều máy mount cùng lúc"
+      ],
+      "cons": [
+        "Chậm với nhiều file nhỏ và thao tác metadata",
+        "Đắt hơn S3 nhiều lần mỗi GB lưu trữ"
+      ]
+    },
+    {
+      "option": "Giữ EBS chia sẻ qua NFS tự dựng",
+      "pros": [
+        "Không phải thay đổi gì ngay"
+      ],
+      "cons": [
+        "Điểm hỏng duy nhất, gắn với một máy trong một AZ",
+        "Tự lo backup, mở rộng dung lượng, hiệu năng NFS"
+      ]
+    }
+  ]
+}

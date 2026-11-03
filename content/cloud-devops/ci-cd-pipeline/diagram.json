@@ -1,0 +1,140 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một commit đi tới người dùng",
+  "nodes": [
+    {
+      "id": "pr",
+      "label": "Pull request",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "commit",
+      "label": "Stage commit < 10 phút",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "registry",
+      "label": "Registry (digest)",
+      "kind": "external",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "integ",
+      "label": "Stage tích hợp",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "staging",
+      "label": "Staging",
+      "kind": "generic",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "prod",
+      "label": "Production + flag",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "pr-commit",
+      "from": "pr",
+      "to": "commit",
+      "label": "build, unit, quét"
+    },
+    {
+      "id": "commit-registry",
+      "from": "commit",
+      "to": "registry",
+      "label": "image theo SHA"
+    },
+    {
+      "id": "registry-integ",
+      "from": "registry",
+      "to": "integ",
+      "label": "cùng digest"
+    },
+    {
+      "id": "integ-staging",
+      "from": "integ",
+      "to": "staging",
+      "label": "test tích hợp xanh"
+    },
+    {
+      "id": "staging-prod",
+      "from": "staging",
+      "to": "prod",
+      "label": "canary + tự rollback"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Mỗi pull request nhỏ, sống dưới một ngày. Stage commit compile, chạy unit test, kiểm tĩnh và quét secret trong vài phút.",
+      "show": [
+        "pr",
+        "commit",
+        "pr-commit"
+      ],
+      "highlight": [
+        "pr-commit"
+      ]
+    },
+    {
+      "caption": "Merge queue gộp pull request vào main; image được build đúng một lần trên commit gộp đó, tag theo SHA, ký và kèm SBOM, đẩy lên registry. Mọi bước sau tham chiếu bằng digest.",
+      "show": [
+        "registry",
+        "commit-registry"
+      ],
+      "highlight": [
+        "commit-registry"
+      ]
+    },
+    {
+      "caption": "Stage tích hợp dùng chính image đó: integration test với database thật, contract test, quét lỗ hổng image.",
+      "show": [
+        "integ",
+        "registry-integ"
+      ],
+      "highlight": [
+        "registry-integ"
+      ]
+    },
+    {
+      "caption": "Lên staging bằng đúng digest, chạy migration tương thích ngược, smoke test và vài kịch bản e2e quan trọng.",
+      "show": [
+        "staging",
+        "integ-staging"
+      ],
+      "highlight": [
+        "integ-staging"
+      ]
+    },
+    {
+      "caption": "Production: canary nhận một phần traffic, pipeline so tỉ lệ lỗi và latency với bản cũ, xấu đi thì tự quay lại.",
+      "show": [
+        "prod",
+        "staging-prod"
+      ],
+      "highlight": [
+        "staging-prod"
+      ]
+    },
+    {
+      "caption": "Code đã deploy nhưng tính năng mới vẫn tắt sau feature flag; bật dần theo phần trăm người dùng, sự cố thì tắt flag thay vì rollback.",
+      "show": [],
+      "highlight": [
+        "prod"
+      ]
+    }
+  ]
+}

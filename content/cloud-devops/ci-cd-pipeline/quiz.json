@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "build-once",
+      "kind": "single",
+      "prompt": "Pipeline có ba job deploy: mỗi job checkout lại cùng commit, chạy `mvn package` và `docker build`, rồi deploy lên dev, staging, prod. Rủi ro chính là gì?",
+      "options": [
+        "Image lên prod không phải image đã được test ở staging",
+        "Pipeline tốn thời gian gấp ba so với chỉ build một lần",
+        "Registry đầy nhanh vì mỗi commit có ba image khác nhau",
+        "Ba lần build làm commit SHA trong tag bị lệch nhau"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lần build có thể kéo dependency, base image, plugin khác nhau (tag base image bị đẩy đè, dependency `SNAPSHOT`, cache khác), nên thứ chạy ở prod chưa từng qua test của staging. Build một lần, tham chiếu bằng digest, promote cùng artifact. Thời gian và dung lượng registry là hệ quả phụ; commit SHA thì giống nhau nên tag không lệch, đó chính là điều làm lỗi khó thấy."
+    },
+    {
+      "id": "deploy-vs-release",
+      "kind": "single",
+      "prompt": "Tính năng thanh toán trả góp cần 3 tuần mới xong. Team muốn vẫn merge vào main mỗi ngày và deploy liên tục. Cách phù hợp nhất?",
+      "options": [
+        "Merge hằng ngày, giấu tính năng sau release toggle tắt mặc định",
+        "Nhánh feature 3 tuần, rebase lên main mỗi ngày, merge khi xong",
+        "Merge hằng ngày nhưng dừng deploy production tới khi xong",
+        "Merge hằng ngày, bật tính năng bằng biến môi trường ở staging"
+      ],
+      "answer": 0,
+      "explanation": "Release toggle tách deploy khỏi release: code đi vào main và lên production mỗi ngày nhưng người dùng chưa thấy; khi xong thì bật dần, có sự cố thì tắt. Nhánh 3 tuần dù rebase vẫn tích hợp muộn; dừng deploy làm mọi thay đổi khác bị kẹt; biến môi trường bật theo môi trường thì không bật dần theo người dùng được và muốn bật ở prod lại phải deploy. Phải gỡ flag sau khi bật hết để không thành nợ."
+    },
+    {
+      "id": "flaky-rerun",
+      "kind": "single",
+      "prompt": "Pipeline cấu hình tự rerun job test tối đa 3 lần nếu đỏ. Tỉ lệ pipeline xanh đạt 99%, nhưng production thỉnh thoảng có lỗi trùng đơn hàng khi tải cao. Nhận định nào đúng nhất?",
+      "options": [
+        "Rerun che test chập chờn, có thể có test đang bắt đúng race condition",
+        "Lỗi trùng đơn chỉ do dữ liệu production, test không thể bắt được",
+        "Tỉ lệ xanh 99% cho thấy cần thêm test e2e cho luồng đặt hàng",
+        "Nên chạy rerun trên runner mạnh hơn để test ổn định thực sự"
+      ],
+      "answer": 0,
+      "explanation": "Test đỏ rồi xanh khi chạy lại có thể là test viết kém, nhưng cũng có thể đang bắt được race condition thật, như tạo đơn trùng khi hai request đến gần nhau. Rerun tự động biến tín hiệu đó thành im lặng. Theo dõi test nào phải rerun, cách ly và điều tra từng cái (bài Test chập chờn). Race condition tái hiện được bằng test concurrency có chủ đích; thêm e2e hay runner mạnh hơn chỉ làm lỗi khó lộ hơn."
+    },
+    {
+      "id": "dora-read",
+      "kind": "single",
+      "prompt": "Ban giám đốc đề xuất thưởng cho team có tần suất deploy cao nhất quý. Rủi ro nào lớn nhất với cách dùng chỉ số DORA này?",
+      "options": [
+        "Team tách deploy vô nghĩa để đạt số, chỉ số mất giá trị",
+        "Lead time chỉ nên tính từ lúc nhận yêu cầu nghiệp vụ",
+        "Nên đo DORA theo từng kỹ sư để công bằng hơn",
+        "Thời gian khôi phục là chỉ số ổn định duy nhất cần xem"
+      ],
+      "answer": 0,
+      "explanation": "Chỉ số bị biến thành mục tiêu thưởng phạt thì người ta tối ưu con số chứ không tối ưu năng lực (định luật Goodhart): deploy rỗng, tách nhỏ giả tạo. DORA khuyên đo theo service, xem xu hướng và cùng lúc cả throughput lẫn instability. Change lead time của DORA tính từ commit tới production; đo theo cá nhân làm hỏng hợp tác; và instability gồm cả change fail rate lẫn deployment rework rate, không chỉ thời gian khôi phục."
+    },
+    {
+      "id": "rollback-schema",
+      "kind": "single",
+      "prompt": "Bản 2.4 đổi tên cột `customer_name` thành `full_name` bằng một migration (`ALTER TABLE ... RENAME COLUMN`) chạy trước deploy. Canary của 2.4 lỗi, pipeline tự rollback về 2.3. Chuyện gì xảy ra?",
+      "options": [
+        "Bản 2.3 vẫn đọc `customer_name` nên lỗi, rollback không cứu được",
+        "Rollback tự chạy migration ngược nên 2.3 hoạt động lại bình thường",
+        "Bản 2.3 vẫn chạy được vì Hibernate tự ánh xạ sang cột tên mới",
+        "Rollback bị pipeline chặn vì phiên bản schema không khớp"
+      ],
+      "answer": 0,
+      "explanation": "Rollback chỉ thay code, không quay lại schema. Migration đổi tên cột là thay đổi phá tương thích: cả lúc rollout (bản 2.3 và 2.4 cùng chạy) lẫn lúc rollback, bản 2.3 đều lỗi. Pipeline không tự chạy migration ngược, Hibernate không đoán tên cột, và pipeline thường không biết gì về schema. Làm theo expand/contract: thêm cột mới, ghi cả hai, chuyển đọc, rồi mới xoá cột cũ ở một bản sau (bài Rolling, blue-green, canary)."
+    }
+  ]
+}

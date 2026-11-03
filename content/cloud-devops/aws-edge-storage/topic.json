@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "aws-edge-storage",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Route 53, CloudFront & lưu trữ trên AWS",
+  "summary": "Routing policy, health check và alias record của Route 53; cache behavior, cache policy, origin access control và chứng chỉ của CloudFront; chọn EBS, EFS hay S3 theo kiểu truy cập, cùng các bẫy: volume từ snapshot đọc chậm, EFS với nhiều file nhỏ, S3 không phải filesystem.",
+  "level": "mid",
+  "order": 9,
+  "minutes": 15,
+  "prerequisites": ["aws-core", "dns-cdn"],
+  "terms": ["route-53", "routing-policy", "alias-record", "amazon-cloudfront", "origin-access-control", "amazon-ebs", "amazon-efs", "amazon-s3", "object-storage", "storage-class", "edge-location", "origin-shield", "presigned-url"],
+  "references": [
+    { "title": "Amazon Route 53: Choosing a routing policy", "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html" },
+    { "title": "Amazon Route 53: Choosing between alias and non-alias records", "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html" },
+    { "title": "Amazon CloudFront: Restrict access to an Amazon S3 origin", "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html" },
+    { "title": "Amazon S3: Best practices design patterns: optimizing performance", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đưa API (không cache được) qua CloudFront thì được gì?\" Ba thứ: bắt tay TCP và TLS diễn ra ở edge gần người dùng (người dùng ở Hà Nội không phải đi vòng tới Singapore cho mỗi kết nối mới), CloudFront giữ sẵn kết nối tới origin trên mạng của AWS, và có chỗ gắn WAF, chống DDoS ở edge. Giá: thêm một tầng có thể cache nhầm nếu cache policy sai (ví dụ cache response có cookie đăng nhập), và phải cấu hình policy để chuyển đúng những header origin cần (token xác thực, IP client qua `CloudFront-Viewer-Address`), rồi kiểm lại bằng log của origin." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng mount S3 như một ổ đĩa (Mountpoint for S3, s3fs) rồi cho ứng dụng cũ ghi file như bình thường. S3 không sửa được giữa file, không rename nguyên tử, ghi đè là ghi lại cả object; công cụ mount hoặc chặn các thao tác đó hoặc làm chúng rất chậm. Mount chỉ hợp cho đọc tuần tự file lớn (dữ liệu huấn luyện, log để phân tích). Ứng dụng cần POSIX thì dùng EFS; ứng dụng mới thì gọi API S3 trực tiếp." }
+  ]
+}

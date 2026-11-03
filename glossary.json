@@ -4461,15 +4461,15 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy", "git-workflow"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy", "git-workflow", "ci-cd-pipeline"]
     },
     {
       "id": "dora-metrics",
       "term": "DORA metrics",
-      "meaning": "Bốn chỉ số đo năng lực giao phần mềm của nhóm: lead time cho thay đổi, tần suất deploy, tỉ lệ deploy gây lỗi, thời gian khôi phục sau deploy lỗi.",
+      "meaning": "Năm chỉ số của DORA đo năng lực giao phần mềm, chia hai nhóm: throughput (change lead time, deployment frequency, failed deployment recovery time) và instability (change fail rate, deployment rework rate).",
       "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
       "related": ["technical-debt"],
-      "topics": ["refactoring-tech-debt", "tech-lead-role", "team-topologies", "evolutionary-architecture"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role", "team-topologies", "evolutionary-architecture", "ci-cd-pipeline"]
     },
     {
       "id": "port",
@@ -6669,7 +6669,7 @@
       "meaning": "Điểm đặt máy chủ của CDN gần người dùng (PoP), trả nội dung từ cache và chỉ hỏi origin khi miss.",
       "example": "Người dùng ở Hà Nội tải ảnh từ edge ở Hà Nội thay vì từ origin ở Singapore, giảm RTT từ khoảng 40 ms xuống vài ms.",
       "related": ["cdn", "origin-shield"],
-      "topics": ["dns-cdn", "sd-building-blocks"]
+      "topics": ["dns-cdn", "sd-building-blocks", "aws-edge-storage"]
     },
     {
       "id": "origin-shield",
@@ -6677,7 +6677,7 @@
       "meaning": "Tầng cache trung gian của CDN đứng giữa các edge và origin. Nhiều edge cùng miss một nội dung chỉ tạo một request tới origin.",
       "example": "Bật origin shield ở vùng gần origin: 400 edge miss cùng một ảnh mới chỉ còn một request tới origin.",
       "related": ["edge-location", "cache-stampede"],
-      "topics": ["dns-cdn", "design-file-storage"]
+      "topics": ["dns-cdn", "design-file-storage", "aws-edge-storage"]
     },
     {
       "id": "cache-purge",
@@ -8621,7 +8621,7 @@
       "meaning": "Kho lưu file dạng object theo key trong không gian tên phẳng, truy cập qua HTTP. Rẻ, gần như vô hạn và rất bền, nhưng không sửa được một phần object và không phải file system.",
       "example": "Ảnh sản phẩm lưu ở S3 với key `products/123/main.jpg`; database chỉ giữ key đó.",
       "related": ["presigned-url", "multipart-upload", "cdn"],
-      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage", "design-metrics-logging", "twelve-factor"]
+      "topics": ["sd-building-blocks", "back-of-envelope", "design-file-storage", "design-metrics-logging", "twelve-factor", "aws-edge-storage"]
     },
     {
       "id": "source-of-truth",
@@ -8677,7 +8677,7 @@
       "meaning": "URL tới một object trong object storage, đã được ký sẵn bằng quyền của server và có thời hạn, cho phép client tải lên hay tải về thẳng mà không cần credential và không đi qua app server.",
       "example": "App trả về URL PUT hết hạn sau 15 phút; trình duyệt upload ảnh thẳng lên S3 bằng URL đó.",
       "related": ["object-storage", "multipart-upload"],
-      "topics": ["sd-building-blocks", "design-file-storage", "twelve-factor"]
+      "topics": ["sd-building-blocks", "design-file-storage", "twelve-factor", "aws-edge-storage"]
     },
     {
       "id": "multipart-upload",
@@ -9669,7 +9669,7 @@
       "meaning": "Lớp lưu trữ của object storage với giá lưu, giá đọc, thời gian lấy lại và thời gian lưu tối thiểu khác nhau; lifecycle rule tự chuyển object giữa các lớp.",
       "example": "File video gốc chuyển từ S3 Standard sang Glacier Flexible Retrieval sau 30 ngày; lấy lại mất vài giờ.",
       "related": ["object-storage"],
-      "topics": ["design-file-storage"]
+      "topics": ["design-file-storage", "aws-edge-storage"]
     },
     {
       "id": "content-defined-chunking",
@@ -11877,7 +11877,7 @@
       "meaning": "Chuỗi bước tự động đưa một thay đổi từ commit tới production: build, test, các kiểm tra chất lượng và bảo mật, deploy từng môi trường.",
       "example": "Bước commit chạy unit test và ArchUnit trong vài phút; bước sau chạy contract test; load test chạy trước release.",
       "related": ["fitness-function"],
-      "topics": ["evolutionary-architecture"]
+      "topics": ["evolutionary-architecture", "ci-cd-pipeline"]
     },
     {
       "id": "jdeps",
@@ -13317,7 +13317,7 @@
       "meaning": "Bộ test nhỏ, nhanh, chạy ngay sau deploy để kiểm các chức năng sống còn còn chạy được, trước khi mở traffic hay chạy test sâu hơn.",
       "example": "Sau deploy staging, 15 test kiểm đăng nhập, tìm hàng, đặt hàng, thanh toán thử.",
       "related": ["end-to-end-test", "synthetic-monitoring"],
-      "topics": ["test-strategy"]
+      "topics": ["test-strategy", "ci-cd-pipeline"]
     },
     {
       "id": "synthetic-monitoring",
@@ -13805,7 +13805,7 @@
       "meaning": "Quy trình mọi người tích hợp vào một nhánh chính (trunk) ít nhất mỗi ngày, nhánh feature sống ngắn, phần chưa xong ẩn sau feature flag.",
       "example": "Pull request sống dưới một ngày, merge vào `main` sau khi CI xanh, deploy ngay.",
       "related": ["git-flow", "feature-flag", "branch-by-abstraction"],
-      "topics": ["git-workflow"]
+      "topics": ["git-workflow", "ci-cd-pipeline"]
     },
     {
       "id": "squash-merge",
@@ -13829,7 +13829,7 @@
       "meaning": "Hàng đợi chạy CI trên kết quả gộp của các pull request theo thứ tự trước khi đưa vào nhánh chính, để hai pull request cùng xanh không làm hỏng main khi gộp.",
       "example": "Hai pull request đều xanh riêng lẻ, nhưng merge queue phát hiện gộp chung thì test thất bại.",
       "related": ["trunk-based-development"],
-      "topics": ["git-workflow"]
+      "topics": ["git-workflow", "ci-cd-pipeline"]
     },
     {
       "id": "linux-namespace",
@@ -14158,6 +14158,102 @@
       "example": "Bảng giỏ hàng với partition key `user_id`, TTL xoá giỏ bỏ quên sau 30 ngày.",
       "related": ["partition-key", "single-table-design", "gsi"],
       "topics": ["aws-managed-services"]
+    },
+    {
+      "id": "route-53",
+      "term": "Route 53",
+      "meaning": "Dịch vụ DNS của AWS: quản lý hosted zone, trả lời truy vấn theo routing policy, kiểm tra sức khoẻ endpoint và đăng ký tên miền.",
+      "example": "Bản ghi `api.shop.example.com` kiểu latency trả về ALB ở region có độ trễ thấp nhất với người dùng.",
+      "related": ["routing-policy", "alias-record", "dns"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "routing-policy",
+      "term": "Routing policy (Route 53)",
+      "meaning": "Cách Route 53 chọn câu trả lời cho một truy vấn DNS: simple, weighted, latency, failover, geolocation, geoproximity, IP-based, multivalue.",
+      "example": "Weighted 90/10 để chuyển 10% người dùng sang hệ thống mới trước.",
+      "related": ["route-53", "canary-release"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "alias-record",
+      "term": "Alias record",
+      "meaning": "Bản ghi riêng của Route 53 trỏ tới tài nguyên AWS hoặc bản ghi khác trong zone; đặt được ở apex, tự theo IP mới, không tính phí truy vấn tới tài nguyên AWS.",
+      "example": "`example.org` (apex) là alias trỏ tới một distribution CloudFront.",
+      "related": ["route-53", "cname"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "amazon-cloudfront",
+      "term": "CloudFront",
+      "meaning": "CDN của AWS: cache và kết thúc TLS ở edge location, chia behavior theo path với cache policy riêng, đọc origin là S3, ALB hay HTTP bất kỳ.",
+      "example": "Behavior `/static/*` cache một năm, `/api/*` không cache nhưng vẫn đi qua edge.",
+      "related": ["cdn", "edge-location", "origin-access-control"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "origin-access-control",
+      "term": "Origin access control (OAC)",
+      "meaning": "Cơ chế cho CloudFront ký request tới S3 bằng SigV4 để bucket chỉ cho đúng distribution đọc, không cần để bucket public. Thay cho OAI cũ.",
+      "example": "Bucket policy chỉ cho `cloudfront.amazonaws.com` với điều kiện `AWS:SourceArn` là distribution của shop.",
+      "related": ["amazon-cloudfront", "amazon-s3"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "amazon-ebs",
+      "term": "EBS",
+      "meaning": "Elastic Block Store: ổ đĩa khối qua mạng cho EC2, nằm trong một AZ, gắn vào một instance; chọn được dung lượng, IOPS, throughput; snapshot lưu theo region.",
+      "example": "Volume gp3 500 GB, 6.000 IOPS cho PostgreSQL tự chạy.",
+      "related": ["amazon-efs", "amazon-s3"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "amazon-efs",
+      "term": "EFS",
+      "meaning": "Elastic File System: filesystem NFS managed, nhiều instance và pod mount cùng lúc, dữ liệu trải nhiều AZ, tự tăng dung lượng; mỗi thao tác file là một round trip mạng.",
+      "example": "Ba pod của CMS cũ cùng mount `/var/www/uploads` từ EFS qua CSI driver.",
+      "related": ["amazon-ebs", "amazon-s3"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "amazon-s3",
+      "term": "S3",
+      "meaning": "Kho object của AWS: lưu object theo bucket và key qua HTTP, bền và gần như vô hạn, nhất quán mạnh sau khi ghi; không rename hay sửa giữa object.",
+      "example": "`PUT s3://shop-uploads/avatars/u-42.jpg` rồi trả về presigned URL cho trình duyệt tải.",
+      "related": ["object-storage", "storage-class", "presigned-url"],
+      "topics": ["aws-edge-storage"]
+    },
+    {
+      "id": "continuous-integration",
+      "term": "Continuous integration (CI)",
+      "meaning": "Thực hành mọi người tích hợp code vào nhánh chính ít nhất mỗi ngày, mỗi lần được build và test tự động, và nhánh chính đỏ thì được sửa ngay.",
+      "example": "Pull request nhỏ, CI chạy trong 8 phút, xanh thì merge vào `main` trong ngày.",
+      "related": ["continuous-delivery", "trunk-based-development"],
+      "topics": ["ci-cd-pipeline"]
+    },
+    {
+      "id": "continuous-delivery",
+      "term": "Continuous delivery",
+      "meaning": "Giữ mọi commit trên nhánh chính ở trạng thái đưa lên production được bất cứ lúc nào; bước lên production có thể vẫn cần một quyết định.",
+      "example": "Mỗi commit xanh đều có image sẵn sàng; product owner chọn lúc bấm deploy.",
+      "related": ["continuous-integration", "continuous-deployment"],
+      "topics": ["ci-cd-pipeline"]
+    },
+    {
+      "id": "continuous-deployment",
+      "term": "Continuous deployment",
+      "meaning": "Mọi commit qua hết pipeline tự động lên production, không có bước duyệt tay; dựa vào test, canary và tự rollback.",
+      "example": "Merge lúc 10:02, lên 5% traffic lúc 10:15, toàn bộ lúc 10:40 nếu chỉ số tốt.",
+      "related": ["continuous-delivery", "canary-release"],
+      "topics": ["ci-cd-pipeline"]
+    },
+    {
+      "id": "build-artifact",
+      "term": "Build artifact",
+      "meaning": "Sản phẩm của bước build (jar, image container) được tạo đúng một lần, có định danh bất biến, rồi chính nó được đưa qua mọi môi trường.",
+      "example": "Image `orders@sha256:4f2a...` được test ở staging rồi deploy nguyên vẹn lên production.",
+      "related": ["deployment-pipeline", "image-digest"],
+      "topics": ["ci-cd-pipeline"]
     }
   ]
 }

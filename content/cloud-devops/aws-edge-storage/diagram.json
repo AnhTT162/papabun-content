@@ -1,0 +1,148 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đường vào của một shop: DNS, CDN, origin, lưu trữ",
+  "nodes": [
+    {
+      "id": "user",
+      "label": "Người dùng",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "r53",
+      "label": "Route 53",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "cf",
+      "label": "CloudFront (edge)",
+      "kind": "cache",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "s3",
+      "label": "S3 ảnh, JS",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "alb",
+      "label": "ALB + app",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "ebs",
+      "label": "EBS / EFS",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "user-r53",
+      "from": "user",
+      "to": "r53",
+      "label": "shop.example.com?"
+    },
+    {
+      "id": "user-cf",
+      "from": "user",
+      "to": "cf",
+      "label": "TLS tại edge"
+    },
+    {
+      "id": "cf-s3",
+      "from": "cf",
+      "to": "s3",
+      "label": "/static/* qua OAC"
+    },
+    {
+      "id": "cf-alb",
+      "from": "cf",
+      "to": "alb",
+      "label": "/api/* không cache"
+    },
+    {
+      "id": "alb-ebs",
+      "from": "alb",
+      "to": "ebs",
+      "label": "ổ của từng máy"
+    },
+    {
+      "id": "alb-s3",
+      "from": "alb",
+      "to": "s3",
+      "label": "file người dùng"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Trình duyệt hỏi DNS. Bản ghi alias ở apex trỏ vào CloudFront; Route 53 không tính phí truy vấn alias tới tài nguyên AWS.",
+      "show": [
+        "user",
+        "r53",
+        "user-r53"
+      ],
+      "highlight": [
+        "user-r53"
+      ]
+    },
+    {
+      "caption": "Route 53 trả về địa chỉ của CloudFront, và hạ tầng DNS của CloudFront chọn một edge gần resolver của người dùng. Bắt tay TLS diễn ra ở đó, chứng chỉ lấy từ ACM us-east-1.",
+      "show": [
+        "cf",
+        "user-cf"
+      ],
+      "highlight": [
+        "user-cf"
+      ]
+    },
+    {
+      "caption": "Behavior /static/* cache dài, đọc S3 bằng origin access control: bucket không public, chỉ distribution này đọc được.",
+      "show": [
+        "s3",
+        "cf-s3"
+      ],
+      "highlight": [
+        "cf-s3"
+      ]
+    },
+    {
+      "caption": "Behavior /api/* tắt cache nhưng vẫn đi qua edge: TLS gần người dùng, kết nối giữ sẵn về ALB, WAF gắn ở đây.",
+      "show": [
+        "alb",
+        "cf-alb"
+      ],
+      "highlight": [
+        "cf-alb"
+      ]
+    },
+    {
+      "caption": "App ghi file người dùng vào S3, không vào ổ máy. EBS chỉ cho dữ liệu của chính máy đó; EFS khi nhiều máy buộc phải chung một thư mục.",
+      "show": [
+        "ebs",
+        "alb-ebs",
+        "alb-s3"
+      ],
+      "highlight": [
+        "alb-s3",
+        "alb-ebs"
+      ]
+    },
+    {
+      "caption": "Thêm region thứ hai thì Route 53 dùng latency hoặc failover kèm health check; thời gian chuyển gồm cả TTL và cache DNS ở client.",
+      "show": [],
+      "highlight": [
+        "r53"
+      ]
+    }
+  ]
+}

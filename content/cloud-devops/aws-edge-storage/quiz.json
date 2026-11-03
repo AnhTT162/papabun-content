@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "apex-alias",
+      "kind": "single",
+      "prompt": "Bạn muốn `example.org` (không có `www`) trỏ vào một distribution CloudFront có tên `d111abcdef8.cloudfront.net`. Tạo bản ghi CNAME ở apex thì Route 53 báo lỗi. Cách đúng?",
+      "options": [
+        "Tạo alias record A/AAAA ở apex trỏ tới distribution",
+        "Tra IP hiện tại của CloudFront và tạo bản ghi A cố định",
+        "Tạo CNAME ở `www` rồi bản ghi TXT ở apex trỏ sang `www`",
+        "Giảm TTL của CNAME xuống 60 giây thì apex sẽ chấp nhận"
+      ],
+      "answer": 0,
+      "explanation": "Theo RFC, tên đã có CNAME không được có bản ghi nào khác, mà apex luôn có SOA và NS, nên CNAME ở apex bị cấm. Alias record của Route 53 trả thẳng địa chỉ IP của tài nguyên AWS, đặt được ở apex, tự cập nhật khi IP đổi và không tính phí truy vấn. IP của CloudFront thay đổi và khác nhau theo vị trí, nên bản ghi A cố định sẽ hỏng; TXT không dùng để chuyển hướng; TTL không liên quan tới luật CNAME."
+    },
+    {
+      "id": "acm-region",
+      "kind": "single",
+      "prompt": "Hệ thống chạy toàn bộ ở Singapore. Bạn tạo chứng chỉ ACM cho `shop.example.com` ở `ap-southeast-1`, nhưng khi cấu hình distribution CloudFront thì không chọn được chứng chỉ đó. Vì sao?",
+      "options": [
+        "CloudFront chỉ dùng chứng chỉ ACM nằm ở region us-east-1",
+        "Chứng chỉ ACM mới cần 24 giờ mới đồng bộ sang CloudFront",
+        "CloudFront chỉ nhận chứng chỉ nhập từ ngoài, không nhận ACM",
+        "Cần xác thực tên miền bằng email thay vì bản ghi DNS"
+      ],
+      "answer": 0,
+      "explanation": "CloudFront là dịch vụ toàn cầu và chỉ đọc chứng chỉ ACM ở `us-east-1`, bất kể origin ở region nào. Tạo thêm một chứng chỉ ở `us-east-1` cho CloudFront; chứng chỉ ở Singapore vẫn dùng cho ALB. Không có thời gian đồng bộ nào, CloudFront dùng tốt chứng chỉ ACM, và cách xác thực tên miền không ảnh hưởng tới việc chọn được."
+    },
+    {
+      "id": "efs-small-files",
+      "kind": "single",
+      "prompt": "Pipeline build Maven chạy trên các pod Kubernetes; để dùng chung cache, đội mount `~/.m2` vào EFS. Build từ 3 phút lên 14 phút dù throughput EFS rất thấp so với giới hạn. Nguyên nhân hợp lý nhất?",
+      "options": [
+        "Mỗi thao tác mở, stat file nhỏ là một round trip mạng",
+        "File system chưa bật throughput mode Elastic",
+        "Các pod chưa mount EFS với tuỳ chọn `nconnect`",
+        "EFS One Zone làm mọi lần đọc phải đi sang AZ khác"
+      ],
+      "answer": 0,
+      "explanation": "Maven đọc ghi rất nhiều file nhỏ (`.pom`, `.sha1`, `_remote.repositories`) và kiểm metadata liên tục. Trên ổ cục bộ mỗi thao tác tốn micro giây; trên NFS là một round trip mạng, nên tổng thời gian tăng dù băng thông còn dư. Đổi throughput mode hay mở nhiều kết nối TCP chỉ giúp khi nghẽn ở băng thông, mà đề bài cho thấy throughput còn rất thấp so với giới hạn; One Zone chỉ khác ở số AZ lưu dữ liệu. Cache build nên là ổ cục bộ của runner, được khôi phục từ một bản nén trên S3, hoặc dùng cache của hệ thống CI."
+    },
+    {
+      "id": "snapshot-first-read",
+      "kind": "single",
+      "prompt": "Diễn tập DR: dựng máy PostgreSQL mới từ snapshot EBS 1 TB, mở traffic ngay khi database khởi động xong. Mười phút đầu truy vấn chậm gấp 20 lần bình thường rồi dần hết. Vì sao?",
+      "options": [
+        "Volume từ snapshot tải từng block từ S3 ở lần đọc đầu tiên",
+        "PostgreSQL phải chạy lại toàn bộ WAL của 1 TB khi mở",
+        "gp3 mới tạo chỉ có 100 IOPS trong giờ đầu rồi mới tăng",
+        "Snapshot được nén nên mỗi lần đọc phải giải nén trên máy"
+      ],
+      "answer": 0,
+      "explanation": "Volume tạo từ snapshot dùng được ngay nhưng block chỉ được kéo từ S3 khi đọc lần đầu; buffer cache của PostgreSQL còn trống nên mọi truy vấn chạm block chưa tải. Cách xử lý: đọc hết volume trước khi mở traffic (khởi tạo), hoặc bật Fast Snapshot Restore cho snapshot đó, và tính thời gian này vào RTO. Replay WAL xảy ra trước khi database nhận kết nối; gp3 có ngay 3.000 IOPS; không có bước giải nén ở phía máy."
+    },
+    {
+      "id": "s3-rename",
+      "kind": "single",
+      "prompt": "Ứng dụng xử lý báo cáo ghi file tạm `reports/tmp/r-91.csv` lên S3 rồi \"đổi tên\" thành `reports/final/r-91.csv` khi xong, như từng làm trên ổ đĩa. File 4 GB mất hơn 1 phút cho bước đổi tên. Vì sao?",
+      "options": [
+        "S3 không có rename: phải copy cả object sang khoá mới rồi xoá khoá cũ",
+        "S3 chỉ nhất quán sau vài giây nên phải chờ object cũ được đồng bộ",
+        "Mỗi prefix chỉ cho 100 thao tác mỗi giây nên đổi prefix bị xếp hàng",
+        "Đổi tên kích hoạt lifecycle rule nên object bị chuyển storage class"
+      ],
+      "answer": 0,
+      "explanation": "Khoá là tên duy nhất của object, không có thao tác đổi tên nguyên tử; \"rename\" của SDK hay công cụ mount là copy phía server rồi xoá, thời gian tăng theo kích thước. Ghi thẳng vào khoá cuối cùng khi xong, và đánh dấu hoàn tất bằng một bản ghi trong database hay một object marker nhỏ. S3 nhất quán mạnh ngay sau khi ghi; mỗi prefix chịu ít nhất 3.500 ghi mỗi giây; lifecycle chạy theo tuổi object chứ không theo thao tác."
+    }
+  ]
+}

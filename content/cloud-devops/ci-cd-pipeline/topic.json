@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "ci-cd-pipeline",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "CI/CD pipeline",
+  "summary": "CI, continuous delivery và continuous deployment; các stage theo chi phí phản hồi, build một artifact rồi promote bằng digest, giữ pipeline nhanh, migration và tự rollback sau deploy; feature flag tách deploy khỏi release; đo bằng năm chỉ số DORA.",
+  "level": "mid",
+  "order": 10,
+  "minutes": 14,
+  "prerequisites": ["git-workflow", "docker", "test-strategy"],
+  "terms": ["continuous-integration", "continuous-delivery", "continuous-deployment", "build-artifact", "deployment-pipeline", "feature-flag", "merge-queue", "smoke-test", "dora-metrics", "trunk-based-development"],
+  "references": [
+    { "title": "Martin Fowler: Continuous Integration", "url": "https://martinfowler.com/articles/continuousIntegration.html" },
+    { "title": "Pete Hodgson: Feature Toggles (aka Feature Flags)", "url": "https://martinfowler.com/articles/feature-toggles.html" },
+    { "title": "DORA: software delivery performance metrics", "url": "https://dora.dev/guides/dora-metrics/" },
+    { "title": "OpenFeature", "url": "https://openfeature.dev/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Pipeline của bạn mất 50 phút, làm sao rút xuống?\" Đo trước: thời gian từng job, phần chờ runner, phần tải dependency. Rồi theo thứ tự lợi ích: cache dependency và layer image; chạy song song các job độc lập và chia bộ test; chỉ build phần bị ảnh hưởng trong monorepo; dời e2e chậm sang stage sau hoặc chạy theo lịch, giữ stage commit dưới 10 phút; sửa hoặc cách ly test chập chờn thay vì rerun. Nêu cái không đánh đổi: không bỏ test để nhanh, mà chuyển test xuống tầng rẻ hơn." },
+    { "type": "callout", "style": "warning", "markdown": "Feature flag không cứu được thay đổi dữ liệu. Bật flag cho đường code mới ghi đơn hàng theo định dạng mới, phát hiện lỗi rồi tắt flag: những đơn đã ghi vẫn ở định dạng mới và code cũ có thể không đọc được. Thay đổi dữ liệu phải tương thích hai chiều (expand/contract) trước khi đặt sau flag, và kill switch phải được thử tắt thật trong staging." }
+  ]
+}
