@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "conway", "front": "Conway's law nói gì?", "back": "Tổ chức thiết kế hệ thống sẽ tạo ra thiết kế sao chép cấu trúc giao tiếp của chính nó (Melvin Conway, 1968). Cấu trúc team vì vậy là một quyết định kiến trúc." },
+    { "id": "inverse-conway", "front": "Inverse Conway maneuver là gì?", "back": "Đổi cấu trúc team theo kiến trúc mong muốn trước, để đường giao tiếp mới kéo kiến trúc đi theo." },
+    { "id": "four-types", "front": "Bốn kiểu team của Team Topologies?", "back": "Stream-aligned (đa số, theo dòng giá trị), platform (dịch vụ nội bộ tự phục vụ), enabling (giúp team khác học năng lực mới, có thời hạn), complicated-subsystem (phần cần chuyên môn hiếm)." },
+    { "id": "three-modes", "front": "Ba kiểu tương tác giữa các team?", "back": "Collaboration (làm sát nhau, có thời hạn), X-as-a-Service (dùng qua giao diện rõ, ít trao đổi), facilitating (giúp team khác học hoặc gỡ vướng)." },
+    { "id": "ownership", "front": "Quy tắc sở hữu service là gì?", "back": "Mỗi service có đúng một team sở hữu, cả quyết định thay đổi lẫn trực sự cố. Một team giữ được vài service, nhưng không để nhiều team cùng sở hữu một service." },
+    { "id": "cognitive-load", "front": "Tải nhận thức liên quan gì tới ranh giới team?", "back": "Team chỉ giữ được phần hệ thống mà họ hiểu và tự tin thay đổi. Platform giảm tải ngoại lai (công cụ, hạ tầng) để team dồn sức cho miền nghiệp vụ." },
+    { "id": "component-team", "front": "Vì sao team theo tầng (frontend, backend, QA, ops) làm chậm giao hàng?", "back": "Mỗi tính năng qua nhiều team và nhiều hàng đợi: lead time dài dù thời gian làm thật ngắn, flow efficiency thường dưới 20%." },
+    { "id": "brooks", "front": "Vì sao tuyển thêm người không chắc làm team nhanh hơn?", "back": "Người mới cần được kèm, và số cặp giao tiếp tăng theo n(n−1)/2 (Brooks's law). Thêm người chỉ giúp khi ranh giới cho phép các team làm độc lập." },
+    { "id": "platform-product", "front": "Platform team nên vận hành thế nào?", "back": "Như một sản phẩm: có người dùng là các team khác, cung cấp tự phục vụ qua X-as-a-Service, bắt đầu từ thinnest viable platform. Nhận ticket cho mọi deploy là thành component team mới." }
+  ]
+}

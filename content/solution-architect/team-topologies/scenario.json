@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "31 microservices, 6 team theo tầng, mỗi tính năng mất 19 ngày: tổ chức lại team và quyền sở hữu",
+  "prompt": "Bạn là solution architect của một công ty du lịch trực tuyến bán phòng khách sạn và vé máy bay qua web và một app di động. Khối kỹ thuật có 46 người, chia theo tầng:\n\n| Team | Người | Làm gì |\n|---|---|---|\n| Web | 7 | Toàn bộ giao diện web |\n| Mobile | 8 | App iOS và Android |\n| Backend | 14 | Cả 31 microservices; [[codeowners|CODEOWNERS]] của mọi repo là backend |\n| Data/DBA | 4 | Database, báo cáo, mô hình xếp hạng khách sạn và định giá động |\n| QA | 8 | Test thủ công và một phần tự động trước mỗi đợt release |\n| Ops | 5 | Kubernetes, pipeline, deploy theo ticket, trực sự cố cấp 1 |\n\nSố liệu quý trước:\n\n- 38 tính năng ra production; 29 trong đó phải qua ít nhất 3 team.\n- Từ lúc bắt đầu làm tới production trung bình 19 ngày; thời gian thật sự có người làm khoảng 3 ngày, còn lại là chờ: chờ backend nhận việc, chờ QA, chờ ticket deploy (trung bình 2,5 ngày).\n- Sự cố: Ops nhận cảnh báo, gọi backend lúc đêm; thời gian khôi phục trung bình 4 giờ, phần lớn để tìm ai hiểu service bị lỗi.\n- 6 trong 31 service không ai trong backend còn nhớ rõ, người viết đã nghỉ. Service `booking-core` bị sửa bởi mọi tính năng liên quan đặt chỗ, của cả khách sạn lẫn vé máy bay.\n\nCTO đề xuất: tuyển thêm 20 kỹ sư backend trong 6 tháng, và tách 31 service thành khoảng 60 để các nhóm làm song song.\n\nCTO cần: cấu trúc team đề xuất, ai sở hữu service nào, ý kiến về đề xuất tuyển người và tách service, kế hoạch chuyển đổi, và đo thế nào để biết đổi đúng.",
+  "hints": [
+    "Tính flow efficiency: 3 ngày làm trên 19 ngày lead time. Nút thắt là năng lực code hay là hàng đợi giữa các team?",
+    "Nếu một tính năng khách sạn chỉ cần một team đưa ra production, team đó phải có những kỹ năng nào?",
+    "Phần nào cần chuyên môn hiếm đến mức không thể rải vào mọi team? Phần nào mọi team cần nhưng không nên tự làm?",
+    "Một team 6–8 người giữ được bao nhiêu service mà vẫn hiểu và trực được ban đêm?"
+  ],
+  "solution": "**1. Chẩn đoán**\n\n[[flow-efficiency|Flow efficiency]] là 3/19 ≈ 16%: tính năng chậm vì chờ, không vì code chậm. 29/38 tính năng (76%) đi qua ít nhất 3 team, mỗi lần bàn giao là một hàng đợi. Team backend 14 người có 91 cặp giao tiếp và sở hữu 31 service, quá sức hiểu của bất kỳ ai, nên 6 service mồ côi và sự cố mất 4 giờ. Đây là [[conways-law|Conway's law]]: team chia theo tầng nên kiến trúc và quy trình cũng chia theo tầng.\n\n**2. Cấu trúc đề xuất (46 người, chưa tuyển thêm)**\n\n| Team | Kiểu | Người | Sở hữu |\n|---|---|---|---|\n| Khách sạn | [[stream-aligned-team|Stream-aligned]] | 8 | Tìm và xem khách sạn, giá phòng, kết nối nhà cung cấp phòng |\n| Vé máy bay | Stream-aligned | 8 | Tìm chuyến, giá vé, kết nối hệ thống đặt vé hãng bay |\n| Đặt chỗ & thanh toán | Stream-aligned | 9 | `booking-core`, thanh toán, hoá đơn, huỷ và hoàn tiền |\n| Khách hàng & khuyến mãi | Stream-aligned | 8 | Tài khoản, điểm thưởng, mã giảm giá, thông báo |\n| Xếp hạng & định giá | [[complicated-subsystem-team|Complicated-subsystem]] | 4 | Mô hình xếp hạng và định giá động, cung cấp qua API; tạm giữ báo cáo kinh doanh |\n| Platform | [[platform-team|Platform]] | 6 | Pipeline tự phục vụ, Kubernetes, observability, mẫu database |\n| Test tự động | [[enabling-team|Enabling]] | 3 | Kèm từng team dựng test tự động, có thời hạn 2 quý |\n\nChuyển người cụ thể: 12 backend vào bốn team stream-aligned (3 mỗi team) và thêm 1 vào Đặt chỗ vì `booking-core` nặng nhất, 1 backend sang Xếp hạng & định giá để làm API quanh mô hình; 7 web chia 2/2/2/1; 8 mobile chia 2 mỗi team; 5 QA chia vào team stream-aligned, 3 QA giỏi tự động hoá thành enabling team; 3 người data sang Xếp hạng & định giá, 1 DBA sang platform cùng 5 người Ops. Tổng vẫn 46. Mỗi team stream-aligned đủ kỹ năng để đưa một tính năng ra production không chờ ai; ưu tiên xếp người vào phần họ đã quen.\n\nVài điểm cần cẩn thận:\n\n- *App di động là một binary chung*: mỗi team sở hữu module của mình trong app, còn khung app, design system và lịch phát hành lên store cần một chủ. Platform không có ai biết mobile, nên giao khung app cho một mobile engineer có tên (ở team Khách hàng & khuyến mãi), còn việc phát hành thì release captain luân phiên giữa các team; nếu không 4 team sẽ dẫm lên nhau mỗi đợt release. Rủi ro: 2 mobile mỗi team thường là 1 iOS và 1 Android, tức [[bus-factor|bus factor]] bằng 1. Giảm bằng review chéo giữa các team và nhóm mobile họp định kỳ để chia sẻ kiến thức.\n- *Data/DBA*: phần mô hình xếp hạng, định giá cần chuyên môn hiếm nên thành complicated-subsystem team. DBA sang platform để dựng mẫu database tự phục vụ (có sẵn backup, giám sát, cảnh báo). Báo cáo cho kinh doanh tạm do team Xếp hạng & định giá giữ vì họ quen dữ liệu nhất; ghi rõ đây là việc tạm, khi tuyển thêm thì lập team data platform.\n- *QA*: 1 QA mỗi team stream-aligned; 3 người giỏi tự động hoá nhất thành enabling team, kèm từng team dựng test tự động rồi rút sau 2 quý. Mục tiêu là team tự test và tự release, không phải một bộ phận QA mới.\n- *Ops thành platform*: deploy theo ticket bị thay bằng pipeline mà team tự bấm. Bắt đầu bằng [[thinnest-viable-platform|thinnest viable platform]]: một template pipeline, một trang tài liệu, dashboard và cảnh báo mặc định cho mỗi service. Quan hệ với team sản phẩm chuyển từ ticket sang [[x-as-a-service|X-as-a-Service]].\n\n**3. Quyền sở hữu service**\n\n- Lập bảng 31 service, mỗi service đúng một team, ghi vào [[service-catalog|service catalog]] và CODEOWNERS. Mỗi team stream-aligned giữ khoảng 6–8 service. 6 service mồ côi được gán chủ ngay, dù chủ mới chưa hiểu: có chủ mới có người đọc code, vá thư viện, viết [[runbook|runbook]].\n- Trực sự cố theo quyền sở hữu: cảnh báo của service nào gọi thẳng team đó; platform trực phần nền tảng. Không còn tầng chuyển tiếp qua Ops.\n- `booking-core` là chỗ kiến trúc buộc nhiều team cùng sửa. Giao cho team Đặt chỗ & thanh toán sở hữu; trong thời gian đầu team khác mở PR vào repo đó và team sở hữu review. Song song, tách dần phần riêng của khách sạn và vé máy bay ra service của hai team đó (ví dụ quy tắc huỷ phòng, đổi chuyến), để `booking-core` chỉ còn luồng đặt chỗ và thanh toán chung. Thời gian đầu hai bên ở kiểu collaboration có hạn, rồi chuyển sang X-as-a-Service qua API.\n\n**4. Về đề xuất của CTO**\n\n- *Tuyển 20 backend trong 6 tháng*: nút thắt là hàng đợi giữa các team, không phải số người viết code. Thêm 20 người vào cấu trúc hiện tại làm khối backend thành 34 người với 561 cặp giao tiếp, cộng thời gian kèm người mới ([[brooks-law|Brooks's law]]). Tổ chức lại trước, đo lại, rồi tuyển theo nhu cầu từng team; khi một dòng giá trị cần thêm sức, lập team stream-aligned thứ hai cho một phần của nó chứ không nhồi team lên 14 người.\n- *Tách thành 60 service*: 60 service cho 4 team stream-aligned là khoảng 15 service mỗi team phải hiểu và trực, tăng tải nhận thức và thêm lời gọi mạng giữa các service. Ngược lại, gộp những service luôn đổi cùng nhau và cùng một team giữ. Chỉ tách theo ranh giới team và bounded context, như phần riêng của `booking-core`.\n\n**5. Chuyển đổi theo bước**\n\n1. Tháng 1: đo nền ([[dora-metrics|DORA metrics]], tỉ lệ tính năng qua nhiều team, thời gian chờ), lập bảng service và chủ, dựng template pipeline đầu tiên.\n2. Quý đầu: lập team Khách sạn (thử mô hình tự deploy, tự trực, vì ít phụ thuộc nhất) và team Đặt chỗ & thanh toán (để `booking-core` có chủ ngay từ đầu). Team data hiện có tiếp tục giữ mô hình xếp hạng và định giá, chỉ chốt API cho team Khách sạn. Các service còn lại, gồm 6 service mồ côi, tạm do phần còn lại của backend giữ với một người chịu trách nhiệm có tên cho mỗi service.\n3. Quý hai: lập hai team stream-aligned còn lại, chính thức hoá team Xếp hạng & định giá, chuyển các service tạm giữ sang chủ cuối cùng; enabling team bắt đầu kèm.\n4. Mỗi tháng rà lại: team nào vẫn phải chờ ai, vì sao; điều chỉnh ranh giới hoặc platform.\n\nNói trước với lãnh đạo: năng suất giảm trong một hai tháng đầu vì người đổi chỗ và học phần mới.\n\n**6. Đo**\n\n- Lead time từ lúc bắt đầu làm tới production, tần suất deploy, tỉ lệ thay đổi gây lỗi, thời gian khôi phục.\n- Tỉ lệ tính năng phải qua hơn một team: mục tiêu dưới 30% sau hai quý.\n- Thời gian chờ team khác và chờ deploy: mục tiêu deploy không còn chờ ticket.\n- Số service mỗi team và khảo sát hằng quý: team có tự tin thay đổi và trực từng service mình giữ không.",
+  "tradeoffs": [
+    {
+      "option": "Giữ team theo tầng, tuyển thêm và tách nhỏ service",
+      "pros": [
+        "Không xáo trộn người, chuyên môn tập trung",
+        "Dễ tuyển theo vị trí quen thuộc"
+      ],
+      "cons": [
+        "Hàng đợi giữa các team vẫn nguyên, lead time không giảm",
+        "Thêm người và service làm tăng tải giao tiếp, nhận thức"
+      ]
+    },
+    {
+      "option": "Tổ chức lại toàn bộ trong một lần",
+      "pros": [
+        "Nhanh có cấu trúc đích",
+        "Không phải chạy hai mô hình song song"
+      ],
+      "cons": [
+        "Năng suất giảm cùng lúc ở mọi nơi",
+        "Sai ranh giới thì sửa trên toàn bộ tổ chức"
+      ]
+    },
+    {
+      "option": "Stream-aligned theo dòng giá trị, platform tự phục vụ, chuyển từng bước",
+      "pros": [
+        "Đa số tính năng chỉ cần một team, giảm chờ đợi",
+        "Học được từ team thử trước khi mở rộng"
+      ],
+      "cons": [
+        "Mất vài tháng và cần lãnh đạo chấp nhận năng suất giảm tạm thời",
+        "Phải tách dần booking-core song song"
+      ]
+    }
+  ]
+}

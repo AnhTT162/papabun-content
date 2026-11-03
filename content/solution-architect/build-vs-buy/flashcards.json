@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "what-to-build", "front": "Phần nào nên tự xây, phần nào nên mua?", "back": "Tự xây core domain, phần làm sản phẩm khác đối thủ. Generic (đăng nhập, email, kế toán chuẩn) thì mua hoặc dùng sẵn; supporting thì xây đơn giản hoặc mua nếu có sản phẩm vừa." },
+    { "id": "tco-parts", "front": "TCO của phương án mua gồm những gì ngoài phí license?", "back": "Mức tăng khi gia hạn và khi tải tăng, tích hợp và chuyển dữ liệu, người quản trị, support, add-on tính riêng, và chi phí thoát." },
+    { "id": "usage-crossover", "front": "Vì sao giá theo lượng dùng luôn có điểm cắt với tự vận hành?", "back": "Giá theo lượng dùng tăng theo tải, còn tự vận hành phần lớn là chi phí cố định (người). Tính theo vài kịch bản tăng trưởng để biết điểm cắt nằm ở đâu." },
+    { "id": "sla-credit", "front": "Service credit khi vendor vi phạm SLA bù được gì?", "back": "Thường chỉ 10–30% phí tháng của dịch vụ đó, không bù thiệt hại kinh doanh. Nếu availability của mình phụ thuộc vendor, phải thiết kế cho lúc vendor ngừng." },
+    { "id": "poc-vendor", "front": "PoC chọn vendor khác demo ở đâu?", "back": "Chạy trên dữ liệu, tải và tích hợp của mình, thử đường khó (dữ liệu bẩn, chuyển dữ liệu cũ, lỗi), với tiêu chí đạt viết trước khi bắt đầu." },
+    { "id": "lockin-reduce", "front": "Giảm vendor lock-in bằng kiến trúc thế nào?", "back": "Ứng dụng nói chuẩn mở (OIDC, SQL, OpenTelemetry), gọi API riêng của vendor qua một adapter của mình, giữ dữ liệu cốt lõi ở database của mình và xuất định kỳ." },
+    { "id": "lockin-contract", "front": "Những điều khoản hợp đồng nào giảm lock-in?", "back": "Định dạng và thời hạn xuất dữ liệu khi chấm dứt, hỗ trợ chuyển giao, trần tăng giá khi gia hạn, hạn báo huỷ rõ ràng, quyền chấm dứt khi vi phạm SLA nhiều lần." },
+    { "id": "agpl", "front": "AGPL khác GPL ở điểm nào?", "back": "AGPL thêm điều khoản mạng: cung cấp dịch vụ qua mạng từ bản đã sửa cũng phải mở mã, không chỉ khi phân phối phần mềm." },
+    { "id": "customize", "front": "Vì sao mua rồi tuỳ biến nặng là lựa chọn tệ?", "back": "Mỗi lần nâng cấp thành một dự án nên bị kẹt ở bản cũ. Với phần generic, đổi quy trình theo sản phẩm; phải tuỳ biến nặng là dấu hiệu chọn sai hoặc phần đó là core." }
+  ]
+}

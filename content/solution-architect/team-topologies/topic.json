@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "team-topologies",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Conway's law & cấu trúc team",
+  "summary": "Conway's law và bằng chứng (mirroring hypothesis, nghiên cứu Windows Vista), inverse Conway maneuver, bốn kiểu team và ba kiểu tương tác của Team Topologies, tải nhận thức, cỡ team và Brooks's law, ranh giới sở hữu (một service một team, you build it you run it, service catalog, team API), fracture plane, component team và flow efficiency, platform engineering (golden path, thinnest viable platform), mô hình Spotify bị chép sai, và cách đo khi tổ chức lại.",
+  "level": "architect",
+  "order": 18,
+  "minutes": 17,
+  "prerequisites": ["ddd-strategic", "microservices-tradeoffs", "architecture-styles", "tech-lead-role"],
+  "terms": ["conways-law", "cognitive-load", "inverse-conway-maneuver", "stream-aligned-team", "platform-team", "enabling-team", "complicated-subsystem-team", "x-as-a-service", "strangler-fig", "modular-monolith", "brooks-law", "service-catalog", "codeowners", "you-build-it-you-run-it", "team-api", "component-team", "internal-developer-platform", "golden-path", "thinnest-viable-platform", "dora-metrics", "mirroring-hypothesis", "two-pizza-team", "fracture-plane", "bounded-context", "pci-dss", "flow-efficiency", "microservices", "bus-factor", "runbook"],
+  "references": [
+    { "title": "Melvin Conway: How Do Committees Invent? (1968)", "url": "https://www.melconway.com/Home/Committees_Paper.html" },
+    { "title": "Team Topologies: Key concepts", "url": "https://teamtopologies.com/key-concepts" },
+    { "title": "Martin Fowler: Conway's Law", "url": "https://martinfowler.com/bliki/ConwaysLaw.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Không đổi được cấu trúc tổ chức thì kiến trúc sư làm gì?\" Chọn kiến trúc vừa với tổ chức hiện có: ít team thì modular monolith thay vì nhiều microservices; đặt ranh giới module theo ranh giới team đang có; chỉ ra bằng số (thời gian chờ, tỉ lệ tính năng qua nhiều team) chỗ cấu trúc hiện tại làm chậm, để người có quyền quyết định đổi tổ chức có dữ liệu." },
+    { "type": "callout", "style": "warning", "markdown": "Tổ chức lại team mà không gán lại quyền sở hữu service là cách nhanh nhất để có service mồ côi: không ai trực, không ai vá thư viện. Sau mỗi lần đổi, rà toàn bộ service catalog và gán chủ cho từng dòng trước khi công bố cấu trúc mới." },
+    { "type": "callout", "style": "tip", "markdown": "Muốn biết team có đang bị chặn bởi team khác không, đếm trong một quý: bao nhiêu tính năng phải chạm hơn một team, và mỗi tính năng chờ bao lâu ở team khác. Hai con số này thuyết phục lãnh đạo hơn mọi sơ đồ tổ chức." }
+  ]
+}

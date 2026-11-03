@@ -16,7 +16,7 @@
 - Vận hành: mỗi service cần pipeline, giám sát, tracing, on-call; debug một request đi qua sáu service.
 - Test end-to-end khó; cần contract test giữa các service.
 
-**Chia thế nào**: theo năng lực nghiệp vụ và bounded context, khớp với đội ([[conways-law|Conway's law]]); cách tìm ranh giới ở bài DDD chiến lược. Góc nhìn phân tán thêm một tiêu chí đo được: **khả dụng nhân theo chuỗi gọi đồng bộ**. Một request đi qua 5 service, mỗi service 99,9%, thì chỉ còn khoảng 99,5%, và p99 của cả request xấu hơn p99 của từng service. Một service nên làm được phần lớn việc của nó mà không gọi đồng bộ sang service khác.
+**Chia thế nào**: theo năng lực nghiệp vụ và bounded context, khớp với đội ([[conways-law|Conway's law]]); cách tìm ranh giới ở bài DDD chiến lược, cấu trúc team và quyền sở hữu service ở bài Conway's law & cấu trúc team. Góc nhìn phân tán thêm một tiêu chí đo được: **khả dụng nhân theo chuỗi gọi đồng bộ**. Một request đi qua 5 service, mỗi service 99,9%, thì chỉ còn khoảng 99,5%, và p99 của cả request xấu hơn p99 của từng service. Một service nên làm được phần lớn việc của nó mà không gọi đồng bộ sang service khác.
 
 **Khi nào không nên**: đội nhỏ, nghiệp vụ chưa rõ, chưa có nền tảng vận hành; khi đó dùng modular monolith (bài Modular monolith).
 

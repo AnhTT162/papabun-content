@@ -424,8 +424,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 14 | `migration-modernization` | Migration & hiện đại hoá | architect | Strangler fig, 7R khi lên cloud, migrate dữ liệu | L D Sc | ✅ |
 | 15 | `cost-finops` | Ước tính chi phí & FinOps | architect | Mô hình chi phí cloud, tối ưu, đánh đổi chi phí và độ tin cậy | L Sc | ✅ |
 | 16 | `multi-tenancy` | Kiến trúc multi-tenant | architect | Mức cô lập, noisy neighbor, dữ liệu theo tenant | L D Sc | ✅ |
-| 17 | `build-vs-buy` | Build hay buy & chọn vendor | architect | Tiêu chí, PoC, lock-in, tổng chi phí sở hữu (TCO) | L Sc | ⬜ |
-| 18 | `team-topologies` | ✚ Conway's law & cấu trúc team | architect | Kiến trúc theo team, Team Topologies, ranh giới sở hữu | L Sc | ⬜ |
+| 17 | `build-vs-buy` | Build hay buy & chọn vendor | architect | Tiêu chí, PoC, lock-in, tổng chi phí sở hữu (TCO) | L Sc | ✅ |
+| 18 | `team-topologies` | ✚ Conway's law & cấu trúc team | architect | Kiến trúc theo team, Team Topologies, ranh giới sở hữu | L Sc | ✅ |
 | 19 | `enterprise-architecture` | ✚ Enterprise architecture & governance | architect | TOGAF ở mức đủ dùng, tech radar, chuẩn hoá công nghệ, review board | L Sc | ⬜ |
 | 20 | `evolutionary-architecture` | ✚ Kiến trúc tiến hoá & fitness function | architect | Fitness function, kiểm tra kiến trúc tự động, thay đổi dần thay vì viết lại | L Sc | ⬜ |
 | 21 | `architecture-review` | Review một kiến trúc | architect | Risk storming, ATAM rút gọn, câu hỏi cần hỏi | L Sc | ⬜ |

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "build-vs-buy",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Build hay buy & chọn vendor",
+  "summary": "Phần nào tự xây (core domain, Wardley map) và phần nào mua, phổ lựa chọn từ SaaS tới open source managed, tổng chi phí sở hữu nhiều năm và điểm cắt của giá theo lượng dùng, quy trình chọn vendor (RFI, RFP, ma trận, PoC trên dữ liệu thật), tiêu chí phi chức năng (SLA và service credit, SOC 2, xuất dữ liệu), các dạng lock-in và cách giảm bằng kiến trúc lẫn hợp đồng, license open source và các lần đổi license, bẫy tuỳ biến nặng, và điều kiện xem lại quyết định.",
+  "level": "architect",
+  "order": 17,
+  "minutes": 18,
+  "prerequisites": ["architecture-tradeoffs", "cost-finops", "ddd-strategic", "requirements-estimation"],
+  "terms": ["core-domain", "tco", "proof-of-concept", "saas", "sla", "vendor-lock-in", "exit-plan", "cots", "sensitivity-analysis", "rfp", "service-credit", "port", "anti-corruption-layer", "source-code-escrow", "copyleft-license", "source-available-license", "wardley-map", "mau", "rfi", "soc-2", "sso", "oidc", "adr", "scim", "webhook", "saml", "opentelemetry", "credential-stuffing", "identity-provider", "jwt"],
+  "references": [
+    { "title": "Simon Wardley: Wardley Maps (sách mở)", "url": "https://medium.com/wardleymaps" },
+    { "title": "Martin Fowler: Utility vs Strategic Dichotomy", "url": "https://martinfowler.com/bliki/UtilityVsStrategicDichotomy.html" },
+    { "title": "Open Source Initiative: Licenses", "url": "https://opensource.org/licenses" },
+    { "title": "Oracle: Partitioning Policy", "url": "https://www.oracle.com/assets/partitioning-070609.pdf" },
+    { "title": "Oracle: Licensing Oracle Software in the Cloud Computing Environment", "url": "https://www.oracle.com/assets/cloud-licensing-070579.pdf" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team muốn tự xây, còn anh nghĩ nên mua. Anh làm gì?\" Đưa về cùng một khung: phần này có phải core không, TCO 3–5 năm của cả hai tính đủ công vận hành và trực sự cố, rủi ro và thời gian ra thị trường. Hỏi team họ muốn chủ động điều gì cụ thể, rồi chỉ ra cách đạt điều đó khi mua (chuẩn mở, adapter, điều khoản xuất dữ liệu). Nếu vẫn bất đồng, người chịu ngân sách quyết, ghi ADR kèm điều kiện xem lại." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng chọn vendor theo demo. Demo được chuẩn bị cho đường đẹp; PoC phải chạy trên dữ liệu bẩn, dữ liệu cũ cần chuyển, tải đỉnh và tích hợp thật của bạn, với tiêu chí đạt viết trước. Và hỏi ngay từ đầu: khi chấm dứt, xuất được những gì, định dạng nào, trong bao lâu." },
+    { "type": "callout", "style": "tip", "markdown": "Với giá theo lượng dùng, vẽ đường chi phí theo kịch bản tăng trưởng cạnh đường chi phí tự vận hành và đánh dấu điểm cắt. Đem con số đó vào đàm phán (khoá đơn giá ở mức tải sẽ đạt) và vào ADR (điều kiện xem lại)." }
+  ]
+}

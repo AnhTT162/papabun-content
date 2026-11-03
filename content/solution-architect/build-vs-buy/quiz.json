@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "core-or-generic",
+      "kind": "single",
+      "prompt": "Công ty cho vay tiêu dùng cần ba thứ: mô hình chấm điểm tín dụng, gửi email giao dịch, và sổ cái kế toán theo chuẩn mực. Phân bổ build và buy nào hợp lý nhất?",
+      "options": [
+        "Tự xây chấm điểm; mua dịch vụ email và phần mềm kế toán",
+        "Tự xây cả ba để chủ động dữ liệu và không bị lock-in",
+        "Mua cả ba, vì sản phẩm có sẵn luôn rẻ hơn tự xây",
+        "Tự xây email và kế toán; mua mô hình chấm điểm có sẵn"
+      ],
+      "answer": 0,
+      "explanation": "Chấm điểm tín dụng là core domain: nó quyết định công ty cho vay ai và lãi bao nhiêu, nên đáng đặt người giỏi vào. Email và kế toán chuẩn là generic: đối thủ dùng cùng sản phẩm cũng không làm mình mất lợi thế. Tự xây mọi thứ đặt người vào phần không tạo khác biệt; mua mọi thứ thì mất chính lợi thế cạnh tranh. Mua có sẵn không phải lúc nào cũng rẻ hơn: giá theo lượng dùng có thể vượt tự vận hành khi lớn."
+    },
+    {
+      "id": "sla-credit",
+      "kind": "single",
+      "prompt": "Vendor thanh toán có SLA 99,95%, vi phạm thì trả service credit 10% phí tháng (phí 8.000 USD). Một lần ngừng 3 giờ làm mất khoảng 150.000 USD doanh thu. Kết luận đúng là gì?",
+      "options": [
+        "Credit chỉ khoảng 800 USD; phải thiết kế cho lúc vendor ngừng",
+        "SLA 99,95% đủ bảo đảm, không cần thêm phương án dự phòng",
+        "Vendor bồi thường phần doanh thu mất vì đã vi phạm SLA đã ký",
+        "Nên đòi SLA 99,99% là đủ để không còn phụ thuộc vào vendor"
+      ],
+      "answer": 0,
+      "explanation": "Service credit thường chỉ là 10–30% phí tháng của dịch vụ, ở đây khoảng 800 USD so với 150.000 USD mất. SLA là động lực cho vendor, không bù thiệt hại kinh doanh, và hợp đồng thường loại trừ thiệt hại gián tiếp. SLA cao hơn không xoá sự phụ thuộc: vẫn cần thiết kế cho lúc vendor ngừng (vendor thứ hai, hàng đợi để xử lý sau, giảm chức năng có kiểm soát)."
+    },
+    {
+      "id": "usage-pricing",
+      "kind": "single",
+      "prompt": "So sánh SaaS tính theo MAU với tự vận hành open source: năm 1 SaaS rẻ hơn 40%. Kế hoạch là MAU tăng gấp 4 trong 3 năm. Cách so nào đúng?",
+      "options": [
+        "Tính TCO từng năm theo vài kịch bản MAU và tìm điểm cắt",
+        "Chọn SaaS vì năm 1 rẻ hơn, năm sau sẽ đàm phán lại giá",
+        "Chọn tự vận hành vì open source không có phí license",
+        "Lấy chi phí năm 1 nhân 3 cho cả hai phương án rồi so"
+      ],
+      "answer": 0,
+      "explanation": "Phí theo MAU tăng theo tải, còn tự vận hành phần lớn là chi phí cố định (người, hạ tầng nền), nên kết luận năm 1 có thể lật ở năm 3. Tính theo kịch bản thấp, kỳ vọng, cao để thấy điểm cắt, rồi dùng con số đó khi đàm phán (khoá đơn giá ở mức tải sẽ đạt) và làm điều kiện xem lại. Đàm phán sau khi đã phụ thuộc thì mất thế mặc cả. Open source vẫn tốn người vận hành. Nhân năm 1 với 3 bỏ qua chính sự tăng trưởng."
+    },
+    {
+      "id": "license-change",
+      "kind": "single",
+      "prompt": "Một thư viện open source chủ chốt đổi từ Apache 2.0 sang source-available, cấm cung cấp sản phẩm dạng dịch vụ cạnh tranh. Bạn dùng nó bên trong hệ thống của mình. Hệ quả đúng nhất?",
+      "options": [
+        "Bản cũ vẫn dùng được theo Apache 2.0; cần đọc điều khoản mới và theo dõi fork",
+        "Phải gỡ ngay mọi bản đang chạy, kể cả bản phát hành trước ngày đổi license",
+        "Dùng nội bộ nên từ nay luôn phải mua license thương mại mới",
+        "Phải mở toàn bộ mã của mình, vì source-available cũng là một dạng copyleft"
+      ],
+      "answer": 0,
+      "explanation": "Đổi license chỉ áp cho phiên bản từ lúc đổi; bản đã phát hành theo Apache 2.0 vẫn dùng được theo Apache 2.0, nhưng sẽ không có bản vá mới dưới license đó. Đọc điều khoản mới: thường chỉ cấm cung cấp dịch vụ cạnh tranh, dùng nội bộ thường vẫn được mà không cần mua license thương mại. Theo dõi fork do tổ chức trung lập duy trì (như OpenSearch, OpenTofu, Valkey). Source-available không phải copyleft: nó hạn chế cách dùng, không buộc mở mã của bạn."
+    }
+  ]
+}

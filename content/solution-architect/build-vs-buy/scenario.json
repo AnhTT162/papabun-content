@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đăng nhập cho app thành viên: tự xây, Keycloak hay SaaS",
+  "prompt": "Bạn là solution architect của một chuỗi bán lẻ có app thành viên tích điểm. App hiện có khoảng 600.000 người dùng hoạt động mỗi tháng (MAU). Đăng nhập đang tự viết trong monolith Spring, hash mật khẩu bằng bcrypt trong PostgreSQL. Năm tới cần thêm: OTP qua SMS, đăng nhập bằng Google và Apple, passkey, MFA khi đổi điểm lấy voucher, và chặn [[credential-stuffing|credential stuffing]] (đợt thử mật khẩu lộ hàng loạt tháng trước đã chiếm 1.200 tài khoản). Yêu cầu: availability 99,95%, dữ liệu cá nhân lưu ở region Singapore. Kế hoạch kinh doanh: MAU cuối năm 1, 2, 3 là 1,0 triệu, 1,6 triệu, 2,5 triệu. Đợt sale lớn, lượng đăng nhập tăng gấp 5 trong 30 phút.\n\nBa phương án (chi phí một kỹ sư tính đầy đủ 5.000 USD/tháng; phí SMS như nhau ở mọi phương án nên không tính):\n\n| | A. SaaS định danh | B. Keycloak tự vận hành | C. Tự xây trên Spring Authorization Server |\n|---|---|---|---|\n| Làm ban đầu | 3 kỹ sư × 2 tháng | 3 kỹ sư × 4 tháng | 4 kỹ sư × 6 tháng |\n| Chạy hằng tháng | 4.000 USD gồm 500.000 MAU, thêm 0,004 USD mỗi MAU vượt; hợp đồng cho tăng giá tới 7% mỗi năm khi gia hạn | Hạ tầng EKS + RDS Multi-AZ: 1.800, 2.200, 2.600 USD theo năm | Hạ tầng 1.200 USD |\n| Người | 0,5 kỹ sư quản trị và tích hợp | 2 kỹ sư vận hành, nâng cấp, trực sự cố (chia ca với team platform) | 2 kỹ sư bảo trì và trực; pentest 15.000 USD mỗi năm |\n\nThêm vài thông tin:\n\n- Vendor [[saas|SaaS]] nhận import hash bcrypt, có region Singapore, [[sla|SLA]] 99,95% với [[service-credit|service credit]] 10% phí tháng. Điều khoản mẫu không nói gì về xuất hash mật khẩu khi chấm dứt.\n- Team có hai kỹ sư rành Spring Security; chưa ai vận hành một [[identity-provider|identity provider]] (IdP) trên production.\n- Trưởng phòng kỹ thuật muốn phương án C để chủ động. CFO thấy A rẻ nhất năm đầu và muốn ký 3 năm ngay.\n\nCTO cần: so sánh chi phí có số, đề xuất kèm lý do, những gì phải kiểm trong PoC và phải có trong hợp đồng, và khi nào xem lại quyết định.",
+  "hints": [
+    "Đăng nhập có làm app của bạn khác đối thủ không? Nếu không, chủ động thật sự đến từ đâu?",
+    "Tính tổng 3 năm cho cả ba, rồi nhìn chi phí hằng tháng ở cuối năm 3: đường nào đang đi lên nhanh hơn?",
+    "Đổi giả định nhạy nhất là tốc độ tăng MAU: kết luận có lật không, và có điểm cắt ở mức MAU nào?",
+    "Nếu ba năm sau phải rời vendor, 2,5 triệu người dùng đăng nhập bằng gì?"
+  ],
+  "solution": "**1. Tổng chi phí sở hữu 3 năm (USD)**\n\n[[tco|TCO]] tính với MAU tăng đều trong mỗi năm theo kế hoạch; SaaS tính phí theo MAU của từng tháng và tăng 7% mỗi năm khi gia hạn. Năm 1 của B và C tính cả đội dựng ban đầu lẫn 2 kỹ sư vận hành đủ 12 tháng; hệ thống đăng nhập cũ chạy tiếp trong lúc dựng.\n\n| | Năm 1 | Năm 2 | Năm 3 | 3 năm |\n|---|---|---|---|---|\n| A. SaaS | 123.200 | 123.732 | 172.197 | 419.129 |\n| B. Keycloak | 201.600 | 146.400 | 151.200 | 499.200 |\n| C. Tự xây | 269.400 | 149.400 | 149.400 | 568.200 |\n\nĐộ nhạy theo tăng trưởng (chỉ tính lại A; B và C phần lớn là chi phí người, hạ tầng của B sẽ tăng thêm ít nhiều ở mức MAU cao):\n\n- MAU chỉ lên 0,8 / 1,0 / 1,2 triệu: A còn 338.718.\n- MAU lên 1,2 / 2,2 / 4,0 triệu: A thành 505.492, ngang B; riêng năm 3 A tốn 231.960 so với 151.200 của B.\n- Theo tháng, A (phí + 0,5 kỹ sư) vượt chi phí chạy của B (hạ tầng + 2 kỹ sư) từ tháng 26, khi MAU khoảng 1,75 triệu: 12.804 so với 12.600 USD. Sau điểm đó khoảng cách tăng theo MAU: tháng 36 là 16.239 so với 12.600.\n\n**2. Loại phương án C**\n\nĐăng nhập là generic subdomain: không khách hàng nào chọn app vì màn hình đăng nhập. C đắt nhất trong 3 năm, ra muộn nhất (6 tháng trong khi credential stuffing đang xảy ra), và đặt 2 kỹ sư giỏi nhất vào việc bảo trì một hệ thống mà lỗi nhỏ là sự cố bảo mật. Phần chủ động mà trưởng phòng kỹ thuật muốn đạt được bằng kiến trúc: ứng dụng chỉ nói [[oidc|OIDC]] chuẩn, dữ liệu thành viên và điểm ở database của mình, và có kế hoạch thoát. Ghi lý do loại vào [[adr|ADR]] để không phải tranh luận lại.\n\n**3. Đề xuất: SaaS bây giờ, với điều kiện**\n\nA rẻ hơn B khoảng 80.000 USD trong 3 năm ở kịch bản kỳ vọng, chạy được sau 2 tháng thay vì 4, và team chưa có kinh nghiệm vận hành IdP 99,95% chịu được đỉnh gấp 5. Nhưng A chỉ thắng nhờ hai năm đầu; từ khoảng 1,75 triệu MAU nó đắt hơn mỗi tháng. Vì vậy không ký theo điều khoản mẫu, và không coi đây là quyết định vĩnh viễn.\n\nTrong 2 tháng chờ A, credential stuffing vẫn đang diễn ra: thêm ngay vào hệ thống hiện có giới hạn số lần thử theo IP và theo tài khoản, và kiểm mật khẩu đã lộ khi đăng nhập.\n\n*Đàm phán (song song với PoC, để còn B làm phương án thay thế):*\n\n- Khoá đơn giá MAU vượt cho tới ít nhất 3 triệu MAU, có bậc giảm khi lớn hơn. Đây là nơi tiền lớn nằm.\n- Trần tăng giá khi gia hạn 3% thay vì 7%: tổng 3 năm từ 419.129 xuống 405.192.\n- Định nghĩa MAU bằng văn bản: người chỉ refresh token có tính không, tài khoản test và token máy-với-máy tính thế nào.\n- Khi chấm dứt: xuất toàn bộ người dùng kèm hash mật khẩu, thuật toán và tham số, trong một thời hạn ghi rõ, kèm hỗ trợ chuyển giao. Thiếu điều khoản này thì ngày rời đi chỉ còn hai cách: buộc 2,5 triệu người đặt lại mật khẩu, hoặc chạy song song nhiều tháng và chuyển dần khi người dùng đăng nhập; cả hai đều mất một phần người dùng.\n- Hạn báo huỷ trước khi tự gia hạn, đưa vào lịch chung. Hợp đồng 1 năm có quyền gia hạn với giá đã khoá tốt hơn ký cứng 3 năm như CFO muốn: giữ được phương án chuyển sang B khi tới điểm cắt.\n\n*[[proof-of-concept|PoC]] 3 tuần, tiêu chí đạt viết trước:*\n\n- Import bản sao 600.000 hash bcrypt; người dùng đăng nhập bằng mật khẩu cũ không phải đặt lại.\n- Tải đăng nhập gấp 5 đỉnh thường từ app thật: p95 của token endpoint từ Việt Nam dưới mức đã chốt, không chạm giới hạn tốc độ (hỏi rõ rate limit theo tenant và cách nâng).\n- Chặn credential stuffing: phát hiện mật khẩu đã lộ, giới hạn theo IP và theo tài khoản, bot detection; chạy lại kịch bản tấn công tháng trước.\n- Passkey và đăng nhập Apple trên iOS và Android; MFA từng bước khi đổi điểm (step-up).\n- Dữ liệu và log chỉ ở Singapore; danh sách subprocessor; SOC 2 Type II.\n- Xuất thử toàn bộ người dùng qua API và đọc được.\n\n*Kiến trúc để giữ chủ động:*\n\n- App và các service chỉ dùng OIDC chuẩn (authorization code + PKCE, kiểm [[jwt|JWT]] tại chỗ bằng khoá công khai JWKS). Nhờ kiểm tại chỗ và refresh token đủ dài, người đã đăng nhập vẫn dùng app khi IdP ngừng; chỉ đăng nhập mới bị ảnh hưởng. Điều này quan trọng vì SLA 99,95% của IdP ghép nối tiếp với app sẽ kéo availability chung xuống dưới 99,95% nếu mọi request đều phụ thuộc IdP. Không gọi API quản trị riêng của vendor từ nhiều nơi: gom vào một identity-service của mình làm adapter (tạo, khoá, xoá tài khoản, đồng bộ hồ sơ).\n- Vendor chỉ giữ thông tin đăng nhập và định danh; hồ sơ thành viên, hạng, điểm ở database của mình, khoá bằng một user id nội bộ chứ không bằng id của vendor.\n- Xuất người dùng định kỳ về kho của mình.\n\n**4. Khi nào xem lại**\n\nGhi trong ADR điều kiện đo được: xem lại khi MAU vượt 1,5 triệu, hoặc phí SaaS (chưa tính 0,5 kỹ sư) quy năm vượt khoảng 120.000 USD, mức tương ứng với điểm cắt, hoặc 6 tháng trước kỳ gia hạn đầu tiên.\n\nTới điểm cắt chưa có nghĩa là nên chuyển ngay. Chuyển sang B tốn khoảng 60.000 USD dựng, cộng thời gian chạy song song và chuyển người dùng; từ tháng 26 tới tháng 36, phần A đắt hơn B cộng lại chỉ khoảng 21.000 USD. Chuyển đáng làm khi khoản tiết kiệm cộng dồn dự kiến trong năm 4–5 (theo tăng trưởng lúc đó) vượt chi phí chuyển. Vì vậy lần xem lại ở khoảng 1,5 triệu MAU là để tính lại với số thật, và để nếu chuyển thì B chạy được vào khoảng lúc qua điểm cắt (dựng mất khoảng 4 tháng). Chuẩn OIDC, adapter và điều khoản xuất hash giữ cho lựa chọn đó luôn mở.",
+  "tradeoffs": [
+    {
+      "option": "C. Tự xây trên Spring Authorization Server",
+      "pros": [
+        "Kiểm soát hoàn toàn luồng và dữ liệu",
+        "Không phí theo MAU khi tăng trưởng"
+      ],
+      "cons": [
+        "Đắt nhất trong 3 năm và ra muộn nhất",
+        "Đặt người giỏi vào phần generic, lỗi nhỏ là sự cố bảo mật"
+      ]
+    },
+    {
+      "option": "B. Keycloak tự vận hành",
+      "pros": [
+        "Chi phí gần như cố định khi MAU tăng",
+        "Open source, chuẩn OIDC, không lock-in vendor"
+      ],
+      "cons": [
+        "Năm đầu đắt hơn SaaS khoảng 78.000 USD",
+        "Team phải tự vận hành IdP 99,95% chịu đỉnh gấp 5"
+      ]
+    },
+    {
+      "option": "A. SaaS với giá khoá, điều khoản xuất dữ liệu và điểm xem lại",
+      "pros": [
+        "Rẻ nhất 3 năm ở kịch bản kỳ vọng, chạy sau 2 tháng",
+        "Có sẵn chặn credential stuffing, passkey, MFA"
+      ],
+      "cons": [
+        "Đắt hơn B mỗi tháng từ khoảng 1,75 triệu MAU",
+        "Rời đi tốn nếu không giành được điều khoản xuất hash"
+      ]
+    }
+  ]
+}

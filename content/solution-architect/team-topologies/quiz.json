@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "flow-efficiency",
+      "kind": "single",
+      "prompt": "Một tính năng mất 20 ngày từ lúc bắt đầu tới production, nhưng chỉ 3 ngày có người thật sự làm; phần còn lại chờ team backend, QA và ticket deploy. Hướng xử lý nào nhắm đúng nút thắt?",
+      "options": [
+        "Đưa đủ kỹ năng vào một team theo dòng giá trị, deploy tự phục vụ",
+        "Tuyển thêm kỹ sư backend để team backend nhận việc nhanh hơn",
+        "Tách nhỏ microservices để nhiều người code song song được hơn",
+        "Bắt mọi team ước lượng chặt hơn và theo dõi tiến độ hằng ngày"
+      ],
+      "answer": 0,
+      "explanation": "Flow efficiency là 3/20 = 15%: thời gian mất vào hàng đợi giữa các team, không vào code. Gom các kỹ năng cần cho một tính năng vào cùng team stream-aligned và thay deploy theo ticket bằng pipeline tự phục vụ thì bỏ được các lần bàn giao. Thêm người vào backend chỉ làm hàng đợi đó ngắn đi chút ít, kèm chi phí giao tiếp. Tách service không bỏ bàn giao giữa team. Ước lượng chặt hơn không đổi cấu trúc gây chờ."
+    },
+    {
+      "id": "shared-service",
+      "kind": "single",
+      "prompt": "Service `booking-core` bị ba team cùng sửa; mỗi team nghĩ team khác lo phần vận hành, và lỗi đêm không ai nhận. Cách xử lý đúng nhất?",
+      "options": [
+        "Giao một team sở hữu; team khác mở PR, rồi tách dần phần riêng ra",
+        "Cả ba team cùng sở hữu và chia lịch trực đều nhau theo từng tuần",
+        "Lập một team mới chỉ để giữ booking-core, nhận yêu cầu qua ticket",
+        "Chép booking-core thành ba bản để mỗi team có một bản riêng của mình"
+      ],
+      "answer": 0,
+      "explanation": "Một service cần đúng một chủ chịu trách nhiệm cả thay đổi lẫn trực. Team khác cần sửa thì mở PR để chủ review (internal open source), trong khi phần riêng của từng team được tách dần ra service của họ. Cùng sở hữu thì không ai thật sự chịu trách nhiệm. Team riêng nhận ticket là một component team mới, thêm hàng đợi. Chép ba bản thì logic đặt chỗ chung bị lệch nhau và phải sửa ba lần."
+    },
+    {
+      "id": "platform-ticket",
+      "kind": "single",
+      "prompt": "Công ty lập platform team từ team ops cũ. Sáu tháng sau, mọi môi trường mới và mọi lần deploy vẫn đi qua ticket gửi platform team, chờ trung bình 2 ngày. Vấn đề nằm ở đâu?",
+      "options": [
+        "Platform đang là component team nhận ticket, chưa phải tự phục vụ",
+        "Platform team quá ít người, cần tuyển thêm để xử lý ticket nhanh",
+        "Các team sản phẩm gửi quá nhiều yêu cầu, cần giới hạn số ticket",
+        "Đổi tên thành platform team chưa đủ, cần thêm một tầng phê duyệt"
+      ],
+      "answer": 0,
+      "explanation": "Platform team phải cung cấp dịch vụ tự phục vụ theo kiểu X-as-a-Service: team sản phẩm tự tạo môi trường, tự deploy qua pipeline và template. Nhận ticket cho mọi việc chỉ là team ops cũ với tên mới. Thêm người hay giới hạn ticket vẫn giữ hàng đợi; thêm phê duyệt làm chậm hơn. Bắt đầu từ thinnest viable platform cho đúng việc đang bị chờ nhiều nhất."
+    },
+    {
+      "id": "small-org",
+      "kind": "single",
+      "prompt": "Startup có 2 team, tổng 12 kỹ sư, đang thiết kế hệ thống mới. Một kỹ sư đề xuất 25 microservices để dễ mở rộng sau này. Theo Conway's law và tải nhận thức, góp ý nào hợp lý nhất?",
+      "options": [
+        "Modular monolith với module theo ranh giới hai team, tách khi cần",
+        "25 microservices là đúng, vì mỗi kỹ sư giữ hai service là vừa sức",
+        "Một monolith không chia module, vì 12 người thì ranh giới vô ích",
+        "Lập ngay 5 team nhỏ hơn để mỗi team giữ 5 microservices cho cân"
+      ],
+      "answer": 0,
+      "explanation": "Hai team nên có khoảng hai vùng sở hữu rõ ràng. 25 service cho 12 người là 12–13 service mỗi team phải hiểu, deploy và trực, kèm chi phí phân tán, và ranh giới service sẽ không khớp đường giao tiếp thật. Modular monolith giữ ranh giới module theo team, tách thành service khi có team mới hoặc nhu cầu riêng. Sở hữu theo cá nhân tạo bus factor 1. Không chia module thì hai team dẫm lên nhau. Chia 12 người thành 5 team để khớp số service là làm ngược."
+    }
+  ]
+}

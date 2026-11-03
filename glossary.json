@@ -4245,7 +4245,7 @@
       "meaning": "Một ứng dụng deploy một khối nhưng chia thành các module có ranh giới rõ (API công khai, dữ liệu riêng), để tách thành service sau này khi thật sự cần.",
       "example": "Module `order` và `payment` trong cùng một Spring Boot app, chỉ gọi nhau qua interface công khai hoặc event.",
       "related": ["package-by-feature", "spring-modulith"],
-      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "adr-c4", "architecture-styles"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "adr-c4", "architecture-styles", "team-topologies"]
     },
     {
       "id": "adapter-pattern",
@@ -4293,7 +4293,7 @@
       "meaning": "Tầng dịch giữa mô hình của hệ thống bên ngoài (hay hệ thống cũ) và mô hình nghiệp vụ của bạn, để mô hình bên ngoài không tràn vào nghiệp vụ.",
       "example": "Adapter dịch mã trạng thái của hệ thống kho cũ (`ST01`, `ST02`) sang `enum StockStatus` của bạn.",
       "related": ["adapter-pattern"],
-      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs", "integration-patterns", "migration-modernization"]
+      "topics": ["structural-patterns", "ddd-strategic", "architecture-tradeoffs", "integration-patterns", "migration-modernization", "build-vs-buy"]
     },
     {
       "id": "strategy-pattern",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns", "migration-modernization"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns", "migration-modernization", "team-topologies"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4469,7 +4469,7 @@
       "meaning": "Bốn chỉ số đo năng lực giao phần mềm của nhóm: lead time cho thay đổi, tần suất deploy, tỉ lệ deploy gây lỗi, thời gian khôi phục sau deploy lỗi.",
       "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
       "related": ["technical-debt"],
-      "topics": ["refactoring-tech-debt", "tech-lead-role"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role", "team-topologies"]
     },
     {
       "id": "port",
@@ -4477,7 +4477,7 @@
       "meaning": "Interface do lõi nghiệp vụ định nghĩa trong Hexagonal Architecture: driving port là use case bên ngoài gọi vào, driven port là thứ lõi cần từ hạ tầng.",
       "example": "`PlaceOrderUseCase` (driving), `OrderRepository` và `PaymentGateway` (driven).",
       "related": ["hexagonal-architecture", "dependency-inversion"],
-      "topics": ["clean-hexagonal"]
+      "topics": ["clean-hexagonal", "build-vs-buy"]
     },
     {
       "id": "clean-architecture",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "cqrs-event-sourcing"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "cqrs-event-sourcing", "team-topologies"]
     },
     {
       "id": "ubiquitous-language",
@@ -4525,7 +4525,7 @@
       "meaning": "Phần nghiệp vụ làm doanh nghiệp khác đối thủ; nơi nên tự xây và đầu tư người giỏi nhất. Đối lập với supporting và generic subdomain.",
       "example": "Với công ty cho vay, chấm điểm tín dụng là core; xác thực người dùng là generic.",
       "related": ["bounded-context"],
-      "topics": ["ddd-strategic"]
+      "topics": ["ddd-strategic", "build-vs-buy"]
     },
     {
       "id": "event-storming",
@@ -4540,8 +4540,8 @@
       "term": "Conway's law",
       "meaning": "Quan sát rằng kiến trúc hệ thống phản chiếu cấu trúc giao tiếp của tổ chức xây dựng nó.",
       "example": "Ba đội cùng sửa một module thì ranh giới trong module đó dần bị trộn lẫn.",
-      "related": ["bounded-context"],
-      "topics": ["ddd-strategic", "microservices-tradeoffs", "architecture-styles"]
+      "related": ["bounded-context", "inverse-conway-maneuver"],
+      "topics": ["ddd-strategic", "microservices-tradeoffs", "architecture-styles", "team-topologies"]
     },
     {
       "id": "ddd-entity",
@@ -4861,7 +4861,7 @@
       "meaning": "Kiến trúc chia hệ thống thành các service deploy độc lập, mỗi service gắn với một năng lực nghiệp vụ, sở hữu dữ liệu riêng và do một đội chủ quản.",
       "example": "Service tìm kiếm scale riêng mùa cao điểm và release nhiều lần mỗi ngày, độc lập với service đặt phòng.",
       "related": ["bounded-context", "distributed-monolith", "modular-monolith"],
-      "topics": ["microservices-tradeoffs", "sd-framework", "architecture-styles"]
+      "topics": ["microservices-tradeoffs", "sd-framework", "architecture-styles", "team-topologies"]
     },
     {
       "id": "consumer-driven-contract",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture"]
+      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy"]
     },
     {
       "id": "ingress",
@@ -5685,7 +5685,7 @@
       "meaning": "Tài liệu hướng dẫn từng bước cách nhận biết và xử lý một loại sự cố hay thao tác vận hành, kèm lệnh cụ thể.",
       "example": "Runbook \"provider thanh toán chậm\": tiêu chí chuyển provider và lệnh bật flag.",
       "related": ["mitigation", "postmortem"],
-      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre"]
+      "topics": ["troubleshooting-mindset", "tech-lead-role", "well-architected", "reliability-sre", "team-topologies"]
     },
     {
       "id": "postmortem",
@@ -5717,7 +5717,7 @@
       "meaning": "Chuẩn mở (CNCF) cho metric, trace và log: API, SDK, Java agent tự instrument, giao thức OTLP và Collector để xử lý rồi gửi tới backend bất kỳ.",
       "example": "Chạy `-javaagent:opentelemetry-javaagent.jar`, gửi OTLP tới Collector, Collector xuất sang Tempo và Prometheus.",
       "related": ["distributed-tracing", "tail-sampling"],
-      "topics": ["observability"]
+      "topics": ["observability", "build-vs-buy"]
     },
     {
       "id": "tail-sampling",
@@ -8925,7 +8925,7 @@
       "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
       "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter"]
+      "topics": ["design-rate-limiter", "build-vs-buy"]
     },
     {
       "id": "noisy-neighbor",
@@ -9109,7 +9109,7 @@
       "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
       "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
       "related": ["idempotency", "idempotent-consumer"],
-      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes", "integration-patterns"]
+      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes", "integration-patterns", "build-vs-buy"]
     },
     {
       "id": "payment-authorization",
@@ -9869,7 +9869,7 @@
       "meaning": "Bộ tiêu chuẩn bảo mật bắt buộc với hệ thống lưu, xử lý hay truyền dữ liệu thẻ thanh toán. Phạm vi càng ít hệ chạm số thẻ thì càng ít yêu cầu phải đáp ứng.",
       "example": "Dùng trang thanh toán do PSP host thì server không chạm số thẻ, phạm vi đánh giá thu nhỏ đáng kể so với tự nhận số thẻ qua API của mình.",
       "related": ["card-tokenization"],
-      "topics": ["design-payment", "nfr-quality-attributes"]
+      "topics": ["design-payment", "nfr-quality-attributes", "team-topologies"]
     },
     {
       "id": "three-d-secure",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles", "build-vs-buy"]
     },
     {
       "id": "proof-of-concept",
@@ -10117,7 +10117,7 @@
       "meaning": "Proof of concept: bản thử nhỏ, có thời hạn, để kiểm chứng một giả định kỹ thuật rủi ro trước khi cam kết vào thiết kế.",
       "example": "Hai ngày dựng thử luồng CDC từ PostgreSQL sang kho báo cáo để đo độ trễ trước khi chọn kiến trúc.",
       "related": ["adr"],
-      "topics": ["sa-role", "project-storytelling", "tech-lead-role", "architecture-tradeoffs"]
+      "topics": ["sa-role", "project-storytelling", "tech-lead-role", "architecture-tradeoffs", "build-vs-buy"]
     },
     {
       "id": "rfp",
@@ -10125,7 +10125,7 @@
       "meaning": "Request for Proposal: hồ sơ mời thầu khách hàng gửi các nhà cung cấp, nêu yêu cầu để họ gửi đề xuất giải pháp, ước lượng và giá.",
       "example": "Ngân hàng gửi RFP xây cổng thanh toán; SA pre-sales đọc yêu cầu, viết kiến trúc đề xuất và ước lượng công sức.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "requirements-estimation"]
+      "topics": ["sa-role", "requirements-estimation", "build-vs-buy"]
     },
     {
       "id": "raci",
@@ -10213,7 +10213,7 @@
       "meaning": "Số người phải vắng mặt để một vùng của hệ thống không còn ai sửa được. Bằng 1 là rủi ro cho cả giao hàng lẫn trực sự cố.",
       "example": "Chỉ một người hiểu job đối soát; người đó nghỉ phép đúng tuần file đối soát đổi định dạng.",
       "related": ["delegation", "runbook"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "team-topologies"]
     },
     {
       "id": "incident-commander",
@@ -10309,7 +10309,7 @@
       "meaning": "Nhận xét của Fred Brooks: thêm người vào một dự án phần mềm đã trễ làm nó trễ thêm, vì người mới cần được hướng dẫn và việc chia lại, phối hợp tốn thêm thời gian.",
       "example": "Hai tuần trước hạn thêm hai người từ team khác; senior mất cả tuần kèm họ nên tính năng còn trễ hơn.",
       "related": ["tech-lead"],
-      "topics": ["tech-lead-role", "requirements-estimation"]
+      "topics": ["tech-lead-role", "requirements-estimation", "team-topologies"]
     },
     {
       "id": "codeowners",
@@ -10317,7 +10317,7 @@
       "meaning": "File trong repo (GitHub, GitLab) gán người hoặc nhóm chịu trách nhiệm duyệt cho từng đường dẫn; PR chạm vào đường dẫn đó cần họ duyệt.",
       "example": "`/src/ledger/ @payments-seniors` thay vì `* @tech-lead` cho cả repo.",
       "related": ["code-review"],
-      "topics": ["tech-lead-role"]
+      "topics": ["tech-lead-role", "team-topologies"]
     },
     {
       "id": "staff-engineer",
@@ -10405,7 +10405,7 @@
       "meaning": "Service Level Agreement: cam kết về mức dịch vụ ghi trong hợp đồng, kèm hậu quả (thường là hoàn tiền) khi vi phạm. Thường lỏng hơn SLO nội bộ.",
       "example": "Cổng thanh toán cam kết 99,9% mỗi tháng, dưới mức đó hoàn 10% phí.",
       "related": ["slo", "sli", "error-budget"],
-      "topics": ["nfr-quality-attributes", "reliability-sre"]
+      "topics": ["nfr-quality-attributes", "reliability-sre", "build-vs-buy"]
     },
     {
       "id": "fitness-function",
@@ -10501,7 +10501,7 @@
       "meaning": "Phân tích độ nhạy: đổi từng trọng số hoặc điểm để xem kết quả lật ở đâu. Lật vì thay đổi nhỏ nghĩa là các phương án gần ngang nhau.",
       "example": "PostgreSQL chỉ thắng khi trọng số tải dưới khoảng 29; trọng số hiện tại là 15.",
       "related": ["decision-matrix"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "build-vs-buy"]
     },
     {
       "id": "pre-mortem",
@@ -10549,7 +10549,7 @@
       "meaning": "Phụ thuộc vào sản phẩm của một nhà cung cấp tới mức đổi đi rất đắt. Là cái giá để dùng tính năng riêng của nền tảng; câu hỏi là chi phí thoát có lớn hơn lợi ích không.",
       "example": "Mô hình dữ liệu viết riêng cho DynamoDB phải thiết kế lại khi chuyển sang database khác.",
       "related": ["one-way-door"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "build-vs-buy"]
     },
     {
       "id": "user-story-mapping",
@@ -11021,7 +11021,7 @@
       "meaning": "Identity provider: hệ thống quản lý danh tính và xác thực người dùng, phát token hoặc assertion cho ứng dụng qua OIDC hay SAML.",
       "example": "Nhân viên đăng nhập IdP một lần bằng passkey, rồi vào console cloud, CI và Grafana qua SSO.",
       "related": ["sso", "oidc", "saml"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "build-vs-buy"]
     },
     {
       "id": "sso",
@@ -11029,7 +11029,7 @@
       "meaning": "Single sign-on: đăng nhập một lần ở IdP để dùng nhiều ứng dụng; ứng dụng tin danh tính do IdP xác nhận thay vì tự giữ mật khẩu.",
       "example": "Khoá tài khoản ở IdP là nhân viên mất quyền vào mọi công cụ nối SSO.",
       "related": ["identity-provider", "oidc", "saml"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "build-vs-buy"]
     },
     {
       "id": "oidc",
@@ -11037,7 +11037,7 @@
       "meaning": "OpenID Connect: lớp danh tính trên OAuth 2.0; IdP trả ID token (JWT) cho biết người dùng là ai, cùng access token để gọi API.",
       "example": "Grafana chuyển người dùng tới IdP, nhận lại ID token và đọc claim `groups` để gán quyền.",
       "related": ["identity-provider", "jwt", "saml"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "build-vs-buy"]
     },
     {
       "id": "saml",
@@ -11045,7 +11045,7 @@
       "meaning": "Security Assertion Markup Language: chuẩn SSO dựa trên XML, IdP gửi assertion có chữ ký cho ứng dụng qua trình duyệt. Phổ biến ở ứng dụng doanh nghiệp đời cũ.",
       "example": "Ứng dụng nhân sự nhận SAML assertion từ IdP và tạo phiên cho nhân viên.",
       "related": ["sso", "oidc"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "build-vs-buy"]
     },
     {
       "id": "mfa",
@@ -11061,7 +11061,7 @@
       "meaning": "System for Cross-domain Identity Management: chuẩn API để IdP tạo, cập nhật, khoá tài khoản và nhóm ở các ứng dụng một cách tự động.",
       "example": "Nhân sự đánh dấu nhân viên nghỉ việc; IdP gửi SCIM tắt tài khoản ở CI và công cụ ticket ngay trong ngày.",
       "related": ["identity-provider", "sso"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "build-vs-buy"]
     },
     {
       "id": "workload-identity",
@@ -11494,6 +11494,246 @@
       "example": "Filter đọc claim `tenant_id`, đặt vào `ScopedValue` và MDC; transaction đầu tiên gọi `set_config('app.tenant_id', ?, true)`.",
       "related": ["row-level-security", "mdc"],
       "topics": ["multi-tenancy"]
+    },
+    {
+      "id": "tco",
+      "term": "TCO",
+      "meaning": "Total cost of ownership: tổng chi phí sở hữu một giải pháp trong nhiều năm, gồm cả công làm, vận hành, tích hợp, license, hạ tầng và chi phí thoát, không chỉ giá mua.",
+      "example": "SaaS rẻ hơn năm đầu nhưng TCO 3 năm ngang tự vận hành khi MAU tăng gấp 4.",
+      "related": ["vendor-lock-in", "exit-plan"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "saas",
+      "term": "SaaS",
+      "meaning": "Software as a Service: phần mềm do vendor vận hành, dùng qua Internet và trả phí định kỳ theo người dùng hoặc lượng dùng.",
+      "example": "Dùng dịch vụ định danh SaaS thay vì tự vận hành identity provider.",
+      "related": ["tco", "cots"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "cots",
+      "term": "COTS",
+      "meaning": "Commercial off-the-shelf: phần mềm đóng gói mua sẵn, thường tự cài và vận hành trong hạ tầng của mình, cấu hình thay vì viết mới.",
+      "example": "Mua một hệ thống quản lý kho đóng gói và cài trên máy chủ của công ty.",
+      "related": ["saas"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "exit-plan",
+      "term": "Exit plan",
+      "meaning": "Kế hoạch rời một vendor hay sản phẩm: xuất dữ liệu gì, sang đâu, mất bao lâu, tốn bao nhiêu, viết từ lúc ký chứ không phải lúc muốn rời.",
+      "example": "Hợp đồng ghi rõ xuất toàn bộ người dùng kèm hash mật khẩu trong 30 ngày khi chấm dứt.",
+      "related": ["vendor-lock-in", "tco"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "service-credit",
+      "term": "Service credit",
+      "meaning": "Khoản vendor trả lại (thường trừ vào hoá đơn sau) khi vi phạm SLA, thường chỉ 10–30% phí tháng của dịch vụ đó, có bậc tới 100% khi ngừng rất lâu nhưng không vượt phí đã trả.",
+      "example": "Ngừng 3 giờ làm mất 150.000 USD doanh thu, vendor chỉ trả credit 800 USD.",
+      "related": ["sla"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "source-code-escrow",
+      "term": "Source code escrow",
+      "meaning": "Thoả thuận gửi mã nguồn của phần mềm mua cho một bên thứ ba giữ, chỉ giao cho khách hàng khi vendor ngừng hoạt động hoặc ngừng hỗ trợ.",
+      "example": "Hệ thống lõi tự cài từ một vendor nhỏ có điều khoản escrow để không bị bỏ rơi nếu vendor phá sản.",
+      "related": ["exit-plan", "vendor-lock-in"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "copyleft-license",
+      "term": "Copyleft",
+      "meaning": "Loại license open source buộc phần mềm dẫn xuất khi phân phối phải mở mã theo cùng license (GPL); AGPL mở rộng sang cung cấp dịch vụ qua mạng.",
+      "example": "Sửa một thư viện AGPL rồi chạy làm dịch vụ cho khách hàng thì phải công bố mã đã sửa.",
+      "related": ["source-available-license"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "source-available-license",
+      "term": "Source-available",
+      "meaning": "License cho xem mã nguồn nhưng hạn chế cách dùng, thường cấm cung cấp sản phẩm dạng dịch vụ cạnh tranh (SSPL, BSL, RSAL); không phải open source theo định nghĩa của OSI.",
+      "example": "Terraform đổi sang BSL năm 2023, cộng đồng fork thành OpenTofu.",
+      "related": ["copyleft-license", "vendor-lock-in"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "cognitive-load",
+      "term": "Cognitive load",
+      "meaning": "Tải nhận thức: lượng thông tin một team phải nắm để làm việc. Ranh giới team nên để phần hệ thống họ giữ vừa sức hiểu và vận hành.",
+      "example": "Team 7 người giữ 15 service không ai hiểu hết, mọi thay đổi chậm và sự cố kéo dài.",
+      "related": ["stream-aligned-team", "platform-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "inverse-conway-maneuver",
+      "term": "Inverse Conway maneuver",
+      "meaning": "Đổi cấu trúc team theo kiến trúc mong muốn trước, để đường giao tiếp mới kéo kiến trúc theo.",
+      "example": "Lập team theo từng dòng sản phẩm trước khi tách monolith theo các dòng đó.",
+      "related": ["conways-law"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "stream-aligned-team",
+      "term": "Stream-aligned team",
+      "meaning": "Team sở hữu trọn một dòng giá trị (sản phẩm, hành trình người dùng), đủ kỹ năng để đưa thay đổi ra production và vận hành mà không chờ team khác.",
+      "example": "Team Khách sạn có backend, web, mobile, QA; tự deploy và trực các service của mình.",
+      "related": ["platform-team", "cognitive-load"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "platform-team",
+      "term": "Platform team",
+      "meaning": "Team cung cấp dịch vụ nội bộ tự phục vụ (pipeline, môi trường, observability) để team stream-aligned không phải làm lại; vận hành như một sản phẩm.",
+      "example": "Team sản phẩm tự tạo service mới từ template có sẵn pipeline và dashboard.",
+      "related": ["stream-aligned-team", "internal-developer-platform", "x-as-a-service"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "enabling-team",
+      "term": "Enabling team",
+      "meaning": "Team chuyên gia giúp team khác có năng lực mới (test tự động, observability, bảo mật) trong thời gian có hạn rồi rút ra.",
+      "example": "Ba kỹ sư tự động hoá test kèm từng team trong 2 quý để các team tự test và tự release.",
+      "related": ["stream-aligned-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "complicated-subsystem-team",
+      "term": "Complicated-subsystem team",
+      "meaning": "Team giữ phần hệ thống cần chuyên môn hiếm, cung cấp cho team khác qua API để họ không phải mang tải đó.",
+      "example": "Team mô hình định giá động cung cấp API giá cho team khách sạn và vé máy bay.",
+      "related": ["stream-aligned-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "x-as-a-service",
+      "term": "X-as-a-Service",
+      "meaning": "Kiểu tương tác giữa hai team trong Team Topologies: một bên dùng dịch vụ của bên kia qua giao diện rõ, ít cần trao đổi.",
+      "example": "Team sản phẩm tạo database qua mẫu tự phục vụ của platform, không gửi ticket.",
+      "related": ["platform-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "service-catalog",
+      "term": "Service catalog",
+      "meaning": "Danh mục mọi service và thành phần kèm team sở hữu, tài liệu, API, kênh liên hệ, trạng thái; Backstage là một công cụ phổ biến.",
+      "example": "Cảnh báo của payment-service tự gọi đúng team sở hữu ghi trong catalog.",
+      "related": ["codeowners", "team-api"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "you-build-it-you-run-it",
+      "term": "You build it, you run it",
+      "meaning": "Nguyên tắc team xây service cũng vận hành và trực sự cố cho nó (Werner Vogels, 2006), để người hiểu nhất xử lý lỗi và có động lực làm nó dễ vận hành.",
+      "example": "Cảnh báo đêm của booking-core gọi thẳng team sở hữu, không qua tầng ops trung gian.",
+      "related": ["service-catalog"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "team-api",
+      "term": "Team API",
+      "meaning": "Mô tả công khai về một team: họ cung cấp gì (API, tài liệu, SLO), sở hữu gì, cách liên hệ và cách nhận yêu cầu.",
+      "example": "Trang của team Thanh toán ghi các service sở hữu, kênh hỗ trợ, giờ nhận yêu cầu và SLO.",
+      "related": ["service-catalog"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "component-team",
+      "term": "Component team",
+      "meaning": "Team chia theo tầng hay thành phần kỹ thuật (frontend, backend, DBA, QA) thay vì theo dòng giá trị, nên mỗi tính năng phải qua nhiều team.",
+      "example": "Tính năng mới phải qua team web, backend, QA và ops; 19 ngày lead time chỉ có 3 ngày làm.",
+      "related": ["stream-aligned-team", "conways-law"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "internal-developer-platform",
+      "term": "Internal developer platform",
+      "meaning": "Tập hợp công cụ và dịch vụ nội bộ tự phục vụ để kỹ sư tạo, deploy, vận hành service mà không cần ticket.",
+      "example": "Cổng nội bộ tạo service mới kèm repo, pipeline, dashboard và cảnh báo mặc định.",
+      "related": ["platform-team", "golden-path"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "golden-path",
+      "term": "Golden path",
+      "meaning": "Đường mặc định được platform hỗ trợ tốt để làm một việc (tạo service, deploy); không bắt buộc, đi đường khác thì team tự chịu. Tên do Spotify dùng; Netflix gọi là paved road.",
+      "example": "Template Spring Boot có sẵn pipeline, OpenTelemetry và cảnh báo SLO.",
+      "related": ["internal-developer-platform"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "thinnest-viable-platform",
+      "term": "Thinnest viable platform",
+      "meaning": "Platform nhỏ nhất đủ giúp các team, có khi chỉ là tài liệu và vài template; mở rộng theo nỗi đau thật của team sản phẩm.",
+      "example": "Bắt đầu bằng một template pipeline và một trang hướng dẫn thay vì dựng cổng nội bộ lớn.",
+      "related": ["platform-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "wardley-map",
+      "term": "Wardley map",
+      "meaning": "Bản đồ của Simon Wardley xếp các thành phần của một giải pháp theo chuỗi giá trị và độ trưởng thành: genesis, custom-built, product, commodity. Dùng để biết phần nào nên tự xây, phần nào nên mua.",
+      "example": "Thanh toán thẻ đã là commodity nên dùng cổng thanh toán; mô hình gợi ý sản phẩm còn ở custom-built nên tự xây.",
+      "related": ["core-domain", "tco"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "mau",
+      "term": "MAU",
+      "meaning": "Monthly active users: số người dùng hoạt động trong một tháng; nhiều SaaS tính giá theo MAU, và mỗi vendor định nghĩa hoạt động khác nhau.",
+      "example": "Vendor tính cả người chỉ refresh token trong tháng là một MAU.",
+      "related": ["saas", "tco"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "rfi",
+      "term": "RFI",
+      "meaning": "Request for information: yêu cầu thông tin gửi nhiều vendor ở bước đầu để lọc danh sách dài, trước khi gửi RFP cho danh sách ngắn.",
+      "example": "Gửi RFI cho 12 vendor, giữ lại 4 để nhận RFP có kịch bản cụ thể.",
+      "related": ["rfp"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "soc-2",
+      "term": "SOC 2",
+      "meaning": "Báo cáo kiểm toán độc lập về kiểm soát bảo mật, availability, bảo mật dữ liệu của nhà cung cấp dịch vụ. Type I đánh giá thiết kế tại một thời điểm; Type II kiểm cả hiệu quả vận hành trong một khoảng thời gian.",
+      "example": "Yêu cầu vendor gửi báo cáo SOC 2 Type II của 12 tháng gần nhất trước khi ký.",
+      "related": ["saas"],
+      "topics": ["build-vs-buy"]
+    },
+    {
+      "id": "mirroring-hypothesis",
+      "term": "Mirroring hypothesis",
+      "meaning": "Giả thuyết rằng cấu trúc sản phẩm phản chiếu cấu trúc tổ chức làm ra nó; cách phát biểu có thể kiểm chứng của Conway's law.",
+      "example": "Sản phẩm do các nhóm phân tán, gắn kết lỏng làm ra có code module hoá hơn sản phẩm cùng chức năng do một team gắn chặt làm.",
+      "related": ["conways-law"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "two-pizza-team",
+      "term": "Two-pizza team",
+      "meaning": "Quy tắc của Amazon: team đủ nhỏ để hai chiếc pizza đủ cho cả team ăn, tức khoảng 5–9 người, để giao tiếp ít tốn kém và tự chủ.",
+      "example": "Team 14 người được tách thành hai team 7 người theo hai dòng giá trị.",
+      "related": ["brooks-law", "stream-aligned-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "fracture-plane",
+      "term": "Fracture plane",
+      "meaning": "Đường có thể cắt hệ thống thành phần cho các team sở hữu riêng: bounded context, yêu cầu tuân thủ, nhịp thay đổi, vị trí, rủi ro, hiệu năng, công nghệ, nhóm người dùng.",
+      "example": "Tách phần thanh toán chịu PCI DSS ra cho một team riêng để thu hẹp phạm vi kiểm toán.",
+      "related": ["bounded-context", "stream-aligned-team"],
+      "topics": ["team-topologies"]
+    },
+    {
+      "id": "flow-efficiency",
+      "term": "Flow efficiency",
+      "meaning": "Tỉ lệ thời gian có người thật sự làm trên tổng lead time của một hạng mục; phần còn lại là chờ.",
+      "example": "3 ngày làm trên 19 ngày lead time là khoảng 16%: nút thắt là hàng đợi, không phải tốc độ code.",
+      "related": ["component-team", "dora-metrics"],
+      "topics": ["team-topologies"]
     }
   ]
 }
