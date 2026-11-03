@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Sau hai thương vụ sáp nhập: 140 ứng dụng, ba message broker, review board chờ 7 tuần",
+  "prompt": "Bạn vừa nhận vai enterprise architect của một tập đoàn logistics. Trong ba năm, tập đoàn mua thêm hai công ty (giao hàng chặng cuối và kho lạnh). Khối kỹ thuật có khoảng 260 kỹ sư trong 31 team, ở ba đơn vị.\n\nHiện trạng sau một tháng tìm hiểu:\n\n| Hạng mục | Số liệu |\n|---|---|\n| Ứng dụng đang chạy | 140; chỉ 96 có chủ ghi rõ |\n| Message broker | RabbitMQ (2 cụm), ActiveMQ 5.x (1 cụm tự vận hành), Kafka tự dựng (1 cụm) |\n| Hệ thống làm \"Quản lý khách hàng\" | 5 (2 CRM SaaS, 3 tự viết) |\n| Nhà cung cấp danh tính | 3; nhân viên chuyển đơn vị có 3 tài khoản |\n| Ngôn ngữ backend | Java, Kotlin, C#, Go, Node.js, PHP |\n| Ứng dụng trên Spring Boot 2.7 (hết hỗ trợ bản open source từ 2023) | 23 |\n| Format log | 4 kiểu; trace chỉ có ở công ty mẹ |\n\nReview board (ARB) gồm 7 người, họp mỗi tháng một lần, mỗi buổi xem được khoảng 6 đề xuất. Mỗi tháng có khoảng 14 đề xuất gửi tới. Thời gian chờ trung bình hiện là 7 tuần. Khảo sát nội bộ cho thấy khoảng 40% dự án mới không gửi ARB mà vẫn lên production. Quý trước, một lỗ hổng trong thư viện của một ứng dụng Spring Boot 2.7 do công ty con vận hành bị khai thác; không ai ở công ty mẹ biết ứng dụng đó tồn tại.\n\nCIO đề xuất: áp dụng TOGAF đầy đủ cho toàn tập đoàn, ARB duyệt mọi dự án và mọi thay đổi kiến trúc, ban hành danh sách công nghệ bắt buộc (một ngôn ngữ, một database, một broker) có hiệu lực ngay.\n\nCIO cần: ý kiến về đề xuất, mô hình governance, phạm vi chuẩn hoá, cách xử lý danh mục ứng dụng, lộ trình 18 tháng, và cách đo.",
+  "hints": [
+    "So số đề xuất gửi tới mỗi tháng với số ARB xem được. Thêm phạm vi cho ARB thì hàng đợi đi về đâu, và 40% dự án đi đường vòng sẽ tăng hay giảm?",
+    "Sự cố quý trước xảy ra vì thiếu chuẩn công nghệ, hay vì không biết ứng dụng đó tồn tại và nó đang chạy phiên bản gì?",
+    "Lựa chọn khác nhau ở chỗ nào thì làm hỏng cả tập đoàn (danh tính, log, trace, event), và ở chỗ nào chỉ ảnh hưởng một team?",
+    "Với 140 ứng dụng, xếp theo giá trị nghiệp vụ và chất lượng kỹ thuật thì mỗi nhóm cần hành động khác nhau thế nào?"
+  ],
+  "solution": "**1. Chẩn đoán**\n\n- *ARB là một hàng đợi không có điểm cân bằng*: 14 đề xuất tới mỗi tháng, năng lực khoảng 6. Mỗi tháng tồn thêm khoảng 8, sau 6 tháng tồn khoảng 48 đề xuất, thời gian chờ chỉ tăng. Khi chờ 7 tuần, team đi đường vòng; 40% dự án không qua ARB nghĩa là ARB không còn biết những gì đang chạy. Bắt ARB duyệt thêm mọi thay đổi chỉ làm tỉ lệ đi vòng tăng.\n- *Sự cố bảo mật là lỗi của danh mục, không phải thiếu chuẩn*: 44 ứng dụng không có chủ ghi rõ, và không ai theo dõi ngày hết hỗ trợ của nền tảng. Một danh sách công nghệ bắt buộc không giúp phát hiện ứng dụng mà không ai biết tồn tại.\n- *Đa dạng ở chỗ nối gây hại thật*: ba nhà cung cấp danh tính, bốn format log, trace chỉ có ở một đơn vị. Đây là chỗ mỗi lựa chọn khác nhau làm hỏng việc liên đơn vị (đăng nhập, điều tra sự cố, tích hợp).\n\n**2. Về đề xuất của CIO**\n\n- *TOGAF đầy đủ*: dùng có chọn lọc. Khung hiện trạng, đích, [[gap-analysis|gap analysis]], lộ trình chuyển tiếp của [[togaf-adm|ADM]] hợp với bài toán sau sáp nhập; mẫu [[architecture-principle|nguyên tắc]] có lý do và hệ quả rất hữu ích. Làm đủ mọi pha và sản phẩm đầu ra cho 140 ứng dụng sẽ mất nhiều tháng trước khi đổi được gì.\n- *ARB duyệt mọi thứ*: không. Thu hẹp phạm vi ARB, phần lớn quyết định trả về team.\n- *Một ngôn ngữ, một database, một broker có hiệu lực ngay*: không áp ngay cho hệ thống đang chạy. Viết lại 140 ứng dụng để đồng nhất ngôn ngữ không mang lại giá trị nghiệp vụ tương xứng. Chuẩn hoá chỗ nối ngay; bên trong service thì thu hẹp dần bằng [[tech-radar|tech radar]] và lộ trình rời bỏ.\n\n**3. Mô hình governance**\n\n- *Nguyên tắc*: khoảng 12 [[architecture-principle|nguyên tắc]] có lý do và hệ quả, ví dụ \"Mỗi ứng dụng có đúng một team chủ ghi trong catalog\", \"Danh tính tập trung: mọi ứng dụng mới đăng nhập qua IdP chung\", \"Mua trước, xây sau cho năng lực không cốt lõi\".\n- *[[architecture-board|ARB]] thu hẹp*: chỉ nhận quyết định một chiều (nền tảng message, database chính, vendor lõi), thay đổi chạm dữ liệu hay năng lực của nhiều đơn vị, công nghệ ngoài radar, dữ liệu nhạy cảm, và chi phí trên ngưỡng. Ước tính khoảng 2–3 đề xuất mỗi tháng. Gửi design doc hoặc [[adr|ADR]] nháp, review bất đồng bộ, cam kết trả lời trong 5 ngày làm việc. Mỗi đơn vị cử một architect vào ARB để người quyết là người chịu hậu quả.\n- *Phần còn lại*: team tự quyết theo [[advice-process|advice process]]: hỏi ý kiến người bị ảnh hưởng và architect của đơn vị, ghi ADR vào repo. ARB đọc ADR định kỳ để phát hiện xu hướng, không duyệt từng cái.\n- *[[architecture-waiver|Ngoại lệ]]*: có lý do, rủi ro, biện pháp bù, chủ, ngày hết hạn. 23 ứng dụng Spring Boot 2.7 nhận ngoại lệ có hạn ngay, kèm biện pháp bù (WAF, quét dependency hằng ngày, hoặc mua bản hỗ trợ thương mại cho ứng dụng chưa nâng kịp).\n- *Kiểm tự động*: [[guardrail|guardrail]] ở cấp tài khoản cloud và Kubernetes ([[policy-as-code|policy as code]]), quét dependency và license trong mọi pipeline, ứng dụng không có chủ trong catalog thì pipeline cảnh báo.\n\n**4. Phạm vi chuẩn hoá**\n\n| Loại | Mức | Lý do |\n|---|---|---|\n| Nhà cung cấp danh tính | Bắt buộc, một IdP | Một nhân viên một tài khoản; thu hồi quyền ở một chỗ |\n| Format log, W3C Trace Context | Bắt buộc cho ứng dụng mới và khi sửa lớn | Điều tra sự cố xuyên đơn vị |\n| Chuẩn API và bao event | Bắt buộc ở biên giữa các đơn vị | Tích hợp không phải dịch qua lại |\n| Message broker | Radar: Kafka (managed) Adopt cho event giữa đơn vị; RabbitMQ (managed) Adopt cho hàng đợi việc trong một đơn vị; ActiveMQ 5.x vòng ngoài, có lộ trình rời | Bớt một cụm phải tự vá và trực |\n| Ngôn ngữ backend | Radar: Java/Kotlin, C# Adopt; Go Trial; Node.js, PHP không dùng cho service mới | Giữ đường cho đội đang mạnh C#, không ép viết lại |\n| Database, framework trong service | Chọn trong radar | Quyết định cục bộ của team |\n\nMỗi mục Adopt có [[golden-path|golden path]] đi kèm: template service có log, trace, đăng nhập qua IdP chung, pipeline có sẵn quét bảo mật. Nếu template không có, chuẩn sẽ chỉ nằm trên giấy.\n\n**5. Danh mục ứng dụng**\n\n- Tháng 1–2: kiểm kê 140 ứng dụng từ nguồn máy đọc được (tài khoản cloud, cluster, DNS, hoá đơn, kho code, quét [[sbom|SBOM]]), gán chủ cho 44 ứng dụng chưa có chủ, ghi vào [[service-catalog|service catalog]]: chủ, năng lực phục vụ, dữ liệu, phiên bản nền tảng, chi phí.\n- Dựng [[capability-map|bản đồ năng lực]] mức 1 khoảng 15 ô, gắn từng ứng dụng vào. Ô \"Quản lý khách hàng\" có 5 hệ thống là ứng viên hợp nhất đầu tiên.\n- Xếp theo [[time-model|TIME]]: Eliminate cho ứng dụng giá trị thấp, kỹ thuật kém (tắt hoặc gộp); Migrate cho ứng dụng giá trị cao mà kỹ thuật kém, ưu tiên 23 ứng dụng Spring Boot 2.7; Tolerate thì giữ, không đầu tư thêm; Invest dồn tiền vào phần tạo khác biệt (điều phối giao hàng, quản lý kho lạnh).\n\n**6. Lộ trình 18 tháng**\n\n1. Tháng 1–3: catalog đầy đủ chủ, thu hẹp ARB, nguyên tắc, radar bản đầu, ngoại lệ cho Spring Boot 2.7; template service đầu tiên.\n2. Tháng 4–9: IdP chung cho ứng dụng mới và ứng dụng nội bộ quan trọng; log và trace chuẩn cho các luồng liên đơn vị; nâng hoặc thay 23 ứng dụng Spring Boot 2.7 theo thứ tự rủi ro.\n3. Tháng 10–18: hợp nhất \"Quản lý khách hàng\" về một CRM; chuyển các hàng đợi trên ActiveMQ sang RabbitMQ hoặc Kafka rồi tắt cụm; radar xem lại mỗi 6 tháng.\n\n**7. Đo**\n\n- Thời gian từ lúc gửi tới lúc ARB quyết định (mục tiêu ≤ 5 ngày làm việc); tỉ lệ dự án đi vòng qua ARB, đo bằng ứng dụng mới xuất hiện trong catalog mà không có ADR.\n- Tỉ lệ ứng dụng có chủ (mục tiêu 100%); tỉ lệ ứng dụng trên nền tảng còn hỗ trợ; số ngoại lệ quá hạn.\n- Số broker, IdP, format log theo thời gian; số hệ thống trong mỗi năng lực.",
+  "tradeoffs": [
+    {
+      "option": "TOGAF đầy đủ, ARB duyệt mọi thứ, danh sách bắt buộc áp ngay",
+      "pros": [
+        "Rõ ràng trên giấy, dễ trình lên ban lãnh đạo",
+        "Một nơi kiểm soát mọi quyết định"
+      ],
+      "cons": [
+        "Hàng đợi ARB tăng mãi, team đi đường vòng nhiều hơn",
+        "Ép viết lại hệ thống đang chạy mà không thêm giá trị"
+      ]
+    },
+    {
+      "option": "Để mỗi đơn vị tự quyết hoàn toàn",
+      "pros": [
+        "Không có hàng đợi, team chạy nhanh trong phạm vi của mình",
+        "Không tốn công cho nhóm EA trung tâm"
+      ],
+      "cons": [
+        "Chỗ nối giữa các đơn vị tiếp tục vỡ: danh tính, log, event",
+        "Không ai thấy toàn danh mục, lặp lại sự cố ứng dụng không chủ"
+      ]
+    },
+    {
+      "option": "Chuẩn ở chỗ nối, radar cho phần còn lại, ARB hẹp, kiểm tự động",
+      "pros": [
+        "ARB có năng lực trả lời nhanh, team ít lý do đi vòng",
+        "Đa dạng giảm dần theo lộ trình thay vì ép một lần"
+      ],
+      "cons": [
+        "Cần đầu tư template và platform để đường mặc định dễ đi",
+        "Vài năm vẫn còn nhiều công nghệ cùng chạy"
+      ]
+    }
+  ]
+}

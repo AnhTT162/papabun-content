@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "arb-queue",
+      "kind": "single",
+      "prompt": "Review board họp mỗi tháng một lần, xem được khoảng 6 đề xuất mỗi buổi; mỗi tháng có 14 đề xuất gửi tới, thời gian chờ đã 7 tuần. Cách xử lý nào đúng?",
+      "options": [
+        "Thu hẹp phạm vi board, phần lớn quyết định trả về team kèm ADR",
+        "Họp hai lần mỗi tháng để xem được 12 đề xuất thay vì chỉ 6",
+        "Bắt mọi dự án gửi board sớm hơn hai tháng so với ngày cần",
+        "Thêm 3 thành viên vào buổi họp hằng tháng hiện có của board"
+      ],
+      "answer": 0,
+      "explanation": "Đề xuất tới nhiều hơn năng lực xử lý thì hàng đợi tăng mãi. Họp gấp đôi vẫn chỉ 12 so với 14, hàng đợi vẫn tăng, chỉ chậm hơn. Gửi sớm hơn chỉ dời thời điểm chờ, không đổi tỉ lệ tới và xử lý. Thêm người vào cùng một buổi họp không làm buổi đó xem được nhiều đề xuất hơn. Thu hẹp phạm vi về quyết định một chiều, chạm nhiều domain, công nghệ ngoài radar làm số tới giảm xuống dưới năng lực; phần còn lại team tự quyết theo advice process và ghi ADR."
+    },
+    {
+      "id": "good-principle",
+      "kind": "single",
+      "prompt": "Câu nào là một nguyên tắc kiến trúc hữu ích nhất?",
+      "options": [
+        "Mua trước, xây sau cho năng lực không cốt lõi; tự xây phải so TCO",
+        "Mọi hệ thống phải bảo mật, ổn định và dễ mở rộng khi cần thiết",
+        "Luôn chọn công nghệ tốt nhất hiện có cho từng bài toán cụ thể",
+        "Kiến trúc phải phục vụ mục tiêu kinh doanh của toàn tập đoàn"
+      ],
+      "answer": 0,
+      "explanation": "Nguyên tắc hữu ích giúp chọn giữa hai phương án và có hệ quả cụ thể: \"mua trước, xây sau\" có thể bị phản đối hợp lý, và nói rõ đề xuất tự xây phải có so sánh TCO. \"Phải bảo mật, ổn định\" không ai phản đối nên không giúp quyết. \"Công nghệ tốt nhất\" không có tiêu chí và dẫn tới mỗi team một công nghệ. \"Phục vụ mục tiêu kinh doanh\" đúng nhưng không chỉ ra phải làm gì khác đi."
+    },
+    {
+      "id": "time-quadrant",
+      "kind": "single",
+      "prompt": "Hệ thống tính cước giao hàng được mọi đơn vị dùng hằng ngày và gắn với doanh thu, nhưng chạy trên framework hết hỗ trợ, không có test và chỉ một người hiểu. Theo mô hình TIME, xếp vào nhóm nào?",
+      "options": [
+        "Migrate: giá trị cao, kỹ thuật kém, cần hiện đại hoá hoặc thay",
+        "Tolerate: đang chạy ổn nên giữ nguyên, không đầu tư thêm gì",
+        "Eliminate: kỹ thuật kém, nên tắt và chuyển sang hệ thống khác",
+        "Invest: giá trị cao nên dồn thêm tính năng mới cho hệ thống này"
+      ],
+      "answer": 0,
+      "explanation": "TIME xét hai trục. Giá trị nghiệp vụ cao và chất lượng kỹ thuật kém là Migrate: hiện đại hoá hoặc thay theo lộ trình (cách cụ thể chọn theo 7 R). Tolerate dành cho giá trị thấp mà kỹ thuật vẫn tốt. Eliminate dành cho giá trị thấp, kỹ thuật kém; tắt một hệ thống gắn với doanh thu không phải lựa chọn. Invest thêm tính năng lên nền kém chỉ làm rủi ro lớn hơn."
+    },
+    {
+      "id": "waiver-expiry",
+      "kind": "single",
+      "prompt": "Một team xin dùng tiếp framework đã hết hỗ trợ vì chưa có người nâng cấp trong quý này. Cách cấp ngoại lệ nào đúng?",
+      "options": [
+        "Cấp có hạn, kèm biện pháp bù, người chịu trách nhiệm và ngày nâng",
+        "Từ chối, yêu cầu tắt ứng dụng cho tới khi nâng cấp xong hoàn toàn",
+        "Cấp không thời hạn vì ứng dụng vẫn đang chạy ổn định nhiều năm",
+        "Cấp miệng trong buổi họp để team không phải viết thêm tài liệu"
+      ],
+      "answer": 0,
+      "explanation": "Ngoại lệ (dispensation) cho phép lệch chuẩn trong một thời hạn, với rủi ro được ghi lại, biện pháp bù như WAF hay quét dependency hằng ngày, người chịu trách nhiệm và ngày hết hạn để xem lại. Tắt ứng dụng thường gây hại cho nghiệp vụ hơn rủi ro đang có. Ngoại lệ không hạn thành một chuẩn ngầm. Cấp miệng thì không ai theo dõi được ngoại lệ nào sắp quá hạn."
+    }
+  ]
+}

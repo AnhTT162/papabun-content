@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "freeze-new-violation",
+      "kind": "output",
+      "prompt": "Store đã ghi 7 vi phạm của `com.shop.checkout.CheckoutService` (gọi các class trong `com.shop.reporting`). Commit mới thêm ba dòng chú thích phía trên `CheckoutService` và thêm class `com.shop.checkout.RefundService` như dưới đây; `SalesReport` thuộc `com.shop.reporting`, có `void record(long)`. Cấu hình mặc định, ArchUnit 1.5.1. Kết quả?",
+      "code": "ArchRule rule = noClasses().that().resideInAPackage(\"..checkout..\")\n        .should().dependOnClassesThat().resideInAPackage(\"..reporting..\");\nFreezingArchRule.freeze(rule).check(classes);\n\n// com.shop.checkout.RefundService\npublic void refund(long orderId) {\n    new SalesReport().record(-orderId);\n}",
+      "options": [
+        "Đỏ, báo 2 vi phạm, đều của RefundService",
+        "Đỏ, báo 9 vi phạm vì số dòng cũ đã bị lệch",
+        "Xanh, vi phạm mới được tự động ghi vào store",
+        "Đỏ, báo 7 vi phạm của CheckoutService bị dời dòng"
+      ],
+      "answer": 0,
+      "explanation": "Mặc định FreezingArchRule so vi phạm mà bỏ qua số dòng, nên 7 vi phạm cũ bị dời dòng vẫn được coi là đã ghi. Chỉ vi phạm mới bị báo: `RefundService.refund` gọi constructor và method `record` của `SalesReport`, tức 2 vi phạm. Vi phạm mới chỉ được ghi vào store và báo xanh khi bật `freeze.refreeze=true`."
+    },
+    {
+      "id": "store-update-ci",
+      "kind": "output",
+      "prompt": "Một kỹ sư xoá phụ thuộc vào `ReportCache` trong `CheckoutService` (bớt 3 vi phạm đã đóng băng), không đổi gì khác và không commit thư mục store. CI chạy với `-Darchunit.freeze.store.default.allowStoreUpdate=false`. Kết quả trên CI?",
+      "code": "FreezingArchRule.freeze(rule).check(classes);",
+      "options": [
+        "Lỗi StoreUpdateFailedException, phải commit store đã thu gọn",
+        "Xanh, store trên CI tự thu gọn còn 4 vi phạm và lưu lại",
+        "Đỏ, báo 3 vi phạm đã biến mất là vi phạm mới cần xử lý",
+        "Xanh, nhưng store trong repo vẫn giữ nguyên 7 vi phạm cũ"
+      ],
+      "answer": 0,
+      "explanation": "Vi phạm đã sửa cần được xoá khỏi store; khi cập nhật store bị cấm, ArchUnit ném `StoreUpdateFailedException: Updating frozen violations is disabled`. Kỹ sư chạy lại trên máy mình (store được thu gọn) và commit store. Nhờ vậy store trong repo luôn khớp code, và ai đưa lại phụ thuộc vào `ReportCache` sẽ bị chặn."
+    },
+    {
+      "id": "rewrite-decision",
+      "kind": "single",
+      "prompt": "Monolith 8 năm có nhiều phụ thuộc chéo giữa module; ba mục tiêu kinh doanh lớn phải xong trong 18 tháng. CTO muốn một team viết lại thành microservices trong 18 tháng. Hướng nào hợp lý nhất?",
+      "options": [
+        "Dựng ranh giới module, giữ bằng fitness function, tách dần phần có lý do",
+        "Viết lại song song, đóng băng tính năng mới của hệ thống cũ 18 tháng",
+        "Tách ngay mỗi package cấp 1 thành một service riêng, chung database",
+        "Giữ nguyên kiến trúc, chỉ tăng số người review mỗi pull request"
+      ],
+      "answer": 0,
+      "explanation": "Vấn đề là ranh giới bị phá, không phải việc deploy chung. Dựng ranh giới trong khối, giữ chúng bằng ArchUnit có ratchet, và chỉ tách phần có lý do deploy riêng thì mục tiêu kinh doanh vẫn làm được ngay. Đóng băng tính năng 18 tháng thường không được kinh doanh chấp nhận, và bản mới vẫn phải đuổi theo. Tách theo package mà chung database thì thành monolith phân tán. Review bằng mắt không bắt được hàng nghìn phụ thuộc chéo."
+    },
+    {
+      "id": "goodhart",
+      "kind": "single",
+      "prompt": "Team đặt fitness function \"coverage ≥ 80%\" để giữ khả năng refactor an toàn. Sáu tháng sau coverage 85%, nhưng refactor vẫn hay làm hỏng hành vi mà test không bắt. Vì sao?",
+      "options": [
+        "Coverage đo dòng được chạy, không đo test có assert đúng hành vi",
+        "Ngưỡng 80% quá thấp, cần nâng lên 95% thì mới bắt được lỗi",
+        "Coverage chỉ đúng với unit test, không áp dụng cho integration",
+        "Fitness function chỉ kiểm được cấu trúc code, không kiểm được test"
+      ],
+      "answer": 0,
+      "explanation": "Đây là Goodhart's law: chỉ số thành mục tiêu thì người ta tối ưu chỉ số. Test có thể chạy qua mọi dòng mà không assert gì. Nâng ngưỡng không sửa được việc đo sai đại lượng. Coverage áp dụng cho mọi loại test. Fitness function kiểm được chất lượng test, ví dụ mutation testing (PIT) đo tỉ lệ thay đổi code bị test phát hiện."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "evolutionary-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Kiến trúc tiến hoá & fitness function",
+  "summary": "Kiến trúc tiến hoá (thay đổi có định hướng, từng bước, nhiều chiều), fitness function và cách phân loại (atomic/holistic, triggered/continual, static/dynamic, temporal), ví dụ theo đặc tính và vị trí trong pipeline, ratchet cho hệ thống cũ bằng FreezingArchRule của ArchUnit (đã chạy 1.5.1: tạo store, bỏ qua số dòng, allowStoreUpdate trên CI, bẫy refreeze), Goodhart's law, các bước nhỏ đảo ngược được, viết lại hay tiến hoá, sacrificial architecture, connascence và dữ liệu là chiều khó nhất.",
+  "level": "architect",
+  "order": 20,
+  "minutes": 17,
+  "prerequisites": ["nfr-quality-attributes", "adr-c4", "architecture-styles", "migration-modernization", "refactoring-tech-debt", "modular-monolith"],
+  "terms": ["evolutionary-architecture", "fitness-function", "ratchet", "archunit", "feature-flag", "expand-contract", "branch-by-abstraction", "strangler-fig", "deployment-pipeline", "jdeps", "consumer-driven-contract", "software-composition-analysis", "goodharts-law", "second-system-effect", "sacrificial-architecture", "architecture-quantum", "connascence", "last-responsible-moment", "dora-metrics", "spring-modulith", "contract-test", "openapi", "slo", "cve", "chaos-engineering", "schema-registry", "burn-rate", "mutation-testing", "parallel-run", "distributed-monolith", "outbox"],
+  "references": [
+    { "title": "Building Evolutionary Architectures (trang của sách)", "url": "https://evolutionaryarchitecture.com/" },
+    { "title": "ArchUnit User Guide: Freezing Arch Rules", "url": "https://www.archunit.org/userguide/html/000_Index.html#_freezing_arch_rules" },
+    { "title": "Martin Fowler: Sacrificial Architecture", "url": "https://martinfowler.com/bliki/SacrificialArchitecture.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Fitness function khác gì unit test?\" Unit test kiểm hành vi nghiệp vụ của một đơn vị code. Fitness function kiểm một đặc tính kiến trúc: chiều phụ thuộc, tương thích API, ngân sách latency, SLO, chi phí. Nhiều fitness function được viết bằng framework test (ArchUnit chạy trong JUnit), nhưng cũng có cái chạy trên production như SLO burn rate hay chaos experiment." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng bật `freeze.refreeze=true` để làm build xanh: nó ghi mọi vi phạm hiện tại, cả vi phạm vừa thêm, vào store và báo thành công. Trên CI, cấm cả refreeze lẫn cập nhật store (`allowStoreUpdate=false`); store chỉ đổi qua commit có người review." },
+    { "type": "callout", "style": "tip", "markdown": "Mỗi ADR đặt ra một quy tắc (\"module báo cáo không đọc bảng của module khác\") nên đi kèm một fitness function giữ quy tắc đó, và ADR ghi tên test. Quy tắc chỉ nằm trong tài liệu sẽ bị phá trong vài tháng." }
+  ]
+}

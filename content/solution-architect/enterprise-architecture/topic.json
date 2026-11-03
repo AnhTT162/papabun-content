@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "enterprise-architecture",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "solution-architect",
+  "title": "Enterprise architecture & governance",
+  "summary": "Enterprise architecture ở mức đủ dùng: TOGAF ADM (hiện trạng, đích, gap analysis, lộ trình) và mẫu nguyên tắc kiến trúc, Zachman, bản đồ năng lực nghiệp vụ, danh mục ứng dụng và mô hình TIME, tech radar nội bộ, chuẩn hoá ở chỗ nối thay vì mọi thứ, đường mặc định thay mệnh lệnh, phạm vi và cách chạy review board, ngoại lệ có hạn, governance tự động bằng guardrail và policy as code, và cách đo EA.",
+  "level": "architect",
+  "order": 19,
+  "minutes": 17,
+  "prerequisites": ["sa-role", "adr-c4", "architecture-tradeoffs", "build-vs-buy", "team-topologies"],
+  "terms": ["enterprise-architect", "architecture-governance", "capability-map", "business-capability", "togaf", "togaf-adm", "architecture-principle", "tech-radar", "architecture-board", "guardrail", "zachman-framework", "gap-analysis", "transitional-architecture", "time-model", "service-catalog", "sbom", "golden-path", "advice-process", "architecture-waiver", "policy-as-code", "adr", "one-way-door", "archimate", "c4-model", "bounded-context", "seven-rs", "tco", "cve", "shadow-it", "waf"],
+  "references": [
+    { "title": "The Open Group: The TOGAF Standard, 10th Edition", "url": "https://www.opengroup.org/togaf" },
+    { "title": "Thoughtworks Technology Radar: FAQ", "url": "https://www.thoughtworks.com/radar/faq" },
+    { "title": "Andrew Harmel-Law: Scaling the Practice of Architecture, Conversationally", "url": "https://martinfowler.com/articles/scaling-architecture-conversationally.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team muốn dùng một công nghệ không có trong radar thì anh xử lý thế nào?\" Không trả lời có hay không ngay. Hỏi nó giải quyết vấn đề gì mà công nghệ trong radar không làm được, ai trực và vá nó, thoát ra thế nào nếu sai. Nếu lý do vững: cho vào Trial với một team chủ và ADR, đặt ngày xem lại; nếu nhiều team cùng cần, đó là tín hiệu radar đang thiếu một mục." },
+    { "type": "callout", "style": "warning", "markdown": "Review board duyệt mọi dự án không làm tổ chức tuân thủ hơn: khi chờ lâu, team đi đường vòng và board mất luôn thông tin về những gì đang chạy. Đo tỉ lệ ứng dụng mới xuất hiện trong catalog mà không có ADR, hoặc lẽ ra thuộc phạm vi board mà không qua board; con số tăng nghĩa là governance đang làm hại." },
+    { "type": "callout", "style": "tip", "markdown": "Bắt đầu EA ở tổ chức mới bằng danh mục ứng dụng có chủ, lấy từ nguồn máy đọc được (tài khoản cloud, cluster, kho code, hoá đơn), trước khi viết nguyên tắc hay vẽ kiến trúc đích. Ứng dụng không ai biết tồn tại là nơi sự cố bảo mật thường bắt đầu." }
+  ]
+}

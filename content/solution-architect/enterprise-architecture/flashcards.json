@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "ea-vs-sa", "front": "Enterprise architect khác solution architect ở đâu?", "back": "EA lo danh mục năng lực, hệ thống và công nghệ của cả tổ chức trong nhiều năm; SA lo một giải pháp cụ thể trong vài tháng tới một năm." },
+    { "id": "togaf-adm", "front": "Phần nào của TOGAF đáng dùng nhất trong thực tế?", "back": "Khung của ADM: hiện trạng, đích, gap analysis, kiến trúc chuyển tiếp và lộ trình; cùng mẫu nguyên tắc có lý do và hệ quả. ADM phải được điều chỉnh theo tổ chức, không làm đủ mọi sản phẩm đầu ra." },
+    { "id": "capability-map", "front": "Vì sao bản đồ năng lực nghiệp vụ là khung tốt cho EA?", "back": "Năng lực là việc công ty làm, ổn định hơn sơ đồ tổ chức và hệ thống. Gắn ứng dụng vào từng năng lực là thấy chỗ trùng và chỗ thiếu đầu tư." },
+    { "id": "time-model", "front": "Bốn nhóm của mô hình TIME?", "back": "Tolerate (giá trị thấp, kỹ thuật tốt), Invest (giá trị cao, kỹ thuật tốt), Migrate (giá trị cao, kỹ thuật kém), Eliminate (giá trị thấp, kỹ thuật kém)." },
+    { "id": "principle", "front": "Một nguyên tắc kiến trúc theo mẫu TOGAF gồm gì?", "back": "Name, Statement, Rationale (vì sao) và Implications (hệ quả). Nguyên tắc tốt là câu người hợp lý có thể không đồng ý." },
+    { "id": "radar-rings", "front": "Bốn vòng của tech radar Thoughtworks?", "back": "Adopt, Trial, Assess và vòng ngoài cùng (FAQ hiện gọi là Caution, các số trước gọi là Hold). Radar nội bộ phải gắn nghĩa cụ thể cho từng vòng, ví dụ Adopt là mặc định có platform hỗ trợ." },
+    { "id": "what-to-standardize", "front": "Nên bắt buộc chuẩn hoá ở đâu?", "back": "Ở chỗ nối giữa các hệ thống: danh tính, format log và trace, chuẩn API và event, cấu trúc tài khoản cloud, nền bảo mật. Bên trong service thì chọn trong radar." },
+    { "id": "arb-scope", "front": "Review board nên nhận những quyết định nào?", "back": "Quyết định một chiều, chạm nhiều domain hay dữ liệu dùng chung, công nghệ ngoài radar, dữ liệu nhạy cảm, chi phí lớn. Phần còn lại team tự quyết theo advice process và ghi ADR." },
+    { "id": "waiver", "front": "Một ngoại lệ (dispensation) cần những gì?", "back": "Lý do, rủi ro, biện pháp bù, người chịu trách nhiệm và ngày hết hạn. Ngoại lệ không hạn là một chuẩn mới không ai công bố." }
+  ]
+}

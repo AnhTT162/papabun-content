@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Monolith 8 năm, 2.318 vi phạm ranh giới module: viết lại 18 tháng hay tiến hoá có fitness function",
+  "prompt": "Bạn là solution architect của một công ty phân phối dược phẩm. Hệ thống lõi là một monolith viết từ 8 năm trước, đã nâng dần lên Spring Boot 3: nhận đơn từ nhà thuốc, giữ hàng theo lô và hạn dùng, điều phối giao hàng, công nợ, báo cáo. Khoảng 640.000 dòng Java, một database PostgreSQL 410 bảng. 34 kỹ sư trong 5 team cùng sửa một repo.\n\nSố liệu:\n\n| Hạng mục | Hiện trạng |\n|---|---|\n| Package module cấp 1 | 11 (`order`, `inventory`, `delivery`, `billing`, `reporting`, ...) |\n| Vi phạm quy tắc \"chỉ gọi package `api` của module khác\" (quét thử bằng [[archunit|ArchUnit]]) | 2.318 |\n| Vòng phụ thuộc giữa module | 4, trong đó `order` ↔ `inventory` |\n| Phát hành | Mỗi tháng một lần, 3 ngày test hồi quy thủ công |\n| Báo cáo | Module `reporting` đọc thẳng 180 bảng của các module khác |\n| Sự cố 6 tháng qua | 9 lần do thay đổi ở một module làm hỏng module khác; 2 lần do đổi tên cột mà báo cáo vẫn dùng |\n\nMục tiêu kinh doanh 2 năm tới: mở kênh đặt hàng cho chuỗi bệnh viện (đơn lớn, hợp đồng giá riêng), tách phần giao hàng cho đối tác vận chuyển gọi qua API, và theo dõi lô thuốc bị thu hồi trong vòng 2 giờ.\n\nCTO đề xuất: lập team 12 người viết lại toàn bộ thành microservices trong 18 tháng; 22 người còn lại giữ hệ thống cũ, chỉ sửa lỗi.\n\nCTO cần: ý kiến về đề xuất, những fitness function sẽ dùng và đặt ở đâu, cách xử lý 2.318 vi phạm, lộ trình tách phần cần tách, và cách đo tiến độ.",
+  "hints": [
+    "Trong 18 tháng viết lại, hệ thống cũ có đứng yên không? Ba mục tiêu kinh doanh sẽ được làm ở bản nào?",
+    "Bật một rule ArchUnit mới lên 2.318 vi phạm thì build đỏ ngay. Làm sao để chặn vi phạm mới mà không phải sửa hết vi phạm cũ trước?",
+    "11 sự cố 6 tháng qua thuộc những loại nào? Mỗi loại có thể bị một kiểm tra tự động nào chặn trước khi lên production?",
+    "Trong ba mục tiêu, phần nào thật sự cần deploy độc lập, và phần nào chỉ cần ranh giới module rõ trong cùng một khối?"
+  ],
+  "solution": "**1. Về đề xuất viết lại**\n\n- Hệ thống cũ không đứng yên: cả ba mục tiêu kinh doanh rơi vào 18 tháng tới. Nếu làm trên bản cũ, bản mới phải đuổi theo; nếu chờ bản mới, kinh doanh chờ 18 tháng. Đây là kịch bản kinh điển của viết lại một lần (bài Migration & hiện đại hoá).\n- 12 người viết lại 640.000 dòng mà không có test bao hành vi sẽ mất các quy tắc ngầm (xuất lô theo hạn dùng gần nhất, ngoại lệ giá của từng nhà thuốc). Bản mới còn dễ bị [[second-system-effect|second-system effect]]: nhồi vào mọi ý tưởng bị hoãn ở bản cũ.\n- Vấn đề đo được là ranh giới module bị phá và database dùng chung, không phải \"monolith\". Microservices với cùng ranh giới đó sẽ thành [[distributed-monolith|monolith phân tán]].\n- Đề xuất: [[evolutionary-architecture|tiến hoá]] hệ thống hiện có: dựng ranh giới module trong khối, giữ chúng bằng [[fitness-function|fitness function]], chỉ tách ra deploy riêng phần có lý do rõ.\n\n**2. Fitness function và vị trí trong pipeline**\n\n| Đặc tính | Kiểm tra | Chạy ở đâu |\n|---|---|---|\n| Module chỉ gọi package `api` của module khác | ArchUnit, đóng băng vi phạm cũ | Commit, vài giây |\n| Không có vòng phụ thuộc module | `slices().matching(\"com.pharma.(*)..\").should().beFreeOfCycles()`, đóng băng 4 vòng hiện có | Commit |\n| Module không đọc bảng của module khác | Rule ArchUnit: entity và repository chỉ dùng trong module của nó (chỉ thấy phụ thuộc trong bytecode). SQL thuần, `JdbcTemplate`, native query thì ArchUnit không thấy: chặn ở database bằng schema và DB user riêng cho mỗi module, `GRANT` tối thiểu | Commit; quyền DB khi deploy |\n| Migration không phá người đọc | Linter cho migration: cấm đổi tên hay xoá cột trong cùng release với code ([[expand-contract|expand-contract]]) | Merge |\n| API cho đối tác vận chuyển không breaking | So OpenAPI với bản đã phát hành; [[consumer-driven-contract|contract test]] với đối tác | Merge |\n| Truy vết lô thu hồi ≤ 2 giờ | Kịch bản thu hồi chạy hằng đêm trên dữ liệu ẩn danh, đo thời gian ra danh sách nhà thuốc nhận lô | Theo lịch |\n| p99 đặt đơn của bệnh viện | Load test có ngưỡng trước release (bài Load & performance testing) | Trước release |\n| CVE và license | [[software-composition-analysis|SCA]] chặn CVE từ mức High chưa có ngoại lệ | Commit |\n\n9 sự cố loại \"module này làm hỏng module kia\" nhắm vào ba dòng đầu; 2 sự cố đổi tên cột nhắm vào linter migration.\n\n**3. Xử lý 2.318 vi phạm bằng ratchet**\n\nBọc rule bằng `FreezingArchRule.freeze(...)`. Trên máy một kỹ sư, bật tạo store một lần rồi commit thư mục store:\n\n```properties\n# archunit.properties (chạy lần đầu trên máy dev)\nfreeze.store.default.allowStoreCreation=true\n```\n\nTrên CI, cấm cập nhật store:\n\n```properties\n# CI: -Darchunit.freeze.store.default.allowStoreUpdate=false\n```\n\nHệ quả (đã chạy với ArchUnit 1.5.1):\n\n- Vi phạm mới làm build đỏ; vi phạm cũ bị dời dòng không bị báo lại.\n- Ai sửa bớt vi phạm mà quên commit store đã thu gọn thì CI ném `StoreUpdateFailedException`; phải commit store, nên số vi phạm trong repo chỉ giảm ([[ratchet|ratchet]]).\n- Không cho phép `freeze.refreeze=true` trên CI: nó ghi luôn vi phạm mới vào store và báo PASSED.\n\nKhông lập dự án \"dọn vi phạm\". Vi phạm được sửa khi team chạm vào code đó, ưu tiên module sắp làm tính năng lớn. Mỗi team giữ rule cho module của mình; số vi phạm đóng băng theo module lên dashboard hằng tuần.\n\n**4. Lộ trình**\n\n1. *Tháng 1–2*: viết các rule trên, đóng băng, đưa vào pipeline. Gán mỗi module cho một team. Bắt đầu tự động hoá kịch bản hồi quy quan trọng nhất (đặt đơn, xuất lô, thu hồi).\n2. *Tháng 2–6, kênh bệnh viện*: làm trong khối, như một module mới `hospital-contract` chỉ gọi `api` của `order` và `billing`. Không cần deploy riêng: tải và nhịp thay đổi chưa khác các module còn lại.\n3. *Tháng 3–8, `reporting` thôi đọc bảng của người khác*: các module phát event (qua [[outbox|outbox]]) hoặc cung cấp view được công bố; báo cáo chuyển dần sang kho dữ liệu riêng (bài Kiến trúc dữ liệu). Truy cập qua entity thì mỗi lần chuyển xong là vi phạm biến mất khỏi store; truy cập bằng SQL thuần thì theo dõi bằng số bảng của module khác mà user `reporting` còn được `GRANT`, rồi thu hồi dần.\n4. *Tháng 6–12, gỡ vòng `order` ↔ `inventory`*: [[branch-by-abstraction|branch by abstraction]]: `order` gọi interface giữ hàng trong `inventory.api`, phần `inventory` gọi ngược lại `order` chuyển sang event \"đơn đã xác nhận\".\n5. *Tháng 9–15, tách `delivery`*: đây là phần có lý do deploy riêng (đối tác bên ngoài gọi API, tải theo khung giờ giao, có thể cần SLA riêng). Dùng [[strangler-fig|strangler fig]]: API đối tác đi qua gateway vào service mới; dữ liệu giao hàng tách schema bằng expand-contract; [[feature-flag|feature flag]] chuyển từng vùng giao hàng.\n6. *Sau đó*: xem số liệu rồi mới quyết tách tiếp module nào; mỗi quyết định tách là một ADR có fitness function đi kèm.\n\n**5. Đo**\n\n- Số vi phạm đóng băng theo module (mục tiêu giảm ít nhất 30% sau 6 tháng ở các module đang phát triển tính năng); số vòng phụ thuộc về 0.\n- Số sự cố do thay đổi lan sang module khác (6 tháng qua là 9).\n- [[dora-metrics|DORA metrics]]: tần suất phát hành (từ mỗi tháng tiến tới mỗi tuần khi test hồi quy tự động), lead time, tỉ lệ thay đổi gây lỗi.\n- Thời gian truy vết lô thu hồi từ kịch bản hằng đêm.",
+  "tradeoffs": [
+    {
+      "option": "Viết lại toàn bộ thành microservices trong 18 tháng",
+      "pros": [
+        "Bắt đầu sạch, chọn lại công nghệ và mô hình dữ liệu",
+        "Hệ thống đích rõ ràng trên sơ đồ"
+      ],
+      "cons": [
+        "Bản mới đuổi theo bản cũ vẫn đang thay đổi; mục tiêu kinh doanh bị hoãn",
+        "Mất quy tắc nghiệp vụ ngầm; ranh giới sai thành monolith phân tán"
+      ]
+    },
+    {
+      "option": "Giữ nguyên, chỉ thêm review code chặt hơn",
+      "pros": [
+        "Không tốn công dựng công cụ",
+        "Không đổi cách làm việc của team"
+      ],
+      "cons": [
+        "Review bằng mắt không bắt được 2.318 phụ thuộc chéo",
+        "Sự cố lan module và đổi tên cột tiếp tục lặp lại"
+      ]
+    },
+    {
+      "option": "Tiến hoá trong khối có fitness function, tách riêng phần có lý do",
+      "pros": [
+        "Mục tiêu kinh doanh làm ngay trên hệ thống đang chạy",
+        "Ranh giới được giữ bằng máy, vi phạm chỉ giảm dần"
+      ],
+      "cons": [
+        "Phải đầu tư rule, pipeline và test hồi quy tự động trước",
+        "Vẫn còn một database và một khối deploy trong nhiều tháng"
+      ]
+    }
+  ]
+}

@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization", "evolutionary-architecture"]
     },
     {
       "id": "replication-slot",
@@ -2229,7 +2229,7 @@
       "meaning": "Cách đổi schema không phá vỡ (còn gọi parallel change): thêm cấu trúc mới, cho code dùng cả cũ lẫn mới, chuyển dữ liệu, rồi mới bỏ cấu trúc cũ. Mỗi bước đều tương thích với code đang chạy.",
       "example": "Đổi tên cột qua ba release: thêm `phone_number`, chuyển code sang đọc nó, cuối cùng xoá `phone`.",
       "related": ["schema-migration", "backfill", "rolling-deployment"],
-      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic", "architecture-tradeoffs"]
+      "topics": ["schema-migration", "refactoring-tech-debt", "ddd-strategic", "architecture-tradeoffs", "evolutionary-architecture"]
     },
     {
       "id": "rolling-deployment",
@@ -2965,7 +2965,7 @@
       "meaning": "Dịch vụ lưu các phiên bản schema của event (Avro, Protobuf, JSON Schema), cấp schema ID cho message, và kiểm tra tương thích khi đăng ký phiên bản mới.",
       "example": "Message mang 4 byte schema ID; consumer lấy schema theo ID để đọc.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution"]
+      "topics": ["event-schema-evolution", "evolutionary-architecture"]
     },
     {
       "id": "schema-compatibility",
@@ -4029,7 +4029,7 @@
       "meaning": "Bộ test kiểm hợp đồng chung của một interface, chạy lại cho mọi cài đặt để đảm bảo chúng thay thế được nhau.",
       "example": "`abstract class PaymentGatewayContractTest` có các test chung; `MomoGatewayTest` và `VnpayGatewayTest` kế thừa nó.",
       "related": ["liskov-substitution"],
-      "topics": ["solid", "event-driven-architecture"]
+      "topics": ["solid", "event-driven-architecture", "evolutionary-architecture"]
     },
     {
       "id": "temporal-coupling",
@@ -4053,7 +4053,7 @@
       "meaning": "Thư viện Java viết unit test cho quy tắc kiến trúc: chiều phụ thuộc giữa package, quy ước đặt tên, vòng phụ thuộc.",
       "example": "`noClasses().that().resideInAPackage(\"..domain..\").should().dependOnClassesThat().resideInAPackage(\"..infrastructure..\")`.",
       "related": ["dependency-inversion", "coupling"],
-      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal", "modular-monolith", "adr-c4"]
+      "topics": ["design-principles", "solid", "layered-architecture", "clean-hexagonal", "modular-monolith", "adr-c4", "evolutionary-architecture"]
     },
     {
       "id": "template-method",
@@ -4237,7 +4237,7 @@
       "meaning": "Dự án Spring hỗ trợ modular monolith: coi mỗi package con trực tiếp của package gốc là một module, kiểm tra trong test rằng module khác chỉ dùng API công khai của nó, và hỗ trợ event giữa các module.",
       "example": "`ApplicationModules.of(ShopApplication.class).verify()` làm test đỏ khi `payment` gọi `shop.order.internal.OrderPricing`.",
       "related": ["modular-monolith", "archunit"],
-      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith"]
+      "topics": ["layered-architecture", "ddd-strategic", "modular-monolith", "evolutionary-architecture"]
     },
     {
       "id": "modular-monolith",
@@ -4413,7 +4413,7 @@
       "meaning": "Cách thay hệ thống cũ dần dần: một lớp định tuyến chuyển từng luồng sang code mới cho tới khi hệ thống cũ không còn được dùng.",
       "example": "API gateway chuyển `/orders/**` sang service mới, các đường khác vẫn tới hệ thống cũ.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns", "migration-modernization", "team-topologies"]
+      "topics": ["refactoring-tech-debt", "ddd-strategic", "modular-monolith", "microservices-tradeoffs", "architecture-tradeoffs", "architecture-styles", "integration-patterns", "migration-modernization", "team-topologies", "evolutionary-architecture"]
     },
     {
       "id": "branch-by-abstraction",
@@ -4421,7 +4421,7 @@
       "meaning": "Kỹ thuật thay một phần lớn trên nhánh chính: đặt interface trước cài đặt cũ, viết cài đặt mới, chuyển dần bằng feature flag rồi xoá bản cũ.",
       "example": "Interface `PriceEngine` có `LegacyPriceEngine` và `NewPriceEngine`; flag bật bản mới cho 5% đơn.",
       "related": ["strangler-fig"],
-      "topics": ["refactoring-tech-debt", "migration-modernization"]
+      "topics": ["refactoring-tech-debt", "migration-modernization", "evolutionary-architecture"]
     },
     {
       "id": "hotspot",
@@ -4437,7 +4437,7 @@
       "meaning": "Kỹ thuật kiểm tra chất lượng test bằng cách cố tình sửa code (mutant) và xem test có đỏ không; công cụ Java phổ biến là PIT.",
       "example": "PIT đổi `amount > 0` thành `amount >= 0`, test vẫn xanh: thiếu test cho giá trị 0.",
       "related": ["characterization-test"],
-      "topics": ["refactoring-tech-debt"]
+      "topics": ["refactoring-tech-debt", "evolutionary-architecture"]
     },
     {
       "id": "code-smell",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture"]
     },
     {
       "id": "dora-metrics",
@@ -4469,7 +4469,7 @@
       "meaning": "Bốn chỉ số đo năng lực giao phần mềm của nhóm: lead time cho thay đổi, tần suất deploy, tỉ lệ deploy gây lỗi, thời gian khôi phục sau deploy lỗi.",
       "example": "Sau khi trả nợ ở module giá, lead time trung bình giảm từ 6 ngày xuống 2 ngày.",
       "related": ["technical-debt"],
-      "topics": ["refactoring-tech-debt", "tech-lead-role", "team-topologies"]
+      "topics": ["refactoring-tech-debt", "tech-lead-role", "team-topologies", "evolutionary-architecture"]
     },
     {
       "id": "port",
@@ -4501,7 +4501,7 @@
       "meaning": "Ranh giới trong đó một mô hình và một ngôn ngữ nghiệp vụ nhất quán; cùng một từ có thể mang nghĩa khác ở context khác.",
       "example": "\"Sản phẩm\" trong Catalog là tên và ảnh, trong Inventory là tồn kho theo kho; hai mô hình nối bằng `productId`.",
       "related": ["ubiquitous-language", "context-map"],
-      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "cqrs-event-sourcing", "team-topologies"]
+      "topics": ["ddd-strategic", "modular-monolith", "ddd-tactical", "data-consistency-services", "microservices-tradeoffs", "cqrs-event-sourcing", "team-topologies", "enterprise-architecture"]
     },
     {
       "id": "ubiquitous-language",
@@ -4613,7 +4613,7 @@
       "meaning": "Hệ thống tách thành nhiều service nhưng vẫn phải deploy và thay đổi cùng nhau vì ranh giới sai; mang chi phí của hệ phân tán mà không có lợi ích độc lập.",
       "example": "Đổi một trường trong service đơn hàng buộc năm service khác cùng release.",
       "related": ["modular-monolith"],
-      "topics": ["modular-monolith", "microservices-tradeoffs", "architecture-styles"]
+      "topics": ["modular-monolith", "microservices-tradeoffs", "architecture-styles", "evolutionary-architecture"]
     },
     {
       "id": "partial-failure",
@@ -4869,7 +4869,7 @@
       "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
       "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
       "related": ["contract-test", "microservices"],
-      "topics": ["microservices-tradeoffs", "rest-api-design"]
+      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture"]
     },
     {
       "id": "sidecar",
@@ -5045,7 +5045,7 @@
       "meaning": "Service Level Objective: mục tiêu đo được cho một chỉ số dịch vụ trong một khoảng thời gian, như tỉ lệ request thành công hay độ trễ.",
       "example": "99% event `OrderPlaced` được Fraud chấm điểm trong 10 giây, tính theo 30 ngày.",
       "related": [],
-      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre"]
+      "topics": ["event-driven-architecture", "observability", "capacity-planning", "load-testing", "sd-framework", "nfr-quality-attributes", "reliability-sre", "evolutionary-architecture"]
     },
     {
       "id": "compensating-transaction",
@@ -5757,7 +5757,7 @@
       "meaning": "Tốc độ tiêu error budget so với mức tiêu đều vừa hết budget đúng cuối cửa sổ SLO. Burn rate 1 là vừa đủ, 10 là cạn sau một phần mười thời gian.",
       "example": "SLO 99,9%, tỉ lệ lỗi 1%: burn rate 10, budget 30 ngày cạn sau 3 ngày.",
       "related": ["error-budget", "slo"],
-      "topics": ["observability", "reliability-sre"]
+      "topics": ["observability", "reliability-sre", "evolutionary-architecture"]
     },
     {
       "id": "structured-logging",
@@ -6909,7 +6909,7 @@
       "meaning": "Chuẩn mô tả HTTP API bằng YAML hoặc JSON: endpoint, tham số, schema request và response, mã lỗi. Dùng để sinh tài liệu, sinh client, và so hai phiên bản để phát hiện breaking change.",
       "example": "springdoc-openapi sinh `/v3/api-docs` từ controller; CI so spec mới với spec đã phát hành và chặn merge nếu có trường bị xoá.",
       "related": ["api-versioning", "consumer-driven-contract"],
-      "topics": ["rest-api-design"]
+      "topics": ["rest-api-design", "evolutionary-architecture"]
     },
     {
       "id": "hateoas",
@@ -8893,7 +8893,7 @@
       "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó không biết khách hàng nào hay kết quả xử lý của ứng dụng.",
       "example": "Luật WAF chặn một IP gửi quá vài nghìn request trong 5 phút trước khi request chạm gateway.",
       "related": ["rate-limiting", "cdn", "api-gateway"],
-      "topics": ["design-rate-limiter"]
+      "topics": ["design-rate-limiter", "enterprise-architecture"]
     },
     {
       "id": "shadow-mode",
@@ -10085,7 +10085,7 @@
       "meaning": "Kiến trúc sư ở mức cả tổ chức, tầm nhiều năm: danh mục hệ thống, chuẩn công nghệ, lộ trình, governance qua review board.",
       "example": "Quyết định mọi hệ thống mới dùng chung một nhà cung cấp danh tính và một nền tảng message theo lộ trình ba năm.",
       "related": ["solution-architect"],
-      "topics": ["sa-role"]
+      "topics": ["sa-role", "enterprise-architecture"]
     },
     {
       "id": "tech-lead",
@@ -10109,7 +10109,7 @@
       "meaning": "Architecture Decision Record: tài liệu ngắn ghi một quyết định kiến trúc gồm bối cảnh, các phương án, quyết định, hệ quả. Giúp người sau hiểu vì sao hệ thống như hiện tại.",
       "example": "ADR-012: dùng một database cho mỗi service; phương án bị loại là database chung; hệ quả là báo cáo phải lấy dữ liệu qua CDC.",
       "related": ["solution-architect"],
-      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles", "build-vs-buy"]
+      "topics": ["sa-role", "tech-lead-role", "adr-c4", "architecture-tradeoffs", "architecture-styles", "build-vs-buy", "enterprise-architecture"]
     },
     {
       "id": "proof-of-concept",
@@ -10245,7 +10245,7 @@
       "meaning": "Cách vẽ kiến trúc phần mềm của Simon Brown theo bốn mức phóng to: System Context, Container, Component, Code; kèm các sơ đồ bổ trợ như deployment và dynamic.",
       "example": "Sơ đồ context cho business, sơ đồ container cho team dev và vận hành, sơ đồ component cho người sửa Order API.",
       "related": ["c4-container", "adr", "arc42"],
-      "topics": ["adr-c4"]
+      "topics": ["adr-c4", "enterprise-architecture"]
     },
     {
       "id": "c4-container",
@@ -10413,7 +10413,7 @@
       "meaning": "Kiểm tra tự động cho biết kiến trúc còn đạt một đặc tính mong muốn hay không, chạy trong pipeline hoặc trên production.",
       "example": "Test ArchUnit cấm module checkout phụ thuộc module báo cáo; load test chặn bản phát hành nếu p99 vượt 800 ms.",
       "related": ["quality-attribute", "archunit"],
-      "topics": ["nfr-quality-attributes", "architecture-styles"]
+      "topics": ["nfr-quality-attributes", "architecture-styles", "evolutionary-architecture"]
     },
     {
       "id": "well-architected-framework",
@@ -10485,7 +10485,7 @@
       "meaning": "Cách chia quyết định theo khả năng đảo ngược: cửa một chiều gần như không quay lại được hoặc quay lại rất đắt, cửa hai chiều sai thì sửa rẻ. Jeff Bezos gọi là quyết định loại 1 và loại 2.",
       "example": "Chọn thư viện log là cửa hai chiều; chỉ lưu số dư mà bỏ lịch sử giao dịch là cửa một chiều.",
       "related": ["decision-matrix", "adr", "last-responsible-moment"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "enterprise-architecture"]
     },
     {
       "id": "decision-matrix",
@@ -10525,7 +10525,7 @@
       "meaning": "Thời điểm mà nếu chờ thêm sẽ mất một phương án quan trọng (Mary và Tom Poppendieck, Lean Software Development). Hoãn quyết định tới lúc đó, không hoãn vô hạn.",
       "example": "Định dạng mã đơn hàng công khai phải chốt trước khi đối tác đầu tiên tích hợp; sau đó mỗi lần đổi đều cần đối tác nâng cấp.",
       "related": ["one-way-door"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "evolutionary-architecture"]
     },
     {
       "id": "tradeoff-point",
@@ -10541,7 +10541,7 @@
       "meaning": "Cách ra quyết định kiến trúc phi tập trung (Andrew Harmel-Law): ai cũng được quyết, miễn là đã hỏi ý kiến người bị ảnh hưởng và người có chuyên môn. Không cần mọi người đồng ý.",
       "example": "Một team tự chọn message broker sau khi hỏi team platform và hai team consumer, rồi ghi ADR.",
       "related": ["adr", "raci"],
-      "topics": ["architecture-tradeoffs"]
+      "topics": ["architecture-tradeoffs", "enterprise-architecture"]
     },
     {
       "id": "vendor-lock-in",
@@ -10677,7 +10677,7 @@
       "meaning": "Phần deploy độc lập, gắn kết chức năng cao, ràng buộc tĩnh cao (chung database, thư viện, hạ tầng) và bên trong gọi nhau đồng bộ (khái niệm của Neal Ford và Mark Richards). Là đơn vị nhỏ nhất có thể có quality attribute riêng.",
       "example": "Hai service dùng chung một database vẫn là một quantum; service nhận event qua Kafka và có dữ liệu riêng là quantum khác.",
       "related": ["architecture-style", "distributed-monolith"],
-      "topics": ["architecture-styles"]
+      "topics": ["architecture-styles", "evolutionary-architecture"]
     },
     {
       "id": "microkernel-architecture",
@@ -11237,7 +11237,7 @@
       "meaning": "Thí nghiệm có kiểm soát: đặt giả thuyết về trạng thái ổn định, gây lỗi thật (chết máy, mạng chậm, dependency lỗi) trong phạm vi nhỏ, có điều kiện dừng, để tìm điểm yếu trước khi sự cố tìm ra.",
       "example": "Tắt một node Redis ở 5% lưu lượng production với giả thuyết tỉ lệ checkout thành công vẫn trên 99,5%.",
       "related": ["steady-state-hypothesis", "fault-injection", "game-day"],
-      "topics": ["reliability-sre"]
+      "topics": ["reliability-sre", "evolutionary-architecture"]
     },
     {
       "id": "steady-state-hypothesis",
@@ -11269,7 +11269,7 @@
       "meaning": "Bảy chiến lược cho từng ứng dụng khi chuyển lên cloud: retire (tắt), retain (giữ), rehost, relocate (chuyển cả nền ảo hoá), repurchase, replatform, refactor (thiết kế lại).",
       "example": "Trong 42 ứng dụng: 7 retire, 3 repurchase sang SaaS, 22 rehost, 9 replatform, monolith lõi replatform trước rồi refactor dần.",
       "related": ["rehost", "replatform", "repurchase", "strangler-fig"],
-      "topics": ["migration-modernization"]
+      "topics": ["migration-modernization", "enterprise-architecture"]
     },
     {
       "id": "rehost",
@@ -11325,7 +11325,7 @@
       "meaning": "Phần code và hạ tầng chỉ tồn tại trong giai đoạn chuyển từ hệ thống cũ sang mới (facade, adapter, đồng bộ ngược), được lên kế hoạch tắt từ đầu.",
       "example": "Luồng ghi ngược hồ sơ mới vào Oracle có người phụ trách và mốc tắt khi báo cáo chuyển sang warehouse.",
       "related": ["legacy-mimic", "strangler-fig", "reverse-replication"],
-      "topics": ["migration-modernization"]
+      "topics": ["migration-modernization", "enterprise-architecture"]
     },
     {
       "id": "feature-parity",
@@ -11341,7 +11341,7 @@
       "meaning": "Chạy cùng đầu vào qua cả hệ thống cũ và mới, dùng kết quả của hệ thống cũ, ghi và phân loại khác biệt trước khi chuyển hẳn.",
       "example": "Bốn tuần tính số tiền bồi thường bằng cả công thức cũ và mới; khác biệt chưa giải thích phải dưới 0,1%.",
       "related": ["strangler-fig", "canary-release"],
-      "topics": ["migration-modernization"]
+      "topics": ["migration-modernization", "evolutionary-architecture"]
     },
     {
       "id": "reverse-replication",
@@ -11501,7 +11501,7 @@
       "meaning": "Total cost of ownership: tổng chi phí sở hữu một giải pháp trong nhiều năm, gồm cả công làm, vận hành, tích hợp, license, hạ tầng và chi phí thoát, không chỉ giá mua.",
       "example": "SaaS rẻ hơn năm đầu nhưng TCO 3 năm ngang tự vận hành khi MAU tăng gấp 4.",
       "related": ["vendor-lock-in", "exit-plan"],
-      "topics": ["build-vs-buy"]
+      "topics": ["build-vs-buy", "enterprise-architecture"]
     },
     {
       "id": "saas",
@@ -11621,7 +11621,7 @@
       "meaning": "Danh mục mọi service và thành phần kèm team sở hữu, tài liệu, API, kênh liên hệ, trạng thái; Backstage là một công cụ phổ biến.",
       "example": "Cảnh báo của payment-service tự gọi đúng team sở hữu ghi trong catalog.",
       "related": ["codeowners", "team-api"],
-      "topics": ["team-topologies"]
+      "topics": ["team-topologies", "enterprise-architecture"]
     },
     {
       "id": "you-build-it-you-run-it",
@@ -11661,7 +11661,7 @@
       "meaning": "Đường mặc định được platform hỗ trợ tốt để làm một việc (tạo service, deploy); không bắt buộc, đi đường khác thì team tự chịu. Tên do Spotify dùng; Netflix gọi là paved road.",
       "example": "Template Spring Boot có sẵn pipeline, OpenTelemetry và cảnh báo SLO.",
       "related": ["internal-developer-platform"],
-      "topics": ["team-topologies"]
+      "topics": ["team-topologies", "enterprise-architecture"]
     },
     {
       "id": "thinnest-viable-platform",
@@ -11734,6 +11734,222 @@
       "example": "3 ngày làm trên 19 ngày lead time là khoảng 16%: nút thắt là hàng đợi, không phải tốc độ code.",
       "related": ["component-team", "dora-metrics"],
       "topics": ["team-topologies"]
+    },
+    {
+      "id": "architecture-governance",
+      "term": "Architecture governance",
+      "meaning": "Cách tổ chức quyết định và kiểm các quyết định kiến trúc: ai được quyết gì, theo nguyên tắc và chuẩn nào, kiểm bằng review hay tự động, ngoại lệ xử lý ra sao.",
+      "example": "Team tự quyết trong radar và ghi ADR; quyết định một chiều chạm nhiều domain thì qua review board; quy tắc kiểm được thì đưa vào pipeline.",
+      "related": ["architecture-board", "architecture-principle", "tech-radar"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "business-capability",
+      "term": "Business capability",
+      "meaning": "Một việc công ty làm để tạo giá trị (Quản lý đơn hàng, Định giá), mô tả độc lập với phòng ban, quy trình hay hệ thống đang làm nó.",
+      "example": "Năng lực \"Quản lý khách hàng\" đang được làm bởi 2 CRM SaaS và 3 hệ thống tự viết.",
+      "related": ["capability-map"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "capability-map",
+      "term": "Capability map",
+      "meaning": "Bản đồ các năng lực nghiệp vụ của tổ chức, chia 2–3 mức; dùng để gắn ứng dụng, chi phí, mức đầu tư lên từng năng lực và tìm chỗ trùng hoặc thiếu.",
+      "example": "Mức 1 có 15 ô; tô đỏ ô có từ ba hệ thống trở lên cùng làm một năng lực.",
+      "related": ["business-capability", "time-model"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "togaf",
+      "term": "TOGAF",
+      "meaning": "Khung enterprise architecture của The Open Group; bản hiện hành là TOGAF Standard, 10th Edition (2022), gồm Fundamental Content và Series Guides.",
+      "example": "Dùng ADM để đi từ hiện trạng, đích, gap analysis tới lộ trình chuyển tiếp, và mẫu nguyên tắc có lý do và hệ quả.",
+      "related": ["togaf-adm", "architecture-principle", "zachman-framework"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "togaf-adm",
+      "term": "ADM (TOGAF)",
+      "meaning": "Architecture Development Method: chu trình của TOGAF gồm Preliminary, các pha A tới H (vision, business, information systems, technology, solutions, migration planning, implementation governance, change management), với Requirements Management ở giữa.",
+      "example": "Pha B, C, D mô tả baseline và target rồi làm gap analysis; pha F sắp các gói việc thành lộ trình.",
+      "related": ["togaf", "gap-analysis"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "architecture-principle",
+      "term": "Architecture principle",
+      "meaning": "Quy tắc định hướng dài hạn cho các quyết định kiến trúc; theo mẫu TOGAF có Name, Statement, Rationale và Implications.",
+      "example": "\"Mua trước, xây sau cho năng lực không cốt lõi\"; hệ quả: đề xuất tự xây phải so TCO với ít nhất hai sản phẩm.",
+      "related": ["architecture-governance", "togaf"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "tech-radar",
+      "term": "Tech radar",
+      "meaning": "Bảng công nghệ chia theo quadrant và vòng khuyến nghị (Adopt, Trial, Assess, vòng ngoài cùng là thận trọng/không dùng mới); Thoughtworks công bố hai lần mỗi năm, tổ chức có thể tự dựng radar nội bộ.",
+      "example": "Radar nội bộ: Kafka managed ở Adopt, RabbitMQ ở Trial, ActiveMQ 5.x ở vòng ngoài kèm lộ trình rời.",
+      "related": ["architecture-governance", "golden-path"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "architecture-board",
+      "term": "Architecture review board (ARB)",
+      "meaning": "Nhóm architect xem và quyết các quyết định kiến trúc có tác động rộng. Hiệu quả khi phạm vi hẹp và trả lời nhanh; thành hàng đợi khi duyệt mọi dự án.",
+      "example": "ARB chỉ nhận quyết định một chiều, chạm nhiều domain, công nghệ ngoài radar; trả lời trong 5 ngày làm việc bằng ADR.",
+      "related": ["architecture-governance", "advice-process", "adr"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "guardrail",
+      "term": "Guardrail",
+      "meaning": "Kiểm soát tự động giữ hệ thống trong giới hạn cho phép mà không cần người duyệt từng lần: chặn trước (preventive) hoặc phát hiện sau (detective).",
+      "example": "SCP chặn tạo tài nguyên ngoài region được phép; AWS Config rule báo bucket S3 công khai.",
+      "related": ["policy-as-code", "architecture-governance"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "zachman-framework",
+      "term": "Zachman Framework",
+      "meaning": "Bảng phân loại tài liệu kiến trúc doanh nghiệp của John Zachman: bài năm 1987 có 3 cột what, how, where; Sowa và Zachman mở rộng thêm who, when, why năm 1992, xếp theo các góc nhìn từ người lập kế hoạch tới người làm. Là taxonomy, không phải phương pháp.",
+      "example": "Ô \"what\" ở góc nhìn nghiệp vụ là danh sách thực thể nghiệp vụ; cùng cột ở góc nhìn kỹ thuật là schema database.",
+      "related": ["togaf"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "gap-analysis",
+      "term": "Gap analysis",
+      "meaning": "So hiện trạng (baseline) với đích (target) của kiến trúc để liệt kê những gì phải thêm, bỏ hoặc đổi; đầu vào của lộ trình chuyển tiếp.",
+      "example": "Hiện trạng có 3 IdP, đích có 1: khoảng cách là chuyển ứng dụng của hai IdP còn lại và gộp tài khoản nhân viên.",
+      "related": ["togaf-adm", "transitional-architecture"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "time-model",
+      "term": "TIME model",
+      "meaning": "Mô hình của Gartner xếp ứng dụng theo giá trị nghiệp vụ và chất lượng kỹ thuật: Tolerate, Invest, Migrate, Eliminate.",
+      "example": "Hệ thống tính cước quan trọng nhưng chạy framework hết hỗ trợ: Migrate.",
+      "related": ["capability-map", "seven-rs"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "sbom",
+      "term": "SBOM",
+      "meaning": "Software Bill of Materials: danh sách mọi thành phần và phiên bản trong một bản build (thư viện, gói hệ điều hành), dùng để tra CVE và license.",
+      "example": "Sinh SBOM CycloneDX trong pipeline; khi có CVE mới, tra ngay ứng dụng nào dùng thư viện đó.",
+      "related": ["tech-radar"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "architecture-waiver",
+      "term": "Ngoại lệ kiến trúc (dispensation)",
+      "meaning": "Cho phép một giải pháp lệch chuẩn trong thời hạn xác định, kèm lý do, rủi ro, biện pháp bù, người chịu trách nhiệm và ngày hết hạn; TOGAF gọi là dispensation.",
+      "example": "Ứng dụng Spring Boot 2.7 được ngoại lệ 6 tháng, bù bằng WAF và quét dependency hằng ngày, chủ là team Vận đơn.",
+      "related": ["architecture-governance", "architecture-board"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "policy-as-code",
+      "term": "Policy as code",
+      "meaning": "Viết quy tắc tuân thủ thành code chạy tự động trong pipeline hay admission controller, thay vì checklist cho người duyệt.",
+      "example": "Rule Conftest/OPA chặn manifest Kubernetes thiếu resource limit hoặc chạy bằng root.",
+      "related": ["guardrail"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "evolutionary-architecture",
+      "term": "Evolutionary architecture",
+      "meaning": "Kiến trúc hỗ trợ thay đổi có định hướng, từng bước, trên nhiều chiều (kỹ thuật, dữ liệu, bảo mật, vận hành); định hướng bằng fitness function.",
+      "example": "Monolith giữ ranh giới module bằng ArchUnit trong pipeline, tách dần phần giao hàng ra service riêng bằng strangler fig.",
+      "related": ["fitness-function", "ratchet", "strangler-fig"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "ratchet",
+      "term": "Ratchet",
+      "meaning": "Cách đưa quy tắc mới vào hệ thống cũ: lưu mức vi phạm hiện tại làm mốc, chặn mọi vi phạm mới, và hạ mốc khi vi phạm được sửa, để chỉ số chỉ đi một chiều.",
+      "example": "`FreezingArchRule` của ArchUnit lưu 2.318 vi phạm; vi phạm đã sửa tự rời store, đưa lại thì build đỏ.",
+      "related": ["fitness-function", "archunit"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "deployment-pipeline",
+      "term": "Deployment pipeline",
+      "meaning": "Chuỗi bước tự động đưa một thay đổi từ commit tới production: build, test, các kiểm tra chất lượng và bảo mật, deploy từng môi trường.",
+      "example": "Bước commit chạy unit test và ArchUnit trong vài phút; bước sau chạy contract test; load test chạy trước release.",
+      "related": ["fitness-function"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "jdeps",
+      "term": "jdeps",
+      "meaning": "Công cụ của JDK phân tích phụ thuộc giữa package, class và module từ file class hoặc jar.",
+      "example": "`jdeps -verbose:package -filter:none build/classes/java/main` liệt kê mọi package mà từng package gọi tới.",
+      "related": ["archunit"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "software-composition-analysis",
+      "term": "Software composition analysis (SCA)",
+      "meaning": "Quét thư viện bên thứ ba trong ứng dụng để tìm CVE đã biết và license không được phép.",
+      "example": "Pipeline chặn build khi có thư viện dính CVE mức High trở lên mà chưa có ngoại lệ được duyệt.",
+      "related": ["sbom"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "goodharts-law",
+      "term": "Goodhart's law",
+      "meaning": "Khi một chỉ số trở thành mục tiêu, nó không còn là chỉ số tốt, vì người ta tối ưu chỉ số thay cho điều nó đại diện.",
+      "example": "Đặt coverage ≥ 80% làm mục tiêu; team viết test chạy qua mọi dòng mà không assert gì.",
+      "related": ["fitness-function", "mutation-testing"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "second-system-effect",
+      "term": "Second-system effect",
+      "meaning": "Xu hướng hệ thống thứ hai do cùng người thiết kế bị nhồi mọi tính năng và ý tưởng mà bản đầu đã kiềm chế, thành quá phức tạp và trễ (Fred Brooks, The Mythical Man-Month). Hay được áp rộng cho các bản viết lại.",
+      "example": "Bản viết lại định thêm đa tiền tệ, plugin, workflow tuỳ biến mà chưa khách hàng nào yêu cầu.",
+      "related": ["strangler-fig", "sacrificial-architecture"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "sacrificial-architecture",
+      "term": "Sacrificial architecture",
+      "meaning": "Chủ động thiết kế một hệ thống (hay một phần) để thay khi quy mô hoặc nhu cầu đổi hẳn; Martin Fowler đặt tên năm 2014.",
+      "example": "Bản đầu của sản phẩm mới viết nhanh để thử thị trường, giữ ranh giới module sạch để thay từng phần khi tải tăng mười lần.",
+      "related": ["second-system-effect", "evolutionary-architecture"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "connascence",
+      "term": "Connascence",
+      "meaning": "Hai phần code connascent khi thay đổi phần này buộc phải thay đổi phần kia để giữ đúng; có dạng tĩnh (tên, kiểu, ý nghĩa, vị trí, thuật toán) và động (thứ tự thực thi, thời điểm, giá trị, danh tính). Do Meilir Page-Jones đề xuất.",
+      "example": "Hai service cùng hiểu mã trạng thái 3 là \"đã giao\" (connascence of meaning); đổi sang enum có tên làm nó yếu đi.",
+      "related": ["coupling", "architecture-quantum"],
+      "topics": ["evolutionary-architecture"]
+    },
+    {
+      "id": "shadow-it",
+      "term": "Shadow IT",
+      "meaning": "Hệ thống, dịch vụ cloud hay công cụ được team dựng và dùng ngoài quy trình chính thức, nên bộ phận kiến trúc, bảo mật và vận hành không biết tới.",
+      "example": "Một team tự mở tài khoản cloud bằng thẻ công ty để chạy ứng dụng giao hàng vì chờ review board 7 tuần.",
+      "related": ["architecture-governance"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "archimate",
+      "term": "ArchiMate",
+      "meaning": "Ngôn ngữ mô hình hoá enterprise architecture của The Open Group, có ký hiệu cho các lớp business, application và technology cùng quan hệ giữa chúng; hay dùng cùng TOGAF.",
+      "example": "Sơ đồ ArchiMate nối năng lực \"Quản lý đơn hàng\" với ứng dụng OMS và cụm Kubernetes chạy nó.",
+      "related": ["togaf"],
+      "topics": ["enterprise-architecture"]
+    },
+    {
+      "id": "cve",
+      "term": "CVE",
+      "meaning": "Common Vulnerabilities and Exposures: mã định danh công khai cho một lỗ hổng bảo mật đã biết, ví dụ CVE-2021-44228 (Log4Shell); mức nghiêm trọng thường chấm theo CVSS.",
+      "example": "Quét dependency báo thư viện dính một CVE mức Critical; pipeline chặn build tới khi nâng phiên bản.",
+      "related": ["sbom", "software-composition-analysis"],
+      "topics": ["enterprise-architecture", "evolutionary-architecture"]
     }
   ]
 }

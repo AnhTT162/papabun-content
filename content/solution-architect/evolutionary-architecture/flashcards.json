@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "definition", "front": "Kiến trúc tiến hoá là gì?", "back": "Kiến trúc hỗ trợ thay đổi có định hướng, từng bước, trên nhiều chiều (Ford, Parsons, Kua, Sadalage). Định hướng đến từ fitness function." },
+    { "id": "fitness-function", "front": "Fitness function là gì?", "back": "Một kiểm tra khách quan, thường tự động, cho biết một đặc tính kiến trúc còn đạt không: quy tắc phụ thuộc, p99, tương thích API, SLO, CVE." },
+    { "id": "ff-categories", "front": "Triggered và continual fitness function khác nhau thế nào?", "back": "Triggered chạy khi có sự kiện như commit hay deploy (ArchUnit, contract test); continual chạy liên tục trên production (SLO, chaos engineering)." },
+    { "id": "atomic-holistic", "front": "Atomic và holistic fitness function khác nhau thế nào?", "back": "Atomic kiểm một đặc tính trong một bối cảnh (quy tắc phụ thuộc); holistic kiểm nhiều đặc tính cùng lúc (bật mã hoá rồi xem latency còn trong ngân sách)." },
+    { "id": "freeze", "front": "FreezingArchRule của ArchUnit dùng để làm gì?", "back": "Lưu vi phạm hiện có vào store, chỉ báo vi phạm mới; vi phạm đã sửa tự rời store nên đưa lại sẽ đỏ. Đây là ratchet cho hệ thống cũ." },
+    { "id": "freeze-ci", "front": "Cấu hình FreezingArchRule trên CI thế nào?", "back": "Store tạo trên máy dev và commit; CI đặt allowStoreUpdate=false để ai sửa vi phạm phải commit store đã thu gọn. Không dùng refreeze=true trên CI vì nó nuốt vi phạm mới." },
+    { "id": "small-steps", "front": "Bốn kỹ thuật thay đổi từng bước mà hệ thống vẫn chạy?", "back": "Feature flag (tách deploy khỏi release), expand-contract cho schema và API, branch by abstraction trong code, strangler fig ở mức hệ thống." },
+    { "id": "rewrite", "front": "Vì sao viết lại từ đầu hiếm khi đúng?", "back": "Hệ thống cũ vẫn thay đổi trong lúc bản mới đuổi theo, quy tắc ngầm bị mất, và bản mới dễ bị second-system effect. Hợp lý khi phần đó nhỏ, hiểu rõ, hoặc nền tảng không chạy tiếp được." },
+    { "id": "connascence", "front": "Connascence là gì và quy tắc dùng nó?", "back": "Hai phần connascent khi đổi phần này buộc đổi phần kia. Connascence càng mạnh càng phải ở gần nhau; giữa các service chỉ nên là dạng yếu như cùng tên trường." }
+  ]
+}
