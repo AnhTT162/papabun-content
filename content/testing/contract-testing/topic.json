@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "contract-testing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Contract testing",
+  "summary": "Consumer-driven contract thay e2e giữa các service; luồng Pact: pact file, broker, provider verify, `can-i-deploy` và `record-deployment`; matcher theo kiểu (đo thật: thêm trường qua, đổi tên trường fail); provider state; selector, pending và WIP pact, webhook; message contract so với schema registry; bi-directional; Spring Cloud Contract; bẫy triển khai và khi nào không đáng.",
+  "level": "senior",
+  "order": 9,
+  "minutes": 16,
+  "prerequisites": ["test-strategy", "http-stubbing", "rest-api-design"],
+  "terms": ["consumer-driven-contract", "pact", "pact-broker", "provider-state", "can-i-deploy", "schema-registry", "openapi"],
+  "references": [
+    { "title": "Pact docs: Introduction", "url": "https://docs.pact.io/" },
+    { "title": "Pact Broker: Can I Deploy", "url": "https://docs.pact.io/pact_broker/can_i_deploy" },
+    { "title": "Pact Broker: Consumer Version Selectors", "url": "https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors" },
+    { "title": "Spring Cloud Contract Reference", "url": "https://docs.spring.io/spring-cloud-contract/reference/" },
+    { "title": "Pact Broker: Pending pacts", "url": "https://docs.pact.io/pact_broker/advanced_topics/pending_pacts" },
+    { "title": "Pact Broker: Recording deployments and releases", "url": "https://docs.pact.io/pact_broker/recording_deployments_and_releases" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Contract test khác integration test với stub HTTP thế nào?\" Trả lời: stub do consumer tự viết chỉ phản ánh điều consumer tin; contract đưa chính kỳ vọng đó sang CI của provider để kiểm với code thật, nên hai bên không thể lệch nhau mà không ai biết. Hỏi tiếp \"provider đổi API thì làm sao không phá consumer\": thêm trường mới, giữ trường cũ (expand), chờ `can-i-deploy` cho thấy mọi consumer đang chạy đã thôi dùng trường cũ, rồi mới bỏ (contract)." },
+    { "type": "callout", "style": "warning", "markdown": "Verify xanh trong CI của provider chưa nói bản đang deploy an toàn. Thiếu `can-i-deploy` trước deploy và `record-deployment` sau deploy ở mọi pipeline thì contract test chỉ là một bộ test nữa, không còn là cổng chặn thay đổi phá vỡ." }
+  ]
+}

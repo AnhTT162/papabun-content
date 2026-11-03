@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Thay môi trường staging dùng chung bằng contract test cho 14 service",
+  "prompt": "Một nền tảng thương mại điện tử có 14 service do 6 đội sở hữu: 11 service Spring Boot, một BFF viết bằng Node.js cho app di động, hai service Go. Giao tiếp qua REST nội bộ và 9 topic Kafka (Avro, có schema registry). Mỗi đội muốn deploy độc lập nhiều lần mỗi ngày, nhưng hiện mọi thay đổi phải qua môi trường staging dùng chung: bộ e2e 70 phút, đỏ khoảng 1/4 số lần vì service khác đang deploy dở. Hai sự cố gần nhất: Inventory đổi tên trường `available` làm Order hiển thị hết hàng 40 phút; Payment bỏ một trường của event `PaymentCaptured` mà Notification vẫn đọc. Đề xuất cách kiểm tương thích giữa các service và lộ trình trong hai quý.",
+  "hints": [
+    "Hai sự cố trên lẽ ra bị chặn ở đâu, trước khi ai đó deploy?",
+    "Công cụ contract nào chạy được với cả Java, Node.js và Go?",
+    "Verify pass trong CI của provider đã đủ để deploy an toàn chưa? Còn thiếu thông tin gì?",
+    "Event Kafka đã có schema registry. Nó chặn được sự cố của Notification không, và contract bổ sung gì?"
+  ],
+  "solution": "**Công cụ**: Pact cho REST và message, vì có thư viện cho Java, JavaScript và Go; một Pact Broker tự host (hoặc PactFlow) làm nguồn sự thật về tương thích. Spring Cloud Contract chỉ phục vụ được BFF Node.js và service Go qua Docker image và Stub Runner Boot, kém tự nhiên hơn.\n\n**Quy ước**: mỗi consumer viết pact cho đúng các trường nó dùng, matcher theo kiểu, provider state đặt tên theo nghiệp vụ. Publish pact với version là git SHA và branch. Provider verify bằng controller và serialize thật, dữ liệu dựng qua state handler, selector `mainBranch` và `deployedOrReleased`; bật pending pact để pact mới không chặn provider; webhook để consumer biết kết quả trong vài phút.\n\n**Cổng deploy**: pipeline của **mọi** service chạy `can-i-deploy --to-environment production` trước khi deploy và `record-deployment` sau khi deploy. Sự cố của Inventory bị chặn ở đây: verify pact của Order fail với \"missing the following keys: available\", và `can-i-deploy` của Inventory trả không.\n\n**Event Kafka**: giữ schema registry ở chế độ `BACKWARD`/`FULL` cho tương thích chung. Thêm message pact: Notification khai báo các trường của `PaymentCaptured` nó đọc, Payment verify hàm sinh event. Registry chỉ kiểm khả năng đọc giữa các phiên bản schema, không biết ai cần trường nào; bỏ một trường có default được chấp nhận và consumer cũ không lỗi mà âm thầm nhận giá trị mặc định. Pact cho biết Notification vẫn cần trường đó, nên chặn được sự cố thứ hai.\n\n**E2E**: giữ khoảng 15 hành trình sống còn làm smoke test sau deploy và synthetic monitoring ở production; bỏ yêu cầu mọi thay đổi phải qua staging chung.\n\n**Lộ trình**: quý 1: dựng broker, mẫu pipeline (publish, verify, `can-i-deploy`, `record-deployment`), áp cho ba cặp gây sự cố nhiều nhất (Order và Inventory, BFF và Order, Notification và Payment), ghi nhận bằng `record-deployment` cho mọi service ngay từ đầu kể cả khi chưa có pact. Quý 2: phủ các cặp còn lại theo số lần gọi, bật `can-i-deploy` ở chế độ chặn, rút bộ e2e còn smoke. Đo: số sự cố do không tương thích, thời gian từ merge tới production, tỉ lệ build provider đỏ vì pact.",
+  "tradeoffs": [
+    {
+      "option": "Pact với Pact Broker, consumer-driven",
+      "pros": [
+        "Đa ngôn ngữ, phủ được Node.js và Go",
+        "`can-i-deploy` trả lời được câu hỏi deploy dựa trên phiên bản đang chạy thật"
+      ],
+      "cons": [
+        "Phải vận hành broker và kỷ luật versioning, `record-deployment` ở mọi pipeline",
+        "Provider phải viết và giữ state handler"
+      ]
+    },
+    {
+      "option": "Spring Cloud Contract, contract nằm ở repo provider",
+      "pros": [
+        "Sinh test provider và stub WireMock cho consumer từ cùng một contract",
+        "Hợp tự nhiên với Spring Boot và Maven"
+      ],
+      "cons": [
+        "Service Node.js và Go chỉ dùng được qua Docker và Stub Runner Boot",
+        "Không có ma trận phiên bản sẵn như broker để chặn deploy"
+      ]
+    },
+    {
+      "option": "Chỉ so OpenAPI và schema registry giữa hai phiên bản",
+      "pros": [
+        "Rẻ, không cần consumer viết gì",
+        "Chặn mọi thay đổi mà schema coi là phá vỡ, hợp với API public"
+      ],
+      "cons": [
+        "Không biết consumer nào dùng trường nào, nên chặn quá tay hoặc cho qua thay đổi được phép theo schema nhưng phá consumer",
+        "Chỉ đúng bằng mức spec khớp với code"
+      ]
+    }
+  ]
+}

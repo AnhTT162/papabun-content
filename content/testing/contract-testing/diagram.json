@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Vòng đời một pact từ CI của consumer tới production",
+  "nodes": [
+    {"id": "order", "label": "CI của Order", "kind": "service", "x": 0.1, "y": 0.05},
+    {"id": "broker", "label": "Pact Broker", "kind": "database", "x": 0.85, "y": 0.05},
+    {"id": "inventory", "label": "CI của Inventory", "kind": "service", "x": 0.85, "y": 0.5},
+    {"id": "gate", "label": "can-i-deploy", "kind": "generic", "x": 0.1, "y": 0.5},
+    {"id": "prod", "label": "Production", "kind": "generic", "x": 0.1, "y": 0.95}
+  ],
+  "edges": [
+    {"id": "order-broker", "from": "order", "to": "broker", "label": "publish pact"},
+    {"id": "broker-inventory", "from": "broker", "to": "inventory", "label": "verify, báo kết quả"},
+    {"id": "gate-broker", "from": "gate", "to": "broker", "label": "hỏi, rồi record"},
+    {"id": "gate-prod", "from": "gate", "to": "prod", "label": "deploy"}
+  ],
+  "steps": [
+    {"caption": "Test của Order chạy với mock server của Pact và sinh pact file: request Order gửi, phần response Order dùng, kèm matcher theo kiểu.", "show": ["order"]},
+    {"caption": "CI của Order publish pact lên broker, gắn version là git SHA và tên branch.", "show": ["broker", "order-broker"], "highlight": ["order-broker"]},
+    {"caption": "Broker bắn webhook sang CI của Inventory, nơi pact được phát lại vào code thật qua provider state.", "show": ["inventory", "broker-inventory"], "highlight": ["broker-inventory"]},
+    {"caption": "Kết quả verify ghi ngược vào broker; pact mới chưa từng pass ở chế độ pending nên không làm đỏ build của Inventory.", "show": [], "highlight": ["broker-inventory"]},
+    {"caption": "Trước khi deploy, `can-i-deploy` hỏi broker phiên bản này đã được verify với mọi phiên bản bên kia đang chạy ở môi trường đích chưa.", "show": ["gate", "gate-broker"], "highlight": ["gate-broker"]},
+    {"caption": "Qua cổng thì deploy, rồi `record-deployment` vào broker để lần hỏi sau dựa trên dữ liệu đúng.", "show": ["prod", "gate-prod"], "highlight": ["gate-prod", "gate-broker"]}
+  ]
+}

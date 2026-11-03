@@ -2965,7 +2965,7 @@
       "meaning": "Dịch vụ lưu các phiên bản schema của event (Avro, Protobuf, JSON Schema), cấp schema ID cho message, và kiểm tra tương thích khi đăng ký phiên bản mới.",
       "example": "Message mang 4 byte schema ID; consumer lấy schema theo ID để đọc.",
       "related": ["schema-compatibility"],
-      "topics": ["event-schema-evolution", "evolutionary-architecture"]
+      "topics": ["event-schema-evolution", "evolutionary-architecture", "contract-testing"]
     },
     {
       "id": "schema-compatibility",
@@ -4869,7 +4869,7 @@
       "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
       "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
       "related": ["contract-test", "microservices"],
-      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture", "test-strategy", "http-stubbing"]
+      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture", "test-strategy", "http-stubbing", "contract-testing"]
     },
     {
       "id": "sidecar",
@@ -6909,7 +6909,7 @@
       "meaning": "Chuẩn mô tả HTTP API bằng YAML hoặc JSON: endpoint, tham số, schema request và response, mã lỗi. Dùng để sinh tài liệu, sinh client, và so hai phiên bản để phát hiện breaking change.",
       "example": "springdoc-openapi sinh `/v3/api-docs` từ controller; CI so spec mới với spec đã phát hành và chặn merge nếu có trường bị xoá.",
       "related": ["api-versioning", "consumer-driven-contract"],
-      "topics": ["rest-api-design", "evolutionary-architecture", "api-security"]
+      "topics": ["rest-api-design", "evolutionary-architecture", "api-security", "contract-testing"]
     },
     {
       "id": "hateoas",
@@ -13582,6 +13582,38 @@
       "example": "Gắn `@Tag(\"quarantine\")`, CI chính `excludedGroups=quarantine`, job đêm chạy riêng nhóm này.",
       "related": ["flaky-test"],
       "topics": ["flaky-tests"]
+    },
+    {
+      "id": "pact",
+      "term": "Pact",
+      "meaning": "Bộ công cụ consumer-driven contract đa ngôn ngữ: test của consumer sinh pact file (các interaction kèm matcher), provider phát lại các interaction đó vào code thật để verify.",
+      "example": "Order khai báo `GET /inventory/PHO-01` trả `available` kiểu số nguyên; CI của Inventory verify pact này.",
+      "related": ["consumer-driven-contract", "pact-broker"],
+      "topics": ["contract-testing"]
+    },
+    {
+      "id": "pact-broker",
+      "term": "Pact Broker",
+      "meaning": "Server lưu pact và kết quả verify theo phiên bản consumer, provider và môi trường; nguồn dữ liệu cho `can-i-deploy`, webhook và pending pact.",
+      "example": "Broker biết Order `a1b2c3` đã được Inventory `9f8e7d` verify, và `9f8e7d` đang chạy ở production.",
+      "related": ["pact", "can-i-deploy"],
+      "topics": ["contract-testing"]
+    },
+    {
+      "id": "provider-state",
+      "term": "Provider state",
+      "meaning": "Điều kiện dữ liệu mà một interaction cần, consumer nêu bằng tên (`given`), provider dựng bằng handler trước khi phát lại request.",
+      "example": "`given(\"SKU PHO-01 có 12 sản phẩm trong kho\")` ở consumer, `@State` cùng tên ở provider insert dữ liệu tương ứng.",
+      "related": ["pact"],
+      "topics": ["contract-testing"]
+    },
+    {
+      "id": "can-i-deploy",
+      "term": "can-i-deploy",
+      "meaning": "Lệnh của Pact Broker hỏi một phiên bản đã được verify tương thích với mọi phiên bản bên kia đang chạy ở môi trường đích chưa; dùng làm cổng chặn trong pipeline deploy.",
+      "example": "`pact-broker can-i-deploy --pacticipant inventory --version 9f8e7d --to-environment production`.",
+      "related": ["pact-broker"],
+      "topics": ["contract-testing"]
     }
   ]
 }

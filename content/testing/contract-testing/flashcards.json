@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "what", "front": "Contract test kiểm điều gì?", "back": "Hai service hiểu nhau về hình dạng request và response, mà không cần dựng cả hai cùng lúc; không kiểm nghiệp vụ của provider." },
+    { "id": "pact-flow", "front": "Ai chạy pact của consumer với code thật?", "back": "CI của provider: lấy pact từ broker, phát lại từng request vào provider thật, ghi kết quả verify ngược vào broker." },
+    { "id": "matcher", "front": "Vì sao pact dùng matcher theo kiểu?", "back": "Để provider thêm trường hay đổi giá trị vẫn qua; chỉ đổi tên, bỏ trường hay đổi kiểu mà consumer dùng mới fail." },
+    { "id": "provider-state", "front": "Provider state là gì?", "back": "Tên điều kiện dữ liệu (\"SKU có 12 sản phẩm\") mà consumer nêu bằng `given`, provider dựng bằng handler `@State` trước khi phát lại request." },
+    { "id": "can-i-deploy", "front": "`can-i-deploy` cần gì để trả lời đúng?", "back": "Kết quả verify trong broker và `record-deployment` từ mọi pipeline, để biết phiên bản nào đang chạy ở môi trường đích." },
+    { "id": "pending", "front": "Pending pact giải quyết vấn đề gì?", "back": "Pact mới chưa từng pass không làm đỏ build của provider, để consumer thêm kỳ vọng mà không chặn đội khác." },
+    { "id": "scc", "front": "Spring Cloud Contract khác Pact ở điểm nào?", "back": "Contract nằm ở repo provider, sinh cả test provider lẫn stub WireMock jar; mạnh cho JVM, service khác ngôn ngữ chỉ dùng được qua Docker và Stub Runner Boot." },
+    { "id": "when-not", "front": "Khi nào không nên dùng consumer-driven contract?", "back": "API public nhiều client không biết trước (dùng OpenAPI diff, versioning), hoặc hai service cùng một đội deploy cùng lúc." }
+  ]
+}

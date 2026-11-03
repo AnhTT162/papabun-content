@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "extra-vs-renamed",
+      "kind": "output",
+      "prompt": "Pact của consumer khai báo body `stringType(\"sku\", \"PHO-01\")` và `integerType(\"available\", 12)`. Provider được verify hai lần với hai response khác nhau. Kết quả verify là gì?",
+      "code": "// Lần 1\n{\"sku\":\"PHO-01\",\"available\":12,\"warehouse\":\"HN\"}\n\n// Lần 2\n{\"sku\":\"PHO-01\",\"availableQty\":12}",
+      "options": [
+        "Lần 1 pass, lần 2 fail vì thiếu `available`",
+        "Cả hai fail vì body khác hẳn ví dụ",
+        "Lần 1 fail vì thừa `warehouse`, lần 2 pass",
+        "Cả hai pass vì matcher chỉ kiểm kiểu"
+      ],
+      "answer": 0,
+      "explanation": "Matcher kiểm kiểu của từng trường consumer khai báo, không so giá trị và không cấm trường thừa, nên provider thêm `warehouse` vẫn qua. Đổi tên `available` làm trường consumer cần biến mất: Pact JVM 4.7.6 báo \"has a matching body (FAILED)\" với \"Actual map is missing the following keys: available\"."
+    },
+    {
+      "id": "can-i-deploy-missing",
+      "kind": "single",
+      "prompt": "Mọi provider đều verify pact trong CI và đều xanh, nhưng một bản Order phá vỡ tương thích vẫn lên production. Pipeline chưa có bước nào?",
+      "options": [
+        "`can-i-deploy` trước deploy, `record-deployment` sau",
+        "Gắn version pact bằng số build tăng dần thay git SHA",
+        "Chỉ verify pact từ nhánh feature mới nhất của consumer",
+        "Verify lại mọi pact mỗi đêm bằng một job riêng"
+      ],
+      "answer": 0,
+      "explanation": "Verify xanh chỉ nói phiên bản provider X tương thích với các pact nó đã kiểm. Câu hỏi khi deploy là phiên bản đang chuẩn bị deploy có tương thích với các phiên bản **đang chạy** ở môi trường đích không; chỉ broker có ma trận đó, và chỉ khi mọi pipeline ghi lại phiên bản đã deploy. Đổi cách gắn version hay verify thêm không trả lời được câu hỏi đó, và verify chỉ nhánh feature còn bỏ sót phiên bản đang chạy."
+    },
+    {
+      "id": "pact-business-rules",
+      "kind": "single",
+      "prompt": "Đội Order viết pact gồm 40 interaction, kiểm cả luật giảm giá và số tiền chính xác Pricing trả về cho từng loại khách. Vấn đề chính là gì?",
+      "options": [
+        "Pact thành functional test cho nghiệp vụ Pricing",
+        "Pact nên chỉ có một interaction mỗi cặp service",
+        "Consumer không được dùng giá trị ví dụ trong pact",
+        "Luật nghiệp vụ phải viết bằng Spring Cloud Contract"
+      ],
+      "answer": 0,
+      "explanation": "Contract kiểm hai bên hiểu nhau về hình dạng request và response. Luật giảm giá là trách nhiệm và test của Pricing; đưa vào pact làm mỗi lần Pricing chỉnh giá là build đỏ, và hai đội kiểm trùng một thứ. Pact nên khai báo trường Order dùng với matcher theo kiểu, và vài interaction cho các nhánh khác nhau về hình dạng (có giảm giá, không giảm giá, SKU không tồn tại trả 404)."
+    },
+    {
+      "id": "registry-vs-contract",
+      "kind": "single",
+      "prompt": "Topic Kafka có schema registry ở chế độ `BACKWARD`. Producer bỏ một trường có giá trị mặc định khỏi event, registry chấp nhận, và một consumer bị sai logic. Thứ gì lẽ ra cho biết trước?",
+      "options": [
+        "Message contract của consumer khai báo trường đó",
+        "Chuyển registry sang `FULL_TRANSITIVE` thay `BACKWARD`",
+        "Kiểm hash schema trước và sau thay đổi trong CI",
+        "Bật `auto.register.schemas=false` cho producer"
+      ],
+      "answer": 0,
+      "explanation": "Registry chỉ kiểm schema mới và cũ có đọc được dữ liệu của nhau không; `BACKWARD` luôn cho xoá trường, và các chế độ chặt hơn vẫn cho xoá trường có default. Nó không biết consumer nào dùng trường đó cho nghiệp vụ. Vì trường có default, consumer cũ không lỗi mà âm thầm nhận giá trị mặc định nên sai logic. Message pact ghi đúng điều đó, nên verify của producer fail trước khi deploy. Tắt tự đăng ký schema hay so hash chỉ cho biết schema đổi, không cho biết ai bị ảnh hưởng."
+    }
+  ]
+}
