@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "docker",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Docker & container",
+  "summary": "Container là process được cô lập bằng namespace và giới hạn bằng cgroup; image là chồng layer bất biến; viết Dockerfile cho service Java: multi-stage, thứ tự layer, layered jar của Spring Boot, PID 1 và tín hiệu, user không phải root, secret lúc build.",
+  "level": "junior",
+  "order": 4,
+  "minutes": 14,
+  "prerequisites": ["os-process-memory", "twelve-factor"],
+  "terms": ["linux-namespace", "cgroup", "container-image", "image-layer", "oci-image", "multi-stage-build", "pid-1", "distroless", "layered-jar", "image-digest", "sbom", "oom-killer", "cpu-throttling", "copy-on-write", "ephemeral-container"],
+  "references": [
+    { "title": "man7.org: namespaces(7)", "url": "https://man7.org/linux/man-pages/man7/namespaces.7.html" },
+    { "title": "OCI Image Spec: Image Layer Filesystem Changeset (whiteouts)", "url": "https://github.com/opencontainers/image-spec/blob/main/layer.md" },
+    { "title": "Docker docs: Build secrets", "url": "https://docs.docker.com/build/building/secrets/" },
+    { "title": "Spring Boot: Efficient Container Images", "url": "https://docs.spring.io/spring-boot/reference/packaging/container-images/efficient-images.html" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Container bị restart liên tục với exit code 137, bạn phân biệt OOM với lỗi tắt thế nào?\" `docker inspect` (hoặc `kubectl describe pod`) cho biết `OOMKilled: true` hay không. OOM thì xem memory limit so với heap cộng bộ nhớ ngoài heap (bài JVM trong container). Không phải OOM mà vẫn 137 thì process bị SIGKILL sau thời gian chờ: kiểm PID 1 có phải JVM không (`ps -o pid,cmd` trong container), app có tắt kịp trong thời gian cho phép không. Exit code 143 (128 + 15) là process tự thoát vì SIGTERM, tức tắt bình thường. Lưu ý: 137 cũng có thể do liveness probe thất bại hay node trục xuất pod, và `OOMKilled` chỉ báo khi chính process chính bị giết; process con bị OOM killer giết thì xem `dmesg` hoặc sự kiện của node." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tin `docker run` trên máy dev là bằng chứng image đúng cho production. Máy dev có thể khác kiến trúc (arm64 so với amd64), không đặt memory limit, chạy bằng root, và có sẵn file trong build context mà CI không có. Build image trong CI, cho đúng kiến trúc của node, rồi chạy thử với cùng limit và user như production." }
+  ]
+}

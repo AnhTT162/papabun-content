@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "git-workflow",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Git bên trong & quy trình nhánh",
+  "summary": "Object model của Git (blob, tree, commit, ref), merge và rebase khác nhau thế nào, squash merge và revert một merge, reflog và bisect để cứu và truy lỗi; chọn Git Flow, GitHub flow hay trunk-based.",
+  "level": "junior",
+  "order": 3,
+  "minutes": 12,
+  "prerequisites": [],
+  "terms": ["git-blob", "git-commit-object", "git-ref", "git-merge", "git-rebase", "merge-base", "git-reflog", "git-bisect", "git-flow", "trunk-based-development", "feature-flag", "squash-merge", "cherry-pick", "merge-queue", "branch-by-abstraction", "git-tree", "fast-forward-merge"],
+  "references": [
+    { "title": "Pro Git: Git Internals - Git Objects", "url": "https://git-scm.com/book/en/v2/Git-Internals-Git-Objects" },
+    { "title": "Git documentation: merge strategies", "url": "https://git-scm.com/docs/merge-strategies" },
+    { "title": "Git howto: Reverting a faulty merge", "url": "https://git-scm.com/docs/howto/revert-a-faulty-merge" },
+    { "title": "Trunk Based Development", "url": "https://trunkbaseddevelopment.com/" },
+    { "title": "Git documentation: git-push (--force-with-lease, --force-if-includes)", "url": "https://git-scm.com/docs/git-push" },
+    { "title": "Git documentation: git-bisect", "url": "https://git-scm.com/docs/git-bisect" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team bạn dùng merge hay rebase, và vì sao?\" Câu trả lời tốt tách hai việc: cập nhật nhánh riêng theo main (rebase để lịch sử gọn, chỉ trên nhánh của mình) và đưa thay đổi vào main (merge commit giữ ranh giới feature, hoặc squash để mỗi pull request là một commit dễ revert). Nói rõ giá của squash: mất các commit nhỏ, `git bisect` chỉ chỉ tới cả pull request, và không được tiếp tục làm trên nhánh đã squash. Rồi nói quy tắc an toàn: không rebase nhánh dùng chung, đẩy đè thì `--force-with-lease --force-if-includes`." },
+    { "type": "callout", "style": "warning", "markdown": "Revert một merge commit rồi sau này merge lại chính nhánh đó **không** đưa thay đổi cũ quay lại: Git thấy các commit đó đã có trong lịch sử nên chỉ mang phần mới. Kết quả là tính năng thiếu một nửa mà không có conflict nào báo. Muốn đưa lại, revert chính commit revert trước, rồi mới merge phần sửa." }
+  ]
+}

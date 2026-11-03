@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "object-types", "front": "Git có những loại object nào?", "back": "Blob (nội dung file), tree (danh sách tên trỏ tới blob và tree con), commit (trỏ tới tree, các cha, tác giả, message) và annotated tag. Mỗi object đặt tên bằng hash nội dung." },
+    { "id": "branch-is-ref", "front": "Một nhánh trong Git thực chất là gì?", "back": "Một ref: con trỏ chứa hash của commit mới nhất. Commit mới là tạo object rồi dời con trỏ; `HEAD` trỏ tới nhánh đang đứng." },
+    { "id": "rebase-new-hash", "front": "Vì sao rebase đổi hash của commit?", "back": "Rebase tạo commit mới với cha khác và committer date mới. Hash tính từ toàn bộ nội dung commit nên đổi theo." },
+    { "id": "merge-base", "front": "Merge ba chiều so sánh những gì?", "back": "Hai đầu nhánh với merge base, tổ tiên chung gần nhất. Conflict nội dung xảy ra khi hai bên sửa cùng vùng so với base." },
+    { "id": "force-with-lease", "front": "`--force-with-lease` bảo vệ gì, và vì sao nên thêm `--force-if-includes`?", "back": "Chỉ đè khi nhánh remote còn trùng ref theo dõi ở máy bạn. Fetch nền có thể cập nhật ref đó; `--force-if-includes` kiểm thêm commit trên remote đã nằm trong lịch sử của bạn." },
+    { "id": "squash-unmerged", "front": "Sau squash merge, vì sao `git branch -d feature` báo chưa merge?", "back": "Commit squash trên main không có quan hệ cha với các commit của nhánh, nên Git không biết nhánh đã được gộp." },
+    { "id": "reflog", "front": "Rebase hỏng, làm sao lấy lại trạng thái trước?", "back": "`git reflog` tìm vị trí của nhánh trước khi rebase, rồi `git reset --hard HEAD@{n}`. Reflog chỉ có ở máy local." },
+    { "id": "bisect-exit", "front": "`git bisect run` hiểu exit code của script thế nào?", "back": "0 là good, 1–127 trừ 125 là bad, 125 là bỏ qua commit, từ 128 trở lên thì dừng bisect." },
+    { "id": "trunk-based", "front": "Trunk-based development cần những điều kiện gì?", "back": "Nhánh sống ngắn, merge vào trunk ít nhất mỗi ngày, feature flag cho phần dở, CI nhanh và tin được, review nhanh." },
+    { "id": "hotfix-direction", "front": "Trunk-based có nhánh release: sửa lỗi ở đâu trước?", "back": "Sửa trên trunk rồi cherry-pick (`-x`) sang nhánh release. Làm ngược lại dễ quên đưa bản sửa về trunk." }
+  ]
+}

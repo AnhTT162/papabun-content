@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã xoá settings.xml mà password Nexus vẫn lộ",
+  "context": "Service `orders` cần tải thư viện nội bộ từ một Nexus có đăng nhập. Dockerfile do một bạn mới viết: copy `settings.xml` chứa password của tài khoản CI vào image để Maven dùng, build xong thì xoá đi \"cho an toàn\". Image được đẩy lên một registry mà đối tác cũng có quyền pull. `.dockerignore` đã loại `settings.xml` khỏi `COPY . .`.",
+  "buggyCode": "FROM maven:3.9-eclipse-temurin-21\nWORKDIR /app\nCOPY settings.xml /root/.m2/settings.xml\nCOPY . .\nRUN mvn -B package -DskipTests\nRUN rm /root/.m2/settings.xml\nEXPOSE 8080\nCMD java -jar target/orders.jar",
+  "symptom": {
+    "description": "Đội bảo mật báo tài khoản `ci-deploy` của Nexus đang bị dùng từ một IP lạ. Họ kéo image `orders:1.8.0` từ registry về, giải nén từng layer và tìm thấy password. Trong container đang chạy thì `ls /root/.m2/settings.xml` báo không có file.",
+    "output": "$ docker save registry.example.test/orders:1.8.0 -o orders.tar && tar -xf orders.tar\n$ for l in blobs/sha256/*; do tar -tf \"$l\" 2>/dev/null | grep settings && echo \"   ^ $l\"; done\nroot/.m2/settings.xml\n   ^ blobs/sha256/3f1c9e...\nroot/.m2/.wh.settings.xml\n   ^ blobs/sha256/9a07d2...\n\n$ tar -xOf blobs/sha256/3f1c9e... root/.m2/settings.xml | grep -E 'username|password'\n      <username>ci-deploy</username>\n      <password>EXAMPLE-not-a-real-password</password>"
+  },
+  "diagnosis": {
+    "question": "Vì sao password vẫn nằm trong image dù đã có `RUN rm`?",
+    "options": [
+      "`COPY` tạo layer chứa file; `RUN rm` chỉ thêm whiteout ở layer mới, còn layer cũ vẫn được đẩy lên registry",
+      "`RUN rm` chạy trong một container tạm nên không có tác dụng gì, file vẫn còn trong lớp ghi được của container khi chạy",
+      "Build cache của Docker giữ bản có `settings.xml` và đẩy nhầm bản cache đó lên registry thay cho bản mới",
+      "Maven chép password từ `settings.xml` vào metadata trong `~/.m2/repository`, nên password đi theo các jar đã tải"
+    ],
+    "answer": 0,
+    "explanation": "Mỗi `COPY`, `RUN` tạo một layer bất biến. Layer của `COPY settings.xml` chứa nguyên file; layer của `RUN rm` chỉ chứa `.wh.settings.xml`, một dấu hiệu để overlayfs ẩn file khi xếp chồng. Vì vậy trong container không thấy file, nhưng image vẫn gồm cả hai layer, và ai pull được image là đọc được layer cũ. Lệnh `RUN rm` có tác dụng: nó tạo ra whiteout, chính là thứ làm `ls` trong container báo không có file. Image đẩy lên registry là image vừa build, không có \"bản cache\" nào khác. Maven không ghi password vào repository cục bộ. Ngoài ra image còn chứa toàn bộ JDK, Maven, source và cache dependency, chạy bằng root, và `CMD` dạng shell khiến JVM không nhận SIGTERM."
+  },
+  "fix": {
+    "code": "# syntax=docker/dockerfile:1\nFROM maven:3.9-eclipse-temurin-21 AS build\nWORKDIR /src\nCOPY pom.xml .\nRUN --mount=type=secret,id=maven_settings,target=/root/.m2/settings.xml \\\n    --mount=type=cache,target=/root/.m2/repository \\\n    mvn -B dependency:go-offline\nCOPY src ./src\nRUN --mount=type=secret,id=maven_settings,target=/root/.m2/settings.xml \\\n    --mount=type=cache,target=/root/.m2/repository \\\n    mvn -B package -DskipTests \\\n && java -Djarmode=tools -jar target/orders.jar extract --layers --destination /extracted\n\nFROM eclipse-temurin:21-jre\nWORKDIR /app\nCOPY --from=build /extracted/dependencies/ ./\nCOPY --from=build /extracted/spring-boot-loader/ ./\nCOPY --from=build /extracted/snapshot-dependencies/ ./\nCOPY --from=build /extracted/application/ ./\nUSER 10001\nENTRYPOINT [\"java\", \"-jar\", \"orders.jar\"]\n\n# Build: docker build --secret id=maven_settings,src=$HOME/.m2/settings.xml -t orders:1.8.1 .",
+    "explanation": "Secret mount của BuildKit gắn `settings.xml` vào đúng lệnh `RUN` cần nó và không ghi vào layer nào. Cache mount giữ repository Maven giữa các lần build mà không đưa vào image. Multi-stage làm image chạy chỉ có JRE và các layer của jar: không còn source, Maven hay cache. Dependency tách thành layer riêng nên sửa code chỉ đẩy layer `application` vài KB. `USER 10001` để không chạy root; `ENTRYPOINT` dạng exec để JVM là PID 1 và nhận SIGTERM. Quan trọng nhất: password đã lộ thì phải đổi ngay và xoá các tag cũ chứa nó khỏi registry; sửa Dockerfile không thu hồi được bản đã bị kéo về. Thêm bước quét secret trong image (Trivy có `--scanners secret`) vào CI để bắt lỗi này trước khi đẩy."
+  }
+}

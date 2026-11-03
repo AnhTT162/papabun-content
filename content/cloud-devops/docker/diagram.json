@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ Dockerfile tới process trên node",
+  "nodes": [
+    { "id": "build", "label": "Stage build (JDK, Maven)", "kind": "generic", "x": 0.1, "y": 0.05 },
+    { "id": "image", "label": "Image runtime (layer)", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "registry", "label": "Registry", "kind": "external", "x": 0.85, "y": 0.5 },
+    { "id": "node", "label": "Node: containerd", "kind": "service", "x": 0.1, "y": 0.5 },
+    { "id": "proc", "label": "Process java (PID 1)", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "kernel", "label": "Kernel của host", "kind": "generic", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "build-image", "from": "build", "to": "image", "label": "COPY --from=build" },
+    { "id": "image-registry", "from": "image", "to": "registry", "label": "push (theo digest)" },
+    { "id": "registry-node", "from": "registry", "to": "node", "label": "pull layer thiếu" },
+    { "id": "node-proc", "from": "node", "to": "proc", "label": "overlayfs + lớp ghi" },
+    { "id": "proc-kernel", "from": "proc", "to": "kernel", "label": "namespace + cgroup" }
+  ],
+  "steps": [
+    { "caption": "Stage build có JDK, Maven, source và cache dependency. Không thứ nào trong số đó cần có lúc chạy.", "show": ["build"] },
+    { "caption": "Stage chạy bắt đầu từ JRE và chỉ copy các thư mục đã tách từ jar: dependency, loader, snapshot, application. Mỗi COPY là một layer.", "show": ["image", "build-image"], "highlight": ["build-image"] },
+    { "caption": "Đẩy lên registry: layer đặt tên bằng digest SHA-256, layer đã có thì bỏ qua. Bản mới thường chỉ đổi layer application vài KB.", "show": ["registry", "image-registry"], "highlight": ["image-registry"] },
+    { "caption": "Node kéo những layer chưa có. Image chỉ có arm64 mà node là amd64 thì pull lỗi no match for platform, hoặc chạy lên báo exec format error.", "show": ["node", "registry-node"], "highlight": ["registry-node"] },
+    { "caption": "Runtime xếp các layer chỉ đọc bằng overlayfs, thêm một lớp ghi được ở trên, rồi chạy ENTRYPOINT. Container bị xoá là lớp ghi mất.", "show": ["proc", "node-proc"], "highlight": ["node-proc"] },
+    { "caption": "Process java chạy thẳng trên kernel của host, chỉ khác là có namespace riêng (PID, network, mount) và bị cgroup giới hạn CPU, bộ nhớ.", "show": ["kernel", "proc-kernel"], "highlight": ["proc-kernel"] },
+    { "caption": "docker stop gửi SIGTERM cho PID 1, chờ 10 giây rồi SIGKILL. JVM là PID 1 thì nhận được và tắt êm; nếu PID 1 là shell thì JVM bị giết, exit code 137.", "show": [], "highlight": ["proc"] }
+  ]
+}

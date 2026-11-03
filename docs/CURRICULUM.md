@@ -361,8 +361,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 |---|---|---|---|---|---|---|
 | 1 | `cloud-fundamentals` | ✚ Cloud cơ bản | foundation | IaaS/PaaS/SaaS, region và AZ, shared responsibility, mô hình tính tiền | A L D | ✅ |
 | 2 | `twelve-factor` | ✚ Twelve-Factor App | junior | Cấu hình qua môi trường, stateless, log ra stdout, dev/prod giống nhau | L B | ✅ |
-| 3 | `git-workflow` | Git bên trong & quy trình nhánh | junior | Object model, merge và rebase, bisect, trunk-based và Git Flow | A L | ⬜ |
-| 4 | `docker` | Docker & container | junior | Namespace và cgroup, image và layer, multi-stage, image cho JVM, bảo mật image | A L D B | ⬜ |
+| 3 | `git-workflow` | Git bên trong & quy trình nhánh | junior | Object model, merge và rebase, bisect, trunk-based và Git Flow | A L | ✅ |
+| 4 | `docker` | Docker & container | junior | Namespace và cgroup, image và layer, multi-stage, image cho JVM, bảo mật image | A L D B | ✅ |
 | 5 | `kubernetes-core` | Kubernetes cơ bản | mid | Pod, Deployment, Service, Ingress, ConfigMap/Secret | A L D | ⬜ |
 | 6 | `k8s-packaging` | ✚ Helm, Kustomize & cấu hình nhiều môi trường | mid | Template và overlay, quản lý giá trị theo môi trường, secret | L B | ⬜ |
 | 7 | `aws-core` | AWS cho kỹ sư backend | mid | VPC, EC2, ALB/NLB, RDS, IAM: dựng một ứng dụng web cơ bản | L D Sc | ⬜ |

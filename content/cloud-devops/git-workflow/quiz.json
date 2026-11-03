@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "revert-remerge-output",
+      "kind": "output",
+      "prompt": "`main` đang có `Pricing.java`. Nhánh `discount` có commit `Add VIP discount` thêm `Vip.java` và được merge vào `main`. Sau sự cố, team revert merge đó. Nhánh `discount` sửa tiếp, thêm `Coupon.java`, rồi merge lại. Lệnh `ls` cuối cùng in ra gì (thứ tự chữ cái)?",
+      "code": "git switch main\ngit merge --no-ff discount -m \"Merge discount\"   # discount có Vip.java\ngit revert -m 1 HEAD --no-edit\n\ngit switch discount\necho coupon > Coupon.java && git add . && git commit -m \"Add coupon\"\n\ngit switch main\ngit merge --no-ff discount -m \"Merge discount again\"\nls",
+      "options": [
+        "Coupon.java Pricing.java Vip.java",
+        "Coupon.java Pricing.java",
+        "Pricing.java Vip.java",
+        "Merge dừng vì conflict giữa Vip.java và commit revert"
+      ],
+      "answer": 1,
+      "explanation": "Merge lần hai lấy merge base là commit `Add VIP discount`, vì nó đã nằm trong lịch sử của `main`. Git chỉ mang các thay đổi sau base, tức `Coupon.java`; việc xoá `Vip.java` của commit revert vẫn giữ nguyên, và không có conflict nào báo. Muốn có lại `Vip.java` thì revert chính commit revert trước khi merge lại (đã chạy thử trên Git 2.54)."
+    },
+    {
+      "id": "rebase-shared",
+      "kind": "single",
+      "prompt": "Nhánh `feature/payment` đã đẩy lên remote. Đồng nghiệp kéo về, thêm một commit và đẩy lên. Bạn chưa fetch, rebase bản cũ của nhánh lên `main` mới nhất rồi `git push --force`. Với cấu hình mặc định, chuyện gì xảy ra?",
+      "options": [
+        "Không có gì: Git tự rebase commit của đồng nghiệp lên bản mới",
+        "Commit đồng nghiệp đã đẩy bị đè mất trên remote, máy họ thấy hai lịch sử song song",
+        "Remote từ chối force push vì nhánh có commit bạn chưa fetch",
+        "Git tự gộp commit của đồng nghiệp vào commit đã rebase"
+      ],
+      "answer": 1,
+      "explanation": "Rebase tạo commit mới với hash mới. Force push thay nhánh trên remote bằng bản mới: commit đồng nghiệp đã đẩy (nếu có) bị đè. Khi họ pull, Git thấy hai lịch sử song song, merge thì nhân đôi commit. Remote không biết ai đã kéo. Quy tắc: không rebase nhánh dùng chung; buộc phải đẩy đè thì `--force-with-lease --force-if-includes`, và báo người cùng nhánh."
+    },
+    {
+      "id": "bisect-steps",
+      "kind": "single",
+      "prompt": "Bản phát hành mới có 1.000 commit kể từ bản tốt gần nhất. Có một test tự động tái hiện lỗi trong 2 phút. Dùng `git bisect run`, cần khoảng bao lâu để tìm commit gây lỗi?",
+      "options": [
+        "Khoảng 20 phút, vì cần chừng 10 lần chạy test",
+        "Khoảng 1 giờ, vì cần chừng 30 lần chạy test",
+        "Khoảng 33 giờ, vì phải chạy test trên từng commit",
+        "Khoảng 2 phút, vì bisect chỉ chạy test một lần"
+      ],
+      "answer": 0,
+      "explanation": "Bisect chia đôi khoảng nghi ngờ mỗi lần, nên cần khoảng log₂(1.000) ≈ 10 lần chạy. Với 100 commit, thử thực tế mất 7 lần. Điều kiện là test ổn định: một lần test flaky đánh dấu sai good/bad là bisect chỉ sai chỗ. Commit không build được thì script trả 125 để bỏ qua."
+    },
+    {
+      "id": "workflow-choice",
+      "kind": "single",
+      "prompt": "Team 8 người phát triển một service deploy nhiều lần mỗi ngày nhưng vẫn dùng Git Flow: feature branch sống 2–3 tuần rồi mới merge vào `develop`, `develop` merge sang `main` để deploy. Merge conflict lớn và lỗi tích hợp phát hiện muộn. Đề xuất nào hợp lý nhất?",
+      "options": [
+        "Chuyển sang trunk-based: nhánh sống một hai ngày, phần dở sau feature flag",
+        "Giữ Git Flow nhưng bắt buộc rebase feature branch lên `develop` mỗi tuần",
+        "Thêm nhánh `integration` giữa feature và `develop` để test tích hợp trước",
+        "Gộp toàn bộ feature thành một commit bằng squash trước khi merge"
+      ],
+      "answer": 0,
+      "explanation": "Gốc của vấn đề là nhánh sống lâu: càng lâu càng lệch xa main, conflict và lỗi tích hợp dồn lại tới cuối. Trunk-based tích hợp mỗi ngày, phần chưa xong nằm sau feature flag; service deploy liên tục không cần nhánh release kiểu Git Flow. Rebase hằng tuần chỉ giảm bớt, nhánh trung gian thêm một tầng chờ, squash chỉ đổi hình dạng lịch sử. Điều kiện đi kèm: CI nhanh, review nhanh, test tự động đủ tin."
+    }
+  ]
+}

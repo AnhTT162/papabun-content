@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "build-cache-output",
+      "kind": "output",
+      "prompt": "Image đã build một lần, cache còn nguyên. Bạn sửa một dòng trong `src/main/java/demo/OrderService.java` rồi build lại. Bước nào dùng lại kết quả từ cache, bước nào chạy lại?",
+      "code": "FROM maven:3.9-eclipse-temurin-21 AS build      # [1]\nWORKDIR /src                                    # [2]\nCOPY pom.xml .                                  # [3]\nRUN mvn -B dependency:go-offline                # [4]\nCOPY src ./src                                  # [5]\nRUN mvn -B package -DskipTests                  # [6]\n\nFROM eclipse-temurin:21-jre                     # [7]\nCOPY --from=build /src/target/orders.jar /app/  # [8]",
+      "options": [
+        "[1] đến [4] và [7]; [5], [6], [8] chạy lại",
+        "Chỉ [1] và [7]; mọi bước còn lại chạy lại",
+        "[1] đến [5] và [7]; chỉ [6] và [8] chạy lại",
+        "Mọi bước đều chạy lại vì source đã đổi"
+      ],
+      "answer": 0,
+      "explanation": "Khoá cache của `COPY` gồm checksum các file được copy. `pom.xml` không đổi nên [3] và [4] dùng cache, tức không tải lại dependency. [5] copy thư mục `src` có file đã đổi nên miss, và mọi bước sau nó trong cùng stage chạy lại. Stage chạy: [7] chỉ phụ thuộc base image nên cache; [8] copy một jar mới nên chạy lại. Nếu viết `COPY . .` trước `mvn dependency:go-offline` thì sửa một dòng code là tải lại toàn bộ dependency."
+    },
+    {
+      "id": "rm-separate-layer",
+      "kind": "single",
+      "prompt": "Dockerfile có `RUN apt-get update && apt-get install -y curl` rồi dòng tiếp theo `RUN rm -rf /var/lib/apt/lists/*` (khoảng 40 MB danh sách package). Image cuối có nhỏ đi 40 MB không?",
+      "options": [
+        "Có, vì `rm` xoá file khỏi filesystem của image",
+        "Không, vì danh sách nằm ở layer trước; phải xoá trong cùng `RUN`",
+        "Có, nhưng chỉ khi build bằng BuildKit thay vì builder cũ",
+        "Không, vì `rm` chỉ xoá file khỏi cache build cục bộ"
+      ],
+      "answer": 1,
+      "explanation": "Mỗi `RUN` tạo một layer bất biến. Layer của `apt-get` đã chứa 40 MB; `rm` ở layer sau chỉ thêm whiteout để ẩn file khi chạy, kích thước image không giảm. Gộp `install` và `rm` vào cùng một `RUN` thì file bị xoá trước khi layer được chốt. BuildKit hay builder cũ đều theo cùng mô hình layer. `rm` có chạy thật, nhưng chỉ tạo whiteout ở layer mới."
+    },
+    {
+      "id": "exec-format-error",
+      "kind": "single",
+      "prompt": "Dev build image trên MacBook chip Apple Silicon bằng `docker build -t orders:2.1 .` (base `eclipse-temurin:21-jre`, `ENTRYPOINT [\"java\", \"-jar\", \"orders.jar\"]`) rồi đẩy lên registry. Pod trên node x86-64 không chạy được, log container chỉ có `exec /opt/java/openjdk/bin/java: exec format error`. Nguyên nhân?",
+      "options": [
+        "Image chỉ có bản linux/arm64, không chạy được trên node amd64",
+        "Node amd64 tự giả lập arm64 nhưng thiếu gói `qemu` để chạy",
+        "Kernel của node cũ hơn kernel mà image được build cùng",
+        "File `java` mất quyền thực thi khi đẩy qua registry"
+      ],
+      "answer": 0,
+      "explanation": "`docker build` mặc định build cho kiến trúc của máy đang chạy. Trên Apple Silicon đó là arm64; kernel x86-64 không thực thi được binary arm64 nên báo `exec format error`. Nếu image được đẩy dạng image index có ghi nền tảng, lỗi đến sớm hơn lúc pull: `no match for platform in manifest`, pod ở `ImagePullBackOff`. Node không giả lập kiến trúc khác (Docker Desktop trên Mac làm việc đó cho bạn, nên máy dev chạy được cả hai). Image không mang kernel theo, và quyền thực thi được giữ trong layer. Sửa: `docker buildx build --platform linux/amd64` hoặc build cả hai kiến trúc thành một image index; tốt nhất để CI build."
+    },
+    {
+      "id": "root-in-container",
+      "kind": "single",
+      "prompt": "Một service chạy bằng image Temurin mặc định (không có `USER`), Docker không bật user namespace. Kẻ tấn công chiếm được process qua lỗ hổng RCE của app. Nhận định nào đúng?",
+      "options": [
+        "An toàn, vì container cô lập hoàn toàn như một máy ảo riêng",
+        "Process là root thật trên host, chỉ bị bớt capability và seccomp",
+        "Process là user `nobody` vì Docker tự hạ quyền khi chạy",
+        "Chỉ nguy hiểm khi container được chạy với cờ `--privileged`"
+      ],
+      "answer": 1,
+      "explanation": "Không có user namespace thì UID 0 trong container chính là UID 0 trên host. Docker bớt capability và chặn một số syscall bằng seccomp, nên chưa phải toàn quyền, nhưng một lỗ hổng kernel hay một volume nhạy cảm được mount (ví dụ `docker.sock`) là đủ để thoát ra. `--privileged` làm mọi thứ tệ hơn nhiều, nhưng chạy root mặc định đã là rủi ro. Thêm `USER 10001` hoặc dùng image `:nonroot`, root filesystem chỉ đọc, bỏ capability."
+    }
+  ]
+}

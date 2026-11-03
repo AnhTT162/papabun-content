@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "container-vs-vm", "front": "Container khác máy ảo ở điểm cốt lõi nào?", "back": "Container là process trên kernel của host, cô lập bằng namespace và giới hạn bằng cgroup. Máy ảo có kernel riêng trên hypervisor, cô lập mạnh hơn nhưng nặng hơn." },
+    { "id": "namespace-cgroup", "front": "Namespace và cgroup mỗi thứ làm gì?", "back": "Namespace quyết định process thấy gì (PID, network, mount, hostname). Cgroup quyết định process được dùng bao nhiêu (CPU, bộ nhớ, số process)." },
+    { "id": "whiteout", "front": "`RUN rm` một file đã `COPY` ở bước trước thì file còn trong image không?", "back": "Còn. Layer mới chỉ chứa file whiteout `.wh.<tên>` để ẩn file khi chạy; nội dung vẫn nằm ở layer cũ và đi theo image." },
+    { "id": "layer-order", "front": "Vì sao copy `pom.xml` và tải dependency trước khi copy source?", "back": "Mỗi bước miss cache làm mọi bước sau chạy lại. Tách ra thì sửa code không làm tải lại dependency." },
+    { "id": "multi-stage", "front": "Multi-stage build giải quyết gì?", "back": "Stage build có JDK, Maven, source; stage chạy chỉ copy artifact cần thiết. Image chạy nhỏ hơn và không chứa công cụ build hay source." },
+    { "id": "exec-form", "front": "Vì sao dùng `ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]` thay vì `CMD java -jar app.jar`?", "back": "Dạng exec chạy JVM làm PID 1 nên nó nhận SIGTERM. Dạng shell chạy qua `/bin/sh -c`; nếu shell là PID 1 thì JVM không nhận tín hiệu và bị SIGKILL sau thời gian chờ." },
+    { "id": "exit-137", "front": "Container thoát với exit code 137 nghĩa là gì?", "back": "128 + 9: process bị SIGKILL. Hai nguyên nhân hay gặp: vượt memory limit (OOMKilled) hoặc không tắt kịp sau SIGTERM." },
+    { "id": "secret-mount", "front": "Cần password để Maven tải thư viện nội bộ lúc build image, làm sao không lộ?", "back": "`RUN --mount=type=secret,...` của BuildKit gắn file vào đúng lệnh đó mà không ghi vào layer. Build với `--secret id=...,src=...`." },
+    { "id": "tag-digest", "front": "Tag và digest của image khác nhau thế nào?", "back": "Tag là tên đổi được, có thể bị đẩy đè. Digest `sha256:...` tính từ nội dung, bất biến; deploy bằng digest biết chính xác đang chạy gì." },
+    { "id": "boot-layers", "front": "`-Djarmode=tools extract --layers` của Spring Boot tạo những layer nào?", "back": "`dependencies`, `spring-boot-loader`, `snapshot-dependencies`, `application`. Sửa code thường chỉ đổi layer `application`." }
+  ]
+}

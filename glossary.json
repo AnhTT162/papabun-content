@@ -150,7 +150,7 @@
       "term": "CPU throttling",
       "meaning": "Container dùng hết CPU quota trong một chu kỳ (mặc định 100ms) thì bị kernel tạm dừng tới chu kỳ sau, làm latency tăng vọt.",
       "example": "Pod limit 2 CPU chạy 8 thread bận sẽ hết quota sau 25ms và đứng yên 75ms còn lại của mỗi chu kỳ.",
-      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning", "jvm-containers"]
+      "topics": ["java-high-cpu", "perf-methodology", "slow-api", "capacity-planning", "os-process-memory", "linux-troubleshooting", "gc-logs-tuning", "jvm-containers", "docker"]
     },
     {
       "id": "full-gc",
@@ -621,7 +621,7 @@
       "meaning": "Kỹ thuật cho hai bên dùng chung dữ liệu tới khi một bên ghi, lúc đó mới sao chép phần bị ghi. Áp dụng cho collection trong Java, và cho bộ nhớ của process sau `fork`, như khi Redis tạo snapshot.",
       "example": "`CopyOnWriteArrayList.add` copy cả mảng, nhưng vòng lặp đang duyệt vẫn đọc mảng cũ an toàn. Với Redis: snapshot trong lúc ghi nhiều làm các page bị ghi được sao chép, RAM có thể tăng gần gấp đôi.",
       "related": ["immutable", "fail-fast"],
-      "topics": ["collections-overview", "redis-internals", "structural-patterns", "os-process-memory", "immutability-records"]
+      "topics": ["collections-overview", "redis-internals", "structural-patterns", "os-process-memory", "immutability-records", "docker"]
     },
     {
       "id": "sequenced-collection",
@@ -4421,7 +4421,7 @@
       "meaning": "Kỹ thuật thay một phần lớn trên nhánh chính: đặt interface trước cài đặt cũ, viết cài đặt mới, chuyển dần bằng feature flag rồi xoá bản cũ.",
       "example": "Interface `PriceEngine` có `LegacyPriceEngine` và `NewPriceEngine`; flag bật bản mới cho 5% đơn.",
       "related": ["strangler-fig"],
-      "topics": ["refactoring-tech-debt", "migration-modernization", "evolutionary-architecture"]
+      "topics": ["refactoring-tech-debt", "migration-modernization", "evolutionary-architecture", "git-workflow"]
     },
     {
       "id": "hotspot",
@@ -4461,7 +4461,7 @@
       "meaning": "Công tắc cấu hình bật tắt một tính năng lúc chạy mà không cần deploy lại, dùng để phát hành dần hoặc tắt nhanh khi có sự cố.",
       "example": "Flag `new-pricing-engine` bật cho 5% đơn hàng, tăng dần khi số liệu ổn.",
       "related": ["branch-by-abstraction"],
-      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy"]
+      "topics": ["refactoring-tech-debt", "troubleshooting-mindset", "tech-lead-role", "architecture-tradeoffs", "migration-modernization", "multi-tenancy", "evolutionary-architecture", "test-strategy", "git-workflow"]
     },
     {
       "id": "dora-metrics",
@@ -6421,7 +6421,7 @@
       "meaning": "Cơ chế của Linux giết một process bằng SIGKILL khi RAM của máy hoặc memory limit của cgroup hết và không thu hồi được nữa. Chọn theo `oom_score` (bộ nhớ đang chiếm cộng `oom_score_adj`).",
       "example": "`dmesg` có dòng `Memory cgroup out of memory: Killed process 4321 (java)`; Kubernetes báo `OOMKilled`, exit code 137.",
       "related": ["oomkilled", "rss"],
-      "topics": ["os-process-memory"]
+      "topics": ["os-process-memory", "docker"]
     },
     {
       "id": "swap",
@@ -6445,7 +6445,7 @@
       "meaning": "Control group: cơ chế của Linux gom process thành nhóm và giới hạn CPU, bộ nhớ, số process cho cả nhóm. Container và pod Kubernetes dựa vào nó để áp `limits`.",
       "example": "Pod có memory limit 1 GiB nghĩa là `memory.max` của cgroup là 1 GiB; vượt thì OOM killer chỉ chọn process trong cgroup đó.",
       "related": ["oom-killer", "cpu-throttling"],
-      "topics": ["os-process-memory", "jvm-containers"]
+      "topics": ["os-process-memory", "jvm-containers", "docker"]
     },
     {
       "id": "hash-table",
@@ -7061,7 +7061,7 @@
       "meaning": "Container tạm được thêm vào một pod đang chạy để debug (`kubectl debug`), dùng image có đủ công cụ và có thể chia sẻ namespace process của container đích; không restart pod, biến mất khi pod bị xoá.",
       "example": "`kubectl debug -it booking-7d9f --image=nicolaka/netshoot --target=app` rồi chạy `ss -tanp` thấy socket của app.",
       "related": ["cgroup"],
-      "topics": ["linux-troubleshooting", "jvm-diagnostic-tools"]
+      "topics": ["linux-troubleshooting", "jvm-diagnostic-tools", "docker"]
     },
     {
       "id": "skip-list",
@@ -11837,7 +11837,7 @@
       "meaning": "Software Bill of Materials: danh sách mọi thành phần và phiên bản trong một bản build (thư viện, gói hệ điều hành), dùng để tra CVE và license.",
       "example": "Sinh SBOM CycloneDX trong pipeline; khi có CVE mới, tra ngay ứng dụng nào dùng thư viện đó.",
       "related": ["tech-radar"],
-      "topics": ["enterprise-architecture", "owasp-top10", "secure-sdlc"]
+      "topics": ["enterprise-architecture", "owasp-top10", "secure-sdlc", "docker"]
     },
     {
       "id": "architecture-waiver",
@@ -13726,6 +13726,198 @@
       "example": "Test dùng PostgreSQL qua Testcontainers thay vì H2 vì prod chạy PostgreSQL.",
       "related": ["twelve-factor-app", "testcontainers"],
       "topics": ["twelve-factor"]
+    },
+    {
+      "id": "git-blob",
+      "term": "Blob (Git)",
+      "meaning": "Object của Git lưu nội dung một file, không có tên file. Tên của blob là hash của nội dung, nên hai file giống hệt nhau dùng chung một blob.",
+      "example": "`git hash-object a.txt` in ra hash của blob mà Git sẽ lưu cho file đó.",
+      "related": ["git-commit-object", "git-ref"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-commit-object",
+      "term": "Commit (Git)",
+      "meaning": "Object trỏ tới một tree (ảnh chụp toàn bộ project), các commit cha, tác giả, người commit và message. Hash của commit tính từ tất cả các phần đó.",
+      "example": "`git cat-file -p HEAD` in ra dòng `tree`, `parent`, `author`, `committer` và message.",
+      "related": ["git-blob", "git-ref", "git-rebase"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-ref",
+      "term": "Ref (Git)",
+      "meaning": "Tên trỏ tới một commit, như nhánh, tag hay `HEAD`. Nhánh chỉ là một ref dời đi mỗi khi có commit mới.",
+      "example": "`refs/heads/main` chứa hash của commit mới nhất trên `main`.",
+      "related": ["git-commit-object", "git-reflog"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-merge",
+      "term": "Merge (Git)",
+      "meaning": "Gộp hai nhánh: fast-forward nếu nhánh đích chưa đi tiếp, không thì gộp ba chiều theo merge base và tạo merge commit có hai cha.",
+      "example": "`git merge --no-ff feature` luôn tạo merge commit để giữ ranh giới của feature.",
+      "related": ["merge-base", "git-rebase", "squash-merge"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-rebase",
+      "term": "Rebase (Git)",
+      "meaning": "Áp lại các commit của một nhánh lên một gốc khác, tạo commit mới với hash mới. Lịch sử thẳng hơn nhưng không nên làm trên nhánh người khác đã dựa vào.",
+      "example": "`git rebase main` đưa các commit của nhánh feature lên sau commit mới nhất của `main`.",
+      "related": ["git-merge", "git-reflog"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "merge-base",
+      "term": "Merge base",
+      "meaning": "Tổ tiên chung gần nhất của hai commit, dùng làm gốc so sánh khi merge ba chiều.",
+      "example": "`git merge-base main feature` in ra commit mà nhánh feature được tách ra.",
+      "related": ["git-merge"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-reflog",
+      "term": "Reflog",
+      "meaning": "Nhật ký cục bộ ghi mọi lần `HEAD` và nhánh di chuyển, dùng để tìm lại commit sau khi reset hay rebase hỏng. Mặc định giữ 90 ngày.",
+      "example": "`git reset --hard HEAD@{2}` quay về vị trí của `HEAD` hai bước trước.",
+      "related": ["git-ref", "git-rebase"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-bisect",
+      "term": "Git bisect",
+      "meaning": "Tìm commit gây lỗi bằng cách chia đôi dải commit giữa một bản tốt và một bản lỗi; `git bisect run` tự chạy script kiểm tra ở mỗi bước.",
+      "example": "100 commit cần khoảng 7 lần chạy test để tìm ra commit đầu tiên bị lỗi.",
+      "related": ["git-commit-object"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "git-flow",
+      "term": "Git Flow",
+      "meaning": "Quy trình nhánh của Vincent Driessen (2010): `main` chứa bản đã phát hành, `develop` để tích hợp, cùng các nhánh feature, release, hotfix. Hợp với phần mềm phát hành theo phiên bản.",
+      "example": "App mobile cắt `release/2.4` từ `develop`, sửa lỗi trên đó rồi merge về cả `main` và `develop`.",
+      "related": ["trunk-based-development"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "trunk-based-development",
+      "term": "Trunk-based development",
+      "meaning": "Quy trình mọi người tích hợp vào một nhánh chính (trunk) ít nhất mỗi ngày, nhánh feature sống ngắn, phần chưa xong ẩn sau feature flag.",
+      "example": "Pull request sống dưới một ngày, merge vào `main` sau khi CI xanh, deploy ngay.",
+      "related": ["git-flow", "feature-flag", "branch-by-abstraction"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "squash-merge",
+      "term": "Squash merge",
+      "meaning": "Gộp toàn bộ thay đổi của một nhánh thành một commit mới trên nhánh đích, không giữ quan hệ cha với các commit của nhánh.",
+      "example": "Nút \"Squash and merge\" biến 12 commit của pull request thành một commit trên `main`.",
+      "related": ["git-merge"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "cherry-pick",
+      "term": "Cherry-pick",
+      "meaning": "Áp thay đổi của một commit cụ thể lên nhánh hiện tại, tạo commit mới với hash mới.",
+      "example": "`git cherry-pick -x a1b2c3d` đưa bản sửa từ `main` sang `release/3.2` và ghi nguồn vào message.",
+      "related": ["git-rebase", "trunk-based-development"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "merge-queue",
+      "term": "Merge queue",
+      "meaning": "Hàng đợi chạy CI trên kết quả gộp của các pull request theo thứ tự trước khi đưa vào nhánh chính, để hai pull request cùng xanh không làm hỏng main khi gộp.",
+      "example": "Hai pull request đều xanh riêng lẻ, nhưng merge queue phát hiện gộp chung thì test thất bại.",
+      "related": ["trunk-based-development"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "linux-namespace",
+      "term": "Namespace (Linux)",
+      "meaning": "Cơ chế của kernel cho một nhóm process thấy một bản riêng của tài nguyên hệ thống: process (PID), mạng, cây thư mục, hostname, user. Container dùng namespace để cô lập.",
+      "example": "Trong container, `ps` chỉ thấy vài process và process app là PID 1, dù trên host nó là PID 48213.",
+      "related": ["cgroup", "pid-1", "container-image"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "container-image",
+      "term": "Container image",
+      "meaning": "Gói bất biến gồm các layer filesystem và cấu hình chạy (entrypoint, user, biến môi trường), dùng để tạo container. Định dạng chuẩn là OCI image.",
+      "example": "`eclipse-temurin:21-jre` là image chứa Ubuntu tối giản và JRE 21.",
+      "related": ["image-layer", "oci-image", "image-digest"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "image-layer",
+      "term": "Image layer",
+      "meaning": "Một tầng filesystem chỉ đọc của image, thường do một lệnh `RUN` hay `COPY` tạo ra. Xoá file ở layer sau chỉ thêm dấu whiteout, nội dung vẫn nằm ở layer cũ.",
+      "example": "Copy `pom.xml` và tải dependency ở các layer riêng để sửa code không làm tải lại dependency.",
+      "related": ["container-image", "multi-stage-build", "copy-on-write"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "oci-image",
+      "term": "OCI image",
+      "meaning": "Định dạng image chuẩn của Open Container Initiative: manifest, config và các layer tar, mỗi thứ đặt tên bằng digest. Docker, containerd, Podman, Kubernetes đều dùng.",
+      "example": "Image build bằng Docker chạy được trên Kubernetes dùng containerd vì cả hai theo chuẩn OCI.",
+      "related": ["container-image", "image-digest"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "multi-stage-build",
+      "term": "Multi-stage build",
+      "meaning": "Dockerfile có nhiều `FROM`: stage đầu build artifact với đủ công cụ, stage cuối chỉ copy artifact cần chạy. Image cuối nhỏ và không chứa công cụ build hay source.",
+      "example": "Stage `maven` build jar, stage `eclipse-temurin:21-jre` chỉ `COPY --from=build` jar đó.",
+      "related": ["image-layer", "layered-jar"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "pid-1",
+      "term": "PID 1",
+      "meaning": "Process đầu tiên trong PID namespace của container. Kernel không áp hành động mặc định của tín hiệu cho nó, và nó phải dọn process zombie.",
+      "example": "`CMD java -jar app.jar` dạng shell làm `/bin/sh` thành PID 1 thay vì JVM, nên JVM có thể không nhận SIGTERM.",
+      "related": ["linux-namespace"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "distroless",
+      "term": "Distroless image",
+      "meaning": "Image chỉ chứa runtime và thư viện app cần, không có shell hay package manager. Bề mặt tấn công nhỏ nhưng khó gỡ lỗi bằng `exec`.",
+      "example": "`gcr.io/distroless/java21-debian12:nonroot` chạy JRE 21 bằng UID 65532.",
+      "related": ["container-image", "ephemeral-container"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "layered-jar",
+      "term": "Layered jar",
+      "meaning": "Spring Boot tách fat jar thành các thư mục theo tần suất thay đổi (dependencies, spring-boot-loader, snapshot-dependencies, application) để mỗi thứ là một layer image riêng.",
+      "example": "`java -Djarmode=tools -jar app.jar extract --layers --destination extracted`.",
+      "related": ["fat-jar", "image-layer", "multi-stage-build"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "image-digest",
+      "term": "Image digest",
+      "meaning": "Hash SHA-256 của manifest image, bất biến theo nội dung. Khác tag là tên có thể bị đẩy đè.",
+      "example": "`orders@sha256:4f2a...` luôn trỏ đúng một image, còn `orders:latest` thì có thể đổi.",
+      "related": ["container-image", "oci-image"],
+      "topics": ["docker"]
+    },
+    {
+      "id": "git-tree",
+      "term": "Tree (Git)",
+      "meaning": "Object của Git ghi danh sách tên file và thư mục con của một thư mục, mỗi mục trỏ tới một blob hoặc một tree khác. Tree gốc của commit là ảnh chụp toàn bộ project.",
+      "example": "`git cat-file -p HEAD^{tree}` in ra từng dòng `100644 blob <hash> a.txt`.",
+      "related": ["git-blob", "git-commit-object"],
+      "topics": ["git-workflow"]
+    },
+    {
+      "id": "fast-forward-merge",
+      "term": "Fast-forward",
+      "meaning": "Kiểu merge khi nhánh đích là tổ tiên của nhánh nguồn: Git chỉ dời con trỏ nhánh tới commit mới nhất, không tạo merge commit.",
+      "example": "`main` chưa có commit mới từ khi tách `feature`, nên `git merge feature` chỉ fast-forward.",
+      "related": ["git-merge", "merge-base"],
+      "topics": ["git-workflow"]
     }
   ]
 }
