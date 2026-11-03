@@ -10,6 +10,8 @@
     { "id": "enum-breaking", "front": "Thêm giá trị enum vào response có tương thích ngược không?", "back": "Không: client cũ không đọc được giá trị lạ và hỏng cả response. Phải báo trước rằng enum mở rộng được, và client cần nhánh `UNKNOWN`." },
     { "id": "etag-if-match", "front": "`If-Match` chống lost update thế nào?", "back": "Client gửi lại `ETag` đã đọc; server chỉ ghi nếu version hiện tại còn khớp, không thì trả `412 Precondition Failed`." },
     { "id": "202-accepted", "front": "Việc chạy vài phút nên trả gì?", "back": "`202 Accepted` kèm `Location` tới tài nguyên trạng thái; client hỏi lại tài nguyên đó hoặc nhận webhook khi xong." },
-    { "id": "long-id-string", "front": "Vì sao id 64 bit nên trả dạng chuỗi trong JSON?", "back": "JavaScript đọc số thành `double`, chỉ chính xác tới 2^53 − 1; id lớn hơn bị làm tròn thành id khác." }
+    { "id": "long-id-string", "front": "Vì sao id 64 bit nên trả dạng chuỗi trong JSON?", "back": "JavaScript đọc số thành `double`, chỉ chính xác tới 2^53 − 1; id lớn hơn bị làm tròn thành id khác." },
+    { "id": "status-415-curl", "front": "Gửi JSON bằng `curl -d` mà quên `Content-Type` thì endpoint `@RequestBody` của Spring trả gì?", "back": "`415 Unsupported Media Type`, vì `curl -d` gửi `application/x-www-form-urlencoded`; Spring kèm header `Accept` liệt kê kiểu đọc được. Khác `406`: không có dạng response nào khớp `Accept` của client." },
+    { "id": "query-method", "front": "Method `QUERY` (RFC 10008) hơn `POST /orders/search` ở đâu?", "back": "Điều kiện vẫn nằm trong body nhưng method an toàn và idempotent như `GET`: retry được, response cache được (cache key gồm body). Server khai kiểu truy vấn nhận được bằng `Accept-Query`." }
   ]
 }

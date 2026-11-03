@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schema/flashcards.schema.json",
   "cards": [
-    { "id": "shared-replica", "front": "Vì sao không cho BI dùng chung replica với ứng dụng trên PostgreSQL?", "back": "Query báo cáo dài làm standby ngừng áp WAL tới 30 giây trước khi huỷ query, nên ứng dụng đọc replica thấy dữ liệu cũ. Bật hot_standby_feedback thì hết huỷ nhưng primary giữ dòng chết và phình." },
+    { "id": "shared-replica", "front": "Vì sao không cho BI dùng chung replica với ứng dụng trên PostgreSQL?", "back": "Query báo cáo dài làm standby ngừng áp WAL tới 30 giây trước khi huỷ query, nên ứng dụng đọc replica thấy dữ liệu cũ. Tách BI sang replica riêng (hoặc sang kho phân tích qua CDC) để query báo cáo không làm replica của ứng dụng trễ." },
     { "id": "feedback-where", "front": "Bật hot_standby_feedback trên replica riêng cho BI thì bảng nào phình?", "back": "Bảng trên primary. Replica báo xmin của query về primary, và VACUUM trên primary không dọn được dòng chết mà query đó còn có thể cần." },
     { "id": "watermark-miss", "front": "Hai lỗi của trích xuất theo updated_at > watermark?", "back": "Bỏ sót dòng của transaction commit sau khi job đã đẩy watermark qua giá trị updated_at của nó, và không thấy dòng bị xoá cứng. CDC đọc log theo thứ tự commit tránh được cả hai." },
     { "id": "lake-vs-lakehouse", "front": "Open table format thêm gì cho file Parquet trên object storage?", "back": "Commit nguyên tử, snapshot và time travel, đổi schema không viết lại dữ liệu (Iceberg đổi được cả partition), để nhiều engine cùng đọc ghi an toàn. Giá: phải chạy compaction và xoá snapshot cũ." },

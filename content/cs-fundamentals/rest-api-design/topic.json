@@ -5,7 +5,7 @@
   "minAppVersion": "0.1",
   "track": "cs-fundamentals",
   "title": "Thiết kế REST API",
-  "summary": "Tài nguyên và method: an toàn, idempotent, `PUT` và `PATCH` (JSON Merge Patch); status code hay dùng sai (`400`/`422`, `401`/`403`/`404`, `409`/`412`, `202`); lỗi theo RFC 9457; phân trang bằng cursor; thay đổi tương thích ngược, enum mới là breaking change, Jackson 2 và 3 với trường lạ; id 64 bit trong JavaScript; versioning, `Deprecation` và `Sunset`; `ETag` và `If-Match`; OpenAPI và contract test.",
+  "summary": "Tài nguyên và method: an toàn, idempotent, `PUT` và `PATCH` (JSON Merge Patch); status code hay dùng sai (`400`/`422`, `401`/`403`/`404`, `405`/`406`/`415`, `409`/`412`, `202`); method `QUERY` (RFC 10008); lỗi theo RFC 9457; phân trang bằng cursor; thay đổi tương thích ngược, enum mới là breaking change, Jackson 2 và 3 với trường lạ; id 64 bit trong JavaScript; versioning, `Deprecation` và `Sunset`; `ETag` và `If-Match`; OpenAPI và contract test.",
   "level": "mid",
   "order": 13,
   "minutes": 14,
@@ -14,6 +14,7 @@
   "references": [
     { "title": "RFC 9110: HTTP Semantics", "url": "https://www.rfc-editor.org/rfc/rfc9110.html" },
     { "title": "RFC 9457: Problem Details for HTTP APIs", "url": "https://www.rfc-editor.org/rfc/rfc9457.html" },
+    { "title": "RFC 10008: The HTTP QUERY Method", "url": "https://www.rfc-editor.org/rfc/rfc10008.html" },
     { "title": "RFC 7396: JSON Merge Patch", "url": "https://www.rfc-editor.org/rfc/rfc7396.html" },
     { "title": "RFC 9745: The Deprecation HTTP Response Header Field", "url": "https://www.rfc-editor.org/rfc/rfc9745.html" },
     { "title": "RFC 8594: The Sunset HTTP Header Field", "url": "https://www.rfc-editor.org/rfc/rfc8594.html" }

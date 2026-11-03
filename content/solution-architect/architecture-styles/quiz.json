@@ -9,10 +9,10 @@
         "Ba: nhóm bốn service, thông báo, báo cáo",
         "Sáu: mỗi service deploy riêng là một quantum",
         "Hai: nhóm đồng bộ và nhóm nhận event",
-        "Một: mọi service cùng chung một Kafka"
+        "Bốn: nhóm bốn service, Kafka, thông báo, báo cáo"
       ],
       "answer": 0,
-      "explanation": "Bốn service chung database và gọi đồng bộ nhau: một bên chết hay đổi schema là bên kia hỏng theo, nên chúng là một quantum dù deploy riêng. Thông báo và báo cáo nối bất đồng bộ và có dữ liệu riêng, mỗi cái là một quantum riêng (hai cái không phụ thuộc nhau nên không gộp). Dùng chung broker không gộp quantum, vì broker tách các bên về thời gian."
+      "explanation": "Bốn service chung database và gọi đồng bộ nhau: một bên chết hay đổi schema là bên kia hỏng theo, nên chúng là một quantum dù deploy riêng. Thông báo và báo cáo nối bất đồng bộ và có dữ liệu riêng, mỗi cái là một quantum riêng (hai cái không phụ thuộc nhau nên không gộp). Broker dùng chung thường không được đếm là một quantum riêng, và cũng không gộp các bên lại, vì nó tách chúng về thời gian."
     },
     {
       "id": "lambda-io-wait",
