@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "helm-vs-kustomize", "front": "Helm và Kustomize khác nhau ở cách tiếp cận nào?", "back": "Helm sinh YAML từ template cộng values và quản lý release có rollback. Kustomize giữ YAML thuần làm base rồi vá theo môi trường bằng overlay, không có template." },
+    { "id": "values-order", "front": "Thứ tự ưu tiên values của Helm?", "back": "Tăng dần: `values.yaml` của chart, của chart cha, các file `-f` (file phải nhất thắng), rồi `--set`." },
+    { "id": "list-replace", "front": "Helm gộp values kiểu map và kiểu list khác nhau thế nào?", "back": "Map gộp đệ quy theo key. List, chuỗi, số thì giá trị ưu tiên hơn thay hẳn; list trong `-f` không nối vào list của chart." },
+    { "id": "release-storage", "front": "Helm lưu lịch sử release ở đâu?", "back": "Mặc định mỗi revision là một Secret `sh.helm.release.v1.<tên>.v<số>` trong namespace của release, giữ 10 revision (`--history-max`)." },
+    { "id": "rollback-limits", "front": "`helm rollback` không quay lại được gì?", "back": "Schema và dữ liệu database đã migrate, tài nguyên do hook tạo, và mọi thay đổi bên ngoài cluster." },
+    { "id": "checksum-annotation", "front": "Làm sao để đổi ConfigMap qua Helm thì pod tự rolling update?", "back": "Thêm annotation `checksum/config` = sha256 của template ConfigMap vào pod template; nội dung đổi thì template đổi." },
+    { "id": "configmap-generator", "front": "`configMapGenerator` của Kustomize giải quyết việc gì?", "back": "Gắn hash nội dung vào tên ConfigMap và sửa mọi chỗ tham chiếu, nên đổi cấu hình là pod template đổi và Deployment rolling update." },
+    { "id": "smp-merge-key", "front": "Vì sao patch Kustomize thêm một biến `env` không làm mất biến của base?", "back": "Strategic merge patch gộp list theo khoá gộp của kiểu Kubernetes: `containers` và `env` theo `name`." },
+    { "id": "helm4-flags", "front": "Helm 4 đổi tên những flag nào hay dùng trong pipeline?", "back": "`--atomic` thành `--rollback-on-failure`, `--force` thành `--force-replace`. Cài mới mặc định dùng server-side apply." },
+    { "id": "no-secret-set", "front": "Vì sao không truyền password bằng `helm --set` trong pipeline?", "back": "Nó vào log CI, vào lịch sử shell, và nằm trong release Secret. Dùng External Secrets Operator, Sealed Secrets hoặc SOPS." }
+  ]
+}

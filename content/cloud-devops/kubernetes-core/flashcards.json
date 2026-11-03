@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "declarative", "front": "\"Kubernetes là hệ thống khai báo\" nghĩa là gì?", "back": "Bạn ghi trạng thái mong muốn vào API server; các controller liên tục so với thực tế và sửa phần lệch. Không có lệnh deploy chạy tuần tự." },
+    { "id": "control-plane-parts", "front": "Control plane của Kubernetes gồm những thành phần nào?", "back": "API server (cửa duy nhất, lưu vào etcd), etcd, scheduler (chọn node cho pod), controller manager (các vòng lặp đối soát)." },
+    { "id": "pod", "front": "Các container trong cùng một pod chia sẻ gì?", "back": "Network namespace (gọi nhau qua `localhost`, cùng IP), volume, và luôn được lên lịch vào cùng một node." },
+    { "id": "deploy-rs", "front": "Deployment, ReplicaSet và Pod liên quan thế nào?", "back": "Deployment tạo một ReplicaSet cho mỗi phiên bản pod template; ReplicaSet giữ đúng số pod. Rolling update là tăng ReplicaSet mới, giảm ReplicaSet cũ." },
+    { "id": "rolling-defaults", "front": "Mặc định của rolling update là gì và làm tròn thế nào?", "back": "`maxSurge` 25% làm tròn lên, `maxUnavailable` 25% làm tròn xuống. 10 replica: tối đa 13 pod, tối thiểu 8 sẵn sàng." },
+    { "id": "progress-deadline", "front": "Deployment quá `progressDeadlineSeconds` (600 giây) thì sao?", "back": "Chỉ đánh dấu condition `ProgressDeadlineExceeded`, không tự rollback. Pipeline phải kiểm `rollout status` rồi tự quay lại." },
+    { "id": "service-types", "front": "Bốn loại Service là gì?", "back": "ClusterIP (mặc định, trong cluster), NodePort (port 30000–32767 trên mọi node), LoadBalancer (cloud tạo LB), ExternalName (CNAME)." },
+    { "id": "service-l4", "front": "Vì sao gRPC qua Service dễ bị lệch tải?", "back": "Service cân bằng tải theo kết nối (L4). gRPC giữ một kết nối HTTP/2 lâu dài nên mọi request của client đó vào cùng một pod." },
+    { "id": "configmap-update", "front": "ConfigMap đổi thì pod thấy thay đổi khi nào?", "back": "Biến môi trường: chỉ sau khi restart pod. Volume: kubelet cập nhật file sau khoảng một phút. Volume mount bằng `subPath`: không bao giờ." },
+    { "id": "secret-at-rest", "front": "Kubernetes Secret có được mã hoá trong etcd không?", "back": "Mặc định không, chỉ là Base64. Phải bật encryption at rest trên API server, nên dùng provider KMS; và giới hạn RBAC `get`/`list` trên `secrets`." },
+    { "id": "pull-policy", "front": "`imagePullPolicy` mặc định phụ thuộc vào gì?", "back": "Tag `latest` hoặc không có tag thì `Always`; tag khác thì `IfNotPresent`, nên đẩy đè cùng tag có thể không được node kéo lại." }
+  ]
+}

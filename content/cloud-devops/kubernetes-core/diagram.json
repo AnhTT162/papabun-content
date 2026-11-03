@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Từ kubectl apply tới request vào pod",
+  "nodes": [
+    { "id": "api", "label": "API server + etcd", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "deploy", "label": "Deployment controller", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "ingress", "label": "Ingress controller", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "rs", "label": "ReplicaSet v2", "kind": "generic", "x": 0.85, "y": 0.5 },
+    { "id": "svc", "label": "Service orders", "kind": "generic", "x": 0.1, "y": 0.95 },
+    { "id": "pods", "label": "Pod × 3", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "api-deploy", "from": "api", "to": "deploy", "label": "watch thay đổi" },
+    { "id": "deploy-rs", "from": "deploy", "to": "rs", "label": "tạo ReplicaSet" },
+    { "id": "rs-pods", "from": "rs", "to": "pods", "label": "tạo pod thiếu" },
+    { "id": "svc-pods", "from": "svc", "to": "pods", "label": "pod Ready" },
+    { "id": "ingress-svc", "from": "ingress", "to": "svc", "label": "host + path" }
+  ],
+  "steps": [
+    { "caption": "kubectl apply chỉ ghi Deployment (image orders:2.0, 3 replica) vào API server, lưu trong etcd. Chưa có gì chạy.", "show": ["api"] },
+    { "caption": "Deployment controller watch thấy pod template đổi, tạo ReplicaSet mới; ReplicaSet cũ được giảm dần về 0.", "show": ["deploy", "rs", "api-deploy", "deploy-rs"], "highlight": ["deploy-rs"] },
+    { "caption": "ReplicaSet tạo pod còn thiếu. Scheduler chọn node theo resource request, kubelet trên node đó kéo image và chạy container.", "show": ["pods", "rs-pods"], "highlight": ["rs-pods"] },
+    { "caption": "Service chọn pod theo label. Chỉ pod qua readiness probe được đánh dấu sẵn sàng trong EndpointSlice và nhận traffic.", "show": ["svc", "svc-pods"], "highlight": ["svc-pods"] },
+    { "caption": "Ingress controller nhận HTTP từ ngoài, chọn Service theo host và path, rồi chuyển tới pod sẵn sàng.", "show": ["ingress", "ingress-svc"], "highlight": ["ingress-svc"] },
+    { "caption": "Một node chết: pod trên đó mất. ReplicaSet thấy thiếu so với 3 và tạo pod mới ở node khác, với IP mới; client vẫn gọi tên Service như cũ.", "show": [], "highlight": ["rs", "pods"] }
+  ]
+}

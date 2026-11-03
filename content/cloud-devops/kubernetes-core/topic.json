@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "kubernetes-core",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Kubernetes cơ bản",
+  "summary": "Mô hình khai báo và vòng lặp đối soát; control plane và node; Pod, Deployment và ReplicaSet, rolling update và cách làm tròn 25%; Service, EndpointSlice và Ingress; ConfigMap/Secret cập nhật khi nào; namespace không cô lập mạng.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 15,
+  "prerequisites": ["docker", "network-basics"],
+  "terms": ["kubernetes-control-plane", "kubelet", "kube-proxy", "kubernetes-pod", "kubernetes-deployment", "replicaset", "kubernetes-service", "endpointslice", "readiness-probe", "ingress", "gateway-api", "configmap", "kubernetes-namespace", "headless-service", "statefulset", "rolling-deployment", "kubernetes-secret", "rbac", "hpa"],
+  "references": [
+    { "title": "Kubernetes: Deployments", "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/" },
+    { "title": "Kubernetes: Service", "url": "https://kubernetes.io/docs/concepts/services-networking/service/" },
+    { "title": "Kubernetes: ConfigMaps", "url": "https://kubernetes.io/docs/concepts/configuration/configmap/" },
+    { "title": "Kubernetes source v1.37.2: apps/v1 defaults", "url": "https://github.com/kubernetes/kubernetes/blob/v1.37.2/pkg/apis/apps/v1/defaults.go" },
+    { "title": "Kubernetes: Gateway API", "url": "https://kubernetes.io/docs/concepts/services-networking/gateway/" },
+    { "title": "Kubernetes: Network Policies", "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/" },
+    { "title": "Kubernetes: Virtual IPs and Service Proxies", "url": "https://kubernetes.io/docs/reference/networking/virtual-ips/" }
+  ],
+  "blocks": [
+    { "type": "analogy", "file": "analogy.md" },
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gõ `kubectl apply -f deployment.yaml` xong, chuyện gì xảy ra cho tới khi request tới được pod mới?\" Kể theo thứ tự: kubectl gửi object, API server xác thực, phân quyền, chạy admission, lưu vào etcd; Deployment controller tạo ReplicaSet mới; ReplicaSet tạo pod; scheduler gán node; kubelet kéo image, khởi động container, chạy probe; pod Ready thì EndpointSlice đánh dấu sẵn sàng, kube-proxy (hoặc CNI eBPF) cập nhật quy tắc; Deployment giảm ReplicaSet cũ theo `maxSurge`/`maxUnavailable`. Mỗi bước là một controller phản ứng với sự kiện, không có ai điều phối từ đầu tới cuối." },
+    { "type": "callout", "style": "warning", "markdown": "Đẩy lại image với **cùng tag** (`orders:1.4`) rồi xoá pod để \"deploy\" là bẫy: node đã có `orders:1.4` cũ dùng `IfNotPresent` nên chạy bản cũ, node khác kéo bản mới, và cluster chạy lẫn hai phiên bản mà không ai biết. Mỗi lần build một tag mới (commit SHA), hoặc tham chiếu image bằng digest." }
+  ]
+}

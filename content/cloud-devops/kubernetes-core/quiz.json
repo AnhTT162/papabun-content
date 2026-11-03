@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "rolling-fenceposts-output",
+      "kind": "output",
+      "prompt": "Deployment dưới đây đang chạy đủ 10 pod sẵn sàng; bạn đổi image. Trong suốt quá trình rolling update, tổng số pod tối đa và số pod sẵn sàng tối thiểu là bao nhiêu?",
+      "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: orders\nspec:\n  replicas: 10\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxSurge: 25%\n      maxUnavailable: 25%\n  # ... selector, template",
+      "options": [
+        "Tối đa 13 pod, tối thiểu 8 pod sẵn sàng",
+        "Tối đa 12 pod, tối thiểu 7 pod sẵn sàng",
+        "Tối đa 13 pod, tối thiểu 7 pod sẵn sàng",
+        "Tối đa 12 pod, tối thiểu 8 pod sẵn sàng"
+      ],
+      "answer": 0,
+      "explanation": "25% của 10 là 2,5. Mã nguồn controller (`ResolveFenceposts`) làm tròn `maxSurge` **lên** thành 3 và `maxUnavailable` **xuống** thành 2, tức nghiêng về an toàn: được thêm nhiều hơn, được thiếu ít hơn. Tổng tối đa 10 + 3 = 13, sẵn sàng tối thiểu 10 − 2 = 8. Đây cũng là lý do cần quota và capacity của node dư ra khoảng 25% cho mỗi lần deploy."
+    },
+    {
+      "id": "configmap-env-update",
+      "kind": "single",
+      "prompt": "Pod đọc `PAYMENT_TIMEOUT_MS` từ ConfigMap qua `envFrom`. Bạn sửa ConfigMap từ 2000 thành 5000 bằng `kubectl apply`. Mười phút sau app vẫn dùng 2000. Vì sao?",
+      "options": [
+        "Biến môi trường chỉ được nạp khi container khởi động; phải restart pod",
+        "kubelet chỉ đồng bộ ConfigMap mỗi 15 phút, cần chờ thêm",
+        "`kubectl apply` không cập nhật ConfigMap đã tồn tại, phải xoá rồi tạo lại",
+        "Spring Boot cache cấu hình, phải gọi `/actuator/refresh` để nạp lại"
+      ],
+      "answer": 0,
+      "explanation": "Biến môi trường của process được đặt một lần lúc container khởi động; Kubernetes không đổi được môi trường của process đang chạy. Chỉ ConfigMap mount dạng volume (không dùng `subPath`) mới được kubelet cập nhật file, sau chu kỳ đồng bộ cộng độ trễ cache, cỡ một phút chứ không phải 15. `kubectl apply` cập nhật ConfigMap bình thường. `/actuator/refresh` của Spring Cloud cũng không giúp, vì giá trị trong môi trường của process vẫn là 2000. Cách gọn: đổi tên ConfigMap theo hash nội dung để Deployment rolling update."
+    },
+    {
+      "id": "service-ready-only",
+      "kind": "single",
+      "prompt": "Pod mới của `orders` mất 40 giây khởi động Spring Boot. Không có readiness probe. Trong lúc rolling update, một phần request trả `Connection refused`. Vì sao?",
+      "options": [
+        "Container vừa chạy là pod được coi là sẵn sàng và nhận traffic, dù app chưa mở port",
+        "Pod cũ bị xoá trước khi endpoint của nó kịp được gỡ khỏi Service",
+        "DNS của Service còn cache IP của pod cũ trong 30 giây",
+        "kube-proxy chỉ cập nhật quy tắc mỗi 60 giây nên trễ so với pod mới"
+      ],
+      "answer": 0,
+      "explanation": "Không có readiness probe thì pod được coi là Ready ngay khi container chạy, nên nó vào EndpointSlice và nhận kết nối trong khi Tomcat chưa nghe port: `Connection refused`. Rolling update cũng coi pod đó đã sẵn sàng và xoá pod cũ sớm hơn. DNS của Service trả ClusterIP ổn định, không trả IP pod (trừ headless). Pod cũ bị xoá trước khi endpoint được gỡ là một lỗi có thật, nhưng nó xảy ra với pod đang tắt và cho lỗi ở pod cũ (bài Graceful shutdown & vòng đời process); ở đây lỗi đến từ pod mới chưa mở port. kube-proxy cập nhật theo sự kiện watch chứ không theo chu kỳ 60 giây. Thêm readiness probe (và startup probe khi khởi động chậm), chi tiết ở bài Vận hành ứng dụng trên Kubernetes."
+    },
+    {
+      "id": "namespace-isolation",
+      "kind": "single",
+      "prompt": "Cluster dùng chung có namespace `team-a` và `team-b`. Một pod ở `team-b` gọi `http://billing.team-a.svc.cluster.local:8080` và nhận được dữ liệu. Không ai cấu hình gì thêm. Nhận định nào đúng?",
+      "options": [
+        "Đúng như mặc định: namespace không cô lập mạng, cần NetworkPolicy để chặn",
+        "Đây là lỗi bảo mật của Kubernetes, namespace đáng lẽ đã chặn lời gọi đó",
+        "Gọi được vì dùng tên đầy đủ; gọi `billing` ngắn thì sẽ bị chặn",
+        "Gọi được vì cùng node; nếu khác node thì namespace sẽ chặn lời gọi"
+      ],
+      "answer": 0,
+      "explanation": "Namespace là phạm vi tên, quyền RBAC và quota, không phải ranh giới mạng. Mặc định mọi pod gọi được mọi pod. Muốn chặn thì viết NetworkPolicy (ví dụ chỉ cho namespace có label `team=a` vào) và CNI phải hỗ trợ thực thi nó. Tên ngắn `billing` chỉ không phân giải được từ namespace khác vì DNS search tìm trong `team-b` trước, không phải do chặn."
+    }
+  ]
+}

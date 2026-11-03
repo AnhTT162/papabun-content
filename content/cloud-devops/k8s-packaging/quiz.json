@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "values-precedence-output",
+      "kind": "output",
+      "prompt": "Chart và hai file values như dưới, cài bằng lệnh ở cuối. Template in `{{ .Values.replicaCount }} {{ .Values.image.repository }}:{{ .Values.image.tag }} {{ .Values.ingress.hosts }}`. Kết quả là gì?",
+      "code": "# chart/values.yaml\nreplicaCount: 2\nimage:\n  repository: orders\n  tag: \"2.0\"\ningress:\n  hosts: [orders.internal.test, api.example.test]\n\n# values-prod.yaml\nimage:\n  tag: \"2.1\"\ningress:\n  hosts: [shop.example.test]\n\n# hotfix.yaml\nimage:\n  tag: \"2.1.1\"\n\n$ helm upgrade --install orders ./chart -f values-prod.yaml -f hotfix.yaml --set replicaCount=4",
+      "options": [
+        "4 orders:2.1.1 [shop.example.test]",
+        "4 orders:2.1 [shop.example.test]",
+        "4 orders:2.1.1 [orders.internal.test api.example.test shop.example.test]",
+        "2 orders:2.1.1 [shop.example.test]"
+      ],
+      "answer": 0,
+      "explanation": "Thứ tự ưu tiên tăng dần: `values.yaml` của chart, các file `-f` từ trái sang phải, rồi `--set`. `replicaCount` lấy 4 từ `--set`. `image` là map nên được gộp: `repository` từ chart, `tag` từ file phải nhất là `hotfix.yaml`. `ingress.hosts` là list nên list của `values-prod.yaml` thay hẳn list của chart, không nối thêm. (Logic gộp theo `coalesce.go` của Helm 4.3.1.)"
+    },
+    {
+      "id": "configmap-no-rollout",
+      "kind": "single",
+      "prompt": "Chart có `templates/configmap.yaml` sinh ConfigMap `orders-config`, Deployment mount nó thành biến môi trường. Bạn đổi `featureX: true` trong values và `helm upgrade`. Helm báo thành công, revision tăng, nhưng các pod vẫn là pod cũ và tính năng chưa bật. Cách sửa phù hợp nhất?",
+      "options": [
+        "Thêm annotation checksum của configmap.yaml vào pod template",
+        "Chạy `helm upgrade --force-replace` để tạo lại mọi tài nguyên",
+        "Đặt `imagePullPolicy: Always` để pod kéo lại image mới",
+        "Chuyển ConfigMap sang Secret vì Secret được cập nhật ngay"
+      ],
+      "answer": 0,
+      "explanation": "Deployment chỉ rolling update khi pod template đổi. ConfigMap đổi nhưng template không đổi, và biến môi trường chỉ được nạp lúc container khởi động. Annotation `checksum/config` tính sha256 của template ConfigMap đặt vào pod template, nên mỗi lần nội dung đổi thì pod template đổi theo và rolling update diễn ra có kiểm soát. `--force-replace` buộc ghi đè tài nguyên nhưng không làm đổi pod template, nên pod vẫn không được tạo lại; `imagePullPolicy` chỉ áp khi pod được tạo mới; Secret cũng không cập nhật biến môi trường của container đang chạy."
+    },
+    {
+      "id": "kustomize-env-merge",
+      "kind": "single",
+      "prompt": "Base của Kustomize có container `orders` với `env` gồm `JAVA_TOOL_OPTIONS` và `SPRING_PROFILES_ACTIVE`. Overlay prod có strategic merge patch cho Deployment đó, khai báo `containers: [{name: orders, env: [{name: DB_POOL_MAX, value: \"40\"}]}]`. Kết quả `kustomize build overlays/prod` có những biến nào?",
+      "options": [
+        "Cả ba biến: patch gộp `containers` và `env` theo khoá `name`",
+        "Chỉ `DB_POOL_MAX`: list trong patch thay list của base",
+        "Chỉ hai biến của base: patch bị bỏ vì thiếu `image`",
+        "Lỗi build vì patch khai báo container mà không có `image`"
+      ],
+      "answer": 0,
+      "explanation": "Strategic merge patch dùng metadata của từng kiểu Kubernetes: `containers` và `env` có khoá gộp là `name`, nên container `orders` trong patch được gộp với container cùng tên ở base, và `env` được nối theo tên. Đây là khác biệt lớn so với Helm values, nơi list bị thay cả. Patch không cần lặp lại `image` vì nó chỉ là phần thay đổi. Muốn thay hẳn list thì dùng chỉ thị `$patch: replace` hoặc JSON patch."
+    },
+    {
+      "id": "upgrade-no-wait",
+      "kind": "single",
+      "prompt": "Pipeline chạy `helm upgrade --install orders ./chart -f values-prod.yaml` (6 replica) rồi báo xanh. Mười phút sau mới có cảnh báo: pod mới CrashLoopBackOff, rollout kẹt giữa chừng. Thiếu gì trong lệnh deploy?",
+      "options": [
+        "`--wait` và `--rollback-on-failure` để chờ tài nguyên sẵn sàng và tự quay lại",
+        "`--reuse-values` để giữ values của lần cài trước còn đang chạy tốt",
+        "`--history-max 0` để Helm giữ đủ lịch sử cho việc rollback",
+        "`--dry-run=server` để API server kiểm tra pod khởi động được không"
+      ],
+      "answer": 0,
+      "explanation": "Không có `--wait`, Helm coi upgrade thành công ngay khi API server nhận manifest, chưa cần pod nào chạy được. `--wait` chờ tài nguyên sẵn sàng (Helm 4 dùng kstatus), `--rollback-on-failure` (tên cũ `--atomic`) quay về revision trước khi chờ thất bại hoặc quá `--timeout`. `--reuse-values` không liên quan tới pod chạy được; `--history-max` mặc định 10 đã đủ rollback; dry-run trên server chỉ kiểm manifest, không chạy container. Rolling update tự dừng vì pod mới không Ready: Deployment chỉ xoá pod cũ trong giới hạn `maxUnavailable` (25% của 6, làm tròn xuống còn 1), nên phần lớn pod cũ vẫn phục vụ; đó là lý do cần readiness probe."
+    }
+  ]
+}

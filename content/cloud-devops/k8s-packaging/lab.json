@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Thêm một biến môi trường cho prod, heap JVM tụt còn 512 MB",
+  "context": "Chart `orders` dùng chung cho mọi môi trường. `values.yaml` của chart khai báo các biến môi trường mặc định và memory limit 2 GiB. Đợt này prod cần tăng pool database, nên một thành viên thêm `env` vào `values-prod.yaml`. Staging chỉ dùng `values-staging.yaml` không có `env`. Pipeline chạy `helm upgrade --install orders ./chart -f values-prod.yaml --rollback-on-failure`.",
+  "buggyCode": "# chart/values.yaml\nreplicaCount: 2\nresources:\n  requests: { cpu: 500m, memory: 2Gi }\n  limits: { memory: 2Gi }\nenv:\n  - name: JAVA_TOOL_OPTIONS\n    value: \"-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError\"\n  - name: SPRING_PROFILES_ACTIVE\n    value: k8s\n\n# chart/templates/deployment.yaml (trích)\n      containers:\n        - name: orders\n          env:\n            {{- toYaml .Values.env | nindent 12 }}\n          resources:\n            {{- toYaml .Values.resources | nindent 12 }}\n\n# values-prod.yaml\nreplicaCount: 6\nresources:\n  requests: { cpu: \"1\" }\nenv:\n  - name: DB_POOL_MAX\n    value: \"40\"",
+  "symptom": {
+    "description": "Sau khi deploy, p99 latency của prod tăng từ 120 ms lên 900 ms, GC chạy liên tục, thỉnh thoảng có `OutOfMemoryError` mà pod không restart. Memory request và limit vẫn đúng 2 GiB, CPU request đã lên 1 như mong muốn. Staging bình thường.",
+    "output": "$ kubectl -n shop exec deploy/orders -- printenv | grep -E 'JAVA_TOOL|SPRING_PROFILES|DB_POOL'\nDB_POOL_MAX=40\n\n$ kubectl -n shop exec deploy/orders -- java -XX:+PrintFlagsFinal -version | grep -E ' MaxHeapSize | MaxRAMPercentage '\n   size_t MaxHeapSize                              = 536870912                                 {product} {ergonomic}\n   double MaxRAMPercentage                         = 25.000000                                 {product} {default}\n\n$ kubectl -n shop get deploy orders -o jsonpath='{.spec.template.spec.containers[0].resources}'\n{\"limits\":{\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"1\",\"memory\":\"2Gi\"}}"
+  },
+  "diagnosis": {
+    "question": "Vì sao `JAVA_TOOL_OPTIONS` và `SPRING_PROFILES_ACTIVE` biến mất, trong khi `resources` vẫn giữ được memory của chart?",
+    "options": [
+      "Helm gộp đệ quy map như `resources`, còn list như `env` trong file `-f` thì thay hẳn list của chart",
+      "JVM bỏ qua `JAVA_TOOL_OPTIONS` khi container có memory limit, nên dùng mặc định 25% của limit",
+      "`--rollback-on-failure` đã âm thầm quay về revision cũ nên env của lần deploy mới không được áp",
+      "Helm gộp hai list `env` nhưng Kubernetes chỉ giữ phần tử cuối cùng khi có nhiều biến môi trường"
+    ],
+    "answer": 0,
+    "explanation": "Khi gộp values, Helm chỉ đi sâu vào những key mà cả hai phía là map (`coalesce.go`). `resources` là map nên `requests.cpu` của prod được gộp với `requests.memory` và `limits` của chart. `env` là list nên list một phần tử của `values-prod.yaml` thay hẳn list của chart: mất `JAVA_TOOL_OPTIONS` (JVM quay về `MaxRAMPercentage` 25%, heap 512 MB trên limit 2 GiB, và không còn `ExitOnOutOfMemoryError` nên OOME không làm pod restart) và mất `SPRING_PROFILES_ACTIVE`. `printenv` cho thấy cả hai biến đều không tồn tại, nên JVM không có gì để bỏ qua. Rollback đã xảy ra thì `DB_POOL_MAX` cũng không có. Kubernetes giữ mọi phần tử của `env`. Staging không lỗi vì `values-staging.yaml` không đụng tới `env`."
+  },
+  "fix": {
+    "code": "# chart/values.yaml: biến môi trường là map, người dùng thêm key không làm mất key khác\nenv:\n  JAVA_TOOL_OPTIONS: \"-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError\"\n  SPRING_PROFILES_ACTIVE: k8s\n\n# chart/templates/deployment.yaml (trích)\n          env:\n            {{- range $name, $value := .Values.env }}\n            - name: {{ $name }}\n              value: {{ $value | quote }}\n            {{- end }}\n\n# values-prod.yaml\nenv:\n  DB_POOL_MAX: \"40\"\n\n# CI: render mọi môi trường và kiểm biến bắt buộc trước khi deploy\n# helm template orders ./chart -f values-prod.yaml > prod.yaml\n# yq '.spec.template.spec.containers[0].env[].name' prod.yaml | grep -qx JAVA_TOOL_OPTIONS",
+    "explanation": "Khai báo `env` dạng map để Helm gộp: prod chỉ thêm `DB_POOL_MAX`, hai biến của chart vẫn còn; muốn bỏ một biến mặc định thì đặt nó thành `null`. Một cách khác giữ list cho chart (`env`) và cho người dùng thêm qua list riêng (`extraEnv`) nối sau. Với Kustomize, strategic merge patch gộp `env` theo khoá `name` nên không có bẫy này. Quan trọng không kém là bắt được lỗi trước khi lên prod: CI render manifest của từng môi trường, kiểm các biến bắt buộc, và hiện diff trong pull request; ai nhìn diff sẽ thấy hai dòng `JAVA_TOOL_OPTIONS`, `SPRING_PROFILES_ACTIVE` bị xoá."
+  }
+}

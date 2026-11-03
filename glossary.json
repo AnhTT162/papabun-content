@@ -2237,7 +2237,7 @@
       "meaning": "Cách deploy thay dần từng instance cũ bằng instance mới, nên trong lúc rollout có cả hai phiên bản code cùng phục vụ.",
       "example": "Kubernetes `RollingUpdate` với `maxUnavailable: 1` thay 12 pod lần lượt trong vài phút.",
       "related": ["expand-contract"],
-      "topics": ["schema-migration"]
+      "topics": ["schema-migration", "kubernetes-core"]
     },
     {
       "id": "online-ddl",
@@ -4701,7 +4701,7 @@
       "meaning": "Kubernetes Service với `clusterIP: None`: DNS trả thẳng IP của từng pod thay vì một IP ảo, để client tự cân bằng tải giữa các pod.",
       "example": "Client gRPC phân giải `inventory-headless` ra 6 IP pod và dùng chính sách `round_robin`.",
       "related": ["grpc", "service-discovery"],
-      "topics": ["service-communication"]
+      "topics": ["service-communication", "kubernetes-core"]
     },
     {
       "id": "linearizability",
@@ -4957,7 +4957,7 @@
       "meaning": "API của Kubernetes thay cho Ingress, tách vai trò: `GatewayClass` và `Gateway` cho đội hạ tầng, `HTTPRoute` cho đội ứng dụng; hỗ trợ chia lưu lượng, header, nhiều giao thức.",
       "example": "`HTTPRoute` gửi 10% request `/orders` sang bản canary.",
       "related": ["api-gateway", "reverse-proxy"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "kubernetes-core"]
     },
     {
       "id": "event-driven-architecture",
@@ -5021,7 +5021,7 @@
       "meaning": "Tài nguyên Kubernetes khai báo route HTTP từ ngoài vào Service theo host và path; cần một Ingress controller (NGINX, Envoy...) thực thi. API đã đóng băng tính năng, Gateway API là bản thay thế.",
       "example": "`host: shop.example.com`, `path: /orders` chuyển tới Service `orders` cổng 8080.",
       "related": ["gateway-api", "reverse-proxy"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "kubernetes-core"]
     },
     {
       "id": "canary-release",
@@ -6093,7 +6093,7 @@
       "meaning": "Horizontal Pod Autoscaler của Kubernetes: định kỳ (mặc định 15 giây) tính số replica = ceil(số pod × metric hiện tại / mục tiêu) rồi chỉnh Deployment.",
       "example": "4 pod ở CPU 90%, mục tiêu 60%: ceil(4 × 90 / 60) = 6 pod.",
       "related": ["autoscaling", "keda"],
-      "topics": ["capacity-planning", "startup-native"]
+      "topics": ["capacity-planning", "startup-native", "kubernetes-core"]
     },
     {
       "id": "keda",
@@ -8981,7 +8981,7 @@
       "meaning": "Loại workload Kubernetes cho pod có danh tính ổn định: tên đánh số (app-0, app-1), giữ nguyên khi restart, và volume riêng cho mỗi pod.",
       "example": "Pod order-3 của StatefulSet dùng số 3 làm worker id Snowflake, không cần kho phối hợp.",
       "related": ["worker-id"],
-      "topics": ["design-id-generator"]
+      "topics": ["design-id-generator", "kubernetes-core"]
     },
     {
       "id": "apns",
@@ -12509,7 +12509,7 @@
       "meaning": "Object Kubernetes chứa dữ liệu nhạy cảm encode Base64, mount vào pod thành file hoặc biến môi trường; không mã hoá trừ khi bật encryption at rest cho etcd.",
       "example": "`data.password: UHIwZC1TM2NyZXQtMjAyNg==` giải Base64 ra `Pr0d-S3cret-2026`.",
       "related": ["secret", "external-secrets-operator"],
-      "topics": ["secret-management"]
+      "topics": ["secret-management", "k8s-packaging", "kubernetes-core"]
     },
     {
       "id": "external-secrets-operator",
@@ -12517,7 +12517,7 @@
       "meaning": "Operator Kubernetes đọc secret từ kho ngoài (Secrets Manager, Vault) rồi tạo hoặc cập nhật Kubernetes Secret theo chu kỳ `refreshInterval`.",
       "example": "ExternalSecret `orders-db` đồng bộ `prod/orders/db` mỗi giờ vào Secret cùng tên.",
       "related": ["kubernetes-secret", "secrets-manager"],
-      "topics": ["secret-management"]
+      "topics": ["secret-management", "k8s-packaging"]
     },
     {
       "id": "sealed-secrets",
@@ -12525,7 +12525,7 @@
       "meaning": "Công cụ mã hoá Kubernetes Secret bằng khoá công khai của controller trong cluster để commit được vào git; chỉ controller giải mã được.",
       "example": "`kubeseal` biến Secret thành SealedSecret, Argo CD áp vào cluster, controller tạo lại Secret.",
       "related": ["kubernetes-secret"],
-      "topics": ["secret-management"]
+      "topics": ["secret-management", "k8s-packaging"]
     },
     {
       "id": "secret-scanning",
@@ -12901,7 +12901,7 @@
       "meaning": "Role-based access control: quyền gán cho role, người dùng nhận quyền qua role. Dễ hiểu và kiểm toán, nhưng không diễn tả quyền trên từng bản ghi.",
       "example": "Role `ACCOUNTANT` có permission `invoice:create`, `invoice:read`.",
       "related": ["abac", "rebac", "role-explosion"],
-      "topics": ["authorization-models"]
+      "topics": ["authorization-models", "kubernetes-core"]
     },
     {
       "id": "abac",
@@ -13918,6 +13918,150 @@
       "example": "`main` chưa có commit mới từ khi tách `feature`, nên `git merge feature` chỉ fast-forward.",
       "related": ["git-merge", "merge-base"],
       "topics": ["git-workflow"]
+    },
+    {
+      "id": "kubernetes-control-plane",
+      "term": "Control plane (Kubernetes)",
+      "meaning": "Các thành phần quản lý cluster: API server (cửa duy nhất, lưu vào etcd), etcd, scheduler, controller manager. Không chạy container của ứng dụng.",
+      "example": "Trên EKS, AWS vận hành control plane; bạn lo node và workload.",
+      "related": ["kubelet", "kubernetes-deployment"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "kubelet",
+      "term": "kubelet",
+      "meaning": "Agent chạy trên mỗi node Kubernetes: nhận các pod được giao, gọi container runtime để chạy container, chạy probe và báo trạng thái về API server.",
+      "example": "kubelet thấy liveness probe thất bại 3 lần liên tiếp thì restart container.",
+      "related": ["kubernetes-pod", "kubernetes-control-plane"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "kube-proxy",
+      "term": "kube-proxy",
+      "meaning": "Thành phần chạy trên mỗi node, lập trình quy tắc iptables hoặc nftables để chuyển kết nối tới ClusterIP của Service sang một pod sẵn sàng. Chế độ IPVS bị deprecated từ Kubernetes 1.35.",
+      "example": "Kết nối tới `10.96.12.7:8080` được kube-proxy chuyển ngẫu nhiên tới một trong ba pod của Service.",
+      "related": ["kubernetes-service", "endpointslice"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "kubernetes-pod",
+      "term": "Pod",
+      "meaning": "Đơn vị chạy nhỏ nhất của Kubernetes: một hay vài container dùng chung network namespace và volume, có IP riêng. Pod không tự sống lại khi node chết.",
+      "example": "Pod `orders-7d9f-x2k4` gồm container app và một sidecar đẩy log.",
+      "related": ["kubernetes-deployment", "replicaset", "sidecar"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "kubernetes-deployment",
+      "term": "Deployment",
+      "meaning": "Object Kubernetes khai báo số replica và pod template của một ứng dụng stateless; tạo ReplicaSet cho mỗi phiên bản và thực hiện rolling update, rollback.",
+      "example": "Đổi image của Deployment `orders` từ `2.0` lên `2.1` tạo ReplicaSet mới và thay dần pod.",
+      "related": ["replicaset", "kubernetes-pod", "rolling-deployment"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "replicaset",
+      "term": "ReplicaSet",
+      "meaning": "Controller giữ đúng số pod khớp một selector và pod template. Thường do Deployment tạo và quản lý, không tạo tay.",
+      "example": "Xoá tay một pod thì ReplicaSet tạo ngay pod khác để đủ 3.",
+      "related": ["kubernetes-deployment", "kubernetes-pod"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "kubernetes-service",
+      "term": "Service (Kubernetes)",
+      "meaning": "Object cho một nhóm pod (chọn theo label) một tên DNS và một IP ảo ổn định; chuyển kết nối tới các pod đang sẵn sàng. Cân bằng tải ở L4 theo kết nối.",
+      "example": "`http://orders.shop.svc.cluster.local:8080` luôn tới được pod của `orders` dù pod đổi IP.",
+      "related": ["endpointslice", "kube-proxy", "headless-service", "ingress"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "endpointslice",
+      "term": "EndpointSlice",
+      "meaning": "Object lưu danh sách địa chỉ pod đứng sau một Service, kèm trạng thái sẵn sàng của từng pod. kube-proxy và controller của Ingress đọc nó để biết gửi traffic đi đâu.",
+      "example": "Pod chưa qua readiness probe vẫn có trong EndpointSlice nhưng `ready: false`, nên không nhận traffic.",
+      "related": ["kubernetes-service", "readiness-probe"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "readiness-probe",
+      "term": "Readiness probe",
+      "meaning": "Kiểm tra định kỳ của kubelet xem container đã sẵn sàng nhận traffic chưa. Thất bại thì pod bị rút khỏi danh sách endpoint của Service, nhưng không bị restart.",
+      "example": "`/actuator/health/readiness` trả 503 khi app đang khởi động hoặc đang tắt.",
+      "related": ["liveness-probe", "startup-probe", "endpointslice"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "configmap",
+      "term": "ConfigMap",
+      "meaning": "Object Kubernetes chứa cấu hình dạng key/value không nhạy cảm, đưa vào pod qua biến môi trường hoặc file. Tối đa 1 MiB.",
+      "example": "ConfigMap `orders-config` chứa `PAYMENT_TIMEOUT_MS=2000`, nạp vào pod bằng `envFrom`.",
+      "related": ["kubernetes-secret", "kubernetes-pod"],
+      "topics": ["kubernetes-core", "k8s-packaging"]
+    },
+    {
+      "id": "kubernetes-namespace",
+      "term": "Namespace (Kubernetes)",
+      "meaning": "Phạm vi tên, quyền RBAC và quota trong một cluster. Không tự cô lập mạng: muốn chặn lưu lượng giữa namespace phải dùng NetworkPolicy.",
+      "example": "Đội A và đội B dùng chung cluster nhưng mỗi đội một namespace với quota riêng.",
+      "related": ["linux-namespace", "kubernetes-service"],
+      "topics": ["kubernetes-core"]
+    },
+    {
+      "id": "helm",
+      "term": "Helm",
+      "meaning": "Trình đóng gói cho Kubernetes: render manifest từ template Go cộng values, cài thành release có lịch sử để nâng cấp và rollback.",
+      "example": "`helm upgrade --install orders ./chart -f values-prod.yaml --wait`.",
+      "related": ["helm-chart", "helm-release", "kustomize"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "helm-chart",
+      "term": "Helm chart",
+      "meaning": "Gói của Helm gồm `Chart.yaml`, thư mục `templates/` và `values.yaml` mặc định; có thể phụ thuộc chart khác và được lưu trong registry OCI.",
+      "example": "Chart `ingress-nginx` cài controller với vài chục giá trị tuỳ chỉnh được.",
+      "related": ["helm", "helm-release"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "helm-release",
+      "term": "Helm release",
+      "meaning": "Một lần cài của chart vào cluster với tên riêng; mỗi lần nâng cấp tạo một revision, mặc định lưu thành Secret trong namespace của release.",
+      "example": "Release `orders` ở revision 14; `helm rollback orders 13` áp lại manifest của revision 13 thành revision 15.",
+      "related": ["helm", "helm-chart"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "kustomize",
+      "term": "Kustomize",
+      "meaning": "Công cụ tuỳ biến manifest Kubernetes không dùng template: base là YAML hợp lệ, overlay khai báo patch và biến đổi cho từng môi trường. Có sẵn trong `kubectl apply -k`.",
+      "example": "`kustomize build overlays/prod` in ra manifest của prod từ base cộng các patch.",
+      "related": ["kustomize-overlay", "strategic-merge-patch", "helm"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "kustomize-overlay",
+      "term": "Overlay (Kustomize)",
+      "meaning": "Thư mục kustomization tham chiếu một base và chỉ khai báo phần khác biệt của một môi trường: patch, image, số replica, ConfigMap sinh ra.",
+      "example": "`overlays/prod/kustomization.yaml` tăng replica lên 6 và đổi image sang digest đã duyệt.",
+      "related": ["kustomize"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "strategic-merge-patch",
+      "term": "Strategic merge patch",
+      "meaning": "Kiểu patch của Kubernetes biết khoá gộp của từng list (ví dụ `containers` và `env` theo `name`), nên vá một phần tử không làm mất các phần tử khác.",
+      "example": "Patch thêm biến `DB_POOL_MAX` vào container `orders` mà vẫn giữ các biến có sẵn.",
+      "related": ["kustomize", "server-side-apply"],
+      "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "server-side-apply",
+      "term": "Server-side apply",
+      "meaning": "Cách apply mà API server tự gộp cấu hình và ghi lại field manager sở hữu từng trường; báo conflict khi hai công cụ cùng sửa một trường.",
+      "example": "Helm 4 cài release mới bằng server-side apply; `kubectl scale` sửa `replicas` thì lần apply sau báo conflict.",
+      "related": ["strategic-merge-patch", "helm"],
+      "topics": ["k8s-packaging"]
     }
   ]
 }

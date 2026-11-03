@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "k8s-packaging",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Helm, Kustomize & cấu hình nhiều môi trường",
+  "summary": "Helm (chart, values, release, rollback, hook, thay đổi của Helm 4) và Kustomize (base, overlay, strategic merge patch, configMapGenerator); bẫy gộp values kiểu list, ConfigMap đổi mà pod không restart; tổ chức cấu hình và secret cho nhiều môi trường.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 14,
+  "prerequisites": ["kubernetes-core", "twelve-factor"],
+  "terms": ["helm", "helm-chart", "helm-release", "kustomize", "kustomize-overlay", "strategic-merge-patch", "server-side-apply", "configmap", "kubernetes-secret", "sealed-secrets", "external-secrets-operator"],
+  "references": [
+    { "title": "Helm: Values Files", "url": "https://helm.sh/docs/chart_template_guide/values_files/" },
+    { "title": "Helm: Chart Development Tips and Tricks (checksum annotation)", "url": "https://helm.sh/docs/howto/charts_tips_and_tricks/" },
+    { "title": "Helm 4 Overview", "url": "https://helm.sh/docs/overview/" },
+    { "title": "Kustomize: configMapGenerator", "url": "https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/configmapgenerator/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn đưa một thay đổi cấu hình từ dev lên prod thế nào để chắc prod nhận đúng thứ đã test?\" Một artifact (image theo digest) cho mọi môi trường; cấu hình mỗi môi trường nằm trong git, cùng một nhánh, mỗi môi trường một file values hay overlay chỉ chứa phần khác biệt. CI render manifest cho mọi môi trường và đưa diff vào pull request; promote bằng một pull request đổi đúng dòng digest hay giá trị đó. Deploy có `--wait` và tự rollback, ConfigMap đổi thì pod rolling update nhờ checksum hay hash trong tên. Không ai `kubectl edit` trên prod; GitOps phát hiện và sửa drift." },
+    { "type": "callout", "style": "warning", "markdown": "Release Secret của Helm (`sh.helm.release.v1.*`) chứa toàn bộ manifest đã render, kể cả Secret của ứng dụng (nén và Base64, không mã hoá). Ai có quyền đọc Secret trong namespace là đọc được mọi giá trị đã từng deploy trong 10 revision gần nhất. Không render secret thật qua values; để External Secrets Operator hay Sealed Secrets tạo Secret ngoài release." }
+  ]
+}
