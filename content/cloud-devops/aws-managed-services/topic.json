@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "aws-managed-services",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Dịch vụ managed của AWS",
+  "summary": "Chọn dịch vụ theo kiểu tương tác: SQS, SNS, EventBridge, Kinesis/MSK, DynamoDB, ElastiCache, Lambda làm keo nối; quota và throttling cần biết trước (on-demand gấp đôi đỉnh, giới hạn partition, quota EventBridge theo region, Lambda đọc SQS); managed hay tự vận hành và lock-in.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 15,
+  "prerequisites": ["aws-core", "messaging-fundamentals", "nosql-overview"],
+  "terms": ["amazon-sqs", "amazon-sns", "amazon-eventbridge", "amazon-dynamodb", "visibility-timeout", "dead-letter-queue", "fan-out", "tco"],
+  "references": [
+    { "title": "Amazon SQS: Message quotas", "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html" },
+    { "title": "Amazon DynamoDB: On-demand capacity mode", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html" },
+    { "title": "Amazon EventBridge quotas", "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-quota.html" },
+    { "title": "AWS Lambda: Configuring scaling for Amazon SQS event source mappings", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"SNS, SQS, EventBridge, Kinesis khác nhau thế nào, khi nào dùng cái nào?\" Trả lời theo câu hỏi \"ai giữ trạng thái và đọc lại được không\": SQS giữ từng message tới khi consumer xoá (giao việc, retry, DLQ); SNS không giữ gì, đẩy ngay tới subscriber (fan-out); EventBridge cũng đẩy nhưng định tuyến theo nội dung và có archive để phát lại, quota thấp hơn; Kinesis/MSK giữ log theo thời gian, consumer tự giữ vị trí đọc nên đọc lại và có thứ tự theo khoá. Rồi nêu con số quyết định: throughput, kích thước message, thời gian giữ." },
+    { "type": "callout", "style": "warning", "markdown": "\"Serverless nên không cần lo capacity\" là hiểu lầm đắt giá. DynamoDB on-demand vẫn throttle khi tải vượt gấp đôi đỉnh trước trong 30 phút hoặc khi một key vượt giới hạn partition; Lambda vẫn bị giới hạn concurrency của tài khoản; EventBridge có quota theo region. Trước ngày mở bán: làm ấm bảng, xin tăng quota, chạy load test trên đúng tài khoản và region." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Bỏ RabbitMQ, Redis, MongoDB tự chạy cho nền tảng giao đồ ăn",
+  "prompt": "Nền tảng giao đồ ăn chạy trên AWS (Singapore), đội 6 kỹ sư. Hiện tự chạy trên EC2: RabbitMQ (một node), Redis (primary + replica, failover bằng tay), MongoDB (replica set 3 node). Tháng nào cũng có 1–2 sự cố do chính các cụm này, và không ai thực sự hiểu MongoDB. Các luồng cần phục vụ:\n1. Đơn mới (đỉnh 300 đơn/giây giờ trưa) phải tới 4 bên: thông báo nhà hàng, tích điểm, phân tích, chống gian lận. Mỗi bên tự xử lý theo tốc độ của mình.\n2. Ảnh món ăn upload cần resize thành 3 cỡ, khoảng 50.000 ảnh/ngày, dồn vào đầu tuần.\n3. Vị trí GPS của 40.000 tài xế, mỗi 2 giây một lần: cần thứ tự theo từng tài xế và đọc lại được 7 ngày cho phân tích tuyến đường.\n4. Giỏ hàng và trạng thái phiên tra theo `user_id`, đỉnh 50.000 đọc/giây giờ tối, mỗi giỏ vài KB.\n5. Cache thực đơn nhà hàng (đọc nhiều, đổi vài lần một ngày).\nĐề xuất dịch vụ cho từng luồng, các giới hạn cần kiểm, và kế hoạch chuyển đổi.",
+  "hints": [
+    "Mỗi luồng là kiểu tương tác nào: giao việc, phát sự kiện tới nhiều bên, luồng có thứ tự đọc lại được, hay tra theo khoá?",
+    "GPS của 40.000 tài xế mỗi 2 giây là bao nhiêu bản ghi mỗi giây, và nó có vượt quota của dịch vụ sự kiện bạn định dùng không?",
+    "Giỏ hàng tra theo user_id ở 50.000 đọc/giây: chọn chế độ capacity nào, và bảng mới có chịu được ngay mức đó không?",
+    "Chuyển đổi một hệ thống đang chạy thì làm sao không mất message và quay lại được?"
+  ],
+  "solution": "**1. Đơn mới tới 4 bên**: SNS topic `order-placed`, mỗi bên một SQS queue subscribe, có DLQ riêng và filter policy nếu bên đó chỉ cần một loại đơn. 300 sự kiện/giây là nhỏ với SNS/SQS. Consumer idempotent theo `order_id` vì SQS standard là at-least-once. Phát sự kiện từ outbox của service đơn hàng để không mất sự kiện khi ghi database thành công mà gửi lỗi. EventBridge cũng làm được (rule theo nội dung, archive để phát lại), với bus kiểu rule, quota invocation ở Singapore 2.250/giây tính cho mọi đích; 300 × 4 = 1.200 vẫn vừa, nên chọn EventBridge nếu cần định tuyến theo nội dung hay chuyển sang tài khoản khác.\n\n**2. Resize ảnh**: S3 upload kích hoạt sự kiện vào SQS, Lambda đọc SQS resize và ghi vào một prefix hoặc bucket khác (ghi lại đúng chỗ kích hoạt sự kiện sẽ tạo vòng lặp vô hạn). Đặt maximum concurrency cho event source mapping (ví dụ 50) để chừa concurrency của tài khoản cho các function khác và giữ chi phí đều, visibility timeout ít nhất 6 lần timeout của function, bật `ReportBatchItemFailures`, DLQ cho ảnh hỏng. Dồn đầu tuần thì queue chỉ dài ra, không ai bị quá tải.\n\n**3. GPS tài xế**: 40.000 ÷ 2 = 20.000 bản ghi/giây, cần thứ tự theo tài xế và giữ 7 ngày: đây là log, không phải queue hay bus. Kinesis Data Streams (partition key `driver_id`; provisioned cần ít nhất 20 shard vì mỗi shard nhận 1.000 bản ghi/giây, hoặc dùng on-demand; retention mở rộng 7 ngày có tính phí) hoặc MSK nếu đội muốn giữ client Kafka. Không đưa luồng này qua bus kiểu rule của EventBridge: 20.000 sự kiện/giây khớp rule vượt xa quota invocation 2.250/giây ở Singapore (sự kiện tới đích bị trễ dồn), và bus không cho đọc lại theo thứ tự từng tài xế. Vị trí hiện tại để ghép chuyến nằm ở Redis geospatial, không đọc từ log (bài Thiết kế ứng dụng gọi xe).\n\n**4. Giỏ hàng**: DynamoDB, partition key `user_id`, TTL để xoá giỏ bỏ quên. On-demand dễ nhất, nhưng bảng mới chỉ chịu ngay 12.000 đọc/giây: làm ấm (warm throughput) lên mức đỉnh trước khi chuyển traffic. Mỗi user một key nên không có key nóng; đọc eventually consistent tốn nửa đơn vị đọc so với strongly consistent. Khi tải đã ổn định, so sánh với provisioned + auto scaling.\n\n**5. Cache thực đơn**: ElastiCache Valkey node-based Multi-AZ (tải đều, dễ đoán nên rẻ hơn serverless), cache-aside với TTL và xoá key khi nhà hàng sửa thực đơn. App chịu được vài chục giây failover vì luôn đọc được từ database.\n\n**Vì sao không giữ giao thức cũ**: Amazon MQ for RabbitMQ giữ nguyên code và giao thức, là bước chuyển nhanh nhất nếu muốn giảm rủi ro trước; đội chọn SNS/SQS vì không còn phải định cỡ broker và có DLQ, filter sẵn, đổi lại phụ thuộc API của AWS. Tương tự, DocumentDB giữ API kiểu MongoDB, nhưng giỏ hàng chỉ cần tra theo khoá nên DynamoDB vận hành ít hơn; đổi lại là viết lại tầng truy cập dữ liệu và lock-in.\n\n**Chuyển đổi**: từng luồng một, bắt đầu từ cache (ít rủi ro nhất). Với queue: producer ghi song song sang RabbitMQ và SQS một thời gian, consumer mới chạy ở chế độ chỉ ghi log để so sánh, rồi chuyển hẳn và rút RabbitMQ khi queue cũ đã cạn. Với MongoDB sang DynamoDB: viết lại theo access pattern, ghi kép hoặc CDC, đối soát, rồi chuyển đọc. Đặt cảnh báo cho metric throttle của DynamoDB và Kinesis, tuổi message cũ nhất của SQS. Tính lại chi phí: hoá đơn managed có thể cao hơn 3 cụm EC2, nhưng bỏ được 1–2 sự cố mỗi tháng và phần lớn công vận hành của đội 6 người.",
+  "tradeoffs": [
+    {
+      "option": "SNS + SQS cho sự kiện nghiệp vụ",
+      "pros": [
+        "Throughput gần như không giới hạn, rẻ",
+        "Mỗi bên một queue và DLQ, cô lập lỗi tốt"
+      ],
+      "cons": [
+        "Bộ lọc kém phong phú hơn EventBridge, ít loại đích hơn",
+        "Topic standard không phát lại sự kiện cũ (chỉ topic FIFO có archive và replay)"
+      ]
+    },
+    {
+      "option": "EventBridge",
+      "pros": [
+        "Rule theo nội dung, nhiều loại đích, chuyển giữa tài khoản",
+        "Archive và replay, schema registry"
+      ],
+      "cons": [
+        "Bus kiểu rule có quota invocation theo region, ở Singapore khá thấp",
+        "Latency cao hơn và giá mỗi sự kiện cao hơn SNS"
+      ]
+    },
+    {
+      "option": "MSK (Kafka managed) cho mọi luồng",
+      "pros": [
+        "Một nền tảng cho cả sự kiện và luồng lớn, đọc lại được",
+        "Giao thức Kafka mở, dễ mang đi"
+      ],
+      "cons": [
+        "Vẫn phải định cỡ broker, partition, nâng phiên bản",
+        "Không có ack từng message, retry và DLQ phải tự làm"
+      ]
+    }
+  ]
+}

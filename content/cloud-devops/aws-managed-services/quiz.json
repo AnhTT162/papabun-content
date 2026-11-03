@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "dynamo-hot-key",
+      "kind": "single",
+      "prompt": "Bảng DynamoDB on-demand lưu bộ đếm lượt xem với partition key `campaign_id`. Một chiến dịch viral nhận 3.000 lượt ghi mỗi giây vào cùng một item, bảng tổng chỉ 3.500 ghi/giây nhưng bị `ProvisionedThroughputExceededException` liên tục. Vì sao và sửa thế nào?",
+      "options": [
+        "Một item nằm ở một partition, tối đa 1.000 WCU; chia khoá thành nhiều mảnh rồi cộng lại",
+        "On-demand chỉ chịu 1.000 ghi/giây cho mỗi bảng; chuyển sang provisioned để tăng",
+        "Bảng mới chưa được làm ấm; đợi 30 phút để on-demand tự nâng giới hạn của bảng",
+        "Bộ đếm phải dùng transaction; ghi `UpdateItem` thường bị DynamoDB giới hạn tốc độ"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi partition chịu tối đa 3.000 RCU và 1.000 WCU; một item luôn ở một partition, adaptive capacity có tách nó ra riêng cũng không vượt được 1.000 WCU. Bảng còn dư không giúp. Sửa: write sharding, ví dụ `campaign_id#0`…`campaign_id#9` chọn ngẫu nhiên khi ghi và cộng 10 item khi đọc, hoặc gom đếm trong bộ nhớ vài giây rồi ghi một lần. On-demand chịu ngay hàng nghìn ghi/giây mỗi bảng; đợi hay chuyển provisioned không đổi giới hạn partition; transaction còn tốn gấp đôi."
+    },
+    {
+      "id": "lambda-sqs-db",
+      "kind": "single",
+      "prompt": "Một Lambda đọc SQS và ghi vào RDS PostgreSQL (`max_connections` 400). Sau một đợt dồn 2 triệu message, database báo `too many clients`, nhiều invocation lỗi và message lặp lại vào DLQ. Cấu hình nào giải quyết gốc vấn đề?",
+      "options": [
+        "Đặt maximum concurrency cho event source mapping và dùng RDS Proxy",
+        "Tăng visibility timeout của queue lên 12 giờ để không giao lại",
+        "Tăng `max_connections` của PostgreSQL lên 5.000 cho đủ invocation",
+        "Chuyển queue sang FIFO để Lambda xử lý từng message một"
+      ],
+      "answer": 0,
+      "explanation": "Khi queue dài, event source mapping scale thêm tối đa 300 lời gọi mỗi phút tới 1.250; mỗi lời gọi mở kết nối riêng nên vượt 400 rất nhanh. Maximum concurrency giới hạn số lời gọi song song từ queue này, RDS Proxy gom kết nối. Visibility timeout dài chỉ làm message lỗi chậm được giao lại; `max_connections` 5.000 làm PostgreSQL tốn bộ nhớ và chậm đi; FIFO giảm song song theo message group nhưng không phải công cụ giới hạn tải và đổi cả ngữ nghĩa."
+    },
+    {
+      "id": "eventbridge-quota",
+      "kind": "single",
+      "prompt": "Đội muốn đưa mọi sự kiện qua một EventBridge bus kiểu rule (Classic) ở Singapore, gồm cả luồng clickstream 15.000 sự kiện/giây, mỗi sự kiện khớp một rule gửi tới Lambda phân tích. Rủi ro lớn nhất là gì?",
+      "options": [
+        "Vượt quota invocation theo region, sự kiện tới đích bị trễ dồn",
+        "EventBridge không bảo đảm sự kiện tới đích ít nhất một lần",
+        "Rule chỉ lọc được theo tên sự kiện, không theo nội dung JSON",
+        "Mỗi bus chỉ cho tối đa 5 rule nên không đủ cho các đích"
+      ],
+      "answer": 0,
+      "explanation": "Bus kiểu rule ở Singapore có quota invocation 2.250 mỗi giây: 15.000 sự kiện khớp rule mỗi giây vượt xa, nên invocation vẫn diễn ra nhưng bị trễ, độ trễ dồn mãi; `PutEvents` (1.200 request/giây, mỗi request gộp nhiều sự kiện) cũng phải gộp batch và retry khi bị throttle. Quota tăng được nhưng giá tính theo từng sự kiện. Clickstream là luồng lớn cần thứ tự và đọc lại: Kinesis hay MSK hợp hơn; EventBridge giữ cho sự kiện nghiệp vụ tần suất vừa. EventBridge có retry tới đích và DLQ, lọc được theo nội dung, và mỗi bus cho tới hàng trăm rule (mặc định 300)."
+    },
+    {
+      "id": "managed-or-self",
+      "kind": "single",
+      "prompt": "Đội 5 người đang dùng các dịch vụ managed. Trường hợp nào tự vận hành (trên EC2 hay Kubernetes) có lý do mạnh nhất?",
+      "options": [
+        "Cần tính năng bản managed chưa có, và đội đã có người vận hành hệ đó",
+        "Hoá đơn bản managed cao hơn tiền EC2 cho cùng cấu hình máy",
+        "Muốn kiểm soát mọi tham số cấu hình dù chưa ai vận hành hệ đó",
+        "Muốn tránh lock-in nên tự chạy mọi thứ thay vì dùng managed"
+      ],
+      "answer": 0,
+      "explanation": "So hoá đơn với tiền EC2 bỏ quên công người: trực đêm, vá, nâng phiên bản, diễn tập failover; với đội 5 người phần này thường lớn hơn khoản chênh. Muốn kiểm soát cấu hình mà không có người hiểu hệ thống là tự mua thêm rủi ro. Lock-in xử lý bằng cách chọn dịch vụ giữ giao thức mở (MSK, ElastiCache Valkey, RDS PostgreSQL, Amazon MQ), không cần tự chạy. Thiếu tính năng thật sự cần và có người đủ năng lực vận hành là lý do hợp lý."
+    }
+  ]
+}

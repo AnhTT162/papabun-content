@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-tier-subnets", "front": "Ba loại subnet của một web app chuẩn trên AWS?", "back": "Public cho ALB và NAT gateway; private cho app; private riêng cho database. Mỗi loại có ở mỗi AZ." },
+    { "id": "sg-reference", "front": "Vì sao luật SG nên tham chiếu SG ID thay vì CIDR?", "back": "Mọi ENI mang SG nguồn đều được phép, bất kể IP hay số instance; máy khác trong cùng subnet thì không." },
+    { "id": "alb-vs-nlb", "front": "Khi nào chọn NLB thay vì ALB?", "back": "Cần TCP/UDP thuần, IP tĩnh mỗi AZ để đối tác whitelist, giữ IP client, rất nhiều kết nối, hoặc làm đầu vào cho PrivateLink." },
+    { "id": "alb-defaults", "front": "Mặc định health check và deregistration của ALB?", "back": "Kiểm mỗi 30 giây, timeout 5 giây, 2 lần lỗi thì rút, 5 lần đạt thì đưa lại; deregistration delay 300 giây." },
+    { "id": "idle-timeout", "front": "Vì sao keep-alive của app phải dài hơn idle timeout 60 giây của ALB?", "back": "Nếu app đóng kết nối nhàn rỗi trước, ALB có thể gửi request vào kết nối vừa đóng và trả 502 cho client." },
+    { "id": "cw-memory", "front": "Vì sao EC2 không có metric bộ nhớ mặc định?", "back": "Metric mặc định đo từ hypervisor, không thấy bộ nhớ bên trong máy ảo. Cần CloudWatch agent." },
+    { "id": "instance-profile", "front": "App trên EC2 lấy quyền AWS thế nào mà không cần access key?", "back": "IAM role gắn qua instance profile; SDK lấy credential tạm thời từ metadata service và tự làm mới." },
+    { "id": "imdsv2", "front": "IMDSv2 chống được gì?", "back": "SSRF đọc credential: mọi request phải kèm token lấy bằng `PUT`, hop limit mặc định 1. Container trên EC2 cần hop limit 2." },
+    { "id": "rds-pitr", "front": "Point-in-time restore của RDS cho ra gì?", "back": "Một instance mới với endpoint mới, khôi phục về thời điểm trong thời gian giữ backup (tối đa 35 ngày); không ghi đè instance đang chạy." },
+    { "id": "burstable", "front": "Instance T3 hết CPU credit thì chuyện gì xảy ra?", "back": "T3/T4g mặc định unlimited: không bị chậm nhưng tính thêm tiền. T2 mặc định standard: bị hạ về baseline." }
+  ]
+}

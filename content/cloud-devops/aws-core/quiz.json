@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sg-chain",
+      "kind": "single",
+      "prompt": "SG của RDS hiện mở 5432 cho `10.0.0.0/16` (cả VPC). Đội bảo mật yêu cầu chỉ app được vào. App chạy trong Auto Scaling group từ 3 tới 12 instance, IP thay đổi liên tục. Cách đúng?",
+      "options": [
+        "Luật inbound 5432 với nguồn là SG ID của app",
+        "Luật inbound 5432 cho CIDR của các subnet app",
+        "Thêm NACL deny mọi IP ngoài subnet app vào subnet DB",
+        "Cập nhật danh sách IP instance vào SG mỗi lần scale"
+      ],
+      "answer": 0,
+      "explanation": "Security group cho phép nguồn là một SG khác: mọi ENI mang SG của app đều vào được, bất kể IP hay số instance. CIDR subnet app vẫn cho mọi thứ khác đặt trong subnet đó (task, Lambda, máy debug) vào database. NACL stateless, phải mở cả chiều về và vẫn theo CIDR. Cập nhật IP theo scale là tự động hoá dễ hỏng và có cửa sổ sai lệch."
+    },
+    {
+      "id": "deregistration-delay",
+      "kind": "single",
+      "prompt": "Mỗi lần deploy, ECS service 6 task của bạn mất hơn 30 phút dù app khởi động trong 40 giây và tắt êm trong 20 giây. Rolling update thay 1 task mỗi đợt. Thứ gì đóng góp nhiều thời gian nhất?",
+      "options": [
+        "Deregistration delay mặc định 300 giây của target group",
+        "Idle timeout 60 giây của ALB giữ kết nối cũ",
+        "Health check 30 giây cần 5 lần thành công để vào",
+        "Cross-zone load balancing phải đồng bộ giữa các AZ"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi task cũ bị rút khỏi target group phải chờ hết deregistration delay, mặc định 300 giây, dù app đã xong việc sau 20 giây: 6 đợt × 5 phút là 30 phút. Giảm delay về khoảng 30–60 giây, lớn hơn thời gian tắt êm. Health check 5 × 30 giây cũng góp phần (tới 2,5 phút mỗi đợt) nhưng ít hơn; có thể giảm interval hoặc threshold. Idle timeout chỉ đóng kết nối nhàn rỗi; cross-zone không có bước đồng bộ nào."
+    },
+    {
+      "id": "memory-metric",
+      "kind": "single",
+      "prompt": "Bạn dựng alarm CloudWatch cho EC2 chạy Spring Boot và muốn cảnh báo khi bộ nhớ dùng trên 90%. Trong danh sách metric của namespace `AWS/EC2` không tìm thấy metric bộ nhớ nào. Vì sao?",
+      "options": [
+        "Hypervisor không thấy bộ nhớ bên trong máy ảo; cần CloudWatch agent",
+        "Metric bộ nhớ chỉ có khi bật detailed monitoring có tính phí",
+        "Metric bộ nhớ nằm ở namespace `AWS/EBS` chứ không ở `AWS/EC2`",
+        "Metric bộ nhớ chỉ có khi instance bật EBS-optimized"
+      ],
+      "answer": 0,
+      "explanation": "Metric mặc định của EC2 do hypervisor đo từ bên ngoài: CPU, mạng, I/O đĩa, trạng thái. Hệ điều hành khách quản lý bộ nhớ, hypervisor không biết trang nào đang dùng. CloudWatch agent chạy trong máy đẩy `mem_used_percent` và dung lượng đĩa vào namespace `CWAgent`. Detailed monitoring chỉ đổi chu kỳ từ 5 phút xuống 1 phút; `AWS/EBS` chỉ có metric của volume, EBS-optimized chỉ là băng thông riêng cho đĩa. Với JVM, nhìn thêm metric heap từ Micrometer vì bộ nhớ hệ điều hành gồm cả page cache."
+    },
+    {
+      "id": "imdsv2-ssrf",
+      "kind": "single",
+      "prompt": "App có lỗ hổng SSRF: kẻ tấn công khiến server gửi `GET` tới URL bất kỳ và đọc response. Instance có IAM role đọc S3. Cấu hình nào chặn được việc lấy credential qua `http://169.254.169.254/...`?",
+      "options": [
+        "Bật IMDSv2 bắt buộc: cần token lấy bằng `PUT` trước",
+        "Thu hẹp security group outbound của instance",
+        "Đặt instance vào subnet private không có NAT",
+        "Dùng access key trong biến môi trường thay role"
+      ],
+      "answer": 0,
+      "explanation": "IMDSv2 bắt buộc mọi request kèm token lấy bằng `PUT` (có hop limit), nên SSRF chỉ gửi được `GET` không đọc được credential. Metadata service là địa chỉ link-local trên chính máy, không đi qua security group hay NAT. Access key dài hạn còn tệ hơn: lộ một lần là dùng được mãi tới khi thu hồi. Vẫn cần sửa SSRF trong app (bài OWASP Top 10)."
+    }
+  ]
+}

@@ -365,8 +365,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `docker` | Docker & container | junior | Namespace và cgroup, image và layer, multi-stage, image cho JVM, bảo mật image | A L D B | ✅ |
 | 5 | `kubernetes-core` | Kubernetes cơ bản | mid | Pod, Deployment, Service, Ingress, ConfigMap/Secret | A L D | ✅ |
 | 6 | `k8s-packaging` | ✚ Helm, Kustomize & cấu hình nhiều môi trường | mid | Template và overlay, quản lý giá trị theo môi trường, secret | L B | ✅ |
-| 7 | `aws-core` | AWS cho kỹ sư backend | mid | VPC, EC2, ALB/NLB, RDS, IAM: dựng một ứng dụng web cơ bản | L D Sc | ⬜ |
-| 8 | `aws-managed-services` | ✚ Dịch vụ managed của AWS | mid | SQS/SNS, DynamoDB, ElastiCache, Lambda, chọn managed hay tự vận hành | L Sc | ⬜ |
+| 7 | `aws-core` | AWS cho kỹ sư backend | mid | VPC, EC2, ALB/NLB, RDS, IAM: dựng một ứng dụng web cơ bản | L D Sc | ✅ |
+| 8 | `aws-managed-services` | ✚ Dịch vụ managed của AWS | mid | SQS/SNS, DynamoDB, ElastiCache, Lambda, chọn managed hay tự vận hành | L Sc | ✅ |
 | 9 | `aws-edge-storage` | ✚ Route 53, CloudFront & lưu trữ trên AWS | mid | Routing policy, CDN, EBS/EFS/S3 và lớp lưu trữ, chọn loại storage | L D Sc | ⬜ |
 | 10 | `ci-cd-pipeline` | CI/CD pipeline | mid | Các stage, artifact, trunk-based, feature flag | A L D | ⬜ |
 | 11 | `graceful-shutdown` | ✚ Graceful shutdown & vòng đời process | mid | SIGTERM và SIGKILL, graceful shutdown của Spring Boot, `preStop` của Kubernetes, rút connection và consumer | L B T | ⬜ |

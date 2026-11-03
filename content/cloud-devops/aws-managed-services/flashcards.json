@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "pick-by-interaction", "front": "Giao việc, phát sự kiện tới nhiều bên, luồng đọc lại được, tra theo khoá: mỗi loại hợp dịch vụ nào trên AWS?", "back": "SQS; SNS (fan-out ra SQS) hoặc EventBridge; Kinesis hoặc MSK; DynamoDB (cộng ElastiCache làm cache)." },
+    { "id": "sqs-size", "front": "SQS cho message tối đa bao lớn, lớn hơn thì làm gì?", "back": "1 MiB. Lớn hơn thì dùng Extended Client Library: payload lên S3, message chỉ giữ con trỏ." },
+    { "id": "eventbridge-quota", "front": "Vì sao không đưa luồng hàng chục nghìn sự kiện mỗi giây qua EventBridge bus kiểu rule?", "back": "Bus kiểu rule có quota invocation theo region (Singapore 2.250 mỗi giây; vượt thì sự kiện tới đích bị trễ) và giá tính theo sự kiện. Luồng lớn dùng Kinesis hoặc MSK." },
+    { "id": "ondemand-scaling", "front": "Bảng DynamoDB on-demand chịu tăng tải đột ngột tới mức nào?", "back": "Bảng mới chịu ngay 4.000 ghi và 12.000 đọc mỗi giây; sau đó gấp đôi đỉnh trước, vượt gấp đôi trong 30 phút có thể bị throttle. Biết trước thì làm ấm bảng." },
+    { "id": "partition-limit", "front": "Giới hạn throughput của một partition DynamoDB?", "back": "3.000 RCU và 1.000 WCU. Key nóng bị throttle dù bảng còn dư; chia khoá thành nhiều mảnh." },
+    { "id": "esm-scaling", "front": "Lambda đọc SQS scale thế nào?", "back": "Bắt đầu 5 lời gọi đồng thời, thêm tối đa 300 mỗi phút, tới 1.250. Đặt maximum concurrency để bảo vệ database." },
+    { "id": "visibility-6x", "front": "Visibility timeout của queue nên đặt bao nhiêu khi Lambda đọc nó?", "back": "Ít nhất 6 lần timeout của function (cộng batch window nếu có), để Lambda còn thời gian retry khi bị throttle." },
+    { "id": "partial-batch", "front": "`ReportBatchItemFailures` giải quyết vấn đề gì?", "back": "Function trả danh sách message lỗi; chỉ chúng được giao lại thay vì cả batch, tránh xử lý lặp các message đã thành công." },
+    { "id": "open-protocol", "front": "Làm sao giảm lock-in khi dùng dịch vụ managed?", "back": "Ưu tiên dịch vụ giữ giao thức mở: MSK (Kafka), ElastiCache (Valkey/Redis), RDS (PostgreSQL). API riêng như DynamoDB, SQS cần adapter nếu tính rời đi." },
+    { "id": "managed-cost", "front": "So sánh chi phí managed với tự vận hành cần tính những gì?", "back": "Hoá đơn cộng công người: trực, vá, nâng phiên bản, diễn tập failover, sự cố. Chỉ so tiền máy là thiếu phần lớn nhất." }
+  ]
+}

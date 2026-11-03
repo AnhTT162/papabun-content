@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Đưa app đặt lịch khám từ một máy chủ lên AWS",
+  "prompt": "Một app đặt lịch khám bệnh: Spring Boot (jar), PostgreSQL 200 GB, file kết quả xét nghiệm PDF lưu trên đĩa cùng máy, tất cả chạy trên **một** máy chủ thuê. Tải thường 150 request/giây, giờ mở đặt lịch sáng thứ Hai lên 1.200 request/giây trong 30 phút. Mỗi instance m7g.large đã đo chịu khoảng 400 request/giây ở p99 dưới 300 ms. Yêu cầu: 99,9% availability theo tháng, mất tối đa 5 phút dữ liệu khi sự cố, khôi phục trong 1 giờ. Cổng thanh toán đối tác chỉ nhận request từ IP đã whitelist. Đội 4 kỹ sư Java, chưa ai vận hành Kubernetes. Thiết kế hạ tầng AWS ở một region và nêu những thay đổi cần làm trong app.",
+  "hints": [
+    "Mất một AZ thì từng thành phần còn chạy không: load balancer, app, database, đường ra Internet, file PDF?",
+    "Với 400 request/giây mỗi instance, cần bao nhiêu instance lúc đỉnh, và nếu đúng lúc đó mất một AZ thì sao?",
+    "Đối tác whitelist IP nào khi app chạy trong subnet private và có thể có nhiều instance?",
+    "App đang giữ những trạng thái gì trên máy, và mỗi thứ phải đi đâu để chạy được nhiều instance?"
+  ],
+  "solution": "**Mạng**: VPC `/16` trên 3 AZ, mỗi AZ subnet public (ALB, NAT gateway), private app, private database. Mỗi AZ một NAT gateway gắn Elastic IP; gửi đối tác cả 3 IP này để whitelist, vì app ra Internet qua NAT của AZ mình. Thêm gateway endpoint cho S3 (miễn phí) để file PDF không đi qua NAT và không mất phí xử lý mỗi GB; interface endpoint cho Secrets Manager nếu muốn traffic tới dịch vụ AWS không ra Internet.\n\n**Phía vào**: ALB với chứng chỉ ACM, health check vào `/actuator/health/readiness`, giảm deregistration delay từ 300 xuống khoảng 40 giây cho khớp graceful shutdown của app, đặt keep-alive của Tomcat dài hơn idle timeout 60 giây của ALB.\n\n**App**: ECS trên Fargate (hoặc EC2 Auto Scaling group nếu muốn tự kiểm soát AMI) trải 3 AZ. Đỉnh 1.200 request/giây ÷ 400 = 3 instance; thêm dư để mất một AZ vẫn đủ: cần 3 instance ở 2 AZ còn lại, tức 2 mỗi AZ, tổng 6 lúc đỉnh. Lúc thường 150 request/giây chỉ cần 1 nhưng giữ tối thiểu 3 (một mỗi AZ). Vì đỉnh có giờ cố định, dùng scheduled scaling lên 6 trước 15 phút thay vì chờ CPU tăng: JVM cần thời gian khởi động và warm-up. Image build cho arm64 nếu chạy Graviton.\n\n**Trạng thái trong app**: file PDF chuyển sang S3 (bucket chặn public, mã hoá, tải bằng presigned URL ngắn hạn sau khi kiểm quyền), session (nếu có) sang Redis hoặc token, cấu hình và secret lấy từ biến môi trường, Secrets Manager. Kiểm `@Scheduled` không chạy trùng ở nhiều instance.\n\n**Database**: RDS PostgreSQL Multi-AZ (standby đồng bộ: mất một AZ không mất dữ liệu đã commit, failover 60–120 giây). Backup tự động giữ 14–35 ngày cho point-in-time restore, dùng khi lỗi logic hay xoá nhầm: RDS đẩy transaction log lên khoảng mỗi 5 phút, nên RPO của đường này xấp xỉ 5 phút, sát đúng giới hạn yêu cầu; muốn dư hơn thì thêm replica bất đồng bộ hoặc ghi log thay đổi ra ngoài. Thử restore định kỳ và đo thời gian: 200 GB phải xong trong 1 giờ. Pool kết nối: 6 instance × 20 = 120 kết nối lúc đỉnh (cộng thêm khi rolling deploy có instance mới và cũ cùng chạy); kiểm `max_connections` của cỡ instance database đã chọn (RDS tính mặc định theo bộ nhớ) còn dư cho kết nối quản trị và migration.\n\n**Quyền và bảo mật**: SG chuỗi ALB → app → DB theo SG ID; task role (hoặc instance profile) chỉ đọc đúng bucket và secret cần; IMDSv2 bắt buộc nếu dùng EC2; không access key nào trong code.\n\n**Kiểm 99,9%**: 99,9% theo tháng cho phép khoảng 43 phút ngừng. Failover RDS và deploy là hai nguồn ngừng chính: deploy rolling với readiness probe, app retry kết nối database khi failover. Theo dõi tỉ lệ lỗi 5xx của ALB và p99 theo SLO (bài Observability).",
+  "tradeoffs": [
+    {
+      "option": "ECS trên Fargate",
+      "pros": [
+        "Không có máy để vá, scale theo task",
+        "Đội Java học nhanh: task definition, service, ALB"
+      ],
+      "cons": [
+        "Đắt hơn EC2 cùng cấu hình khi chạy đều 24/7",
+        "Ít tuỳ chỉnh tầng máy (kernel, agent riêng)"
+      ]
+    },
+    {
+      "option": "EC2 Auto Scaling group chạy jar",
+      "pros": [
+        "Rẻ nhất khi dùng Savings Plans, kiểm soát hoàn toàn",
+        "Không cần thêm lớp container nếu chưa quen"
+      ],
+      "cons": [
+        "Tự vá AMI, tự làm instance refresh khi deploy",
+        "Khởi động máy mới chậm hơn task Fargate"
+      ]
+    },
+    {
+      "option": "EKS",
+      "pros": [
+        "Chuẩn chung khi có nhiều service và nhiều team",
+        "Hệ sinh thái lớn: Helm, Argo CD, HPA"
+      ],
+      "cons": [
+        "Quá nặng cho một app và đội 4 người chưa vận hành Kubernetes",
+        "Phí control plane và công nâng cấp phiên bản đều đặn"
+      ]
+    }
+  ]
+}

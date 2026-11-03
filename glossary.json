@@ -2485,7 +2485,7 @@
       "meaning": "Khoảng thời gian SQS ẩn một message khỏi các consumer khác sau khi nó được nhận; hết thời gian mà chưa bị xoá thì message hiện lại.",
       "example": "Mặc định 30 giây, tối đa 12 giờ; gia hạn bằng `ChangeMessageVisibility`.",
       "related": ["message-ack", "message-queue"],
-      "topics": ["messaging-fundamentals", "design-message-queue"]
+      "topics": ["messaging-fundamentals", "design-message-queue", "aws-managed-services"]
     },
     {
       "id": "delivery-semantics",
@@ -2509,7 +2509,7 @@
       "meaning": "Dead-letter queue: queue riêng chứa message lỗi quá số lần cho phép, để chúng không chặn các message khác và được xem xét, đẩy lại sau.",
       "example": "SQS redrive policy `maxReceiveCount: 5` chuyển message sang `orders-dlq`.",
       "related": ["poison-message", "retry-backoff"],
-      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification", "design-job-scheduler", "integration-patterns"]
+      "topics": ["messaging-fundamentals", "rabbitmq", "kafka-troubleshooting", "producer-consumer", "event-driven-architecture", "design-notification", "design-job-scheduler", "integration-patterns", "aws-managed-services"]
     },
     {
       "id": "poison-message",
@@ -2525,7 +2525,7 @@
       "meaning": "Một message được nhân thành nhiều bản cho nhiều bên nhận độc lập.",
       "example": "SNS đẩy `OrderPlaced` sang ba SQS queue; mỗi queue có tốc độ và DLQ riêng.",
       "related": ["pub-sub"],
-      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture", "tail-latency", "design-notification"]
+      "topics": ["messaging-fundamentals", "distributed-fundamentals", "event-driven-architecture", "tail-latency", "design-notification", "aws-managed-services"]
     },
     {
       "id": "cache-aside",
@@ -6253,7 +6253,7 @@
       "meaning": "Firewall ảo gắn vào interface mạng trên AWS, chỉ có luật cho phép. Nó stateful: cho chiều vào thì response tự được đi ra. Gói không khớp luật bị bỏ lặng lẽ nên phía gọi thấy timeout.",
       "example": "Security group của database cho phép TCP 5432 từ dải `10.0.1.0/24`.",
       "related": ["route-table", "subnet"],
-      "topics": ["network-basics", "security-architecture"]
+      "topics": ["network-basics", "security-architecture", "aws-core"]
     },
     {
       "id": "mtu",
@@ -10469,7 +10469,7 @@
       "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
       "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
       "related": ["shared-responsibility-model", "zero-trust"],
-      "topics": ["well-architected", "security-architecture", "secret-management", "secure-sdlc"]
+      "topics": ["well-architected", "security-architecture", "secret-management", "secure-sdlc", "aws-core"]
     },
     {
       "id": "shared-responsibility-model",
@@ -11389,7 +11389,7 @@
       "meaning": "Dịch vụ NAT quản lý của AWS cho máy trong subnet private ra ngoài. Tính phí theo giờ và theo mỗi GB xử lý, kể cả khi đích là dịch vụ AWS cùng region.",
       "example": "32 TB đi qua NAT mỗi tháng tốn khoảng 1.475 USD phí xử lý; chuyển phần đi S3 sang gateway endpoint thì gần như hết.",
       "related": ["nat", "vpc-endpoint"],
-      "topics": ["cost-finops", "cloud-fundamentals"]
+      "topics": ["cost-finops", "cloud-fundamentals", "aws-core"]
     },
     {
       "id": "cost-allocation-tag",
@@ -11501,7 +11501,7 @@
       "meaning": "Total cost of ownership: tổng chi phí sở hữu một giải pháp trong nhiều năm, gồm cả công làm, vận hành, tích hợp, license, hạ tầng và chi phí thoát, không chỉ giá mua.",
       "example": "SaaS rẻ hơn năm đầu nhưng TCO 3 năm ngang tự vận hành khi MAU tăng gấp 4.",
       "related": ["vendor-lock-in", "exit-plan"],
-      "topics": ["build-vs-buy", "enterprise-architecture"]
+      "topics": ["build-vs-buy", "enterprise-architecture", "aws-managed-services"]
     },
     {
       "id": "saas",
@@ -14062,6 +14062,102 @@
       "example": "Helm 4 cài release mới bằng server-side apply; `kubectl scale` sửa `replicas` thì lần apply sau báo conflict.",
       "related": ["strategic-merge-patch", "helm"],
       "topics": ["k8s-packaging"]
+    },
+    {
+      "id": "vpc",
+      "term": "VPC",
+      "meaning": "Virtual Private Cloud: mạng riêng của bạn trên AWS với dải CIDR riêng, chia thành subnet theo AZ, có route table, Internet gateway, NAT gateway và security group.",
+      "example": "VPC `10.0.0.0/16` chia mỗi AZ ba subnet `/20`: public, app, database.",
+      "related": ["subnet", "security-group", "nat-gateway"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "application-load-balancer",
+      "term": "ALB",
+      "meaning": "Application Load Balancer của AWS: load balancer L7 cho HTTP/HTTPS/gRPC, định tuyến theo host và path, kết thúc TLS, kiểm health check từng target.",
+      "example": "ALB gửi `/api/*` tới target group của service orders và `/` tới frontend.",
+      "related": ["network-load-balancer", "load-balancer", "deregistration-delay"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "network-load-balancer",
+      "term": "NLB",
+      "meaning": "Network Load Balancer của AWS: load balancer L4 cho TCP/UDP/TLS, mỗi AZ một IP tĩnh, giữ IP client, chịu rất nhiều kết nối; cross-zone mặc định tắt.",
+      "example": "Đối tác whitelist các Elastic IP của NLB đứng trước dịch vụ gRPC.",
+      "related": ["application-load-balancer", "load-balancer"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "auto-scaling-group",
+      "term": "Auto Scaling group",
+      "meaning": "Nhóm instance EC2 tạo từ một launch template, giữ số lượng giữa min và max, trải đều các AZ, tự thay instance hỏng và co giãn theo chính sách.",
+      "example": "ASG từ 3 tới 12 instance, target tracking giữ CPU trung bình 50%.",
+      "related": ["autoscaling", "elasticity"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "deregistration-delay",
+      "term": "Deregistration delay",
+      "meaning": "Thời gian load balancer của AWS chờ request đang dở trên một target hoàn tất trước khi rút hẳn target đó; mặc định 300 giây.",
+      "example": "Giảm xuống 40 giây khi app tắt êm trong 30 giây để deploy không mất 5 phút mỗi đợt.",
+      "related": ["connection-draining", "application-load-balancer"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "iam-role",
+      "term": "IAM role",
+      "meaning": "Danh tính IAM không có mật khẩu hay key dài hạn; ai được phép \"đảm nhận\" role thì nhận credential tạm thời có quyền của role đó.",
+      "example": "Task ECS của orders đảm nhận role `orders-task` chỉ được đọc bucket hoá đơn và một secret.",
+      "related": ["instance-profile", "least-privilege"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "instance-profile",
+      "term": "Instance profile",
+      "meaning": "Vỏ chứa một IAM role để gắn vào EC2; SDK trên máy lấy credential tạm thời của role đó từ instance metadata service.",
+      "example": "EC2 gắn instance profile `orders-ec2` nên AWS SDK for Java tự có quyền mà không cần access key.",
+      "related": ["iam-role", "imdsv2"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "imdsv2",
+      "term": "IMDSv2",
+      "meaning": "Phiên bản 2 của instance metadata service trên EC2: mọi request cần token lấy bằng `PUT`, giới hạn hop, giúp chặn tấn công SSRF đọc credential.",
+      "example": "`aws ec2 modify-instance-metadata-options --http-tokens required` bắt buộc dùng IMDSv2.",
+      "related": ["instance-profile", "ssrf"],
+      "topics": ["aws-core"]
+    },
+    {
+      "id": "amazon-sqs",
+      "term": "Amazon SQS",
+      "meaning": "Hàng đợi managed của AWS: giữ từng message tới khi consumer xoá, có visibility timeout, DLQ, kiểu standard (at-least-once) và FIFO (thứ tự theo message group). Message tối đa 1 MiB.",
+      "example": "Mỗi ảnh mới upload tạo một message trong SQS; worker resize xong thì `DeleteMessage`.",
+      "related": ["visibility-timeout", "dead-letter-queue", "amazon-sns"],
+      "topics": ["aws-managed-services"]
+    },
+    {
+      "id": "amazon-sns",
+      "term": "Amazon SNS",
+      "meaning": "Dịch vụ pub/sub managed của AWS: nhận một message và đẩy ngay tới mọi subscriber (SQS, Lambda, HTTP, email, SMS), có filter policy theo thuộc tính. Không giữ message để đọc lại.",
+      "example": "Topic `order-placed` fan-out tới 4 queue SQS của 4 team.",
+      "related": ["amazon-sqs", "fan-out", "amazon-eventbridge"],
+      "topics": ["aws-managed-services"]
+    },
+    {
+      "id": "amazon-eventbridge",
+      "term": "Amazon EventBridge",
+      "meaning": "Event bus managed của AWS: rule lọc sự kiện theo nội dung JSON và gửi tới nhiều loại đích, chuyển giữa tài khoản, có archive và replay. Quota throughput theo region.",
+      "example": "Rule chỉ chuyển sự kiện đơn hàng có `total > 10000000` tới service chống gian lận.",
+      "related": ["amazon-sns", "event-driven-architecture"],
+      "topics": ["aws-managed-services"]
+    },
+    {
+      "id": "amazon-dynamodb",
+      "term": "Amazon DynamoDB",
+      "meaning": "Database key-value và document managed của AWS, latency ổn định ở quy mô lớn; khoá gồm partition key và sort key, chế độ on-demand hoặc provisioned, mỗi partition tối đa 3.000 RCU và 1.000 WCU.",
+      "example": "Bảng giỏ hàng với partition key `user_id`, TTL xoá giỏ bỏ quên sau 30 ngày.",
+      "related": ["partition-key", "single-table-design", "gsi"],
+      "topics": ["aws-managed-services"]
     }
   ]
 }

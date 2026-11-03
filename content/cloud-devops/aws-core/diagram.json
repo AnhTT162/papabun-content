@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Ba tầng mạng và chuỗi security group",
+  "nodes": [
+    { "id": "internet", "label": "Người dùng", "kind": "client", "x": 0.1, "y": 0.05 },
+    { "id": "alb", "label": "ALB (subnet public)", "kind": "generic", "x": 0.85, "y": 0.05 },
+    { "id": "nat", "label": "NAT gateway mỗi AZ", "kind": "generic", "x": 0.1, "y": 0.5 },
+    { "id": "app", "label": "App ASG (subnet private)", "kind": "service", "x": 0.85, "y": 0.5 },
+    { "id": "secrets", "label": "Secrets Manager", "kind": "external", "x": 0.1, "y": 0.95 },
+    { "id": "rds", "label": "RDS Multi-AZ (subnet DB)", "kind": "database", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "internet-alb", "from": "internet", "to": "alb", "label": "443 từ 0.0.0.0/0" },
+    { "id": "alb-app", "from": "alb", "to": "app", "label": "8080 từ sg-alb" },
+    { "id": "app-rds", "from": "app", "to": "rds", "label": "5432 từ sg-app" },
+    { "id": "app-nat", "from": "app", "to": "nat", "label": "0.0.0.0/0 ra ngoài" },
+    { "id": "app-secrets", "from": "app", "to": "secrets", "label": "IAM role" }
+  ],
+  "steps": [
+    { "caption": "Chỉ ALB có mặt ở subnet public và chỉ SG của ALB mở 443 cho Internet. ALB kết thúc TLS bằng chứng chỉ ACM.", "show": ["internet", "alb", "internet-alb"], "highlight": ["internet-alb"] },
+    { "caption": "App ở subnet private, không có IP public. SG của app chỉ nhận 8080 từ SG của ALB (tham chiếu theo ID), nên thêm bớt instance không phải sửa luật.", "show": ["app", "alb-app"], "highlight": ["alb-app"] },
+    { "caption": "SG của database chỉ nhận 5432 từ SG của app. Máy trong cùng VPC mà không mang sg-app cũng không vào được.", "show": ["rds", "app-rds"], "highlight": ["app-rds"] },
+    { "caption": "App gọi API ngoài qua NAT gateway ở chính AZ của nó; một NAT dùng chung cho mọi AZ là điểm hỏng duy nhất và thêm phí truyền giữa AZ.", "show": ["nat", "app-nat"], "highlight": ["app-nat"] },
+    { "caption": "App đọc password từ Secrets Manager bằng credential tạm thời của IAM role lấy qua IMDSv2, đi qua NAT hoặc một VPC endpoint; không có access key nào trên máy.", "show": ["secrets", "app-secrets"], "highlight": ["app-secrets"] },
+    { "caption": "Mất một AZ: ALB rút target hỏng sau hai lần health check thất bại, ASG tạo instance ở AZ còn lại, RDS failover sang standby trong 60–120 giây.", "show": [], "highlight": ["alb", "app", "rds"] }
+  ]
+}

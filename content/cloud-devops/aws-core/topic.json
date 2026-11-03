@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "aws-core",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "AWS cho kỹ sư backend",
+  "summary": "Dựng một web app trên AWS: VPC ba tầng subnet trên nhiều AZ, chuỗi security group, ALB và NLB (health check, deregistration delay, idle timeout, cross-zone), EC2 và Auto Scaling group, RDS Multi-AZ và point-in-time restore, IAM role và IMDSv2 thay cho access key.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 16,
+  "prerequisites": ["cloud-fundamentals", "network-basics"],
+  "terms": ["vpc", "application-load-balancer", "network-load-balancer", "auto-scaling-group", "deregistration-delay", "iam-role", "instance-profile", "imdsv2", "security-group", "nat-gateway", "least-privilege"],
+  "references": [
+    { "title": "AWS: Health checks for Application Load Balancer target groups", "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html" },
+    { "title": "AWS: Network Load Balancers", "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html" },
+    { "title": "AWS: Multi-AZ DB instance deployments", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html" },
+    { "title": "AWS: Use the Instance Metadata Service (IMDSv2)", "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Người dùng báo lác đác lỗi 502 từ ALB, app không có log lỗi nào. Bạn nhìn gì?\" Metric `HTTPCode_ELB_502_Count` (lỗi do ALB sinh, khác `HTTPCode_Target_5XX_Count` do app trả) và access log của ALB: cột `target_status_code` trống nghĩa là app không trả gì. Nguyên nhân hay gặp: keep-alive của app ngắn hơn idle timeout 60 giây của ALB nên app đóng kết nối ngay lúc ALB gửi request; app bị kill giữa chừng khi deploy vì deregistration delay ngắn hơn thời gian xử lý; hoặc response header quá lớn. Sửa keep-alive của Tomcat dài hơn 60 giây trước, rồi khớp thời gian tắt êm với deregistration delay." },
+    { "type": "callout", "style": "warning", "markdown": "Một access key IAM dài hạn trong `application.yml`, biến môi trường của CI hay image là nguồn sự cố phổ biến nhất trên AWS: key lộ qua git, log hay image công khai là dùng được ngay từ bất cứ đâu cho tới khi bị thu hồi. App chạy trên AWS dùng role (instance profile, task role, EKS Pod Identity); CI dùng OIDC để nhận role tạm thời; người dùng đăng nhập qua IAM Identity Center. Bật cảnh báo khi có access key mới được tạo." }
+  ]
+}
