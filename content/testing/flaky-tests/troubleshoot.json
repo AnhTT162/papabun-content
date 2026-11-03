@@ -1,0 +1,88 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Test báo cáo doanh thu chỉ đỏ trên CI, khoảng 3 lần trong 10",
+  "symptom": "Test `dailyReport_countsOrderPlacedToday` của service báo cáo đỏ trong khoảng 30% số lần chạy trên CI, chưa từng đỏ trên máy dev ở Hà Nội. Thông báo lỗi: `expected: <1> but was: <0>`. Ai đó bấm chạy lại pipeline vào sáng hôm sau thì xanh, nên team gọi nó là \"test chập chờn\" và đã đề xuất bật rerun. Không có thread hay code bất đồng bộ nào trong luồng này.",
+  "steps": [
+    {
+      "id": "start",
+      "question": "Bạn bắt đầu từ đâu?",
+      "choices": [
+        {
+          "label": "Lấy lịch sử các lần chạy: thời điểm, runner, kết quả",
+          "quality": "good",
+          "feedback": "Test chập chờn luôn phụ thuộc vào một thứ chưa được kiểm soát. Đặt các lần đỏ cạnh nhau theo thời điểm, máy, thứ tự chạy thường chỉ ra ngay thứ đó.",
+          "next": "history"
+        },
+        {
+          "label": "Chạy `@RepeatedTest(500)` trên máy dev để tái hiện",
+          "quality": "ok",
+          "feedback": "Nên làm khi nghi race condition, nhưng test chưa từng đỏ trên máy dev; nếu nguyên nhân nằm ở môi trường CI thì 500 lần trên máy dev đều xanh.",
+          "next": "history"
+        },
+        {
+          "label": "Bật `rerunFailingTestsCount=5` cho test này",
+          "quality": "poor",
+          "feedback": "Rerun chỉ giấu triệu chứng, và ở đây còn không giấu nổi: lần chạy lại chỉ cách vài giây, rơi vào cùng điều kiện nên cũng đỏ. Nếu đây là bug thật của báo cáo, khách hàng sẽ gặp nó.",
+          "next": "history"
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "evidence": "Kết quả 40 lần chạy gần nhất (giờ bắt đầu chạy test, UTC):\n\n  đỏ:   17:12  17:33  17:48  18:30  19:05  20:41  21:20  22:03  22:57  23:15  23:40  23:52\n  xanh: 01:10 02:45 03:30 ... 15:58 16:41 16:55 (28 lần, đều trước 17:00 UTC)\n\nRunner CI: TZ=UTC, user.timezone=UTC\nMáy dev:   TZ=Asia/Ho_Chi_Minh",
+      "evidenceFormat": "monospace",
+      "question": "Điểm chung của các lần đỏ là gì?",
+      "choices": [
+        {
+          "label": "Mọi lần đỏ đều từ 17:00 tới 23:59 UTC",
+          "quality": "good",
+          "feedback": "Đúng. Đó là 00:00–06:59 giờ Việt Nam, khoảng mà ngày theo UTC và ngày theo giờ Việt Nam khác nhau. 12/40 = 30% khớp với tỉ lệ đỏ; chạy lại vào buổi sáng (trước 17:00 UTC) thì xanh, còn máy dev dùng giờ Việt Nam nên không bao giờ rơi vào khoảng này.",
+          "next": "code"
+        },
+        {
+          "label": "Các lần đỏ rơi vào giờ CI bận, máy chậm",
+          "quality": "poor",
+          "feedback": "Thông báo lỗi là `expected: <1> but was: <0>`, không phải timeout, và luồng này không có code bất đồng bộ để máy chậm ảnh hưởng.",
+          "next": "code"
+        },
+        {
+          "label": "Chưa đủ dữ liệu, cần thêm log trong test",
+          "quality": "ok",
+          "feedback": "Thêm log không hại gì, nhưng 40 lần chạy đã cho một ranh giới rất rõ ở 17:00 UTC.",
+          "next": "code"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "evidence": "// ReportService\npublic long countOrdersOn(LocalDate day) {\n    ZonedDateTime start = day.atStartOfDay(ZoneId.of(\"Asia/Ho_Chi_Minh\"));\n    return orders.countByCreatedAtBetween(start.toInstant(), start.plusDays(1).toInstant());\n}\n\n// Test\n@Test\nvoid dailyReport_countsOrderPlacedToday() {\n    orders.save(new Order(\"ORD-1\", Instant.now()));\n    assertEquals(1, reportService.countOrdersOn(LocalDate.now()));\n}\n\nMô phỏng với Clock cố định, CI ở UTC:\n2026-11-02T16:59:59Z  test today=2026-11-02  order day (VN)=2026-11-02  -> count=1 PASS\n2026-11-02T17:00:00Z  test today=2026-11-02  order day (VN)=2026-11-03  -> count=0 FAIL",
+      "evidenceFormat": "monospace",
+      "question": "Sửa thế nào cho đúng?",
+      "choices": [
+        {
+          "label": "Tiêm `Clock` cho service và test, thêm test tại 16:59:59Z và 17:00:00Z",
+          "quality": "good",
+          "feedback": "Test không còn phụ thuộc giờ và múi giờ của máy chạy: `Clock.fixed` với múi giờ của shop, và hai test tại biên khẳng định cách service chia ngày. Service cũng nên lấy \"hôm nay\" từ cùng `Clock` đó thay vì để code gọi tự tính.",
+          "next": "root"
+        },
+        {
+          "label": "Đặt `TZ=Asia/Ho_Chi_Minh` cho runner CI",
+          "quality": "ok",
+          "feedback": "Test hết đỏ, nhưng chỉ vì CI giống máy dev. Test vẫn phụ thuộc giờ máy, và mọi code gọi `countOrdersOn(LocalDate.now())` trên server chạy UTC (job, API báo cáo) vẫn lấy nhầm ngày trong 7 giờ mỗi đêm.",
+          "next": "root"
+        },
+        {
+          "label": "Bỏ qua test trong khung 17:00–24:00 UTC",
+          "quality": "poor",
+          "feedback": "Biến bug thành điều kiện bỏ qua. Lỗi lệch ngày giữa máy và múi giờ shop vẫn còn, chỉ không còn test nào nhìn thấy nó.",
+          "next": "root"
+        }
+      ]
+    },
+    {
+      "id": "root",
+      "evidence": "**Nguyên nhân gốc**: test lấy \"hôm nay\" bằng `LocalDate.now()` theo múi giờ của máy chạy, còn service chia ngày theo `Asia/Ho_Chi_Minh`. Trên CI chạy UTC, từ 17:00 tới 23:59 UTC hai cách tính lệch nhau một ngày, nên đơn vừa tạo rơi vào ngày hôm sau theo giờ Việt Nam và báo cáo của ngày UTC đếm được 0.\n\n**Sửa**: một bean `Clock` dùng chung; code và test gọi `now(clock)`; test dùng `Clock.fixed` tại các mốc biên. Đặt `-Duser.timezone=UTC` cho JVM test để mọi máy giống nhau, và không dùng múi giờ mặc định của JVM ở bất kỳ chỗ nào tính ngày nghiệp vụ.\n\n**Phòng ngừa**: rule tĩnh (ArchUnit, Error Prone, Checkstyle) cấm `LocalDate.now()` và `Instant.now()` không tham số trong code chính; rerun chỉ để ghi nhận flake, mỗi flake có người sở hữu và hạn sửa; một job định kỳ chạy suite với múi giờ khác (ví dụ `Pacific/Kiritimati`, UTC+14) để lộ sớm các phụ thuộc múi giờ.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

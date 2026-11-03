@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "http-stubbing",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Test HTTP client với WireMock",
+  "summary": "Vì sao stub ở tầng HTTP thay vì mock interface client; WireMock: stub, khớp request, near miss, verify; test đường lỗi: mã lỗi, chậm, lỗi mạng, scenario; đo thật: retry khi timeout gửi ba `POST` với ba idempotency key khác nhau; exception của JDK `HttpClient` cho từng fault; timeout cắt cả body chậm; record và playback; wiremock-spring-boot; giới hạn của stub so với contract test.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 13,
+  "prerequisites": ["junit5", "mockito", "idempotency"],
+  "terms": ["wiremock", "test-stub", "read-timeout", "idempotency-key", "consumer-driven-contract", "fault-injection", "circuit-breaker"],
+  "references": [
+    { "title": "WireMock: Stubbing", "url": "https://wiremock.org/docs/stubbing/" },
+    { "title": "WireMock: Simulating Faults", "url": "https://wiremock.org/docs/simulating-faults/" },
+    { "title": "WireMock: JUnit 5+ Jupiter", "url": "https://wiremock.org/docs/junit-jupiter/" },
+    { "title": "Java SE 27: HttpRequest.Builder.timeout", "url": "https://docs.oracle.com/en/java/javase/27/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn test retry và circuit breaker của client thế nào?\" Trả lời: dùng WireMock với scenario (503 rồi 200) để kiểm hồi phục; trả 500 liên tục để kiểm mạch mở; `withFixedDelay` lớn hơn timeout để kiểm timeout; rồi `verify` số request thật tới server và header của từng lần. Hỏi tiếp \"retry `POST` có an toàn không\": chỉ khi mọi lần thử mang cùng một idempotency key và server hỗ trợ nó; timeout ở client không có nghĩa server chưa xử lý." },
+    { "type": "callout", "style": "warning", "markdown": "Test timeout với delay 30 giây làm suite chậm 30 giây mỗi test. Đặt timeout của client trong test thật nhỏ (vài trăm mili giây) qua cấu hình, và cho stub chậm hơn mức đó một chút." }
+  ]
+}

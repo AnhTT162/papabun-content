@@ -453,7 +453,7 @@
       "meaning": "Lỗi khi kết quả phụ thuộc vào thứ tự chạy xen kẽ của các thread, ví dụ kiểm tra rồi hành động (check-then-act) hay đọc-sửa-ghi không atomic.",
       "example": "`if (!map.containsKey(k)) map.put(k, v);` trên map dùng chung có thể put hai lần.",
       "related": ["data-race", "lost-update"],
-      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency", "lld-ood-interview", "java-basics-types"]
+      "topics": ["synchronized-volatile", "cache-patterns", "concurrency-basics", "testing-concurrency", "lld-ood-interview", "java-basics-types", "flaky-tests"]
     },
     {
       "id": "cas",
@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns", "architecture-review", "api-security"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns", "architecture-review", "api-security", "http-stubbing"]
     },
     {
       "id": "orm",
@@ -3909,7 +3909,7 @@
       "meaning": "Test lúc xanh lúc đỏ dù code không đổi. Với code đồng thời, nguyên nhân thường là bug thật chỉ lộ ra khi các thread xen nhau theo một lịch nhất định.",
       "example": "Test đếm từ hai thread đỏ khoảng 3% số lần chạy vì `hits++` không atomic; bật rerun chỉ che lỗi.",
       "related": ["race-condition", "jcstress"],
-      "topics": ["testing-concurrency", "test-strategy", "junit5"]
+      "topics": ["testing-concurrency", "test-strategy", "junit5", "flaky-tests"]
     },
     {
       "id": "coupling",
@@ -4869,7 +4869,7 @@
       "meaning": "Kiểm thử hợp đồng giữa các service: bên gọi (consumer) mô tả request và response nó mong đợi, bên cung cấp (provider) chạy các kỳ vọng đó trong CI để không phá hợp đồng.",
       "example": "Order viết contract cho `GET /inventory/{sku}`; CI của Inventory chạy contract này bằng Pact hoặc Spring Cloud Contract trước mỗi lần deploy.",
       "related": ["contract-test", "microservices"],
-      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture", "test-strategy"]
+      "topics": ["microservices-tradeoffs", "rest-api-design", "evolutionary-architecture", "test-strategy", "http-stubbing"]
     },
     {
       "id": "sidecar",
@@ -5805,7 +5805,7 @@
       "meaning": "Thời gian tối đa chờ giữa hai lần nhận được dữ liệu trên một kết nối đã mở. Không giới hạn tổng thời gian của cả lời gọi.",
       "example": "HttpClient 5: `RequestConfig.custom().setResponseTimeout(Timeout.ofSeconds(1))`; mặc định không giới hạn.",
       "related": ["timeout", "connection-pool"],
-      "topics": ["server-tuning"]
+      "topics": ["server-tuning", "http-stubbing"]
     },
     {
       "id": "http-compression",
@@ -11253,7 +11253,7 @@
       "meaning": "Cố ý đưa lỗi vào hệ thống (tắt instance, thêm latency, mất gói, trả 5xx, đầy đĩa) để quan sát cách hệ thống phản ứng.",
       "example": "Dùng Toxiproxy thêm 3 giây latency vào kết nối tới cổng thanh toán trong test tích hợp.",
       "related": ["chaos-engineering"],
-      "topics": ["reliability-sre"]
+      "topics": ["reliability-sre", "http-stubbing"]
     },
     {
       "id": "game-day",
@@ -13405,7 +13405,7 @@
       "meaning": "Test double trả câu trả lời dựng sẵn để code đang test chạy tiếp; test không kiểm lời gọi tới nó.",
       "example": "`when(rates.get(\"USD\")).thenReturn(new BigDecimal(\"25400\"))` để test quy đổi tiền.",
       "related": ["test-double", "mock-object"],
-      "topics": ["mockito"]
+      "topics": ["mockito", "http-stubbing"]
     },
     {
       "id": "test-spy",
@@ -13550,6 +13550,38 @@
       "example": "Bốn class với bốn bộ `@MockitoBean` khác nhau làm log báo `size = 4, missCount = 4`.",
       "related": ["test-slice"],
       "topics": ["spring-boot-test"]
+    },
+    {
+      "id": "wiremock",
+      "term": "WireMock",
+      "meaning": "Thư viện chạy HTTP server giả trên cổng ngẫu nhiên trong test, trả response dựng sẵn cho request khớp stub, giả lập chậm và lỗi mạng, và ghi lại mọi request để verify.",
+      "example": "`stubFor(post(\"/payments\").willReturn(okJson(...).withFixedDelay(1500)))` để kiểm client timeout và retry.",
+      "related": ["test-stub", "consumer-driven-contract"],
+      "topics": ["http-stubbing"]
+    },
+    {
+      "id": "clock",
+      "term": "Clock",
+      "meaning": "Class `java.time.Clock` cung cấp thời điểm hiện tại và múi giờ; tiêm nó vào code thay vì gọi `now()` không tham số để test cố định được thời gian.",
+      "example": "Production dùng `Clock.system(ZoneId.of(\"Asia/Ho_Chi_Minh\"))`, test dùng `Clock.fixed(Instant.parse(\"2026-11-02T17:00:00Z\"), zone)`.",
+      "related": ["flaky-test"],
+      "topics": ["flaky-tests"]
+    },
+    {
+      "id": "awaitility",
+      "term": "Awaitility",
+      "meaning": "Thư viện chờ trong test theo điều kiện: thăm dò định kỳ tới khi assert đúng hoặc hết thời gian, thay cho `Thread.sleep`.",
+      "example": "`await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(status(id)).isEqualTo(PAID))`.",
+      "related": ["flaky-test"],
+      "topics": ["flaky-tests"]
+    },
+    {
+      "id": "test-quarantine",
+      "term": "Quarantine (cách ly test)",
+      "meaning": "Tách test chập chờn khỏi bộ chặn merge nhưng vẫn chạy ở job riêng, kèm người sở hữu và hạn sửa hoặc xoá.",
+      "example": "Gắn `@Tag(\"quarantine\")`, CI chính `excludedGroups=quarantine`, job đêm chạy riêng nhóm này.",
+      "related": ["flaky-test"],
+      "topics": ["flaky-tests"]
     }
   ]
 }

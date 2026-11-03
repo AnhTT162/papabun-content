@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "root-cause", "front": "Nguyên nhân chung của mọi test chập chờn là gì?", "back": "Test phụ thuộc vào một thứ không xác định mà nó không kiểm soát: thời gian, thứ tự, state chung, mạng, lịch thread." },
+    { "id": "clock", "front": "Làm test không phụ thuộc giờ hệ thống thế nào?", "back": "Tiêm `Clock` vào code, gọi `now(clock)`; trong test dùng `Clock.fixed(instant, zone)`." },
+    { "id": "timezone", "front": "Vì sao test ngày tháng hay đỏ trên CI mà xanh trên máy dev?", "back": "CI thường chạy UTC, máy dev chạy giờ địa phương; quanh nửa đêm hai múi giờ cho hai ngày khác nhau." },
+    { "id": "set-of", "front": "`Set.of` và `Map.of` có giữ thứ tự duyệt không?", "back": "Không; thứ tự đổi theo salt ngẫu nhiên mỗi lần khởi động JVM." },
+    { "id": "awaitility", "front": "Thay `Thread.sleep` trong test bất đồng bộ bằng gì?", "back": "Awaitility: `await().atMost(...).untilAsserted(...)`, thăm dò tới khi điều kiện đúng hoặc hết giờ." },
+    { "id": "random-order", "front": "Làm lộ test phụ thuộc thứ tự thế nào?", "back": "Chạy theo thứ tự ngẫu nhiên (`MethodOrderer$Random`) với seed tường minh để tái hiện được." },
+    { "id": "quarantine", "front": "Cách ly test chập chờn nghĩa là gì?", "back": "Gắn tag để không chặn merge nhưng vẫn chạy ở job riêng, kèm người sở hữu và hạn sửa hoặc xoá." },
+    { "id": "rerun", "front": "Rerun test đỏ có giá trị gì?", "back": "Ghi nhận test nào chập chờn (`Flakes` của Surefire); không phải cách sửa." }
+  ]
+}

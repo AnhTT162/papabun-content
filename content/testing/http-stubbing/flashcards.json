@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "what", "front": "WireMock khác mock một interface client ở điểm nào?", "back": "Nó là HTTP server thật, nên code client chạy y như production: URL, header, JSON, mã lỗi, timeout, pool đều được kiểm." },
+    { "id": "unmatched", "front": "Request không khớp stub nào thì WireMock trả gì?", "back": "`404` kèm báo cáo near miss: stub gần nhất và trường bị lệch." },
+    { "id": "slow", "front": "Test read timeout bằng WireMock thế nào?", "back": "`withFixedDelay` (header đến chậm) hoặc `withChunkedDribbleDelay` (body nhỏ giọt), chọn theo kiểu timeout của client (cả response hay từng lần đọc), và đặt timeout nhỏ trong test." },
+    { "id": "faults", "front": "Giả lập lỗi mạng bằng WireMock thế nào?", "back": "`withFault(Fault.CONNECTION_RESET_BY_PEER)`, `EMPTY_RESPONSE`, `MALFORMED_RESPONSE_CHUNK`, `RANDOM_DATA_THEN_CLOSE`." },
+    { "id": "scenario", "front": "Scenario trong WireMock dùng làm gì?", "back": "Máy trạng thái cho stub: lần đầu 503, các lần sau 200; dùng để test retry và hồi phục." },
+    { "id": "verify-retry", "front": "Kiểm retry gửi đúng thế nào?", "back": "`verify(n, postRequestedFor(...).withHeader(\"Idempotency-Key\", equalTo(key)))`: đúng số lần và mọi lần cùng một key." },
+    { "id": "timeout-server", "front": "Client timeout có huỷ việc phía server không?", "back": "Không; server vẫn xử lý xong request, nên retry thao tác ghi cần idempotency key." },
+    { "id": "limit", "front": "Stub HTTP không kiểm được điều gì?", "back": "Provider có thật sự trả như stub không; cần contract test hoặc stub sinh từ contract." }
+  ]
+}

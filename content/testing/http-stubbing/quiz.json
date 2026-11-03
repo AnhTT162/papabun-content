@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "scenario-calls",
+      "kind": "output",
+      "prompt": "Client gọi `GET /rates` ba lần liên tiếp. In ra gì?",
+      "code": "gateway.stubFor(get(\"/rates\").inScenario(\"flaky\")\n        .whenScenarioStateIs(Scenario.STARTED)\n        .willReturn(aResponse().withStatus(503))\n        .willSetStateTo(\"recovered\"));\ngateway.stubFor(get(\"/rates\").inScenario(\"flaky\")\n        .whenScenarioStateIs(\"recovered\")\n        .willReturn(okJson(\"{\\\"usd\\\":25400}\")));\n\nfor (int i = 0; i < 3; i++) {\n    System.out.println(send(\"/rates\").statusCode());\n}",
+      "options": [
+        "`503`, `200`, `200`",
+        "`503`, `503`, `200`",
+        "`503`, `200`, `503`",
+        "`200`, `200`, `200`"
+      ],
+      "answer": 0,
+      "explanation": "Scenario bắt đầu ở `STARTED`, khớp stub thứ nhất, trả 503 và chuyển sang `recovered`. Từ đó mọi request khớp stub thứ hai và trả 200; trạng thái không tự quay lại cho tới khi reset. Đã chạy với WireMock 3.13.2."
+    },
+    {
+      "id": "query-mismatch",
+      "kind": "single",
+      "prompt": "Stub khai báo `get(urlPathEqualTo(\"/products\")).withQueryParam(\"sku\", equalTo(\"PHO-01\"))`. Client gửi `GET /products?sku=pho-01`. WireMock trả gì?",
+      "options": [
+        "`404` kèm bảng \"Closest stub\" đánh dấu \"Query does not match\"",
+        "`200` vì `equalTo` không phân biệt hoa thường khi so query",
+        "`500` vì request không khớp làm stub ném exception",
+        "Treo tới khi client hết timeout vì không có response"
+      ],
+      "answer": 0,
+      "explanation": "`equalTo` phân biệt hoa thường; muốn bỏ qua thì dùng `equalToIgnoreCase`. Request không khớp nhận 404 cùng báo cáo near miss chỉ ra stub gần nhất và trường lệch. Đọc báo cáo này nhanh hơn nhiều so với đoán vì sao client nhận 404."
+    },
+    {
+      "id": "why-not-mock-client",
+      "kind": "single",
+      "prompt": "Lỗi nào chỉ test với WireMock mới bắt được, còn mock interface `PaymentClient` bằng Mockito thì không?",
+      "options": [
+        "Client không đặt read timeout nên treo khi cổng chậm",
+        "Service gọi `charge` hai lần cho cùng một đơn hàng",
+        "Service không xử lý `PaymentDeclinedException` mà client ném",
+        "Service truyền sai số tiền vào tham số của `charge`"
+      ],
+      "answer": 0,
+      "explanation": "Timeout, connection pool, serialize JSON, header, xử lý mã lỗi HTTP nằm **bên trong** cài đặt của client; mock interface bỏ qua toàn bộ phần đó. Ba lỗi còn lại nằm ở code gọi client và kiểm được bằng mock: đếm số lần gọi, ném exception từ mock, kiểm tham số."
+    },
+    {
+      "id": "stub-vs-contract",
+      "kind": "single",
+      "prompt": "Provider đổi trường `amount` thành `totalAmount` trong response. Bộ test WireMock của consumer vẫn xanh. Vì sao, và cần thêm gì?",
+      "options": [
+        "Stub do consumer viết vẫn trả `amount`; cần contract test",
+        "WireMock bỏ qua trường không khai báo khi trả JSON",
+        "Test consumer phải gọi tới provider thật mới đúng",
+        "Cần bật record mode trên CI để stub tự cập nhật"
+      ],
+      "answer": 0,
+      "explanation": "Stub chỉ phản ánh điều consumer tin về API. Provider đổi mà stub không đổi thì test không biết. Consumer-driven contract (Pact, Spring Cloud Contract) đưa kỳ vọng của consumer vào CI của provider. Ghi lại tự động trên CI làm test phụ thuộc vào sandbox của provider và không còn ổn định."
+    }
+  ]
+}

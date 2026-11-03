@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "flaky-tests",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Test chập chờn",
+  "summary": "Mọi test chập chờn phụ thuộc một thứ không xác định; các nguồn ngoài race: giờ và múi giờ (ví dụ CI chạy UTC lệch ngày từ 17:00), thứ tự và state dùng chung, thứ tự duyệt `Set.of` đổi mỗi lần chạy JVM (đo JDK 27), `sleep` thay Awaitility, cổng, locale; tiêm `Clock`; thứ tự ngẫu nhiên với seed; rerun để ghi nhận `Flakes`, cách ly và tái hiện.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 13,
+  "prerequisites": ["junit5", "testing-concurrency"],
+  "terms": ["flaky-test", "clock", "awaitility", "test-quarantine", "race-condition"],
+  "references": [
+    { "title": "Maven Surefire: Rerun Failing Tests", "url": "https://maven.apache.org/surefire/maven-surefire-plugin/examples/rerun-failing-tests.html" },
+    { "title": "Awaitility: Usage", "url": "https://github.com/awaitility/awaitility/wiki/Usage" },
+    { "title": "Java SE 27: java.time.Clock", "url": "https://docs.oracle.com/en/java/javase/27/docs/api/java.base/java/time/Clock.html" },
+    { "title": "JUnit User Guide: Test Execution Order", "url": "https://docs.junit.org/current/user-guide/" },
+    { "title": "Java SE 27: Set (Unmodifiable Sets)", "url": "https://docs.oracle.com/en/java/javase/27/docs/api/java.base/java/util/Set.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team bạn xử lý test chập chờn thế nào?\" Trả lời theo quy trình: phát hiện (rerun có ghi nhận flake, thống kê theo test), cách ly để không chặn merge, giao người sở hữu với hạn sửa, tái hiện bằng cách chạy lặp, đổi seed thứ tự, đổi múi giờ hay locale, rồi sửa nguyên nhân và thêm rule chặn tái phát (cấm `Instant.now()` không tham số). Hỏi tiếp \"có bao giờ xoá test\": có, khi test kiểm điều không còn quan trọng hoặc đã có test khác kiểm tốt hơn; giữ một test chập chờn mãi trong danh sách cách ly cũng là xoá, chỉ là không thừa nhận." },
+    { "type": "callout", "style": "warning", "markdown": "Một test chập chờn có thể là bug thật chỉ lộ ra hiếm khi, như lệch ngày theo múi giờ hay race condition. Trước khi kết luận \"test có vấn đề\", kiểm xem production có cùng điều kiện đó không." }
+  ]
+}

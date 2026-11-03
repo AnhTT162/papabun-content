@@ -223,8 +223,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `test-design` | Thiết kế test tốt | mid | AAA, test smell, mutation testing (PIT), mức coverage | L B | ✅ |
 | 5 | `testcontainers` | Testcontainers | mid | DB thật, singleton container, reuse, chạy trên CI | L B | ✅ |
 | 6 | `spring-boot-test` | Spring Boot Test | mid | Test slice, context caching, `@MockBean` làm chậm suite | L B T | ✅ |
-| 7 | `http-stubbing` | ✚ Test HTTP client với WireMock | mid | Stub downstream, test timeout và retry, lỗi mạng giả lập | L B | ⬜ |
-| 8 | `flaky-tests` | Test chập chờn | mid | Thời gian, thứ tự, đồng thời, `Clock`, Awaitility | L T | ⬜ |
+| 7 | `http-stubbing` | ✚ Test HTTP client với WireMock | mid | Stub downstream, test timeout và retry, lỗi mạng giả lập | L B | ✅ |
+| 8 | `flaky-tests` | Test chập chờn | mid | Thời gian, thứ tự, đồng thời, `Clock`, Awaitility | L T | ✅ |
 | 9 | `contract-testing` | Contract testing | senior | Consumer-driven, Pact, Spring Cloud Contract | L D Sc | ⬜ |
 
 ### 7. Database (`database`)

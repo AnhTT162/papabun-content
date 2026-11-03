@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "set-of-order",
+      "kind": "output",
+      "prompt": "Chạy chương trình sau năm lần (năm lần khởi động JVM) trên JDK 27. Kết quả nào mô tả đúng?",
+      "code": "System.out.println(Set.of(\"VIP\", \"NEW\", \"BLOCKED\", \"TRIAL\"));\nSystem.out.println(new HashSet<>(List.of(\"VIP\", \"NEW\", \"BLOCKED\", \"TRIAL\")));",
+      "options": [
+        "`Set.of` đổi thứ tự giữa các lần chạy, `HashSet` giữ nguyên",
+        "Cả hai dòng giữ đúng thứ tự khai báo ở mọi lần chạy",
+        "Cả hai dòng đổi thứ tự ngẫu nhiên ở mỗi lần chạy",
+        "`HashSet` đổi thứ tự, còn `Set.of` thì giữ nguyên"
+      ],
+      "answer": 0,
+      "explanation": "`Set.of` và `Map.of` trộn thứ tự duyệt theo một salt chọn ngẫu nhiên khi JVM khởi động, để code không vô tình phụ thuộc thứ tự (đo: bốn thứ tự khác nhau trong năm lần). `HashSet` duyệt theo hash nên ổn định giữa các lần chạy, nhưng thứ tự đó không theo thứ tự khai báo và có thể đổi giữa các bản JDK. Test nên so sánh không theo thứ tự."
+    },
+    {
+      "id": "order-dependent",
+      "kind": "single",
+      "prompt": "Test `B` xanh khi chạy riêng, đỏ khi chạy cả class sau test `A`. `A` gọi `FeatureFlags.enable(\"new-checkout\")` trên một singleton. Cách sửa nào đúng?",
+      "options": [
+        "Đưa flag về trạng thái ban đầu sau mỗi test",
+        "Đặt `@TestMethodOrder` để `B` luôn chạy trước `A`",
+        "Đánh dấu `B` là `@Disabled` vì phụ thuộc môi trường",
+        "Tăng `rerunFailingTestsCount` để `B` được chạy lại riêng"
+      ],
+      "answer": 0,
+      "explanation": "`A` để lại state trong singleton và `B` vô tình phụ thuộc vào nó. Ép thứ tự chỉ dời vấn đề và vỡ khi bật chạy song song hay thêm test mới. Rerun cho `B` xanh vì lần chạy lại đứng riêng, nên che mất lỗi. Test phải tự dựng và dọn state của mình."
+    },
+    {
+      "id": "sleep-vs-await",
+      "kind": "single",
+      "prompt": "Test gửi event rồi `Thread.sleep(500)` trước khi kiểm trạng thái đơn đã thành `PAID`. Thỉnh thoảng đỏ trên CI. Cách sửa nào tốt nhất?",
+      "options": [
+        "Chờ theo điều kiện bằng `await().untilAsserted(...)`",
+        "Tăng `sleep` lên 3 giây cho chắc chắn hơn",
+        "Chạy test đó trên runner CI có nhiều CPU hơn",
+        "Bỏ phần kiểm trạng thái, chỉ kiểm event đã gửi"
+      ],
+      "answer": 0,
+      "explanation": "Awaitility thăm dò định kỳ và trả ngay khi điều kiện đúng, nên nhanh khi máy nhanh và vẫn chịu được khi máy chậm, tới mức trần đặt ra. `sleep` dài làm mọi lần chạy đều chậm mà vẫn có thể đỏ khi CI quá tải. Bỏ assert thì test không còn kiểm hành vi."
+    },
+    {
+      "id": "rerun-meaning",
+      "kind": "single",
+      "prompt": "Với `surefire.rerunFailingTestsCount=2`, một test đỏ lần đầu và xanh ở lần chạy lại. Kết quả build là gì?",
+      "options": [
+        "Build xanh, test được đếm vào `Flakes` trong tổng kết",
+        "Build đỏ, vì lần chạy đầu tiên của test đã fail",
+        "Build xanh, test được ghi là pass và không để lại dấu vết",
+        "Build bị đánh dấu unstable và dừng các bước sau"
+      ],
+      "answer": 0,
+      "explanation": "Surefire ghi `Run 1: ...`, `Run 2: PASS` và đếm test vào `Flakes: N`, đồng thời ghi vào XML báo cáo; build vẫn thành công. Thông tin đó chỉ có ích nếu có người theo dõi danh sách flake và sửa chúng."
+    }
+  ]
+}
