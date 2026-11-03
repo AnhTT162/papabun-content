@@ -1,0 +1,149 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Warm standby giữa hai region",
+  "nodes": [
+    {
+      "id": "users",
+      "label": "Người dùng",
+      "kind": "client",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "dns",
+      "label": "Route 53 + routing control",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "app-a",
+      "label": "App region chính",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "app-b",
+      "label": "App region DR (thu nhỏ)",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "db-a",
+      "label": "Aurora writer",
+      "kind": "database",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "db-b",
+      "label": "Aurora secondary",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-dns",
+      "from": "users",
+      "to": "dns",
+      "label": "api.shop.example.com"
+    },
+    {
+      "id": "dns-a",
+      "from": "dns",
+      "to": "app-a",
+      "label": "bình thường"
+    },
+    {
+      "id": "a-db",
+      "from": "app-a",
+      "to": "db-a"
+    },
+    {
+      "id": "repl",
+      "from": "db-a",
+      "to": "db-b",
+      "label": "bất đồng bộ"
+    },
+    {
+      "id": "dns-b",
+      "from": "dns",
+      "to": "app-b",
+      "label": "sau failover"
+    },
+    {
+      "id": "b-db",
+      "from": "app-b",
+      "to": "db-b",
+      "label": "sau khi promote"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "Bình thường: Route 53 trả về region chính; region chính chạy Multi-AZ, chịu được mất một AZ mà không cần DR.",
+      "show": [
+        "users",
+        "dns",
+        "app-a",
+        "db-a",
+        "users-dns",
+        "dns-a",
+        "a-db"
+      ],
+      "highlight": [
+        "dns-a"
+      ]
+    },
+    {
+      "caption": "Aurora Global Database chép bất đồng bộ sang region DR, lag thường vài giây: đó là RPO khi mất cả region. Backup bất biến nằm ở tài khoản khác, không vẽ ở đây.",
+      "show": [
+        "db-b",
+        "repl"
+      ],
+      "highlight": [
+        "repl"
+      ]
+    },
+    {
+      "caption": "Region DR chạy sẵn một bản app nhỏ (warm standby) với image, secret, quota, chứng chỉ đã chuẩn bị, nhận được traffic thử.",
+      "show": [
+        "app-b"
+      ],
+      "highlight": [
+        "app-b"
+      ]
+    },
+    {
+      "caption": "Region chính hỏng (app và database ở đó không còn phục vụ). Người trực có quyền quyết định failover theo tín hiệu đã thống nhất; không tự failover giữa region vì một health check chập chờn.",
+      "show": [],
+      "highlight": [
+        "app-a",
+        "db-a"
+      ]
+    },
+    {
+      "caption": "Promote Aurora secondary thành writer và tăng capacity app ở region DR (thao tác ở region còn sống, đã có trong runbook). Phần dữ liệu chưa kịp chép là phần mất, được giữ lại để đối soát.",
+      "show": [
+        "b-db"
+      ],
+      "highlight": [
+        "b-db",
+        "db-b",
+        "app-b"
+      ]
+    },
+    {
+      "caption": "Bật routing control để Route 53 trả về region DR (thao tác data plane). Thời gian chuyển còn cộng TTL và cache DNS của client. Khi region cũ sống lại, chặn ghi ở đó rồi mới tính chuyện chuyển về.",
+      "show": [
+        "dns-b"
+      ],
+      "highlight": [
+        "dns-b"
+      ]
+    }
+  ]
+}

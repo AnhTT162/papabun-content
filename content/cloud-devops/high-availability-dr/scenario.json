@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chọn mức DR cho ba hệ thống của một sàn thương mại điện tử",
+  "prompt": "Sàn thương mại điện tử chạy ở region Singapore, đã Multi-AZ. Ban giám đốc yêu cầu \"mọi hệ thống phải chịu được mất cả region\" sau khi đọc tin một sự cố cloud lớn. Ba hệ thống:\n1. Checkout và thanh toán: doanh thu khoảng 30.000 USD mỗi giờ giờ cao điểm. Đơn đã thanh toán phải mất ít nhất có thể và phải đối soát được với cổng thanh toán. PostgreSQL (Aurora) 800 GB.\n2. Tìm kiếm sản phẩm: Elasticsearch 2 TB, dữ liệu dựng lại được từ database sản phẩm trong khoảng 6 giờ. Ngừng thì người dùng vẫn duyệt danh mục được nhưng không tìm được.\n3. Báo cáo kinh doanh nội bộ: data warehouse cập nhật hằng đêm, 40 người dùng nội bộ.\nNgoài mất region, đội bảo mật lo ngại ransomware mã hoá dữ liệu sau khi chiếm được quyền ở tài khoản prod. Đề xuất RPO/RTO và mức DR cho từng hệ thống, cùng phần chung cho cả sàn.",
+  "hints": [
+    "Mỗi hệ thống mất bao nhiêu tiền mỗi giờ ngừng, và dữ liệu của nó có dựng lại được không?",
+    "Sao chép sang region khác có bảo vệ được trước ransomware hay một lệnh xoá nhầm không?",
+    "Failover giữa region phụ thuộc những thao tác nào, ai quyết định, và cái gì có thể chưa sẵn ở region kia?",
+    "Làm sao biết RTO ghi trong kế hoạch là con số thật?"
+  ],
+  "solution": "**1. Checkout và thanh toán**: RPO vài giây, RTO dưới 15 phút. Warm standby ở region thứ hai: Aurora Global Database (RPO thường tính bằng giây), app chạy sẵn bản nhỏ, image, secret (Secrets Manager replica), khoá KMS multi-Region, chứng chỉ, quota vCPU đã chuẩn bị; Failover giữa region do người trực có quyền quyết định theo runbook; chuyển traffic bằng routing control của Application Recovery Controller (bật tắt qua cluster endpoint, thao tác data plane), promote Aurora secondary ở region còn sống, rồi tăng capacity đã đặt sẵn. RPO 0 xuyên region không đạt được với sao chép bất đồng bộ; Đơn đã thanh toán ghi trong vài giây lag có thể mất khi failover: đối soát với cổng thanh toán (bài Thiết kế hệ thống thanh toán) để tìm và bù các giao dịch đó. Cổng thanh toán của đối tác phải whitelist cả IP NAT của region DR. Active-active không đáng với độ phức tạp ghi hai nơi khi warm standby đã đạt RTO 15 phút; ba giờ ngừng là khoảng 90.000 USD; warm standby làm chi phí hạ tầng của riêng checkout tăng cỡ 40–70% (ước lượng minh hoạ), tức vài nghìn USD mỗi tháng nếu checkout tốn vài nghìn USD, rẻ hơn nhiều so với một lần mất region.\n\n**2. Tìm kiếm**: RPO không quan trọng vì dựng lại được; RTO chấp nhận vài giờ nhờ chế độ suy giảm (duyệt danh mục, tìm đơn giản bằng database). Backup và restore có chế độ suy giảm: snapshot Elasticsearch định kỳ sang S3 ở region DR, IaC dựng cluster khi cần (hoặc dựng lại index từ database sản phẩm); app có feature flag chuyển sang tìm kiếm giản lược. Không chạy cluster 2 TB thường trực ở region DR; nếu sau này cần RTO dưới một giờ thì mới nâng lên pilot light với một cluster nhỏ luôn chạy.\n\n**3. Báo cáo nội bộ**: RPO 24 giờ, RTO 1–2 ngày làm việc. Backup và restore: backup warehouse và pipeline ETL chép sang region DR, dựng lại bằng IaC khi cần. Chi phí gần như chỉ là lưu trữ.\n\n**Chung cho cả sàn**:\n- Chống ransomware và xoá nhầm: AWS Backup với vault ở tài khoản backup riêng, Vault Lock (thử governance mode trước, rồi compliance mode), chép sang region DR; S3 versioning và Object Lock cho dữ liệu quan trọng. Quyền ở tài khoản prod không xoá được bản sao này. Sao chép Aurora hay S3 không thay được backup vì xoá và mã hoá cũng được chép.\n- Failover không phụ thuộc tạo tài nguyên mới, sửa IAM hay control plane của region đang hỏng: role, endpoint, capacity tối thiểu đặt sẵn; chuyển traffic bằng thao tác data plane; runbook ghi người quyết định và tín hiệu quyết định. Chặn ghi ở region cũ khi nó sống lại, giữ phần dữ liệu chưa chép để đối soát, rồi chuyển về bằng switchover có kế hoạch.\n- Diễn tập: mỗi quý một game day failover checkout sang region DR (hoặc switchover chủ động của Aurora Global), đo RTO thật; mỗi tháng restore thử một backup vào tài khoản cô lập. Kế hoạch ghi RTO đo được, không phải RTO mong muốn.\n- Trả lời ban giám đốc: \"mọi hệ thống chịu mất region\" với cùng RTO là lãng phí; mỗi hệ thống có mức riêng theo thiệt hại, và đã được kiểm chứng.",
+  "tradeoffs": [
+    {
+      "option": "Warm standby cho mọi hệ thống",
+      "pros": [
+        "RTO vài phút cho cả sàn",
+        "Một mô hình vận hành chung"
+      ],
+      "cons": [
+        "Trả tiền hạ tầng chờ cho cả hệ thống ít quan trọng",
+        "Cluster Elasticsearch và warehouse chạy không ở region DR rất đắt"
+      ]
+    },
+    {
+      "option": "Mức DR riêng theo từng hệ thống",
+      "pros": [
+        "Chi tiền tương xứng với thiệt hại",
+        "Hệ thống quan trọng có mức bảo vệ cao nhất"
+      ],
+      "cons": [
+        "Nhiều kiểu runbook và diễn tập khác nhau",
+        "Phải giữ chế độ suy giảm khi một hệ thống phụ chưa khôi phục"
+      ]
+    },
+    {
+      "option": "Chỉ Multi-AZ và backup chép sang region khác",
+      "pros": [
+        "Rẻ và đơn giản nhất",
+        "Đủ cho phần lớn sự cố hạ tầng"
+      ],
+      "cons": [
+        "RTO hàng giờ cho checkout khi mất region",
+        "Thời gian restore và dựng lại toàn bộ ở region khác chưa từng được đo"
+      ]
+    }
+  ]
+}

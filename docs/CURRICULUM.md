@@ -377,7 +377,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 16 | `kubernetes-operations` | Vận hành ứng dụng trên Kubernetes | senior | Probe, requests/limits, HPA, rolling update, PDB, CrashLoopBackOff, OOMKilled | L T | ✅ |
 | 17 | `cloud-networking` | Network trên cloud | senior | Subnet, NAT, security group, PrivateLink, DNS nội bộ, LB L4 và L7, VPN/Direct Connect/Transit Gateway | L D T | ✅ |
 | 18 | `cloud-security-iam` | ✚ Bảo mật trên cloud & IAM | senior | Least privilege, role và policy, phân tách tài khoản, network segmentation, KMS | L B Sc | ✅ |
-| 19 | `high-availability-dr` | High availability & disaster recovery | senior | Multi-AZ, multi-region, RPO/RTO, diễn tập | L D Sc | ⬜ |
+| 19 | `high-availability-dr` | High availability & disaster recovery | senior | Multi-AZ, multi-region, RPO/RTO, diễn tập | L D Sc | ✅ |
 
 ### 14. System Design (`system-design`)
 

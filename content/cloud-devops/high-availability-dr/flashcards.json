@@ -1,0 +1,65 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    {
+      "id": "ha-vs-dr",
+      "front": "HA và DR khác nhau thế nào?",
+      "back": "HA giữ dịch vụ chạy khi một phần hạ tầng hỏng (máy, AZ) bằng dư thừa. DR đưa dịch vụ trở lại sau sự cố lớn (mất region, hỏng dữ liệu, ransomware)."
+    },
+    {
+      "id": "rpo-rto",
+      "front": "RPO và RTO đo gì?",
+      "back": "RPO: lượng dữ liệu có thể mất, tính ngược từ lúc sự cố. RTO: thời gian từ lúc sự cố tới lúc dịch vụ chạy lại với người dùng."
+    },
+    {
+      "id": "four-tiers",
+      "front": "Bốn mức DR theo AWS và RTO cỡ nào?",
+      "back": "Backup và restore (giờ), pilot light (hàng chục phút), warm standby (vài phút), multi-site active-active (gần như tức thì)."
+    },
+    {
+      "id": "replication-not-backup",
+      "front": "Vì sao sao chép sang region khác không thay được backup?",
+      "back": "Xoá nhầm, migration hỏng, ransomware cũng được chép sang trong vài giây; cần backup point-in-time và bản sao bất biến."
+    },
+    {
+      "id": "async-rpo",
+      "front": "RPO của sao chép bất đồng bộ bằng bao nhiêu?",
+      "back": "Bằng lag lúc sự cố, thường là lag đỉnh lúc tải cao, không phải lag trung bình."
+    },
+    {
+      "id": "data-plane",
+      "front": "Failover giữa region nên tránh phụ thuộc vào gì?",
+      "back": "Tạo mới tài nguyên, sửa IAM hay control plane của region đang hỏng. Đặt sẵn role, capacity tối thiểu, endpoint; chuyển traffic bằng thao tác data plane như routing control."
+    },
+    {
+      "id": "s3-rtc",
+      "front": "S3 Replication Time Control cam kết gì?",
+      "back": "99,9% object được chép sang bucket đích trong 15 phút, phần lớn trong vài giây."
+    },
+    {
+      "id": "dr-region-gaps",
+      "front": "Những thứ hay quên chuẩn bị ở region DR?",
+      "back": "Quota, image, secret, chứng chỉ ACM, khoá KMS multi-Region, whitelist IP NAT của đối tác."
+    },
+    {
+      "id": "drill",
+      "front": "Khi nào RTO trong kế hoạch DR là con số đáng tin?",
+      "back": "Khi đã đo được trong diễn tập thật: restore backup, failover sang region DR, có ghi thời gian từng bước."
+    },
+    {
+      "id": "who-decides",
+      "front": "Failover trong region và giữa region khác nhau về ai quyết định?",
+      "back": "Trong region thì tự động (Multi-AZ, load balancer, zonal shift). Giữa region thì người có quyền quyết định theo tín hiệu đã thống nhất, automation chạy các bước."
+    },
+    {
+      "id": "failback",
+      "front": "Chuyển về region chính sau failover cần gì?",
+      "back": "Chặn ghi ở region cũ, giữ phần dữ liệu chưa chép để đối soát, dựng lại sao chép ngược, rồi switchover có kế hoạch vào giờ thấp điểm."
+    },
+    {
+      "id": "zonal-shift",
+      "front": "Zonal shift dùng khi nào?",
+      "back": "Khi một AZ có vấn đề (kể cả health check vẫn xanh): rút traffic của load balancer khỏi AZ đó, miễn là các AZ còn lại đủ capacity."
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "replication-not-backup",
+      "kind": "single",
+      "prompt": "Database có Aurora Global Database sang region thứ hai, lag khoảng 1 giây. Một migration lỗi chạy `UPDATE orders SET status = 'CANCELLED'` không có `WHERE` lúc 14:02. Phát hiện lúc 14:20. Region thứ hai giúp được gì?",
+      "options": [
+        "Không giúp: lệnh sai đã được chép sang sau khoảng 1 giây",
+        "Promote region thứ hai vì nó còn dữ liệu trước 14:02",
+        "Multi-AZ ở region chính đã giữ bản trước lệnh sai",
+        "Chuyển traffic sang region thứ hai để tránh dữ liệu sai"
+      ],
+      "answer": 0,
+      "explanation": "Sao chép là để chống mất hạ tầng: mọi thay đổi, kể cả thay đổi sai, được chép sang trong vài giây; standby Multi-AZ cũng nhận đúng lệnh đó. Lỗi dữ liệu cần backup: point-in-time restore về 14:01 vào một cluster mới rồi chép lại phần dữ liệu đúng, hay bản sao bất biến ở tài khoản khác."
+    },
+    {
+      "id": "rpo-async",
+      "kind": "single",
+      "prompt": "Checkout ghi vào Aurora ở Singapore, sao chép bất đồng bộ sang Tokyo với lag trung bình 1 giây, đỉnh 8 giây khi tải cao. Region Singapore mất hoàn toàn đúng lúc cao điểm. RPO thực tế gần nhất với?",
+      "options": [
+        "Khoảng 8 giây, mức lag lúc sự cố",
+        "0, vì Global Database là đồng bộ",
+        "1 giây, mức lag trung bình",
+        "15 phút, theo cam kết của AWS"
+      ],
+      "answer": 0,
+      "explanation": "Với sao chép bất đồng bộ, dữ liệu mất là phần chưa kịp chép lúc sự cố, tức lag tại thời điểm đó chứ không phải trung bình. Sự cố hay xảy ra lúc tải cao, cũng là lúc lag lớn nhất, nên thiết kế và cảnh báo theo lag đỉnh. 15 phút là cam kết của S3 Replication Time Control, không phải của Aurora. Aurora PostgreSQL có `rds.global_db_rpo` để đặt trần."
+    },
+    {
+      "id": "data-plane-failover",
+      "kind": "single",
+      "prompt": "Kế hoạch DR khi region chính hỏng: chạy script tạo mới Auto Scaling group, launch template, IAM role ở region DR, rồi sửa bản ghi Route 53. Điểm yếu lớn nhất?",
+      "options": [
+        "Phụ thuộc tạo mới tài nguyên và sửa cấu hình lúc sự cố lớn",
+        "Script chạy bằng tay nên chậm hơn khoảng một phút",
+        "Route 53 không đổi được bản ghi khi region chính hỏng",
+        "Region DR không chạy được ASG khi region chính đang hỏng"
+      ],
+      "answer": 0,
+      "explanation": "Lúc sự cố lớn, thao tác control plane có thể chậm, lỗi hoặc nghẽn khi mọi khách hàng cùng failover, và script tạo mới chưa từng chạy dưới áp lực dễ thiếu bước (quota, AMI, quyền). Cách an toàn: đặt sẵn role, launch template, ASG với capacity tối thiểu ở region DR, chỉ tăng capacity theo runbook đã diễn tập, và chuyển traffic bằng thao tác data plane (routing control của Application Recovery Controller, health check). Route 53 vẫn đổi được bản ghi và region DR vẫn chạy được ASG bình thường; chậm một phút không phải điểm chính."
+    },
+    {
+      "id": "pick-tier",
+      "kind": "single",
+      "prompt": "Hệ thống tạo báo cáo cuối tháng cho 30 người dùng nội bộ, dữ liệu dựng lại được từ hệ thống nguồn. Ngừng một ngày gây phiền nhưng không mất tiền. Mức DR hợp lý?",
+      "options": [
+        "Backup và restore sang region khác, dựng bằng IaC",
+        "Warm standby để chuyển được trong vài phút",
+        "Multi-site active-active ở hai region",
+        "Không cần DR, chỉ cần Multi-AZ"
+      ],
+      "answer": 0,
+      "explanation": "RTO một ngày và dữ liệu dựng lại được thì backup và restore (mức rẻ nhất) là đủ; hạ tầng chờ ở region khác là lãng phí. Bỏ hẳn DR thì một lần mất region hay xoá nhầm dữ liệu sẽ không có đường khôi phục nào đã chuẩn bị: vẫn nên có backup ở nơi khác và IaC để dựng lại."
+    },
+    {
+      "id": "zonal-shift-vs-failover",
+      "kind": "single",
+      "prompt": "Một AZ ở Singapore có mạng chập chờn: health check của load balancer vẫn xanh nhưng p99 của request đi qua AZ đó tăng gấp 10. Các AZ khác bình thường. Làm gì trước?",
+      "options": [
+        "Zonal shift rút traffic khỏi AZ đó, kiểm các AZ còn lại đủ capacity",
+        "Failover cả hệ thống sang region dự phòng",
+        "Chờ health check chuyển đỏ để load balancer tự bỏ AZ",
+        "Promote Aurora secondary ở region khác cho chắc"
+      ],
+      "answer": 0,
+      "explanation": "Sự cố một AZ xử lý trong region: zonal shift của Application Recovery Controller rút traffic khỏi AZ đó ngay cả khi health check còn xanh, có thời hạn, và chỉ an toàn khi các AZ còn lại đủ capacity (static stability). Failover sang region khác là dùng búa tạ cho sự cố một AZ, kèm mất dữ liệu chưa chép và một lần chuyển về. Health check có thể không bao giờ đỏ với lỗi chập chờn."
+    },
+    {
+      "id": "switchover-vs-failover",
+      "kind": "single",
+      "prompt": "Đội muốn diễn tập chuyển checkout sang region DR mỗi quý mà không mất dữ liệu. Với Aurora Global Database, chọn thao tác nào?",
+      "options": [
+        "Switchover: chuyển vai có kế hoạch, chờ đồng bộ xong nên không mất dữ liệu",
+        "Failover: nhanh hơn và cho kết quả giống hệt switchover",
+        "Xoá cluster chính để buộc region DR nhận vai writer",
+        "Không diễn tập được trên Aurora Global, chỉ diễn tập trên giấy"
+      ],
+      "answer": 0,
+      "explanation": "Switchover (managed planned failover) chờ region phụ bắt kịp rồi mới đổi vai, nên dùng được cho diễn tập và cho chuyển về có kế hoạch. Failover dành cho khi region chính hỏng thật và có thể mất phần lag; sau đó cluster cũ bị tách khỏi global database. Xoá cluster là phá hoại, và diễn tập trên giấy không cho RTO thật."
+    }
+  ]
+}

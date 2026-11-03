@@ -1901,7 +1901,7 @@
       "meaning": "RPO (Recovery Point Objective): lượng dữ liệu tối đa được phép mất, đo bằng thời gian. RTO (Recovery Time Objective): thời gian tối đa để hệ thống hoạt động lại sau sự cố.",
       "example": "RPO 5 phút, RTO 1 giờ: mất tối đa 5 phút dữ liệu và chạy lại trong vòng 1 giờ.",
       "related": ["pitr"],
-      "topics": ["backup-restore", "replication-ha", "multi-region-active-active", "nfr-quality-attributes", "well-architected", "architecture-review"]
+      "topics": ["backup-restore", "replication-ha", "multi-region-active-active", "nfr-quality-attributes", "well-architected", "architecture-review", "high-availability-dr"]
     },
     {
       "id": "table-lock",
@@ -2130,10 +2130,10 @@
     {
       "id": "failover",
       "term": "Failover",
-      "meaning": "Chuyển vai primary sang một replica khi primary chết: phát hiện, chọn replica mới nhất, promote, rồi chuyển ứng dụng sang.",
+      "meaning": "Chuyển vai sang bản dự phòng khi bản chính hỏng: phát hiện, chọn bản mới nhất, promote, rồi chuyển ứng dụng và traffic sang. Ở mức database trong region thường tự động; ở mức region thường do người quyết định.",
       "example": "Patroni promote replica có LSN mới nhất sau khi khoá leader của primary cũ hết hạn (mặc định 30 giây).",
       "related": ["split-brain", "patroni"],
-      "topics": ["replication-ha", "redis-ha-cluster", "cloud-fundamentals"]
+      "topics": ["replication-ha", "redis-ha-cluster", "cloud-fundamentals", "high-availability-dr"]
     },
     {
       "id": "split-brain",
@@ -8765,7 +8765,7 @@
       "meaning": "Một hay nhiều data center tách biệt về điện, mạng và làm mát trong cùng một region của cloud. Chạy qua nhiều AZ để một data center hỏng không làm ngừng hệ thống.",
       "example": "Ba instance app đặt ở ba AZ `ap-southeast-1a/b/c`; mất một AZ vẫn còn hai.",
       "related": ["single-point-of-failure", "availability"],
-      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue", "well-architected", "cloud-fundamentals"]
+      "topics": ["sd-building-blocks", "sd-framework", "design-message-queue", "well-architected", "cloud-fundamentals", "high-availability-dr"]
     },
     {
       "id": "oltp",
@@ -11213,7 +11213,7 @@
       "meaning": "Thiết kế để data plane tiếp tục chạy với trạng thái và capacity đang có khi một phần hệ thống hỏng, không cần gọi control plane (tạo máy, sửa cấu hình) để hồi phục.",
       "example": "Chạy 3 AZ, mỗi AZ có sẵn 50% tải đỉnh; mất một AZ thì không cần chờ autoscaling.",
       "related": ["availability-zone", "blast-radius"],
-      "topics": ["reliability-sre"]
+      "topics": ["reliability-sre", "high-availability-dr"]
     },
     {
       "id": "shuffle-sharding",
@@ -13645,7 +13645,7 @@
       "meaning": "Một vùng địa lý của nhà cung cấp cloud, gồm nhiều Availability Zone. Phần lớn tài nguyên (VPC, bucket S3, queue) thuộc về một region.",
       "example": "`ap-southeast-1` là region Singapore của AWS.",
       "related": ["availability-zone", "local-zone"],
-      "topics": ["cloud-fundamentals"]
+      "topics": ["cloud-fundamentals", "high-availability-dr"]
     },
     {
       "id": "az-id",
@@ -14462,6 +14462,38 @@
       "example": "Đội dự án được tạo role, nhưng role nào cũng phải gắn boundary cấm IAM và KMS quản trị.",
       "related": ["identity-based-policy", "least-privilege"],
       "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "backup-and-restore",
+      "term": "Backup và restore (mức DR)",
+      "meaning": "Mức DR rẻ nhất: backup được chép sang region hoặc tài khoản khác, khi có sự cố mới dựng lại hạ tầng bằng IaC và restore dữ liệu; RTO tính bằng giờ.",
+      "example": "Báo cáo nội bộ: backup warehouse chép sang region khác, dựng lại trong một ngày khi cần.",
+      "related": ["pilot-light", "warm-standby", "rpo-rto"],
+      "topics": ["high-availability-dr"]
+    },
+    {
+      "id": "pilot-light",
+      "term": "Pilot light",
+      "meaning": "Mức DR mà dữ liệu luôn được sao chép sang region dự phòng và hạ tầng lõi (database, storage) chạy sẵn, còn app tắt hoặc 0 instance; khi cần thì bật app lên. RTO hàng chục phút.",
+      "example": "Aurora replica chạy ở region DR, ASG của app để 0, AMI và cấu hình đã sẵn.",
+      "related": ["backup-and-restore", "warm-standby"],
+      "topics": ["high-availability-dr"]
+    },
+    {
+      "id": "warm-standby",
+      "term": "Warm standby",
+      "meaning": "Mức DR có một bản thu nhỏ đầy đủ của hệ thống chạy sẵn ở region dự phòng, nhận được traffic thử; failover là tăng capacity và chuyển traffic. RTO vài phút.",
+      "example": "Region DR chạy 2 task cho checkout thay vì 20, đủ để kiểm tra hằng ngày.",
+      "related": ["pilot-light", "failover"],
+      "topics": ["high-availability-dr"]
+    },
+    {
+      "id": "zonal-shift",
+      "term": "Zonal shift",
+      "meaning": "Tính năng của Application Recovery Controller rút traffic của load balancer khỏi một AZ đang có vấn đề trong một khoảng thời gian, kể cả khi health check vẫn xanh.",
+      "example": "Một AZ mạng chập chờn làm p99 tăng gấp 10: zonal shift 2 giờ trong lúc điều tra.",
+      "related": ["availability-zone", "static-stability"],
+      "topics": ["high-availability-dr"]
     }
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "high-availability-dr",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "High availability & disaster recovery",
+  "summary": "HA khác DR; RPO và RTO theo từng hệ thống và loại sự cố; bốn mức DR của AWS và giá của chúng; sao chép dữ liệu qua region (Aurora Global Database, S3 CRR/RTC, DynamoDB global tables) và vì sao sao chép không phải backup; failover giữa region do người quyết định và chuyển traffic bằng data plane, failback, zonal shift; những thứ hay thiếu ở region DR; diễn tập.",
+  "level": "senior",
+  "order": 19,
+  "minutes": 16,
+  "prerequisites": ["cloud-fundamentals", "aws-core", "backup-restore"],
+  "terms": ["rpo-rto", "failover", "static-stability", "availability-zone", "cloud-region", "backup-and-restore", "pilot-light", "warm-standby", "zonal-shift"],
+  "references": [
+    { "title": "AWS Whitepaper: Disaster Recovery of Workloads on AWS", "url": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html" },
+    { "title": "Amazon Aurora: switchover or failover in Aurora Global Database", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html" },
+    { "title": "Amazon S3 Replication Time Control", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-time-control.html" },
+    { "title": "AWS Whitepaper: AWS Fault Isolation Boundaries, global services", "url": "https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/global-services.html" },
+    { "title": "Amazon Application Recovery Controller: zonal shift", "url": "https://docs.aws.amazon.com/r53recovery/latest/dg/arc-zonal-shift.html" },
+    { "title": "AWS Backup: Vault Lock", "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống của bạn có RPO, RTO bao nhiêu, và làm sao bạn biết?\" Câu trả lời tốt có số theo từng loại sự cố (mất AZ: RPO 0, RTO vài phút nhờ Multi-AZ; mất region: RPO vài giây, RTO 15 phút; hỏng dữ liệu: RPO 5 phút nhờ point-in-time restore, RTO đo được trong lần restore thử gần nhất), kèm lần diễn tập gần nhất và con số đo được. \"Chúng tôi có backup hằng ngày\" mà chưa từng restore thử là câu trả lời yếu." },
+    { "type": "callout", "style": "warning", "markdown": "Failover tự động sang region khác dựa trên một health check đơn lẻ dễ gây hại hơn sự cố gốc: chập chờn mạng vài phút có thể làm hệ thống chuyển region, mất phần dữ liệu chưa chép, rồi phải failback phức tạp. Với DR cấp region, để người có quyền quyết định dựa trên nhiều tín hiệu, còn tự động hoá các bước sau quyết định đó." }
+  ]
+}
