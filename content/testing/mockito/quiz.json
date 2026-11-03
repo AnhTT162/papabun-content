@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "spy-when-calls-real",
+      "kind": "output",
+      "prompt": "`Mailer.send()` tăng biến đếm `sent` và in dòng \"REAL send\". Đoạn test sau in ra gì?",
+      "code": "Mailer mailer = spy(new Mailer());\nwhen(mailer.send(\"a@x\")).thenReturn(\"stub\");\nSystem.out.println(\"sent=\" + mailer.sent);\ndoReturn(\"stub\").when(mailer).send(\"b@x\");\nSystem.out.println(\"sent=\" + mailer.sent);",
+      "options": [
+        "`REAL send`, `sent=1`, rồi `sent=1`",
+        "`sent=0` rồi `sent=0`, không có dòng nào khác",
+        "`REAL send`, `sent=1`, `REAL send`, `sent=2`",
+        "`sent=0`, `REAL send`, rồi `sent=1`"
+      ],
+      "answer": 0,
+      "explanation": "Với spy, `when(mailer.send(\"a@x\"))` phải gọi `send` thật để Mockito biết đang stub method nào, nên email thật \"được gửi\" một lần. `doReturn(...).when(mailer).send(...)` đặt stub mà không gọi method thật, nên biến đếm giữ nguyên 1. Đã chạy với Mockito 5.24.0."
+    },
+    {
+      "id": "captor-mutable",
+      "kind": "output",
+      "prompt": "Code dùng lại một list làm buffer. Test in ra gì?",
+      "code": "List<String> batch = new ArrayList<>();\nbatch.add(\"a\");\nsender.send(batch);\nbatch.clear();\nbatch.add(\"b\");\nsender.send(batch);\n\nArgumentCaptor<List<String>> captor = ArgumentCaptor.captor();\nverify(sender, times(2)).send(captor.capture());\nSystem.out.println(captor.getAllValues());",
+      "options": [
+        "`[[b], [b]]`",
+        "`[[a], [b]]`",
+        "`[[a, b], [b]]`",
+        "`[[], [b]]`"
+      ],
+      "answer": 0,
+      "explanation": "Mockito lưu tham chiếu tới tham số của mỗi lời gọi, không chép nội dung. Cả hai lời gọi trỏ tới cùng một list, và lúc `verify` list đó chứa `[b]`. Muốn biết nội dung tại thời điểm gọi thì chép dữ liệu trong `doAnswer`, hoặc kiểm bằng fake ghi lại bản sao."
+    },
+    {
+      "id": "unused-stub-strict",
+      "kind": "single",
+      "prompt": "Test dùng `@ExtendWith(MockitoExtension.class)`, stub `when(repo.findById(42L))` nhưng code đang test không gọi `findById` lần nào. Kết quả?",
+      "options": [
+        "Test fail với `UnnecessaryStubbingException` sau khi method test chạy xong",
+        "Test xanh, Mockito chỉ in một dòng cảnh báo stub thừa vào log",
+        "Test fail ngay ở dòng `when(...)` vì method chưa được gọi lần nào",
+        "Test xanh, vì stub không dùng tới không ảnh hưởng gì tới kết quả"
+      ],
+      "answer": 0,
+      "explanation": "`MockitoExtension` mặc định `STRICT_STUBS`, kiểm stub thừa sau mỗi test (trong `afterEach`). Stub thừa thường nghĩa là test đang dựa vào một đường code không còn chạy. Mock tạo bằng `Mockito.mock()` ngoài extension hay session thì không có kiểm tra này, test xanh im lặng."
+    },
+    {
+      "id": "what-not-to-mock",
+      "kind": "single",
+      "prompt": "Service `OrderService` dùng bốn phụ thuộc. Trong unit test của nó, phụ thuộc nào nên thay bằng test double thay vì dùng bản thật?",
+      "options": [
+        "`PaymentGatewayClient` gọi HTTP sang cổng thanh toán bên ngoài",
+        "`Money`, record bất biến chứa số tiền và đơn vị tiền tệ",
+        "`DiscountPolicy`, class thuần tính giảm giá theo quy tắc của mình",
+        "`OrderNumberFormatter`, class thuần sinh mã đơn từ id và ngày"
+      ],
+      "answer": 0,
+      "explanation": "Cổng thanh toán chậm, có tác dụng phụ (trừ tiền) và không kiểm soát được, nên thay bằng test double (tốt hơn nữa là bọc bằng adapter của mình và test adapter bằng WireMock). Value object và logic thuần của mình (tính giảm giá, sinh mã đơn) chạy nhanh và xác định, dùng bản thật cho test sát hành vi và không vỡ khi refactor."
+    }
+  ]
+}

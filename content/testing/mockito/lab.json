@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Test \"không huỷ được đơn đã giao\" vẫn xanh sau khi logic bị xoá",
+  "context": "Service đơn hàng Spring Boot, test dùng JUnit 6.1.3 và Mockito 5.24.0. Để chống hai request huỷ cùng lúc, một developer đổi `findById` thành `findByIdForUpdate` (`SELECT ... FOR UPDATE`) trong `cancel()`, và khi gộp code thì lỡ xoá đoạn kiểm trạng thái. Test cũ tạo mock bằng `Mockito.mock()` trong field, không dùng `MockitoExtension`.",
+  "buggyCode": "class OrderService {\n    private final OrderRepository repo;\n    OrderService(OrderRepository repo) { this.repo = repo; }\n\n    void cancel(long id) {\n        Order order = repo.findByIdForUpdate(id)\n                .orElseThrow(() -> new OrderNotFoundException(id));\n        // trước đây: if (order.status == SHIPPED) throw new CannotCancelException(id);\n        order.status = Status.CANCELLED;\n        repo.save(order);\n    }\n}\n\n// OrderNotFoundException và CannotCancelException cùng kế thừa OrderException;\n// CannotCancelException(id) có message \"order <id> already shipped\"\n\nclass OrderServiceTest {\n    OrderRepository repo = mock(OrderRepository.class);\n    OrderService service = new OrderService(repo);\n\n    @Test\n    void cannotCancelShippedOrder() {\n        when(repo.findById(42L)).thenReturn(Optional.of(new Order(42L, Status.SHIPPED)));\n        assertThrows(OrderException.class, () -> service.cancel(42L));\n    }\n}",
+  "symptom": {
+    "description": "Bộ phận chăm sóc khách hàng báo một số đơn đã giao bị huỷ và hoàn tiền. CI của commit đó xanh; chạy riêng test liên quan:",
+    "output": "└─ JUnit Jupiter ✔\n   └─ OrderServiceTest ✔\n      └─ cannotCancelShippedOrder() ✔\n\nTest run finished after 385 ms\n[         1 tests successful      ]\n[         0 tests failed          ]"
+  },
+  "diagnosis": {
+    "question": "Vì sao test vẫn xanh dù code đã cho huỷ đơn đã giao?",
+    "options": [
+      "Stub `findById` không còn được gọi; `findByIdForUpdate` chưa stub trả `Optional.empty()` nên code ném `OrderNotFoundException`",
+      "Mock tạo bằng `Mockito.mock()` gọi xuống repository thật, nên test đọc được đơn thật đang ở trạng thái đã huỷ",
+      "`assertThrows` bắt mọi exception, kể cả `AssertionError` mà JUnit ném ra khi một assert bên trong hỏng",
+      "Mockito cache stub theo tham số 42, nên `findByIdForUpdate(42L)` dùng lại kết quả đã stub của `findById(42L)`"
+    ],
+    "answer": 0,
+    "explanation": "Method chưa stub của mock trả giá trị mặc định, với `Optional` là `Optional.empty()`. `cancel(42L)` vì vậy ném `OrderNotFoundException` trước cả khi tới đoạn đổi trạng thái, và vì `OrderNotFoundException` cũng là một `OrderException`, `assertThrows(OrderException.class, ...)` chấp nhận nó, nên test xanh vì một lý do khác hẳn. Mock không gọi code thật (đó là spy). `assertThrows` chỉ khớp kiểu đã cho và trả lại exception. Stub khớp theo method và tham số, không dùng chung giữa hai method."
+  },
+  "fix": {
+    "code": "@ExtendWith(MockitoExtension.class)          // STRICT_STUBS mặc định\nclass OrderServiceTest {\n    @Mock OrderRepository repo;\n    OrderService service;\n\n    @BeforeEach\n    void setUp() { service = new OrderService(repo); }\n\n    @Test\n    void cannotCancelShippedOrder() {\n        Order shipped = new Order(42L, Status.SHIPPED);\n        when(repo.findByIdForUpdate(42L)).thenReturn(Optional.of(shipped));\n\n        CannotCancelException error =\n                assertThrows(CannotCancelException.class, () -> service.cancel(42L));\n\n        assertEquals(\"order 42 already shipped\", error.getMessage());\n        assertEquals(Status.SHIPPED, shipped.status);\n        verify(repo, never()).save(any());\n    }\n}\n\n// OrderService.cancel(): trả lại kiểm tra trạng thái\nif (order.status == Status.SHIPPED) throw new CannotCancelException(id);",
+    "explanation": "Với `MockitoExtension`, chính test cũ đã đỏ sau refactor: \"Unnecessary stubbings detected ... OrderServiceTest.java:13\", vì stub `findById` không còn ai gọi. Đó là tín hiệu test đang không kiểm điều nó định kiểm. Bản sửa stub đúng method, kiểm **đúng lớp exception** chứ không phải lớp cha, kiểm trạng thái đơn không đổi, và vì không ghi là một phần hành vi nên `verify(never()).save(...)` ở đây có lý. Một integration test cho `cancel()` với database thật sẽ bắt luôn lỗi này mà không phụ thuộc mock."
+  }
+}

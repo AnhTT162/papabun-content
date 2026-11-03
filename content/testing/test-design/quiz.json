@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "boundary-values",
+      "kind": "single",
+      "prompt": "Quy tắc: đơn từ 1.000.000đ trở lên được giảm 5%. Bộ giá trị nào kiểm quy tắc này đáng tin nhất?",
+      "options": [
+        "999.999, 1.000.000 và 1.000.001",
+        "500.000 và 2.000.000",
+        "0, 1.000.000 và 10.000.000",
+        "Một test với 1.500.000 và một test với 100.000"
+      ],
+      "answer": 0,
+      "explanation": "Bug hay nằm đúng ở biên (`>` với `>=`, hay ngưỡng gõ lệch). Ba giá trị ngay tại và sát hai bên ngưỡng phân biệt được mọi cách viết sai so sánh lẫn ngưỡng lệch một đơn vị. Bộ 500.000 và 2.000.000 cùng bộ 1.500.000/100.000 không có giá trị tại ngưỡng, nên đổi `>=` thành `>` vẫn xanh. Bộ 0, 1.000.000, 10.000.000 có giá trị tại ngưỡng nhưng thiếu 999.999, nên ngưỡng bị viết lệch xuống (ví dụ `>= 999_000`) vẫn lọt."
+    },
+    {
+      "id": "coverage-meaning",
+      "kind": "single",
+      "prompt": "Module tính phí đạt 100% line coverage và 100% branch coverage. Kết luận nào đúng?",
+      "options": [
+        "Mọi dòng và nhánh đã chạy, chưa nói gì về assert",
+        "Mọi bug logic trong module sẽ làm ít nhất một test đỏ",
+        "Không cần chạy mutation testing cho module này nữa",
+        "Mọi giá trị biên của các điều kiện đều đã được kiểm"
+      ],
+      "answer": 0,
+      "explanation": "Coverage đo việc thực thi, không đo việc kiểm tra. Một test gọi hàm mà không assert gì vẫn được tính coverage. Branch coverage cũng không đòi giá trị sát biên, nên đổi `>` thành `>=` vẫn có thể không test nào đỏ; mutation testing là cách tìm ra những chỗ đó."
+    },
+    {
+      "id": "survived-mutant",
+      "kind": "single",
+      "prompt": "PIT báo mutant \"removed call to `AuditLog::record`\" ở `OrderService.cancel()` SURVIVED. Điều này nói gì?",
+      "options": [
+        "Không test nào kiểm việc ghi audit khi huỷ đơn",
+        "PIT lỗi, vì method `void` không thể bị đột biến",
+        "Lời gọi `record` không bao giờ được thực thi trong test",
+        "Test có kiểm audit nhưng chạy quá lâu nên PIT bỏ qua"
+      ],
+      "answer": 0,
+      "explanation": "Mutator void method call xoá lời gọi và chạy lại test. Mutant sống sót nghĩa là dòng đó **có chạy** (nếu không PIT báo NO_COVERAGE) nhưng không test nào phụ thuộc vào kết quả của nó. Nếu audit là yêu cầu nghiệp vụ, thêm assert trên fake `AuditLog` hoặc `verify` lời gọi; test chạy quá giờ được PIT báo TIMED_OUT, không phải SURVIVED."
+    },
+    {
+      "id": "test-smell",
+      "kind": "single",
+      "prompt": "Test `orderFlowWorks()` dài 80 dòng: tạo đơn, kiểm tổng, áp mã, kiểm lại, huỷ, kiểm hoàn tiền, với 14 `assertEquals` không message. Smell chính là gì?",
+      "options": [
+        "Eager test kèm assertion roulette",
+        "Mystery guest: dữ liệu nằm ngoài test",
+        "Sleepy test: chờ bằng `Thread.sleep`",
+        "Conditional logic: test chứa `if`"
+      ],
+      "answer": 0,
+      "explanation": "Một test gom cả chuỗi hành vi (tạo, áp mã, huỷ, hoàn tiền) là eager test; assert đầu tiên hỏng thì phần sau không chạy, và 14 assert không message khiến khó biết sai ở đâu. Tách theo hành vi, mỗi test dựng trạng thái nó cần bằng test data builder. Đề không nhắc dữ liệu ngoài, `sleep` hay `if`."
+    }
+  ]
+}

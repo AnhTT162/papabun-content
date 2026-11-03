@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "test-design",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Thiết kế test tốt",
+  "summary": "Arrange-Act-Assert, một test một hành vi, đặt tên; test smell (assertion roulette, mystery guest, eager, fragile, sleepy); DAMP hơn DRY, test data builder và Object Mother; phân vùng tương đương và giá trị biên; coverage dòng/nhánh và giới hạn của nó, diff coverage; mutation testing với PIT (đo thật: 100% coverage mà mutant biên sống sót), equivalent mutant, chi phí; property-based và approval test.",
+  "level": "mid",
+  "order": 4,
+  "minutes": 14,
+  "prerequisites": ["junit5", "test-strategy"],
+  "terms": ["arrange-act-assert", "test-smell", "test-data-builder", "code-coverage", "mutation-testing", "equivalent-mutant", "characterization-test", "parameterized-test", "object-mother", "property-based-testing"],
+  "references": [
+    { "title": "PIT: Mutation testing for Java", "url": "https://pitest.org/quickstart/" },
+    { "title": "Google Testing Blog: Code Coverage Best Practices", "url": "https://testing.googleblog.com/2020/08/code-coverage-best-practices.html" },
+    { "title": "JaCoCo: Coverage Counters", "url": "https://www.jacoco.org/jacoco/trunk/doc/counters.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Team bạn đặt coverage bao nhiêu?\" Trả lời: dùng coverage để tìm vùng chưa test, không làm mục tiêu cứng, vì chỉ tiêu tổng sinh ra test không assert gì. Chặn ở mức code vừa đổi (diff coverage), và với logic tiền, quyền thì chạy mutation testing trên phần thay đổi. Hỏi tiếp \"mutation testing chậm thì sao\": chỉ phân tích file đổi trong pull request (`scmMutationCoverage`), bật phân tích tăng dần, và giới hạn ở module lõi." },
+    { "type": "callout", "style": "warning", "markdown": "Test không bao giờ đỏ thì không bảo vệ gì. Trước khi tin một test mới, làm nó đỏ một lần: viết test trước khi sửa bug, hoặc tạm sửa sai code để thấy test bắt được." }
+  ]
+}

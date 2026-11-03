@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Coverage 100% mà đơn đúng 500.000đ vẫn bị tính phí ship",
+  "context": "Quy tắc nghiệp vụ: đơn **từ 500.000đ trở lên** hoặc khách VIP được miễn phí ship, còn lại phí 30.000đ. Pipeline chặn merge nếu JaCoCo báo dưới 90% dòng hoặc nhánh. Class `ShippingPolicy` có ba test, cả ba xanh. Dự án dùng JUnit 6.1.3, JaCoCo 0.8.16, PIT 1.30.1.",
+  "buggyCode": "package shop;\n\npublic class ShippingPolicy {\n    static final long FREE_FROM = 500_000;\n    static final long FEE = 30_000;\n\n    public long fee(long orderTotal, boolean vip) {\n        if (vip || orderTotal > FREE_FROM) {\n            return 0;\n        }\n        return FEE;\n    }\n}\n\nclass ShippingPolicyTest {\n    private final ShippingPolicy policy = new ShippingPolicy();\n\n    @Test\n    void bigOrderShipsFree() {\n        assertEquals(0, policy.fee(800_000, false));\n    }\n\n    @Test\n    void smallOrderPaysFee() {\n        assertEquals(30_000, policy.fee(120_000, false));\n    }\n\n    @Test\n    void vipShipsFree() {\n        assertEquals(0, policy.fee(120_000, true));\n    }\n}",
+  "symptom": {
+    "description": "Khách phàn nàn đơn đúng 500.000đ vẫn bị tính 30.000đ phí ship. Báo cáo của JaCoCo và PIT cho class này:",
+    "output": "JaCoCo  ShippingPolicy  LINE_COVERED=4 LINE_MISSED=0  BRANCH_COVERED=4 BRANCH_MISSED=0\n\nPIT >> Line Coverage (for mutated classes only): 4/4 (100%)\nPIT >> Generated 4 mutations Killed 3 (75%)\nPIT >> Mutations with no coverage 0. Test strength 75%\n  ShippingPolicy.java:8   changed conditional boundary   SURVIVED\n  ShippingPolicy.java:8   negated conditional            KILLED\n  ShippingPolicy.java:8   negated conditional            KILLED\n  ShippingPolicy.java:11  replaced long return with 0    KILLED"
+  },
+  "diagnosis": {
+    "question": "Vì sao bộ test đạt 100% dòng và nhánh mà không bắt được bug?",
+    "options": [
+      "Không test nào chạm đúng ngưỡng 500.000, nên đổi `>` thành `>=` hay ngược lại test vẫn xanh như nhau",
+      "JaCoCo đếm sai nhánh của điều kiện `||`, nên thực ra còn một nhánh chưa được chạy",
+      "Test dùng `assertEquals` với `long` và `int` lẫn nhau, nên phép so sánh luôn đúng",
+      "PIT báo mutant sống sót vì nó không hỗ trợ JUnit 6, kết quả không đáng tin"
+    ],
+    "answer": 0,
+    "explanation": "Coverage chỉ ghi nhận dòng và nhánh đã chạy: 800.000 đi nhánh miễn phí, 120.000 đi nhánh tính phí, nên cả bốn nhánh đều được tính. Nhưng 800.000 và 120.000 cách xa ngưỡng, nên `>` hay `>=` đều cho cùng kết quả. PIT chỉ ra đúng chỗ đó: mutant \"changed conditional boundary\" ở dòng 8 sống sót. JaCoCo đếm `vip || orderTotal > FREE_FROM` thành 4 nhánh và cả 4 đã chạy. `assertEquals(0, ...)` với `long` gọi overload `(long, long)` và so đúng giá trị. PIT chạy được với JUnit 6 qua `pitest-junit5-plugin` và đã giết 3 mutant còn lại."
+  },
+  "fix": {
+    "code": "public long fee(long orderTotal, boolean vip) {\n    if (vip || orderTotal >= FREE_FROM) {\n        return 0;\n    }\n    return FEE;\n}\n\nclass ShippingPolicyBoundaryTest {\n    private final ShippingPolicy policy = new ShippingPolicy();\n\n    @ParameterizedTest(name = \"{0}đ -> phí {1}\")\n    @CsvSource({\"499999, 30000\", \"500000, 0\", \"500001, 0\"})\n    void freeShippingStartsAt500k(long total, long expectedFee) {\n        assertEquals(expectedFee, policy.fee(total, false));\n    }\n}",
+    "explanation": "Viết test biên trước khi sửa: với code cũ, dòng `500000, 0` đỏ (`expected: <0> but was: <30000>`), tái hiện đúng bug khách báo. Sửa thành `>=` thì cả ba dòng xanh và PIT báo \"Generated 4 mutations Killed 4 (100%)\". Bài học cho pipeline: giữ ngưỡng coverage làm tín hiệu vùng chưa test, nhưng với logic tiền và quyền thì chạy thêm mutation testing trên code thay đổi, và luôn có test tại biên cùng hai bên biên."
+  }
+}

@@ -4029,7 +4029,7 @@
       "meaning": "Bộ test kiểm hợp đồng chung của một interface, chạy lại cho mọi cài đặt để đảm bảo chúng thay thế được nhau.",
       "example": "`abstract class PaymentGatewayContractTest` có các test chung; `MomoGatewayTest` và `VnpayGatewayTest` kế thừa nó.",
       "related": ["liskov-substitution"],
-      "topics": ["solid", "event-driven-architecture", "evolutionary-architecture"]
+      "topics": ["solid", "event-driven-architecture", "evolutionary-architecture", "mockito"]
     },
     {
       "id": "temporal-coupling",
@@ -4405,7 +4405,7 @@
       "meaning": "Test ghi lại hành vi hiện tại của code cũ, kể cả chỗ trông như bug, để làm lưới an toàn trước khi refactor.",
       "example": "Chạy hàm tính phí cũ với 200 đơn hàng thật, lưu kết quả làm giá trị mong đợi.",
       "related": ["refactoring"],
-      "topics": ["refactoring-tech-debt", "clean-hexagonal"]
+      "topics": ["refactoring-tech-debt", "clean-hexagonal", "test-design"]
     },
     {
       "id": "strangler-fig",
@@ -4437,7 +4437,7 @@
       "meaning": "Kỹ thuật kiểm tra chất lượng test bằng cách cố tình sửa code (mutant) và xem test có đỏ không; công cụ Java phổ biến là PIT.",
       "example": "PIT đổi `amount > 0` thành `amount >= 0`, test vẫn xanh: thiếu test cho giá trị 0.",
       "related": ["characterization-test"],
-      "topics": ["refactoring-tech-debt", "evolutionary-architecture", "test-strategy"]
+      "topics": ["refactoring-tech-debt", "evolutionary-architecture", "test-strategy", "test-design"]
     },
     {
       "id": "code-smell",
@@ -13308,8 +13308,8 @@
       "term": "Sociable test",
       "meaning": "Unit test dùng các class thật mà đơn vị được test gọi tới, chỉ thay phụ thuộc chậm hoặc dùng chung; ngược lại, solitary test mock mọi class cộng tác.",
       "example": "Test `OrderService` dùng `PriceCalculator` thật và repository giả trong bộ nhớ.",
-      "related": ["unit-test"],
-      "topics": ["test-strategy"]
+      "related": ["unit-test", "test-double"],
+      "topics": ["test-strategy", "mockito"]
     },
     {
       "id": "smoke-test",
@@ -13373,7 +13373,7 @@
       "meaning": "Một method test chạy nhiều lần với các bộ dữ liệu khác nhau, mỗi bộ hiện thành một test riêng trong báo cáo.",
       "example": "`@ParameterizedTest @CsvSource({\"100000,true,90000\", \"100000,false,100000\"})` kiểm giảm giá cho cả khách VIP và thường.",
       "related": ["junit-jupiter"],
-      "topics": ["junit5"]
+      "topics": ["junit5", "test-design"]
     },
     {
       "id": "junit-extension",
@@ -13390,6 +13390,118 @@
       "example": "Service Order được test chủ yếu bằng cách gọi API thật của nó với database thật và stub cho service khác.",
       "related": ["testing-trophy", "test-pyramid"],
       "topics": ["test-strategy"]
+    },
+    {
+      "id": "test-double",
+      "term": "Test double",
+      "meaning": "Tên chung cho mọi object đứng thay một phụ thuộc thật trong test (Gerard Meszaros): dummy, stub, spy, mock, fake.",
+      "example": "Repository trong bộ nhớ thay PostgreSQL, hay mock của cổng thanh toán, đều là test double.",
+      "related": ["test-stub", "mock-object", "fake-object"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "test-stub",
+      "term": "Stub",
+      "meaning": "Test double trả câu trả lời dựng sẵn để code đang test chạy tiếp; test không kiểm lời gọi tới nó.",
+      "example": "`when(rates.get(\"USD\")).thenReturn(new BigDecimal(\"25400\"))` để test quy đổi tiền.",
+      "related": ["test-double", "mock-object"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "test-spy",
+      "term": "Spy",
+      "meaning": "Theo Meszaros: test double ghi lại các lời gọi để test kiểm sau. Trong Mockito, `spy()` là object thật được bọc lại, method chưa stub chạy code thật.",
+      "example": "`spy(new Mailer())` chạy `send` thật trừ các method đã `doReturn`.",
+      "related": ["test-double", "mock-object"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "mock-object",
+      "term": "Mock",
+      "meaning": "Test double dùng để kiểm lời gọi: method nào được gọi, với tham số gì, bao nhiêu lần. Trong Mockito, object tạo bằng `mock()` vừa stub được vừa verify được.",
+      "example": "`verify(mailer).send(\"a@x.com\")` kiểm email xác nhận đã được gửi.",
+      "related": ["test-double", "test-stub"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "fake-object",
+      "term": "Fake",
+      "meaning": "Test double có cài đặt chạy được nhưng đơn giản hơn bản thật, như repository lưu trong `HashMap`; có thể lệch hành vi thật nên cần contract test.",
+      "example": "`InMemoryOrderRepository` cài cùng interface với repository JPA, dùng cho test use case.",
+      "related": ["test-double", "contract-test"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "strict-stubbing",
+      "term": "Strict stubbing",
+      "meaning": "Chế độ của Mockito (mặc định trong `MockitoExtension`) làm test fail khi có stub không được dùng hoặc code gọi method đã stub với tham số khác.",
+      "example": "Stub `findById` nhưng code đã chuyển sang `findByIdForUpdate`: test đỏ với `UnnecessaryStubbingException`.",
+      "related": ["test-stub"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "argument-captor",
+      "term": "ArgumentCaptor",
+      "meaning": "Công cụ của Mockito bắt tham số của lời gọi lên mock để assert chi tiết; lưu tham chiếu chứ không chép nội dung.",
+      "example": "`verify(publisher).publish(captor.capture())` rồi kiểm `captor.getValue().orderId()`.",
+      "related": ["mock-object"],
+      "topics": ["mockito"]
+    },
+    {
+      "id": "arrange-act-assert",
+      "term": "Arrange-Act-Assert",
+      "meaning": "Cấu trúc ba phần của một test: dựng dữ liệu và phụ thuộc, gọi đúng một hành vi, kiểm kết quả. Given-When-Then là cách gọi tương đương.",
+      "example": "Arrange: giỏ có hai món; Act: `cart.checkout()`; Assert: tổng tiền và trạng thái đơn.",
+      "related": ["test-smell"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "test-smell",
+      "term": "Test smell",
+      "meaning": "Dấu hiệu test khó đọc, dễ vỡ hoặc kiểm lỏng, như assertion roulette, mystery guest, eager test, sleepy test.",
+      "example": "Test 80 dòng với 14 `assertEquals` không message: fail không biết hành vi nào hỏng.",
+      "related": ["arrange-act-assert", "flaky-test"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "test-data-builder",
+      "term": "Test data builder",
+      "meaning": "Builder dựng object cho test với giá trị mặc định hợp lệ, để mỗi test chỉ ghi các trường nó quan tâm (Nat Pryce).",
+      "example": "`anOrder().withTotal(500_000).vip().build()`.",
+      "related": ["test-smell"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "code-coverage",
+      "term": "Code coverage",
+      "meaning": "Tỉ lệ dòng, nhánh hoặc lệnh của code đã được chạy khi chạy test, đo bằng công cụ như JaCoCo; không cho biết test có assert đúng hay không.",
+      "example": "JaCoCo báo 4/4 dòng, 4/4 nhánh cho `ShippingPolicy`, nhưng giá trị biên 500.000 chưa được kiểm.",
+      "related": ["mutation-testing"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "equivalent-mutant",
+      "term": "Equivalent mutant",
+      "meaning": "Mutant không làm đổi hành vi quan sát được, nên không test nào giết được; lý do mutation score hiếm khi đạt 100%.",
+      "example": "Đổi `value >= 0 ? value : -value` thành `value > 0 ? ...`: tại 0 cả hai đều trả 0.",
+      "related": ["mutation-testing"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "object-mother",
+      "term": "Object Mother",
+      "meaning": "Class chứa các method tạo sẵn object mẫu cho test, như `TestOrders.shippedVipOrder()`; tiện nhưng dễ phình ra nhiều biến thể và giấu dữ liệu quan trọng khỏi test.",
+      "example": "`TestCustomers.vip()` trả khách VIP với 15 trường đã điền sẵn, test không thấy trường nào quyết định kết quả.",
+      "related": ["test-data-builder"],
+      "topics": ["test-design"]
+    },
+    {
+      "id": "property-based-testing",
+      "term": "Property-based testing",
+      "meaning": "Kiểu test mô tả tính chất phải đúng với mọi đầu vào; thư viện (jqwik, QuickCheck) sinh hàng trăm đầu vào ngẫu nhiên và thu nhỏ ví dụ hỏng về dạng nhỏ nhất.",
+      "example": "Tính chất `decode(encode(text)).equals(text)` với mọi chuỗi Unicode bắt được lỗi ký tự ngoài BMP.",
+      "related": ["parameterized-test"],
+      "topics": ["test-design"]
     }
   ]
 }

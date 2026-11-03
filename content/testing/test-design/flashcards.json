@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "aaa", "front": "Arrange-Act-Assert gồm những gì?", "back": "Arrange dựng dữ liệu và phụ thuộc, Act gọi đúng một hành vi, Assert kiểm kết quả của hành vi đó." },
+    { "id": "one-behavior", "front": "\"Một test một assert\" có đúng không?", "back": "Không hẳn; quy tắc là một test một hành vi, có thể nhiều assert cho cùng một kết quả." },
+    { "id": "coverage-limit", "front": "Coverage 100% chứng minh được gì?", "back": "Chỉ rằng mọi dòng hoặc nhánh đã chạy; không chứng minh test assert đúng hay kiểm giá trị biên." },
+    { "id": "mutation", "front": "Mutant SURVIVED trong PIT nghĩa là gì?", "back": "PIT sửa code mà không test nào đỏ: thiếu test hoặc assert quá lỏng ở chỗ đó." },
+    { "id": "boundary", "front": "Kiểm một ngưỡng như \"từ 500.000đ\" cần những giá trị nào?", "back": "Ngay tại ngưỡng và hai bên sát ngưỡng: 499.999, 500.000, 500.001." },
+    { "id": "damp", "front": "Vì sao test nên DAMP hơn DRY?", "back": "Mỗi test cần tự đọc hiểu được; helper chung giấu dữ liệu quan trọng khiến khó biết test kiểm gì và vì sao đỏ." },
+    { "id": "builder", "front": "Test data builder giải quyết vấn đề gì?", "back": "Dựng object với giá trị mặc định hợp lệ, để mỗi test chỉ ghi trường nó quan tâm." },
+    { "id": "equivalent-mutant", "front": "Equivalent mutant là gì?", "back": "Mutant không đổi hành vi quan sát được, nên không test nào giết được; lý do không nên đòi 100% mutation score." }
+  ]
+}

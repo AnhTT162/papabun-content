@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "mockito",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "testing",
+  "title": "Mockito & test double",
+  "summary": "Năm loại test double (dummy, stub, spy, mock, fake) và cách Mockito đặt tên; inline mock maker, Java agent trên JDK 21+; giá trị mặc định của mock; strict stubbing và test xanh sai lý do; khi nào không mock (value object, database, API của bên thứ ba, thời gian); matcher, captor giữ tham chiếu, spy gọi method thật, `mockStatic`, `@InjectMocks` im lặng; fake với contract test; `@MockitoBean` thay `@MockBean`.",
+  "level": "mid",
+  "order": 3,
+  "minutes": 14,
+  "prerequisites": ["junit5", "test-strategy"],
+  "terms": ["test-double", "test-stub", "test-spy", "mock-object", "fake-object", "strict-stubbing", "argument-captor", "contract-test", "sociable-test"],
+  "references": [
+    { "title": "Mockito Javadoc (5.x)", "url": "https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html" },
+    { "title": "Martin Fowler: Mocks Aren't Stubs", "url": "https://martinfowler.com/articles/mocksArentStubs.html" },
+    { "title": "Martin Fowler: TestDouble", "url": "https://martinfowler.com/bliki/TestDouble.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Test của bạn mock repository, vậy làm sao biết câu query đúng?\" Trả lời: không biết; unit test với mock repository chỉ kiểm logic quanh repository. Câu query được kiểm bằng integration test với database thật (Testcontainers). Hỏi tiếp \"vậy khi nào verify lời gọi\": khi chính lời gọi là hành vi có tác dụng ra ngoài (gửi email, trừ tiền, phát event) và không có trạng thái nào để kiểm; còn lại kiểm kết quả trả về hoặc trạng thái." },
+    { "type": "callout", "style": "warning", "markdown": "`assertThrows(OrderException.class, ...)` với lớp cha chấp nhận mọi lớp con, kể cả exception do mock trả `Optional.empty()` sinh ra. Kiểm đúng lớp exception cụ thể và message, và dùng `MockitoExtension` để stub thừa làm test đỏ." }
+  ]
+}

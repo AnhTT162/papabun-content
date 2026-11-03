@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "stub-vs-mock", "front": "Stub và mock khác nhau thế nào?", "back": "Stub trả câu trả lời dựng sẵn để code chạy tiếp; mock được dùng để kiểm lời gọi (method nào, tham số gì, mấy lần)." },
+    { "id": "fake", "front": "Fake là gì?", "back": "Cài đặt chạy được nhưng đơn giản của một phụ thuộc, như repository lưu trong `HashMap`; nên chạy chung contract test với bản thật." },
+    { "id": "defaults", "front": "Method chưa stub của mock Mockito trả gì?", "back": "Giá trị mặc định: `null`, `0`, `false`, collection rỗng, `Optional.empty()`." },
+    { "id": "strict-stubs", "front": "`STRICT_STUBS` bắt hai lỗi nào?", "back": "Stub không được dùng (`UnnecessaryStubbingException`) và code gọi method đã stub với tham số khác (`PotentialStubbingProblem`)." },
+    { "id": "spy-doreturn", "front": "Vì sao stub spy bằng `doReturn` thay vì `when`?", "back": "`when(spy.method())` gọi method thật một lần lúc stub; `doReturn(...).when(spy).method()` thì không." },
+    { "id": "inline-agent", "front": "Mockito 5 trên JDK 21+ nên cấu hình gì?", "back": "Thêm `-javaagent` trỏ tới jar mockito-core vào `argLine`; hiện JVM chỉ cảnh báo khi agent tự attach, nhưng các bản JDK sau sẽ chặn." },
+    { "id": "dont-mock-not-own", "front": "\"Don't mock types you don't own\" nghĩa là gì?", "back": "Đừng mock trực tiếp API của bên thứ ba; bọc nó trong adapter của mình, mock adapter khi test logic, và test adapter với bản thật hoặc stub HTTP." },
+    { "id": "any-null", "front": "`any(String.class)` có khớp `null` không?", "back": "Không (từ Mockito 2); `any()` không kèm kiểu thì khớp cả `null`." }
+  ]
+}
