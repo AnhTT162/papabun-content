@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "jackson3-entity-vs-dto",
+      "kind": "output",
+      "prompt": "Spring Boot 4 dùng Jackson 3. Client gửi body `{\"email\":\"a@x.vn\",\"role\":\"ADMIN\"}`. Dòng in ra là gì?",
+      "code": "String body = \"{\\\"email\\\":\\\"a@x.vn\\\",\\\"role\\\":\\\"ADMIN\\\"}\";\n\npublic static class User {\n    public String email;\n    public String role = \"USER\";\n}\npublic record UpdateProfile(String email) {}\n\nJsonMapper mapper = JsonMapper.builder().build();\nUser user = mapper.readValue(body, User.class);\nUpdateProfile dto = mapper.readValue(body, UpdateProfile.class);\nSystem.out.println(user.role + \" \" + dto);",
+      "options": [
+        "ADMIN UpdateProfile[email=a@x.vn]",
+        "USER UpdateProfile[email=a@x.vn]",
+        "Ném UnrecognizedPropertyException khi đọc UpdateProfile",
+        "ADMIN rồi ném lỗi vì record không có trường role"
+      ],
+      "answer": 0,
+      "explanation": "Entity có trường `role` công khai nên Jackson gán `ADMIN` từ body: đó là mass assignment. Record `UpdateProfile` không có `role`, và Jackson 3 tắt sẵn `FAIL_ON_UNKNOWN_PROPERTIES`, nên trường lạ bị bỏ qua lặng lẽ (đã chạy với Jackson 3.2.4). Lỗi `UnrecognizedPropertyException` là hành vi của `new ObjectMapper()` ở Jackson 2. DTO riêng cho request chặn được mass assignment; bỏ qua lặng lẽ thì an toàn nhưng client không biết trường đã bị bỏ."
+    },
+    {
+      "id": "api-top10-category",
+      "kind": "single",
+      "prompt": "`GET /me` trả nguyên entity, trong đó có `riskScore` nội bộ; người dùng chỉ đọc được bản ghi của chính mình. Lỗi này thuộc mục nào của OWASP API Security Top 10 (2023)?",
+      "options": [
+        "API3 Broken Object Property Level Authorization",
+        "API1 Broken Object Level Authorization",
+        "API5 Broken Function Level Authorization",
+        "API8 Security Misconfiguration của Jackson"
+      ],
+      "answer": 0,
+      "explanation": "Người dùng chỉ đọc bản ghi của mình nên quyền trên đối tượng (API1, BOLA) vẫn đúng. Cái sai là quyền trên từng thuộc tính: trường `riskScore` không được phép ra ngoài. Bản 2023 gộp lộ dữ liệu thừa và mass assignment vào API3 (BOPLA). API5 là gọi được chức năng không được phép, như endpoint quản trị. Sửa bằng DTO response theo vai, không phải bằng cấu hình serializer toàn cục."
+    },
+    {
+      "id": "confused-deputy-refund",
+      "kind": "single",
+      "prompt": "`orders` gọi `payments` bằng token client credentials của chính nó, scope `payments:refund`. Một người dùng gửi yêu cầu hoàn tiền với id đơn của người khác và `orders` chuyển tiếp. Mesh đã bật mTLS STRICT. Biện pháp nào chặn được gốc lỗi ở phía `payments`?",
+      "options": [
+        "`payments` nhận người dùng gốc qua token và kiểm đơn thuộc người đó",
+        "Thêm AuthorizationPolicy để chỉ `orders` được gọi `payments` là đủ",
+        "Đổi token của `orders` sang ES256 và rút thời hạn còn 1 phút",
+        "Bỏ token, chỉ dựa vào mTLS vì chứng chỉ chứng minh `orders` là nội bộ"
+      ],
+      "answer": 0,
+      "explanation": "Đây là confused deputy: `orders` có quyền rộng và dùng nó thay cho người dùng mà không kiểm. mTLS và AuthorizationPolicy chỉ trả lời service nào được gọi; ở đây chính `orders` là bên gọi hợp lệ nên không chặn được. Đổi thuật toán ký hay thời hạn không liên quan. Service phía sau phải biết người dùng gốc để tự kiểm quyền trên bản ghi, (token chuyển tiếp hoặc đổi qua token exchange). Phía `orders` cũng nên kiểm đơn thuộc người dùng trước khi gọi; với tiền thì làm cả hai."
+    },
+    {
+      "id": "redos-modern-jdk",
+      "kind": "single",
+      "prompt": "Một endpoint chạy `Pattern.compile(\"^(.*,){10}END$\")` trên trường `tags` do client gửi. Đồng nghiệp nói JDK 9+ đã sửa ReDoS nên không cần lo. Nhận định nào đúng?",
+      "options": [
+        "Sai: JDK 9+ chỉ cứu một số mẫu lồng; mẫu này vẫn chậm, phải giới hạn độ dài trước",
+        "Đúng: từ JDK 9 java.util.regex ghi nhớ trạng thái, mọi mẫu chạy tuyến tính",
+        "Sai, nhưng chỉ cần timeout cho request vì nó sẽ ngắt được Matcher đang chạy",
+        "Đúng, miễn là compile Pattern một lần và lưu vào biến static để dùng lại"
+      ],
+      "answer": 0,
+      "explanation": "Tối ưu từ JDK 9 (ghi nhớ vị trí đã thử cho vòng lặp lồng) làm mẫu lồng nhau kinh điển `^(a+)+$` chạy dưới 1 ms, nhưng lặp có giới hạn với `.*` vẫn bùng nổ: đã đo trên JDK 27, 40 dấu phẩy mất 9,5 giây. `Matcher` không kiểm interrupt nên timeout của request không dừng thread. Compile một lần chỉ tiết kiệm thời gian compile, không đổi thời gian khớp. Giới hạn độ dài input trước khi khớp, viết mẫu không có `.*` lặp, hoặc dùng engine tuyến tính như RE2/J."
+    },
+    {
+      "id": "partner-auth",
+      "kind": "single",
+      "prompt": "Đối tác gọi API hoàn tiền từ server của họ. Phương án xác thực nào hợp nhất?",
+      "options": [
+        "Client credentials với `private_key_jwt` hoặc mTLS, token ngắn hạn, scope hẹp",
+        "API key tĩnh gửi trong header, lưu hash ở server, xoay mỗi năm một lần",
+        "Tài khoản người dùng của nhân viên đối tác, gọi API bằng password grant",
+        "Allowlist IP của đối tác ở gateway, không cần thêm thông tin xác thực"
+      ],
+      "answer": 0,
+      "explanation": "Hoàn tiền là thao tác có giá trị: cần token ngắn hạn, scope hẹp, và bằng chứng sở hữu khoá mà không gửi secret dùng chung qua mạng; `private_key_jwt` hay mTLS cho điều đó. API key tĩnh dùng được cho API ít rủi ro nhưng không hạn, không scope nếu không tự làm, lộ là dùng tới khi bị thu hồi. Password grant đã bị loại khỏi OAuth hiện đại và gắn API vào một người cụ thể. Allowlist IP là lớp phụ: IP của đối tác đổi và có thể dùng chung."
+    }
+  ]
+}

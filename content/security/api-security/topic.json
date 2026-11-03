@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "api-security",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Bảo mật API",
+  "summary": "OWASP API Security Top 10 (2023); gateway và service chia việc; BOPLA với Jackson 3 (mass assignment, lộ trường, trường lạ bị bỏ lặng lẽ, đã chạy); validate và giới hạn kích thước từ biên (Tomcat, Jackson StreamReadConstraints, phân trang); ReDoS trên JDK 27 (mẫu nào còn chậm, đã đo); hạn mức theo chi phí, luồng nghiệp vụ nhạy cảm; API key, ký request, webhook; service gọi service: mTLS, client credentials, token exchange, confused deputy; kiểm kê API, dùng API bên thứ ba, lỗi trả về, phát hiện dò quét.",
+  "level": "senior",
+  "order": 11,
+  "minutes": 18,
+  "prerequisites": ["authorization-models", "oauth2-oidc", "api-gateway-service-mesh", "rate-limiting"],
+  "terms": ["owasp-api-top-10", "api-gateway", "waf", "rate-limiting", "bola", "bfla", "bopla", "mass-assignment", "bean-validation", "mtls", "service-mesh", "token-exchange", "api-key", "redos", "openapi", "ssrf", "token-relay", "graphql", "sms-pumping", "client-credentials", "secret-scanning", "request-signing", "replay-attack", "webhook", "zero-trust", "spiffe", "confused-deputy", "shadow-api", "idempotency-key"],
+  "references": [
+    { "title": "OWASP API Security Top 10 (2023)", "url": "https://owasp.org/API-Security/editions/2023/en/0x11-t10/" },
+    { "title": "OWASP REST Security Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html" },
+    { "title": "RFC 8693: OAuth 2.0 Token Exchange", "url": "https://www.rfc-editor.org/rfc/rfc8693.html" },
+    { "title": "RFC 9421: HTTP Message Signatures", "url": "https://www.rfc-editor.org/rfc/rfc9421.html" },
+    { "title": "Jackson StreamReadConstraints (jackson-core)", "url": "https://github.com/FasterXML/jackson-core/blob/3.x/src/main/java/tools/jackson/core/StreamReadConstraints.java" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Gateway đã kiểm JWT rồi, service phía sau còn phải kiểm lại không?\" Có, vì hai lý do. Một: gateway chỉ biết token hợp lệ và có scope, không biết bản ghi thuộc về ai, nên phân quyền trên bản ghi và trên trường chỉ làm được ở service. Hai: service phải an toàn cả khi bị gọi thẳng, không qua gateway (pod khác trong cluster bị chiếm, NodePort quên đóng). Nếu service chỉ tin header `X-User-Id` do gateway gắn thì kẻ vào được mạng nội bộ là thành bất kỳ ai. Cách rẻ: chuyển tiếp JWT và để mỗi service làm resource server tự kiểm chữ ký, `aud`; cộng mTLS và chính sách ai gọi ai ở mesh. Kiểm chữ ký JWT với khoá công khai đã cache tốn chưa tới một mili giây, không phải lý do để bỏ." },
+    { "type": "callout", "style": "warning", "markdown": "Giới hạn kích thước không tự có. `maxPostSize` của Tomcat chỉ áp cho form; Jackson 3 mặc định không giới hạn độ dài document và cho chuỗi tới 100 triệu ký tự; `@Size(max = 100)` chỉ chạy sau khi cả mảng đã nằm trong heap. Đặt trần body ở gateway hay Nginx, trần cỡ trang (`max-page-size` mặc định 2.000), trần số id trong endpoint theo lô, và giới hạn độ dài trước mọi regex chạy trên input." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

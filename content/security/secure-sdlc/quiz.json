@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "sbom-test-scope",
+      "kind": "output",
+      "prompt": "Chạy `cyclonedx-maven-plugin:2.9.1:makeBom` (cấu hình mặc định) cho project dưới. `mvn dependency:tree` cho thấy spring-webmvc kéo theo 10 thư viện, jackson-databind kéo theo 2, junit-jupiter kéo theo 7. File `bom.json` có bao nhiêu phần tử trong `components`?",
+      "code": "<dependencies>\n  <dependency>\n    <groupId>org.springframework</groupId>\n    <artifactId>spring-webmvc</artifactId>\n    <version>7.0.10</version>\n  </dependency>\n  <dependency>\n    <groupId>com.fasterxml.jackson.core</groupId>\n    <artifactId>jackson-databind</artifactId>\n    <version>2.9.10</version>\n  </dependency>\n  <dependency>\n    <groupId>org.junit.jupiter</groupId>\n    <artifactId>junit-jupiter</artifactId>\n    <version>5.11.4</version>\n    <scope>test</scope>\n  </dependency>\n</dependencies>",
+      "options": [
+        "14",
+        "3",
+        "22",
+        "2"
+      ],
+      "answer": 0,
+      "explanation": "SBOM liệt kê cả dependency bắc cầu: spring-webmvc và 10 thư viện của nó, jackson-databind và 2 thư viện của nó, tổng 14 (đã chạy với Maven 3.10). Scope test bị loại theo mặc định nên junit-jupiter và 7 thư viện đi kèm không có (22 là khi tính cả chúng). Chỉ liệt kê 2 hay 3 dependency khai báo trực tiếp thì SBOM vô dụng: phần lớn CVE nằm ở thư viện bắc cầu, như Log4Shell nằm trong log4j-core được kéo theo gián tiếp."
+    },
+    {
+      "id": "stride-category",
+      "kind": "single",
+      "prompt": "Trong buổi threat modeling luồng đặt lại mật khẩu, nhóm phát hiện: link đặt lại chứa token trong URL, và trang đặt lại có tải script phân tích của bên thứ ba. Mối đe doạ chính thuộc chữ nào của STRIDE?",
+      "options": [
+        "Information disclosure: token trong URL lộ cho bên thứ ba",
+        "Spoofing: kẻ tấn công giả làm nhà cung cấp script",
+        "Repudiation: người dùng chối đã yêu cầu đặt lại",
+        "Denial of service: script ngoài làm trang tải chậm"
+      ],
+      "answer": 0,
+      "explanation": "Token nằm trong URL thì script bên thứ ba trên trang đọc được qua `location.href`, và có thể lọt qua header `Referer` ở trình duyệt cũ hay khi trang đặt `Referrer-Policy` lỏng (mặc định hiện nay chỉ gửi origin sang site khác): đó là lộ thông tin. Dùng token đó chiếm tài khoản là spoofing, nhưng đó là hậu quả; mối đe doạ ở luồng này là rò token. Biện pháp: không tải script bên thứ ba trên trang nhạy cảm, `Referrer-Policy: no-referrer`, token dùng một lần và hết hạn nhanh."
+    },
+    {
+      "id": "cve-priority",
+      "kind": "single",
+      "prompt": "Backlog có hai CVE trong thư viện của dịch vụ hướng Internet. CVE A: CVSS 9,8, EPSS 0,2%, chỉ khai thác được khi bật một tính năng bạn không dùng. CVE B: CVSS 7,5, nằm trong danh mục KEV của CISA, đường code bị lỗi có chạy. Ưu tiên thế nào?",
+      "options": [
+        "Sửa B trước; ghi A vào VEX là không ảnh hưởng, kèm lý do và ngày xem lại",
+        "Sửa A trước vì điểm CVSS cao hơn, B xếp sau theo hàng đợi",
+        "Sửa cả hai cùng lúc và chặn mọi build tới khi xong hết",
+        "Bỏ qua cả hai vì đã có WAF chặn ở phía trước dịch vụ"
+      ],
+      "answer": 0,
+      "explanation": "CVSS đo độ nặng nếu bị khai thác, không đo khả năng. B đã bị khai thác ngoài thực tế (KEV) và chạm được, nên rủi ro thật cao hơn. A không chạm được trong cấu hình hiện tại; ghi VEX để lần quét sau không hỏi lại, và xem lại nếu bật tính năng đó. Chặn mọi build làm đứng cả bản vá khẩn; WAF không phải lý do bỏ qua lỗi trong thư viện."
+    },
+    {
+      "id": "pin-action-sha",
+      "kind": "single",
+      "prompt": "Workflow dùng `uses: some-org/changed-files@v45`. Kẻ tấn công chiếm repo của action và trỏ lại tag `v45` sang commit độc in secret ra log. Cách nào chặn được đúng kiểu tấn công này?",
+      "options": [
+        "Ghim action theo commit SHA, để bot mở PR cập nhật",
+        "Ghim theo tag đầy đủ `v45.0.1` thay cho tag `v45`",
+        "Bật secret scanning với push protection cho repo",
+        "Bật Dependabot để action luôn ở bản mới nhất"
+      ],
+      "answer": 0,
+      "explanation": "Tag trong git là con trỏ di chuyển được, kể cả tag phiên bản đầy đủ; vụ tj-actions/changed-files năm 2025 trỏ lại nhiều tag cùng lúc. Commit SHA không đổi được nên workflow chỉ chạy đúng code đã duyệt. Secret scanning chặn secret bị commit vào repo, không chặn action in secret ra log. Tự động lên bản mới nhất kéo mã độc về còn nhanh hơn; bot chỉ có ích khi mở PR đổi SHA để người duyệt. Thêm `permissions` tối thiểu và OIDC thay key dài hạn để giảm thiệt hại nếu vẫn lọt."
+    },
+    {
+      "id": "cosign-verify-identity",
+      "kind": "single",
+      "prompt": "Cluster dùng admission policy kiểm image phải có chữ ký Sigstore keyless. Policy chỉ kiểm \"có chữ ký hợp lệ trong Rekor\", không ghim danh tính người ký. Rủi ro là gì?",
+      "options": [
+        "Ai có tài khoản OIDC bất kỳ cũng ký được image độc và vượt qua policy",
+        "Không có rủi ro vì Fulcio chỉ cấp chứng chỉ cho tổ chức đã đăng ký",
+        "Chữ ký hết hạn sau 10 phút nên image hợp lệ bị chặn khi pod khởi động lại",
+        "Rekor là log công khai nên kẻ tấn công đọc được nội dung image"
+      ],
+      "answer": 0,
+      "explanation": "Keyless nghĩa là ai có danh tính OIDC (tài khoản GitHub, Google) cũng xin được chứng chỉ ngắn hạn và ký được. Chữ ký chỉ có ý nghĩa khi bạn kiểm ai ký: `--certificate-identity` là đường dẫn workflow của bạn và `--certificate-oidc-issuer` là nhà phát hành token của CI. Chứng chỉ ngắn hạn không làm chữ ký mất hiệu lực, vì Rekor ghi lại thời điểm ký nằm trong hạn của chứng chỉ. Rekor lưu chữ ký và metadata, không lưu nội dung image."
+    }
+  ]
+}

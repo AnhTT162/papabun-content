@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "gateway-vs-service", "front": "Gateway chặn được gì và không chặn được gì?", "back": "Chặn được: chưa xác thực, sai scope, vượt hạn mức, body quá lớn. Không chặn được BOLA, vì nó không biết bản ghi thuộc về ai; việc đó của service sở hữu dữ liệu." },
+    { "id": "uuid-not-bola-fix", "front": "Đổi id tăng dần sang UUID có chữa được BOLA không?", "back": "Không. Chỉ làm khó dò hàng loạt; id vẫn lộ qua link chia sẻ, log, API khác. Service vẫn phải kiểm bản ghi thuộc người gọi." },
+    { "id": "bopla", "front": "BOPLA (API3 2023) gồm những lỗi nào?", "back": "Lộ trường không được phép trong response (lộ dữ liệu thừa) và client gán được trường không được sửa (mass assignment). Chữa bằng DTO riêng cho request và response theo vai." },
+    { "id": "jackson3-unknown", "front": "Jackson 3 làm gì với trường lạ trong body?", "back": "Bỏ qua lặng lẽ, vì `FAIL_ON_UNKNOWN_PROPERTIES` tắt sẵn. Muốn báo 400 khi client gửi trường không có thì bật lại cho mapper đọc request." },
+    { "id": "body-limit", "front": "Vì sao phải giới hạn kích thước body ở gateway hay Nginx?", "back": "`maxPostSize` của Tomcat chỉ áp cho form, Jackson 3 không giới hạn độ dài document; body JSON khổng lồ được parse hết vào heap trước khi `@Size` chạy." },
+    { "id": "redos-jdk", "front": "JDK 9+ có hết ReDoS không?", "back": "Không. Mẫu lồng như `(a+)+` được cứu, nhưng `(.*,){10}` hay backreference vẫn bùng nổ, và `Matcher` không dừng khi bị interrupt. Giới hạn độ dài trước khi khớp." },
+    { "id": "api-key", "front": "API key định danh ai và lưu thế nào?", "back": "Định danh ứng dụng hay tổ chức, không phải người dùng. Lưu hash SHA-256, có tiền tố để tra và để secret scanning nhận ra, cho hai key song song khi xoay." },
+    { "id": "mobile-key", "front": "Key nhúng trong app di động có bảo vệ được API không?", "back": "Không: ai cũng trích ra được. Nó chỉ định danh app; xác thực phải đi qua người dùng đăng nhập, cộng chứng thực app (App Attest, Play Integrity) khi cần chống bot." },
+    { "id": "mtls-not-user", "front": "mTLS giữa service trả lời được câu hỏi nào?", "back": "Service nào đang gọi. Nó không biết người dùng cuối, nên service phía sau vẫn cần người dùng gốc (token chuyển tiếp hoặc token exchange) để kiểm quyền trên bản ghi." },
+    { "id": "cost-quota", "front": "Vì sao hạn mức OTP theo IP không đủ?", "back": "Tiền tính theo SMS, kẻ tấn công rải qua nhiều IP. Giới hạn theo số điện thoại, thiết bị, tài khoản, chặn đầu số không phục vụ, và cảnh báo theo tỉ lệ OTP được nhập đúng." },
+    { "id": "shadow-zombie", "front": "Shadow API và zombie API là gì?", "back": "Shadow: chạy mà không ai khai báo (endpoint debug, staging lộ ra ngoài). Zombie: bản cũ lẽ ra đã tắt, thường thiếu kiểm tra mới. Chặn bằng spec OpenAPI làm nguồn sự thật và gateway chỉ route path trong spec." }
+  ]
+}

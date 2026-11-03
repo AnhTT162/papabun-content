@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four-questions", "front": "Bốn câu hỏi của threat modeling là gì?", "back": "Đang làm gì? Cái gì có thể hỏng? Sẽ làm gì với nó? Đã làm đủ chưa?" },
+    { "id": "stride", "front": "STRIDE gồm những gì?", "back": "Spoofing (giả danh), Tampering (sửa dữ liệu), Repudiation (chối bỏ), Information disclosure (lộ thông tin), Denial of service, Elevation of privilege (leo quyền)." },
+    { "id": "trust-boundary", "front": "Vì sao threat modeling tập trung vào ranh giới tin cậy?", "back": "Dữ liệu cắt qua ranh giới (Internet vào API, app vào bên thứ ba) là chỗ giả định về người gửi thay đổi, nên phần lớn mối đe doạ nằm ở đó." },
+    { "id": "sast-dast-sca", "front": "SAST, DAST, SCA khác nhau thế nào?", "back": "SAST đọc mã nguồn của mình tìm mẫu nguy hiểm; DAST tấn công ứng dụng đang chạy từ bên ngoài; SCA tìm CVE và license trong thư viện bên thứ ba." },
+    { "id": "sbom-why", "front": "SBOM giải quyết câu hỏi gì?", "back": "\"Bản build nào, dịch vụ nào đang dùng thư viện X phiên bản Y\" khi CVE mới xuất hiện, trả lời bằng truy vấn thay vì đi hỏi từng team." },
+    { "id": "cvss-epss-kev", "front": "CVSS, EPSS, KEV khác nhau thế nào?", "back": "CVSS: độ nặng nếu bị khai thác. EPSS: xác suất bị khai thác trong 30 ngày. KEV: danh mục CVE đã thấy khai thác thật, nên ưu tiên trước." },
+    { "id": "vex", "front": "VEX dùng để làm gì?", "back": "Ghi kèm SBOM rằng một CVE có ảnh hưởng tới sản phẩm hay không và vì sao (ví dụ đường code lỗi không chạy), để công cụ quét không báo lại." },
+    { "id": "dependency-confusion", "front": "Dependency confusion là gì và chặn thế nào?", "back": "Tên gói nội bộ bị đăng lên repo công khai với phiên bản cao hơn, build tải nhầm. Chặn bằng repository manager làm cửa duy nhất, gói nội bộ chỉ lấy từ repo nội bộ." },
+    { "id": "pin-sha", "front": "Vì sao ghim GitHub Action theo commit SHA chứ không theo tag?", "back": "Tag là con trỏ di chuyển được; người chiếm repo action trỏ lại tag sang commit độc. SHA không đổi được." },
+    { "id": "gate-policy", "front": "Pipeline nên chặn build khi nào?", "back": "Khi có secret, CVE nghiêm trọng có bản vá và chạm được hoặc trong KEV, phát hiện SAST mới độ tin cậy cao. Phần còn lại vào backlog có hạn xử lý." }
+  ]
+}

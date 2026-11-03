@@ -965,7 +965,7 @@
       "meaning": "Mã duy nhất gửi kèm một request để bên nhận nhận ra request lặp lại và trả lại kết quả cũ thay vì xử lý lần nữa.",
       "example": "Gọi lại API thanh toán với cùng `Idempotency-Key: order-42` không trừ tiền lần hai.",
       "related": ["retry-backoff"],
-      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns", "architecture-review"]
+      "topics": ["transaction-isolation", "acid-transactions-basics", "messaging-fundamentals", "redis-use-cases", "distributed-fundamentals", "service-communication", "idempotency", "api-gateway-service-mesh", "rest-api-design", "sd-framework", "design-notification", "design-ecommerce-order", "design-chat", "design-job-scheduler", "design-payment", "design-ride-hailing", "integration-patterns", "architecture-review", "api-security"]
     },
     {
       "id": "orm",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler", "multi-tenancy"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler", "multi-tenancy", "api-security"]
     },
     {
       "id": "redis-sentinel",
@@ -3253,7 +3253,7 @@
       "meaning": "Lỗ hổng khi framework bind mọi field client gửi vào object, kể cả field không được phép sửa như `role` hay `id`.",
       "example": "`PUT /users/me` nhận entity `User` trực tiếp; client gửi thêm `\"role\":\"ADMIN\"` và được lưu.",
       "related": ["dto-projection"],
-      "topics": ["spring-mvc-flow", "layered-architecture", "authorization-models"]
+      "topics": ["spring-mvc-flow", "layered-architecture", "authorization-models", "api-security"]
     },
     {
       "id": "jpa",
@@ -3453,7 +3453,7 @@
       "meaning": "Cửa vào chung cho client bên ngoài, đứng trước các service: route, xác thực, rate limit, chuyển đổi header hay giao thức.",
       "example": "Spring Cloud Gateway route `/orders/**` tới `lb://orders` và kiểm tra JWT trước khi chuyển tiếp.",
       "related": ["service-discovery", "reverse-proxy"],
-      "topics": ["spring-cloud", "api-gateway-service-mesh", "design-rate-limiter"]
+      "topics": ["spring-cloud", "api-gateway-service-mesh", "design-rate-limiter", "api-security"]
     },
     {
       "id": "service-discovery",
@@ -4669,7 +4669,7 @@
       "meaning": "Ngôn ngữ truy vấn cho API: client khai báo đúng các trường cần, server gom dữ liệu từ nhiều nguồn trong một request.",
       "example": "`query { order(id: 42) { total customer { name } } }`.",
       "related": ["dataloader"],
-      "topics": ["service-communication"]
+      "topics": ["service-communication", "api-security"]
     },
     {
       "id": "protobuf",
@@ -4893,7 +4893,7 @@
       "meaning": "Tầng hạ tầng lo lưu lượng giữa các service bằng proxy đứng trên mọi kết nối (data plane) và một control plane cấu hình chúng: mTLS, retry, timeout, metric mà không sửa code.",
       "example": "Istio, Linkerd: mọi lời gọi từ `checkout` tới `payments` đi qua proxy được mã hoá và đo latency.",
       "related": ["sidecar", "data-plane", "control-plane"],
-      "topics": ["api-gateway-service-mesh", "security-architecture"]
+      "topics": ["api-gateway-service-mesh", "security-architecture", "api-security"]
     },
     {
       "id": "mtls",
@@ -4901,7 +4901,7 @@
       "meaning": "Mutual TLS: cả hai đầu kết nối cùng trình chứng chỉ để xác thực nhau, không chỉ server như HTTPS thường. Dùng để xác thực service với service.",
       "example": "Sidecar của `checkout` trình chứng chỉ mang danh tính service account `checkout` khi gọi `payments`.",
       "related": ["service-mesh", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "tls-https", "security-architecture", "oauth2-oidc"]
+      "topics": ["api-gateway-service-mesh", "tls-https", "security-architecture", "oauth2-oidc", "api-security"]
     },
     {
       "id": "envoy",
@@ -4941,7 +4941,7 @@
       "meaning": "Gateway chuyển tiếp access token của người dùng xuống service phía sau để service tự kiểm tra và quyết định quyền, thay vì chỉ gửi header danh tính.",
       "example": "Spring Cloud Gateway với filter `TokenRelay` gắn `Authorization: Bearer ...` vào request tới `orders`.",
       "related": ["api-gateway", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "spring-cloud", "security-architecture", "jwt-deep"]
+      "topics": ["api-gateway-service-mesh", "spring-cloud", "security-architecture", "jwt-deep", "api-security"]
     },
     {
       "id": "zero-trust",
@@ -4949,7 +4949,7 @@
       "meaning": "Nguyên tắc không tin một request chỉ vì nó đến từ mạng nội bộ; mọi lời gọi đều phải xác thực và kiểm tra quyền.",
       "example": "Service `payments` từ chối request không có chứng chỉ mTLS hợp lệ dù đến từ cùng cluster.",
       "related": ["mtls", "token-relay"],
-      "topics": ["api-gateway-service-mesh", "security-architecture"]
+      "topics": ["api-gateway-service-mesh", "security-architecture", "api-security"]
     },
     {
       "id": "gateway-api",
@@ -6909,7 +6909,7 @@
       "meaning": "Chuẩn mô tả HTTP API bằng YAML hoặc JSON: endpoint, tham số, schema request và response, mã lỗi. Dùng để sinh tài liệu, sinh client, và so hai phiên bản để phát hiện breaking change.",
       "example": "springdoc-openapi sinh `/v3/api-docs` từ controller; CI so spec mới với spec đã phát hành và chặn merge nếu có trường bị xoá.",
       "related": ["api-versioning", "consumer-driven-contract"],
-      "topics": ["rest-api-design", "evolutionary-architecture"]
+      "topics": ["rest-api-design", "evolutionary-architecture", "api-security"]
     },
     {
       "id": "hateoas",
@@ -7445,7 +7445,7 @@
       "meaning": "Dependency trung gian: thư viện được kéo vào vì một dependency khác cần nó, không phải vì project khai báo trực tiếp.",
       "example": "Khai báo `spring-boot-starter-web` kéo theo Jackson, Tomcat và hàng chục jar khác.",
       "related": ["dependency-mediation", "bom"],
-      "topics": ["maven-gradle"]
+      "topics": ["maven-gradle", "secure-sdlc"]
     },
     {
       "id": "dependency-mediation",
@@ -7485,7 +7485,7 @@
       "meaning": "Build tái lập: cùng mã nguồn và cấu hình cho ra artifact giống hệt từng byte, nhờ cố định phiên bản dependency, plugin, công cụ và timestamp.",
       "example": "Đặt `project.build.outputTimestamp` và cấm version range để hai lần build cùng commit cho cùng checksum.",
       "related": ["snapshot-version", "semantic-versioning"],
-      "topics": ["maven-gradle"]
+      "topics": ["maven-gradle", "secure-sdlc"]
     },
     {
       "id": "logging-facade",
@@ -7877,7 +7877,7 @@
       "meaning": "Chuỗi class có sẵn trên classpath mà các hook khi deserialize (`readObject`, `hashCode`, `compare`) gọi nhau, cuối cùng chạy lệnh tuỳ ý. Kẻ tấn công chỉ cần gửi byte đúng hình dạng.",
       "example": "Chuỗi `InvokerTransformer` của Apache Commons Collections 3.x (2015) dẫn tới `Runtime.exec`.",
       "related": ["java-serialization", "object-input-filter"],
-      "topics": ["serialization-security", "owasp-top10"]
+      "topics": ["serialization-security", "owasp-top10", "secure-sdlc"]
     },
     {
       "id": "object-input-filter",
@@ -8893,7 +8893,7 @@
       "meaning": "Web Application Firewall: lớp lọc HTTP đứng trước ứng dụng (thường ở CDN hoặc load balancer), chặn theo IP, mẫu tấn công và hạn mức request. Nó không biết khách hàng nào hay kết quả xử lý của ứng dụng.",
       "example": "Luật WAF chặn một IP gửi quá vài nghìn request trong 5 phút trước khi request chạm gateway.",
       "related": ["rate-limiting", "cdn", "api-gateway"],
-      "topics": ["design-rate-limiter", "enterprise-architecture", "owasp-top10"]
+      "topics": ["design-rate-limiter", "enterprise-architecture", "owasp-top10", "api-security"]
     },
     {
       "id": "shadow-mode",
@@ -9061,7 +9061,7 @@
       "meaning": "Gian lận gọi API gửi OTP hàng loạt tới dải số đắt tiền để ăn chia cước với nhà mạng; bên gửi trả tiền cho tin không ai dùng.",
       "example": "Tỉ lệ OTP được nhập đúng rơi từ 80% xuống 5% trong khi số SMS tăng gấp mười: dấu hiệu SMS pumping.",
       "related": ["rate-limiting", "credential-stuffing"],
-      "topics": ["design-notification"]
+      "topics": ["design-notification", "api-security"]
     },
     {
       "id": "one-click-unsubscribe",
@@ -9109,7 +9109,7 @@
       "meaning": "Lời gọi HTTP do hệ thống bên ngoài chủ động gửi tới URL của bạn khi có sự kiện; thường được gửi lại nhiều lần nếu không nhận 2xx, nên phía nhận phải kiểm chữ ký và khử trùng.",
       "example": "Cổng thanh toán POST tới /payments/webhook với event payment.succeeded; handler lưu event_id với unique constraint rồi mới xử lý.",
       "related": ["idempotency", "idempotent-consumer"],
-      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes", "integration-patterns", "build-vs-buy"]
+      "topics": ["design-ecommerce-order", "design-notification", "design-payment", "nfr-quality-attributes", "integration-patterns", "build-vs-buy", "api-security"]
     },
     {
       "id": "payment-authorization",
@@ -10469,7 +10469,7 @@
       "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
       "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
       "related": ["shared-responsibility-model", "zero-trust"],
-      "topics": ["well-architected", "security-architecture", "secret-management"]
+      "topics": ["well-architected", "security-architecture", "secret-management", "secure-sdlc"]
     },
     {
       "id": "shared-responsibility-model",
@@ -11077,7 +11077,7 @@
       "meaning": "Chuẩn đặt danh tính cho workload dạng URI `spiffe://<trust-domain>/<path>`, thường nằm trong SAN của chứng chỉ mTLS ngắn hạn. SPIRE và Istio cấp danh tính theo chuẩn này.",
       "example": "`spiffe://shop.local/ns/prod/sa/orders` là danh tính của service account `orders` trong namespace `prod`.",
       "related": ["mtls", "workload-identity"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "api-security"]
     },
     {
       "id": "lateral-movement",
@@ -11157,7 +11157,7 @@
       "meaning": "Server-side request forgery: kẻ tấn công khiến server gửi request tới đích do họ chọn, thường là địa chỉ nội bộ hay metadata service mà từ ngoài không với tới được.",
       "example": "Service xem trước link nhận `http://169.254.169.254/latest/meta-data/iam/security-credentials/...` và trả về credential của máy.",
       "related": ["imds", "defense-in-depth"],
-      "topics": ["security-architecture", "owasp-top10"]
+      "topics": ["security-architecture", "owasp-top10", "api-security"]
     },
     {
       "id": "imds",
@@ -11837,7 +11837,7 @@
       "meaning": "Software Bill of Materials: danh sách mọi thành phần và phiên bản trong một bản build (thư viện, gói hệ điều hành), dùng để tra CVE và license.",
       "example": "Sinh SBOM CycloneDX trong pipeline; khi có CVE mới, tra ngay ứng dụng nào dùng thư viện đó.",
       "related": ["tech-radar"],
-      "topics": ["enterprise-architecture", "owasp-top10"]
+      "topics": ["enterprise-architecture", "owasp-top10", "secure-sdlc"]
     },
     {
       "id": "architecture-waiver",
@@ -11893,7 +11893,7 @@
       "meaning": "Quét thư viện bên thứ ba trong ứng dụng để tìm CVE đã biết và license không được phép.",
       "example": "Pipeline chặn build khi có thư viện dính CVE mức High trở lên mà chưa có ngoại lệ được duyệt.",
       "related": ["sbom"],
-      "topics": ["evolutionary-architecture"]
+      "topics": ["evolutionary-architecture", "secure-sdlc"]
     },
     {
       "id": "goodharts-law",
@@ -11949,7 +11949,7 @@
       "meaning": "Common Vulnerabilities and Exposures: mã định danh công khai cho một lỗ hổng bảo mật đã biết, ví dụ CVE-2021-44228 (Log4Shell); mức nghiêm trọng thường chấm theo CVSS.",
       "example": "Quét dependency báo thư viện dính một CVE mức Critical; pipeline chặn build tới khi nâng phiên bản.",
       "related": ["sbom", "software-composition-analysis"],
-      "topics": ["enterprise-architecture", "evolutionary-architecture"]
+      "topics": ["enterprise-architecture", "evolutionary-architecture", "secure-sdlc"]
     },
     {
       "id": "risk-storming",
@@ -12533,7 +12533,7 @@
       "meaning": "Quét code và lịch sử git để tìm secret theo mẫu đã biết hoặc độ ngẫu nhiên; chạy ở server lúc push, trong CI và trên lịch sử cũ.",
       "example": "GitHub push protection chặn push có AWS access key; gitleaks chạy trong CI trên mỗi pull request.",
       "related": ["secret"],
-      "topics": ["secret-management"]
+      "topics": ["secret-management", "api-security", "secure-sdlc"]
     },
     {
       "id": "pii",
@@ -12733,7 +12733,7 @@
       "meaning": "Grant OAuth cho trường hợp không có người dùng: client xác thực bằng chính nó (secret, private_key_jwt, mTLS) và nhận access token cho quyền của nó.",
       "example": "Job đối soát kho gọi `/token` với `grant_type=client_credentials&scope=inventory.reconcile`, cache token tới gần hết hạn.",
       "related": ["oauth2", "confidential-client"],
-      "topics": ["oauth2-oidc"]
+      "topics": ["oauth2-oidc", "api-security"]
     },
     {
       "id": "oauth-client",
@@ -12805,7 +12805,7 @@
       "meaning": "RFC 8693: đổi một token lấy token khác, thường để service gọi service phía sau với `aud` đúng service đó và scope hẹp hơn mà vẫn giữ danh tính người dùng.",
       "example": "Orders service đổi token của người dùng lấy token `aud=payment-api`, scope `payments.create`.",
       "related": ["access-token", "token-relay"],
-      "topics": ["oauth2-oidc"]
+      "topics": ["oauth2-oidc", "api-security"]
     },
     {
       "id": "saml-assertion",
@@ -12973,7 +12973,7 @@
       "meaning": "Broken Object Level Authorization: lỗi số 1 của OWASP API Security Top 10, API thao tác trên object theo id mà không kiểm người gọi có quyền với đúng object đó. Cùng nghĩa với IDOR.",
       "example": "Kiểm chủ đơn theo id trên URL, nhưng lệnh ghi lấy đơn theo id trong body.",
       "related": ["idor", "broken-access-control"],
-      "topics": ["authorization-models"]
+      "topics": ["authorization-models", "api-security"]
     },
     {
       "id": "separation-of-duties",
@@ -12989,7 +12989,271 @@
       "meaning": "Thành phần có quyền cao bị lừa làm việc thay một bên có quyền thấp, vì nó dùng quyền của chính nó thay vì quyền của người yêu cầu.",
       "example": "Service báo cáo dùng tài khoản service đọc mọi tenant, nên ai gọi nó với tenant_id khác cũng lấy được dữ liệu.",
       "related": ["token-exchange", "least-privilege"],
-      "topics": ["authorization-models"]
+      "topics": ["authorization-models", "api-security"]
+    },
+    {
+      "id": "owasp-api-top-10",
+      "term": "OWASP API Security Top 10",
+      "meaning": "Danh sách mười nhóm rủi ro hay gặp nhất riêng cho API, bản hiện hành là 2023; ba mục đầu đều là lỗi phân quyền (trên đối tượng, trên thuộc tính, trên chức năng).",
+      "example": "Pentest báo `GET /v1/transactions/{id}` trả giao dịch của người khác: mục API1 (BOLA) của danh sách 2023.",
+      "related": ["owasp-top-10", "bola", "bopla", "bfla"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "bopla",
+      "term": "BOPLA",
+      "meaning": "Broken Object Property Level Authorization (API3 2023): phân quyền sai ở mức từng trường, gồm lộ trường không được phép trong response và cho client gán trường không được sửa (mass assignment).",
+      "example": "`GET /me` trả cả `riskScore`; `PATCH /me` nhận `kycStatus` và ghi xuống database.",
+      "related": ["mass-assignment", "bola", "owasp-api-top-10"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "bfla",
+      "term": "BFLA",
+      "meaning": "Broken Function Level Authorization (API5 2023): gọi được chức năng không được phép, thường là endpoint quản trị chỉ bị ẩn khỏi giao diện chứ không bị kiểm quyền.",
+      "example": "Người dùng thường đổi `GET /users/42` thành `DELETE /admin/users/42` và xoá được, vì endpoint chỉ kiểm đã đăng nhập.",
+      "related": ["bola", "broken-access-control", "owasp-api-top-10"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "bean-validation",
+      "term": "Bean Validation",
+      "meaning": "Chuẩn Jakarta Validation: khai báo ràng buộc bằng annotation (`@NotNull`, `@Size`, `@Pattern`, `@Max`) trên trường hay tham số; Spring kiểm khi gặp `@Valid` và trả 400 khi sai. Bản cài đặt phổ biến là Hibernate Validator.",
+      "example": "`record CreateTransfer(@NotNull @Positive Long amount, @Size(max = 140) String note)` nhận `@Valid @RequestBody`; ghi chú 500 ký tự bị trả 400.",
+      "related": ["mass-assignment"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "api-key",
+      "term": "API key",
+      "meaning": "Chuỗi bí mật tĩnh định danh một ứng dụng hay tổ chức gọi API, không phải một người dùng; không tự có hạn hay scope. Server chỉ lưu hash của nó.",
+      "example": "Key dạng `key_live_7f3a_<32 byte ngẫu nhiên>`: phần `7f3a` để tra bản ghi, server so SHA-256 của cả chuỗi.",
+      "related": ["client-credentials", "secret-scanning", "rate-limiting"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "redos",
+      "term": "ReDoS",
+      "meaning": "Regular expression denial of service: input được chọn để engine regex quay lui rất lâu, chiếm trọn một thread. JDK 9+ đã cứu một số mẫu lồng nhau nhưng không phải tất cả.",
+      "example": "Trên JDK 27, `^(.*,){10}END$` với chuỗi 40 dấu phẩy mất 9,5 giây.",
+      "related": ["load-shedding"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "request-signing",
+      "term": "Request signing",
+      "meaning": "Ký từng request bằng khoá bí mật hay khoá riêng trên phương thức, đường dẫn, mốc thời gian và hash của body; server tính lại để biết request không bị sửa và còn mới. Ví dụ: AWS SigV4, RFC 9421.",
+      "example": "Đối tác gửi header chữ ký HMAC của `POST\\n/refunds\\n1767225600\\n<sha256 body>`; lệch giờ quá 5 phút thì bị từ chối.",
+      "related": ["hmac", "replay-attack", "api-key"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "replay-attack",
+      "term": "Replay attack",
+      "meaning": "Kẻ tấn công bắt được một request hợp lệ rồi gửi lại nguyên văn để lặp lại hành động. Chặn bằng mốc thời gian có hạn cộng nonce hay idempotency key đã dùng.",
+      "example": "Gửi lại một webhook `payment.succeeded` đã ký đúng sau một giờ; server từ chối vì mốc thời gian quá cũ.",
+      "related": ["request-signing", "idempotency-key", "webhook"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "shadow-api",
+      "term": "Shadow API",
+      "meaning": "API đang chạy mà không có trong danh mục hay spec chính thức (endpoint debug, bản staging lộ ra ngoài). Họ hàng gần là zombie API: phiên bản cũ lẽ ra đã tắt nhưng vẫn chạy.",
+      "example": "Log gateway có `/internal/debug/users` mà spec OpenAPI không có; tra ra endpoint thử nghiệm quên xoá.",
+      "related": ["openapi", "api-versioning", "owasp-api-top-10"],
+      "topics": ["api-security"]
+    },
+    {
+      "id": "threat-modeling",
+      "term": "Threat modeling",
+      "meaning": "Phân tích có hệ thống ở bước thiết kế: hệ làm gì, cái gì có thể hỏng về bảo mật, sẽ làm gì với từng mối đe doạ. Kết quả là biện pháp có người chịu trách nhiệm hoặc rủi ro được chấp nhận.",
+      "example": "Trước khi mở API cho đối tác, team vẽ luồng dữ liệu, duyệt STRIDE và ra 9 ticket, trong đó có ký request và hạn mức hoàn tiền mỗi ngày.",
+      "related": ["stride", "data-flow-diagram", "trust-boundary"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "sast",
+      "term": "SAST",
+      "meaning": "Static application security testing: phân tích mã nguồn hay bytecode mà không chạy, tìm mẫu nguy hiểm như dữ liệu từ request chảy vào câu SQL. Ví dụ: CodeQL, Semgrep, SpotBugs với Find Security Bugs.",
+      "example": "SAST báo `@RequestParam sort` nối vào `createNativeQuery` trên pull request; dev đổi sang danh sách cột cho phép trước khi merge.",
+      "related": ["dast", "software-composition-analysis"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "dast",
+      "term": "DAST",
+      "meaning": "Dynamic application security testing: tấn công ứng dụng đang chạy từ bên ngoài bằng HTTP, không cần mã nguồn. Ví dụ: OWASP ZAP. Chỉ thấy những gì nó gọi tới được.",
+      "example": "ZAP chạy mỗi đêm với staging theo spec OpenAPI, đăng nhập bằng tài khoản thử, báo một endpoint phản chiếu input chưa escape.",
+      "related": ["sast", "openapi"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "owasp-asvs",
+      "term": "OWASP ASVS",
+      "meaning": "Application Security Verification Standard: danh sách yêu cầu bảo mật kiểm được cho ứng dụng web, chia ba mức theo độ nhạy của hệ. Dùng làm tiêu chí chấp nhận và checklist kiểm thử, khác với Top 10 chỉ là danh sách rủi ro.",
+      "example": "Ứng dụng ví điện tử nhắm ASVS mức 2; mục về thời hạn phiên thành tiêu chí chấp nhận của story đăng nhập.",
+      "related": ["owasp-top-10"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "data-flow-diagram",
+      "term": "Data flow diagram (DFD)",
+      "meaning": "Sơ đồ luồng dữ liệu: thực thể bên ngoài, process, kho dữ liệu và các luồng giữa chúng, kèm ranh giới tin cậy. Là đầu vào chuẩn của threat modeling.",
+      "example": "DFD của luồng upload hồ sơ: app → API (cắt ranh giới Internet) → service quét virus → bucket; mỗi mũi tên ghi giao thức và loại dữ liệu.",
+      "related": ["trust-boundary", "threat-modeling"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "trust-boundary",
+      "term": "Trust boundary",
+      "meaning": "Ranh giới tin cậy: chỗ dữ liệu hay lời gọi đi từ vùng có mức tin cậy này sang vùng khác (Internet vào API, service vào bên thứ ba, người dùng thường vào chức năng quản trị). Phần lớn mối đe doạ nằm trên các luồng cắt qua nó.",
+      "example": "Webhook từ ngân hàng cắt ranh giới tin cậy, nên phải kiểm chữ ký dù đến từ IP trong danh sách cho phép.",
+      "related": ["data-flow-diagram", "zero-trust"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "stride",
+      "term": "STRIDE",
+      "meaning": "Bộ sáu loại mối đe doạ của Microsoft dùng khi threat modeling: Spoofing (giả danh), Tampering (sửa dữ liệu), Repudiation (chối bỏ), Information disclosure (lộ thông tin), Denial of service, Elevation of privilege (leo quyền).",
+      "example": "Áp STRIDE vào luồng đặt lại mật khẩu: Information disclosure là token lọt qua header Referer.",
+      "related": ["threat-modeling", "attack-tree"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "supply-chain-attack",
+      "term": "Supply chain attack",
+      "meaning": "Tấn công chuỗi cung ứng phần mềm: chèn mã độc vào thứ bạn dùng để build hay chạy (thư viện, công cụ build, action CI, image nền) thay vì tấn công ứng dụng trực tiếp.",
+      "example": "Backdoor trong xz utils 2024 nằm trong file nén phát hành của thư viện nén, nhắm vào SSH của các bản phân phối Linux.",
+      "related": ["dependency-confusion", "typosquatting", "sbom", "slsa"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "security-champion",
+      "term": "Security champion",
+      "meaning": "Kỹ sư trong team sản phẩm nhận thêm vai trò bảo mật (thường khoảng 10% thời gian): dẫn threat modeling, phân loại phát hiện của công cụ, là đầu mối với đội bảo mật.",
+      "example": "Một kỹ sư bảo mật huấn luyện 9 champion; mỗi champion dẫn threat modeling cho tính năng rủi ro cao của team mình.",
+      "related": ["threat-modeling"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "attack-tree",
+      "term": "Attack tree",
+      "meaning": "Cây tấn công: gốc là mục tiêu của kẻ tấn công, các nhánh là những cách đạt được nó (AND/OR), dùng để thấy đường rẻ nhất và chặn đúng chỗ.",
+      "example": "Gốc \"rút tiền từ ví người khác\"; nhánh: chiếm tài khoản qua đặt lại mật khẩu, BOLA ở API chuyển tiền, lừa nhân viên hỗ trợ đổi số điện thoại.",
+      "related": ["stride", "threat-modeling"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "epss",
+      "term": "EPSS",
+      "meaning": "Exploit Prediction Scoring System của FIRST: xác suất một CVE bị khai thác trong 30 ngày tới, cập nhật hằng ngày. Bổ sung cho CVSS vốn chỉ đo độ nặng.",
+      "example": "Hai CVE cùng CVSS 9,8 nhưng EPSS 0,2% và 94%: cái sau sửa trước.",
+      "related": ["cve", "vex"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "vex",
+      "term": "VEX",
+      "meaning": "Vulnerability Exploitability eXchange: tuyên bố đi kèm SBOM về việc một CVE có ảnh hưởng tới sản phẩm hay không (not_affected, affected, fixed, under_investigation) và lý do.",
+      "example": "Ghi CVE gadget của jackson-databind là not_affected vì không bật polymorphic typing; lần quét sau không báo lại.",
+      "related": ["sbom", "cve", "epss"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "dependency-confusion",
+      "term": "Dependency confusion",
+      "meaning": "Tấn công đăng gói có tên trùng gói nội bộ lên repo công khai với phiên bản cao hơn, để công cụ build chọn nhầm bản công khai chứa mã độc.",
+      "example": "Gói npm nội bộ `ui-kit` (không có scope) chỉ nằm trên registry nội bộ; kẻ xấu đăng `ui-kit` 99.0.0 lên npmjs và build CI cấu hình đọc cả hai nơi tải bản công khai.",
+      "related": ["supply-chain-attack", "typosquatting"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "typosquatting",
+      "term": "Typosquatting",
+      "meaning": "Đăng gói có tên gần giống gói phổ biến (sai một chữ, đổi dấu gạch) để người gõ nhầm hay copy nhầm cài phải gói độc.",
+      "example": "Gói `jackson-databnd` thay vì `jackson-databind`; review dependency mới bắt được nhờ nhìn tên và số lượt tải.",
+      "related": ["supply-chain-attack", "dependency-confusion"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "build-provenance",
+      "term": "Build provenance",
+      "meaning": "Bản ghi có chữ ký nói artifact được build từ repo nào, commit nào, bằng quy trình và nền tảng build nào. Dùng để kiểm trước khi deploy rằng artifact đến từ pipeline chính thức.",
+      "example": "Admission controller từ chối image không có provenance chỉ tới repo `payments` và workflow `release.yml`.",
+      "related": ["slsa", "sigstore", "reproducible-build"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "slsa",
+      "term": "SLSA",
+      "meaning": "Supply-chain Levels for Software Artifacts: khung các mức bảo đảm cho quy trình build (bản 1.0: L1 có provenance, L2 provenance do nền tảng build được host ký, L3 nền tảng build cứng hoá và cách ly).",
+      "example": "Pipeline sinh provenance có chữ ký bằng nền tảng CI được host, đạt SLSA Build L2.",
+      "related": ["build-provenance", "sigstore"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "sigstore",
+      "term": "Sigstore",
+      "meaning": "Bộ công cụ ký phần mềm không cần tự quản lý khoá: cosign ký, Fulcio cấp chứng chỉ ngắn hạn theo danh tính OIDC, Rekor là transparency log công khai ghi lại chữ ký.",
+      "example": "CI ký image bằng `cosign sign` theo digest; cluster chỉ nhận image có chữ ký với danh tính là workflow release của repo.",
+      "related": ["build-provenance", "slsa"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "cvss",
+      "term": "CVSS",
+      "meaning": "Common Vulnerability Scoring System: điểm 0–10 đo độ nặng của một lỗ hổng nếu bị khai thác (đường tấn công, độ phức tạp, ảnh hưởng). Không đo khả năng bị khai thác.",
+      "example": "CVE có CVSS 9,8 nhưng chỉ khai thác được khi bật tính năng bạn không dùng: điểm cao, rủi ro thực thấp.",
+      "related": ["cve", "epss", "kev"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "kev",
+      "term": "KEV",
+      "meaning": "Known Exploited Vulnerabilities: danh mục của CISA (Mỹ) các CVE đã thấy bị khai thác ngoài thực tế. CVE trong KEV nên sửa trước, kể cả khi CVSS không cao nhất.",
+      "example": "Quét SCA đánh dấu CVE nằm trong KEV; pipeline chặn build nếu đã có bản vá.",
+      "related": ["cve", "cvss", "epss"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "iast",
+      "term": "IAST",
+      "meaning": "Interactive application security testing: agent chạy trong ứng dụng (với Java là Java agent) theo dõi dữ liệu thật chảy từ request tới sink trong lúc test chạy, nên ít cảnh báo sai hơn SAST.",
+      "example": "Agent IAST báo tham số `q` từ request đi tới `Statement.executeQuery` khi bộ test tích hợp gọi endpoint tìm kiếm.",
+      "related": ["sast", "dast", "rasp"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "rasp",
+      "term": "RASP",
+      "meaning": "Runtime application self-protection: agent trong ứng dụng ở production phát hiện và chặn tấn công tại chỗ (ví dụ chặn câu SQL bị chèn). Thêm overhead và phụ thuộc nhà cung cấp.",
+      "example": "RASP chặn lời gọi JNDI ra ngoài trong lúc đội đang nâng log4j-core.",
+      "related": ["iast", "waf"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "fuzzing",
+      "term": "Fuzzing",
+      "meaning": "Sinh hàng loạt input ngẫu nhiên hay biến đổi có định hướng để tìm crash, treo hay hành vi sai, nhất là ở parser. Với Java có Jazzer.",
+      "example": "Fuzz parser file Excel nhập liệu tìm ra input làm `OutOfMemoryError` do tin vào kích thước khai trong header.",
+      "related": ["dast", "redos"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "pentest",
+      "term": "Pentest",
+      "meaning": "Penetration test: người kiểm thử (nội bộ hay thuê ngoài) tấn công hệ thống thật trong phạm vi được cho phép để tìm lỗ hổng, nhất là lỗi logic mà công cụ tự động không thấy.",
+      "example": "Pentest trước khi mở API đối tác tìm ra `/v1` cũ không kiểm chủ sở hữu giao dịch.",
+      "related": ["dast", "bola"],
+      "topics": ["secure-sdlc"]
+    },
+    {
+      "id": "rekor",
+      "term": "Rekor",
+      "meaning": "Transparency log công khai của Sigstore: ghi lại chữ ký, chứng chỉ và thời điểm ký, chỉ thêm không sửa, để ai cũng kiểm được chữ ký đã tồn tại khi chứng chỉ ngắn hạn còn hiệu lực.",
+      "example": "`cosign verify` tìm bản ghi Rekor của chữ ký image để biết nó được ký trong 10 phút chứng chỉ còn hạn.",
+      "related": ["sigstore"],
+      "topics": ["secure-sdlc"]
     }
   ]
 }

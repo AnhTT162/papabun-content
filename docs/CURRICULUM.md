@@ -290,8 +290,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 8 | `oauth2-oidc` | OAuth2 & OpenID Connect | mid | Authorization code + PKCE, client credentials, scope, ID token và access token | L D Sc | ✅ |
 | 9 | `sso-saml` | ✚ SSO doanh nghiệp & SAML | senior | SAML và OIDC, IdP, federation, đăng xuất tập trung | L D Sc | ✅ |
 | 10 | `authorization-models` | Mô hình phân quyền | senior | RBAC, ABAC, ReBAC, policy engine (OPA), cô lập multi-tenant, IDOR | L B Sc | ✅ |
-| 11 | `api-security` | Bảo mật API | senior | Rate limit, mTLS giữa service, API gateway, validate input, service-to-service auth | L Sc | ⬜ |
-| 12 | `secure-sdlc` | Bảo mật trong quy trình phát triển | senior | Threat modeling (STRIDE), SAST/DAST/SCA, supply chain, SBOM | L Sc | ⬜ |
+| 11 | `api-security` | Bảo mật API | senior | Rate limit, mTLS giữa service, API gateway, validate input, service-to-service auth | L Sc | ✅ |
+| 12 | `secure-sdlc` | Bảo mật trong quy trình phát triển | senior | Threat modeling (STRIDE), SAST/DAST/SCA, supply chain, SBOM | L Sc | ✅ |
 
 ### 10. Performance & Troubleshooting (`performance`)
 

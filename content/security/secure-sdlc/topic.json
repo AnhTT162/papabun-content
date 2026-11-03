@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "secure-sdlc",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Bảo mật trong quy trình phát triển",
+  "summary": "SDL, NIST SSDF, OWASP SAMM và ASVS; threat modeling với sơ đồ luồng dữ liệu, ranh giới tin cậy, STRIDE áp vào một luồng thật; SAST cho Java và cách sống với cảnh báo sai; SCA, nguồn dữ liệu CVE, Dependabot; xếp ưu tiên bằng CVSS, EPSS, KEV, khả năng chạm tới và VEX; SBOM CycloneDX (đã chạy với Maven 3.10); dependency confusion, typosquatting, xz utils; bảo vệ pipeline CI (tj-actions, ghim SHA, OIDC); ký artifact với Sigstore, SLSA; DAST, fuzzing, pentest; cổng chặn trong pipeline và cách đo.",
+  "level": "senior",
+  "order": 12,
+  "minutes": 18,
+  "prerequisites": ["owasp-top10", "maven-gradle", "secret-management"],
+  "terms": ["threat-modeling", "sast", "software-composition-analysis", "dast", "owasp-asvs", "data-flow-diagram", "trust-boundary", "stride", "cve", "sbom", "supply-chain-attack", "security-champion", "attack-tree", "epss", "gadget-chain", "vex", "dependency-confusion", "typosquatting", "build-provenance", "slsa", "sigstore", "secret-scanning", "reproducible-build", "transitive-dependency", "least-privilege", "cvss", "kev", "rekor", "fuzzing", "pentest", "iast", "rasp"],
+  "references": [
+    { "title": "NIST SP 800-218: Secure Software Development Framework (SSDF) Version 1.1", "url": "https://csrc.nist.gov/pubs/sp/800/218/final" },
+    { "title": "OWASP Threat Modeling Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" },
+    { "title": "SLSA specification v1.0: Security levels", "url": "https://slsa.dev/spec/v1.0/levels" },
+    { "title": "CycloneDX Maven Plugin", "url": "https://github.com/CycloneDX/cyclonedx-maven-plugin" },
+    { "title": "GitHub Docs: Security hardening for GitHub Actions", "url": "https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions" },
+    { "title": "Sigstore: Verifying signatures with cosign", "url": "https://docs.sigstore.dev/cosign/verifying/verify/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Log4Shell công bố tối thứ Năm. Sáng thứ Sáu bạn trả lời CTO thế nào về việc công ty có dính không?\" Câu trả lời tốt dựa vào dữ liệu có sẵn từ trước: SBOM của từng bản đang chạy ở production (không phải của nhánh main) trong một kho tra cứu được, cộng quét image vì thư viện có thể nằm trong image nền hay agent. Tra các bản `log4j-core` bị ảnh hưởng ra danh sách dịch vụ, xếp theo hướng Internet và dữ liệu nhạy cảm. Trong lúc nâng phiên bản, giảm thiểu tạm (chặn chiều ra tới Internet của server ứng dụng, luật WAF) và tìm dấu hiệu đã bị khai thác trong log. Đừng quên phần mềm mua về và dịch vụ của nhà cung cấp: hỏi họ, vì SBOM của bạn không có chúng. Chi tiết lỗ hổng ở bài Logging trong Java." },
+    { "type": "callout", "style": "warning", "markdown": "Bật SAST và SCA với chế độ chặn trên toàn bộ code cũ là cách nhanh nhất để giết chương trình bảo mật: hàng nghìn build đỏ, phần lớn là cảnh báo sai hay CVE không chạm tới, và team học cách bấm bỏ qua. Bắt đầu bằng baseline, chỉ chặn phát hiện mới có độ tin cậy cao, và để mỗi ngoại lệ có ngày hết hạn." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}
