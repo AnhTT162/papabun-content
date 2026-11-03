@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "graceful-shutdown",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Graceful shutdown & vòng đời process",
+  "summary": "SIGTERM, SIGKILL và shutdown hook; graceful shutdown của Spring Boot và thứ tự dừng theo phase (đã đo trên Boot 4.1.2); trình tự xoá pod của Kubernetes, preStop và ngân sách grace period; executor, Kafka, SQS khi tắt; thiết kế chịu được chết đột ngột.",
+  "level": "mid",
+  "order": 11,
+  "minutes": 15,
+  "prerequisites": ["kubernetes-core", "docker", "load-balancing"],
+  "terms": ["sigterm", "sigkill", "prestop-hook", "termination-grace-period", "connection-draining", "readiness-probe", "pid-1", "outbox", "envoy"],
+  "references": [
+    { "title": "Spring Boot: Graceful Shutdown", "url": "https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html" },
+    { "title": "Kubernetes: Pod Lifecycle, Termination of Pods", "url": "https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination" },
+    { "title": "Kubernetes: Container Lifecycle Hooks", "url": "https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Làm sao chứng minh deploy của bạn không làm rơi request?\" Đưa ra phép thử chứ không chỉ cấu hình: chạy tải liên tục (k6, Gatling) qua đúng đường vào thật (gateway, load balancer) trong lúc rollout cả Deployment, yêu cầu 0 lỗi; lặp lại với request dài và với scale xuống. Theo dõi exit code của pod cũ (143 là tắt êm, 137 là bị giết), log `Graceful shutdown complete` và log phase quá hạn. Rồi nói phần không cấu hình nào cứu: pod chết đột ngột, nên consumer idempotent và việc quan trọng ở nơi bền." },
+    { "type": "callout", "style": "warning", "markdown": "Kéo dài `terminationGracePeriodSeconds` lên vài phút để \"cho chắc\" có giá: mỗi lần deploy, scale xuống hay rút node phải chờ chừng đó cho từng pod chậm, và cluster autoscaler không rút được node. Giữ việc dài (báo cáo, batch) ra khỏi web pod, chia nhỏ để làm lại được, thay vì kéo dài thời gian tắt." }
+  ]
+}

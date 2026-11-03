@@ -1701,7 +1701,7 @@
       "meaning": "Pattern ghi sự kiện cần gửi đi vào một bảng outbox trong cùng transaction với thay đổi nghiệp vụ; một relay (poller hoặc CDC) đọc bảng đó và gửi sang message broker, nên không có dual write.",
       "example": "Đặt đơn: `INSERT INTO orders ...` và `INSERT INTO outbox (type, payload) ...` trong một transaction; Debezium đẩy dòng outbox vào Kafka.",
       "related": ["cdc", "dual-write"],
-      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization", "evolutionary-architecture", "architecture-review"]
+      "topics": ["views-procedures-triggers", "nosql-overview", "search-elasticsearch", "messaging-fundamentals", "rabbitmq", "event-schema-evolution", "producer-consumer", "behavioral-patterns", "clean-hexagonal", "ddd-strategic", "ddd-tactical", "modular-monolith", "service-communication", "idempotency", "data-consistency-services", "microservices-tradeoffs", "event-driven-architecture", "saga", "outbox-cdc", "distributed-transactions", "sd-building-blocks", "design-url-shortener", "design-id-generator", "design-ecommerce-order", "design-notification", "design-job-scheduler", "design-file-storage", "design-payment", "design-ride-hailing", "architecture-tradeoffs", "migration-modernization", "evolutionary-architecture", "architecture-review", "graceful-shutdown"]
     },
     {
       "id": "replication-slot",
@@ -4765,7 +4765,7 @@
       "meaning": "Rút một instance khỏi load balancer để không nhận request mới, nhưng vẫn cho nó xử lý nốt request đang chạy trước khi tắt.",
       "example": "Rolling deploy: pod cũ bị gỡ khỏi endpoint, chờ `preStop` 5 giây, rồi graceful shutdown tối đa 30 giây; `terminationGracePeriodSeconds` đặt 45 giây để không bị SIGKILL giữa chừng.",
       "related": ["health-check"],
-      "topics": ["load-balancing"]
+      "topics": ["load-balancing", "graceful-shutdown"]
     },
     {
       "id": "sticky-session",
@@ -4909,7 +4909,7 @@
       "meaning": "Proxy L4/L7 mã nguồn mở viết bằng C++, cấu hình động qua API (xDS); là data plane của Istio và nền của nhiều gateway.",
       "example": "Envoy sidecar áp retry `attempts: 2` và ghi metric latency cho mọi request ra khỏi pod.",
       "related": ["sidecar", "service-mesh"],
-      "topics": ["api-gateway-service-mesh", "design-rate-limiter"]
+      "topics": ["api-gateway-service-mesh", "design-rate-limiter", "graceful-shutdown"]
     },
     {
       "id": "data-plane",
@@ -10461,7 +10461,7 @@
       "meaning": "Mô tả hạ tầng bằng code được quản lý phiên bản và review, rồi để công cụ tạo và cập nhật tài nguyên, thay vì click tay trên console.",
       "example": "Terraform hoặc AWS CDK định nghĩa VPC, ECS service và RDS; thay đổi đi qua pull request và pipeline.",
       "related": ["well-architected-framework"],
-      "topics": ["well-architected"]
+      "topics": ["well-architected", "infrastructure-as-code"]
     },
     {
       "id": "least-privilege",
@@ -11853,7 +11853,7 @@
       "meaning": "Viết quy tắc tuân thủ thành code chạy tự động trong pipeline hay admission controller, thay vì checklist cho người duyệt.",
       "example": "Rule Conftest/OPA chặn manifest Kubernetes thiếu resource limit hoặc chạy bằng root.",
       "related": ["guardrail"],
-      "topics": ["enterprise-architecture", "authorization-models"]
+      "topics": ["enterprise-architecture", "authorization-models", "infrastructure-as-code"]
     },
     {
       "id": "evolutionary-architecture",
@@ -13877,7 +13877,7 @@
       "meaning": "Process đầu tiên trong PID namespace của container. Kernel không áp hành động mặc định của tín hiệu cho nó, và nó phải dọn process zombie.",
       "example": "`CMD java -jar app.jar` dạng shell làm `/bin/sh` thành PID 1 thay vì JVM, nên JVM có thể không nhận SIGTERM.",
       "related": ["linux-namespace"],
-      "topics": ["docker"]
+      "topics": ["docker", "graceful-shutdown"]
     },
     {
       "id": "distroless",
@@ -13987,9 +13987,9 @@
       "id": "readiness-probe",
       "term": "Readiness probe",
       "meaning": "Kiểm tra định kỳ của kubelet xem container đã sẵn sàng nhận traffic chưa. Thất bại thì pod bị rút khỏi danh sách endpoint của Service, nhưng không bị restart.",
-      "example": "`/actuator/health/readiness` trả 503 khi app đang khởi động hoặc đang tắt.",
+      "example": "`/actuator/health/readiness` trả 503 (`OUT_OF_SERVICE`) khi app chưa sẵn sàng nhận traffic lúc khởi động.",
       "related": ["liveness-probe", "startup-probe", "endpointslice"],
-      "topics": ["kubernetes-core"]
+      "topics": ["kubernetes-core", "graceful-shutdown"]
     },
     {
       "id": "configmap",
@@ -14254,6 +14254,86 @@
       "example": "Image `orders@sha256:4f2a...` được test ở staging rồi deploy nguyên vẹn lên production.",
       "related": ["deployment-pipeline", "image-digest"],
       "topics": ["ci-cd-pipeline"]
+    },
+    {
+      "id": "sigterm",
+      "term": "SIGTERM",
+      "meaning": "Tín hiệu số 15 yêu cầu process kết thúc; process có thể bắt nó để tắt êm. JVM chạy shutdown hook khi nhận SIGTERM; thoát xong thì exit code là 143.",
+      "example": "Kubernetes gửi SIGTERM cho PID 1 của container khi xoá pod, sau khi chạy xong `preStop`.",
+      "related": ["sigkill", "pid-1", "termination-grace-period"],
+      "topics": ["graceful-shutdown"]
+    },
+    {
+      "id": "sigkill",
+      "term": "SIGKILL",
+      "meaning": "Tín hiệu số 9 giết process ngay, không bắt được, không shutdown hook nào chạy. Exit code 137.",
+      "example": "Hết `terminationGracePeriodSeconds` mà container chưa thoát thì kubelet gửi SIGKILL.",
+      "related": ["sigterm", "oom-killer"],
+      "topics": ["graceful-shutdown"]
+    },
+    {
+      "id": "prestop-hook",
+      "term": "preStop hook",
+      "meaning": "Hook của Kubernetes chạy trong container trước khi gửi SIGTERM, ví dụ ngủ vài giây để load balancer kịp ngừng gửi traffic. Thời gian của nó tính vào grace period.",
+      "example": "`lifecycle.preStop.sleep.seconds: 10` giữ pod phục vụ thêm 10 giây sau khi bị đánh dấu kết thúc.",
+      "related": ["termination-grace-period", "sigterm"],
+      "topics": ["graceful-shutdown"]
+    },
+    {
+      "id": "termination-grace-period",
+      "term": "Termination grace period",
+      "meaning": "Thời gian Kubernetes cho pod tắt (mặc định 30 giây), tính từ lúc pod bị xoá, gồm cả `preStop`; hết hạn thì SIGKILL.",
+      "example": "preStop 10 giây + xả request 30 giây + đóng tài nguyên 5 giây nên đặt `terminationGracePeriodSeconds: 50`.",
+      "related": ["prestop-hook", "sigkill"],
+      "topics": ["graceful-shutdown"]
+    },
+    {
+      "id": "terraform",
+      "term": "Terraform",
+      "meaning": "Công cụ IaC khai báo của HashiCorp: mô tả tài nguyên bằng HCL, tính kế hoạch thay đổi bằng cách so code với state và thực tế, rồi gọi API của provider để áp dụng. OpenTofu là nhánh mã nguồn mở.",
+      "example": "`terraform plan -out=plan.out` rồi `terraform apply plan.out` trong pipeline.",
+      "related": ["terraform-state", "terraform-module", "infrastructure-as-code"],
+      "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "terraform-state",
+      "term": "Terraform state",
+      "meaning": "Dữ liệu Terraform giữ để biết mỗi địa chỉ trong code ứng với tài nguyên thật nào, kèm giá trị thuộc tính; cần lưu ở backend chung có khoá và được bảo vệ vì có thể chứa secret.",
+      "example": "State ở `s3://tf-state-shop/prod/orders.tfstate`, khoá bằng `use_lockfile`.",
+      "related": ["terraform", "configuration-drift"],
+      "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "terraform-module",
+      "term": "Terraform module",
+      "meaning": "Gói cấu hình Terraform tái sử dụng có biến vào và output ra, được gọi kèm phiên bản.",
+      "example": "Module `service-ecs` v3.2 tạo task definition, service, target group và alarm mặc định.",
+      "related": ["terraform"],
+      "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "configuration-drift",
+      "term": "Drift",
+      "meaning": "Tình trạng hạ tầng thật lệch khỏi cấu hình khai báo do sửa tay hoặc hệ thống khác thay đổi; IaC sẽ hoàn tác ở lần apply sau nếu không được đưa vào code.",
+      "example": "Security group mở thêm cổng trên console trong lúc xử lý sự cố.",
+      "related": ["terraform-state", "gitops"],
+      "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "gitops",
+      "term": "GitOps",
+      "meaning": "Cách vận hành mà trạng thái mong muốn khai báo nằm trong git, agent tự kéo về và liên tục đối soát hệ thống thật cho khớp.",
+      "example": "Argo CD thấy commit đổi digest image trong repo cấu hình và đồng bộ Deployment.",
+      "related": ["argo-cd", "configuration-drift"],
+      "topics": ["infrastructure-as-code"]
+    },
+    {
+      "id": "argo-cd",
+      "term": "Argo CD",
+      "meaning": "Công cụ GitOps cho Kubernetes: đọc manifest (YAML, Kustomize, Helm) từ git, đồng bộ vào cluster, báo lệch và có thể tự sửa (self-heal), xoá tài nguyên đã bỏ (prune).",
+      "example": "Application `orders-prod` trỏ tới `deploy/orders/overlays/prod` với `selfHeal: true`.",
+      "related": ["gitops", "kustomize", "helm"],
+      "topics": ["infrastructure-as-code"]
     }
   ]
 }

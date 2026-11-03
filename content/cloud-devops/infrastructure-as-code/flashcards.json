@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "three-sources", "front": "`terraform plan` so sánh những gì?", "back": "Code (trạng thái mong muốn), state (ánh xạ địa chỉ trong code với ID tài nguyên thật) và trạng thái thật lấy từ API của cloud." },
+    { "id": "plan-symbols", "front": "`-/+` trong plan nghĩa là gì?", "back": "Thay thế: xoá rồi tạo lại, vì một thuộc tính không sửa tại chỗ được; dòng `# forces replacement` chỉ ra thuộc tính đó." },
+    { "id": "count-vs-for-each", "front": "Vì sao nên dùng `for_each` thay vì `count` cho danh sách tài nguyên?", "back": "`count` gắn tài nguyên với vị trí, bỏ phần tử giữa làm dịch chỉ số và thay thế các tài nguyên phía sau; `for_each` gắn với khoá ổn định." },
+    { "id": "moved-block", "front": "Khối `moved` dùng để làm gì?", "back": "Báo Terraform một tài nguyên đổi địa chỉ (đổi tên, vào module, `count` sang `for_each`) để chuyển state thay vì xoá rồi tạo." },
+    { "id": "state-backend", "front": "Backend S3 cho state cần cấu hình gì?", "back": "Bật versioning và mã hoá bucket, chặn public, khoá bằng `use_lockfile = true` (khoá qua DynamoDB đã deprecated)." },
+    { "id": "state-secrets", "front": "Vì sao phải hạn chế ai đọc được state?", "back": "State chứa giá trị thuộc tính dạng rõ, kể cả password truyền vào tài nguyên. Dùng ephemeral resource, đối số write-only hoặc để dịch vụ tự quản lý secret." },
+    { "id": "drift", "front": "Drift là gì và phát hiện thế nào?", "back": "Thực tế lệch khỏi code do sửa tay hay hệ thống khác; chạy `terraform plan -refresh-only` hoặc plan định kỳ trong CI." },
+    { "id": "prevent-destroy", "front": "`prevent_destroy` bảo vệ gì?", "back": "Mọi plan muốn xoá tài nguyên đó báo lỗi; dùng cho database, bucket, queue có dữ liệu." },
+    { "id": "gitops-principles", "front": "Bốn nguyên tắc của OpenGitOps?", "back": "Khai báo; lưu có phiên bản và bất biến; agent tự kéo về; liên tục đối soát." },
+    { "id": "argo-selfheal", "front": "`selfHeal` và `prune` của Argo CD làm gì?", "back": "`selfHeal` hoàn tác thay đổi tay trên cluster về đúng git; `prune` xoá tài nguyên đã bỏ khỏi git." }
+  ]
+}

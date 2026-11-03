@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "shutdown-timeline-output",
+      "kind": "output",
+      "prompt": "App Spring Boot 4.1 có endpoint `/slow` ngủ 8 giây. Một request `/slow` bắt đầu, 1 giây sau process nhận SIGTERM, ngay sau đó có request `/ping` mới. Cấu hình như dưới. Kết quả của hai request là gì?",
+      "code": "# application.yml\nspring:\n  lifecycle:\n    timeout-per-shutdown-phase: 3s\n# server.shutdown để mặc định\n\n$ curl localhost:8080/slow &     # t = 0\n$ kill -TERM <pid>               # t = 1 s\n$ curl localhost:8080/ping       # t = 1,5 s",
+      "options": [
+        "/slow bị cắt không response ở ~4 s; /ping bị từ chối kết nối",
+        "/slow 200 sau 8 s; /ping 200 vì graceful vẫn nhận request mới",
+        "/slow 200 sau 8 s; /ping bị từ chối kết nối",
+        "/slow 503 ngay lúc SIGTERM; /ping 503 vì readiness từ chối"
+      ],
+      "answer": 0,
+      "explanation": "Đã chạy thử với Spring Boot 4.1.2: graceful shutdown (mặc định từ 3.4) đóng cổng nghe ngay khi nhận SIGTERM nên `/ping` bị từ chối kết nối (curl mã 7), không có response 503 nào vì không còn ai nghe. Request đang chạy được chờ tối đa `timeout-per-shutdown-phase`, ở đây 3 giây; hết hạn thì log `Shutdown phase ... ends with 1 bean still running after timeout of 3000ms: [webServerGracefulShutdown]` và kết nối bị đóng, curl nhận phản hồi rỗng (mã 52) ở khoảng giây thứ 4. Với mặc định 30 giây, `/slow` sẽ trả 200 sau 8 giây."
+    },
+    {
+      "id": "grace-budget",
+      "kind": "single",
+      "prompt": "Pod có `preStop` sleep 15 giây, app cần tối đa 25 giây để xả request dở và 5 giây đóng tài nguyên. `terminationGracePeriodSeconds` để mặc định. Chuyện gì xảy ra khi pod bị xoá?",
+      "options": [
+        "Grace tính cả preStop: app còn 15 giây và bị SIGKILL giữa chừng",
+        "Grace bắt đầu sau preStop: app có đủ 30 giây để xả và đóng",
+        "Kubelet tự kéo dài grace period cho tới khi app thoát xong",
+        "preStop bị bỏ qua vì tổng thời gian vượt grace period"
+      ],
+      "answer": 0,
+      "explanation": "Đồng hồ grace period chạy từ lúc pod bị xoá, gồm cả `preStop`. 30 − 15 = 15 giây cho app trong khi cần 30, nên SIGKILL đến giữa lúc xả, exit code 137. Kubelet chỉ cho thêm 2 giây một lần khi `preStop` còn chạy lúc hết hạn, không chờ app. Đặt grace period ít nhất 15 + 25 + 5 = 45 giây, nên khoảng 50–60."
+    },
+    {
+      "id": "prestop-why",
+      "kind": "single",
+      "prompt": "App đã bật graceful shutdown, readiness probe đúng chuẩn. Vì sao vẫn cần `preStop` sleep vài giây trên Kubernetes?",
+      "options": [
+        "Gỡ endpoint và SIGTERM chạy song song; LB cần vài giây mới ngừng gửi",
+        "SIGTERM chỉ được gửi sau khi readiness probe thất bại đủ số lần",
+        "preStop làm Spring chuyển readiness sang từ chối sớm hơn",
+        "preStop giúp JVM kịp ghi heap dump trước khi bị tắt"
+      ],
+      "answer": 0,
+      "explanation": "Khi xoá pod, control plane đánh dấu endpoint đang kết thúc và kubelet bắt đầu tắt container cùng lúc. kube-proxy, Ingress, gateway, load balancer của cloud cập nhật trễ vài giây; app nhận SIGTERM là đóng cổng nghe ngay nên request trong khoảng trễ bị từ chối. `preStop` sleep giữ app phục vụ bình thường tới khi mọi nơi đã gỡ pod. SIGTERM không chờ readiness probe; preStop sleep không báo gì cho Spring, readiness chỉ đổi khi SIGTERM tới; heap dump không liên quan."
+    },
+    {
+      "id": "durable-work",
+      "kind": "single",
+      "prompt": "Một consumer SQS nhận message, gọi API đối tác (mất tới 20 giây), rồi `DeleteMessage`. Pod bị OOMKilled giữa lúc gọi đối tác. Message đó thì sao?",
+      "options": [
+        "Hiện lại sau visibility timeout và được xử lý lại",
+        "Mất vĩnh viễn vì consumer đã nhận nó trước khi chết",
+        "Được SQS chuyển ngay sang DLQ vì consumer không phản hồi",
+        "Được giữ trong bộ nhớ của SDK và gửi lại khi pod khởi động lại"
+      ],
+      "answer": 0,
+      "explanation": "Message chưa bị xoá nên SQS cho nó hiện lại sau visibility timeout, consumer khác nhận và làm lại; đây là lý do ack sau khi xử lý và làm consumer idempotent (đối tác có thể đã nhận lần gọi đầu). Chỉ chuyển sang DLQ khi số lần nhận vượt `maxReceiveCount`. SDK không giữ gì sau khi process chết. Đó là thiết kế chịu chết đột ngột: không dựa vào việc lúc nào cũng được tắt êm."
+    }
+  ]
+}

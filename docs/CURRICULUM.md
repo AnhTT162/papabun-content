@@ -369,8 +369,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 8 | `aws-managed-services` | ✚ Dịch vụ managed của AWS | mid | SQS/SNS, DynamoDB, ElastiCache, Lambda, chọn managed hay tự vận hành | L Sc | ✅ |
 | 9 | `aws-edge-storage` | ✚ Route 53, CloudFront & lưu trữ trên AWS | mid | Routing policy, CDN, EBS/EFS/S3 và lớp lưu trữ, chọn loại storage | L D Sc | ✅ |
 | 10 | `ci-cd-pipeline` | CI/CD pipeline | mid | Các stage, artifact, trunk-based, feature flag | A L D | ✅ |
-| 11 | `graceful-shutdown` | ✚ Graceful shutdown & vòng đời process | mid | SIGTERM và SIGKILL, graceful shutdown của Spring Boot, `preStop` của Kubernetes, rút connection và consumer | L B T | ⬜ |
-| 12 | `infrastructure-as-code` | Infrastructure as Code & GitOps | mid | Terraform state, module, drift, Argo CD | L B | ⬜ |
+| 11 | `graceful-shutdown` | ✚ Graceful shutdown & vòng đời process | mid | SIGTERM và SIGKILL, graceful shutdown của Spring Boot, `preStop` của Kubernetes, rút connection và consumer | L B T | ✅ |
+| 12 | `infrastructure-as-code` | Infrastructure as Code & GitOps | mid | Terraform state, module, drift, Argo CD | L B | ✅ |
 | 13 | `incident-management` | Alerting, on-call & postmortem | mid | Alert theo SLO, runbook, postmortem không đổ lỗi | L T | ⬜ |
 | 14 | `serverless` | Serverless | mid | Lambda, cold start, giới hạn, khi nào phù hợp | L Sc | ⬜ |
 | 15 | `deployment-strategies` | Rolling, blue-green, canary | mid | Rollback, tương thích schema và API khi deploy | L S Sc | ⬜ |

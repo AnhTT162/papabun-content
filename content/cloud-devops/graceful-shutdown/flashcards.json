@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "sigterm-sigkill", "front": "SIGTERM và SIGKILL khác nhau thế nào với JVM?", "back": "SIGTERM chạy shutdown hook nên Spring đóng context êm, thoát mã 143. SIGKILL giết ngay, không hook nào chạy, mã 137." },
+    { "id": "boot-graceful", "front": "Graceful shutdown của Spring Boot làm gì khi nhận SIGTERM?", "back": "Đóng cổng nghe ngay (kết nối mới bị từ chối) và chờ request đang chạy xong, tối đa `timeout-per-shutdown-phase` 30 giây. Mặc định bật từ Boot 3.4." },
+    { "id": "phase-timeout", "front": "`timeout-per-shutdown-phase` áp dụng cho cái gì?", "back": "Cho từng phase của `SmartLifecycle` khi dừng (web server, executor, Kafka container...), nên tổng thời gian tắt có thể gấp vài lần con số đó." },
+    { "id": "k8s-parallel", "front": "Khi xoá pod, gỡ endpoint và SIGTERM diễn ra theo thứ tự nào?", "back": "Song song: endpoint được đánh dấu đang kết thúc trong khi kubelet chạy preStop rồi gửi SIGTERM. Load balancer cập nhật trễ vài giây." },
+    { "id": "prestop", "front": "Vì sao thêm `preStop` sleep vài giây?", "back": "Để app vẫn phục vụ trong lúc mọi load balancer gỡ pod, rồi mới nhận SIGTERM và đóng cổng nghe." },
+    { "id": "grace-includes-prestop", "front": "`terminationGracePeriodSeconds` tính những gì?", "back": "Cả thời gian `preStop` lẫn thời gian app tắt sau SIGTERM. Đặt ≥ preStop + thời gian xả việc + đóng tài nguyên." },
+    { "id": "async-queue-lost", "front": "Việc `@Async` còn trong hàng đợi khi tắt pod thì sao?", "back": "Boot 4 chờ executor tối đa một phase (30 giây); hết hạn thì việc đang chạy bị ngắt, việc trong hàng đợi mất không log." },
+    { "id": "readiness-on-close", "front": "Spring Boot làm gì với readiness khi bắt đầu tắt?", "back": "Phát `REFUSING_TRAFFIC` ngay trước `ContextClosedEvent`." },
+    { "id": "crash-only", "front": "Vì sao không được dựa vào graceful shutdown cho việc quan trọng?", "back": "Pod vẫn có thể chết bằng SIGKILL, OOMKilled, mất node. Việc quan trọng phải ở queue bền hoặc outbox, ack sau khi xong, xử lý idempotent." }
+  ]
+}

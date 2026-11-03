@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "infrastructure-as-code",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Infrastructure as Code & GitOps",
+  "summary": "Terraform: plan đọc thế nào, state và backend có khoá, địa chỉ tài nguyên (`count`, `for_each`, `moved`, `prevent_destroy`), module, drift, secret trong state, policy as code; GitOps theo bốn nguyên tắc OpenGitOps với Argo CD; immutable infrastructure.",
+  "level": "mid",
+  "order": 12,
+  "minutes": 15,
+  "prerequisites": ["aws-core", "k8s-packaging", "ci-cd-pipeline"],
+  "terms": ["infrastructure-as-code", "terraform", "terraform-state", "terraform-module", "configuration-drift", "gitops", "argo-cd", "policy-as-code"],
+  "references": [
+    { "title": "Terraform: S3 backend (state locking)", "url": "https://developer.hashicorp.com/terraform/language/backend/s3" },
+    { "title": "Terraform: moved block", "url": "https://developer.hashicorp.com/terraform/language/moved" },
+    { "title": "Terraform: Ephemeral values in resources", "url": "https://developer.hashicorp.com/terraform/language/manage-sensitive-data/ephemeral" },
+    { "title": "OpenGitOps Principles v1.0.0", "url": "https://opengitops.dev/" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn tổ chức Terraform cho 3 môi trường và 15 service thế nào?\" Chia state theo vòng đời và người sở hữu: nền tảng (mạng, DNS, cluster) ít đổi, do platform team giữ; mỗi service một state nhỏ cho tài nguyên riêng của nó (database, queue, bucket); mỗi môi trường một state riêng, cùng module, khác biến. Module dùng chung có phiên bản. Pipeline: plan trên pull request, policy check, apply sau merge, chỉ pipeline có quyền apply prod. Nêu lý do: plan nhanh, lỗi không lan, quyền tách bạch; giá là phải truyền output giữa các state." },
+    { "type": "callout", "style": "warning", "markdown": "`terraform apply -auto-approve` trong pipeline mà không giữ lại và đọc plan là công tắc xoá hạ tầng. Lưu plan thành file (`terraform plan -out=plan.out`), đăng tóm tắt vào pull request, chặn tự động khi có `destroy` hay `replace` với tài nguyên giữ dữ liệu, và apply đúng file plan đã duyệt để không có thay đổi lọt vào giữa lúc review và lúc apply. File plan chứa giá trị nhạy cảm dạng rõ: lưu có mã hoá, giới hạn quyền đọc, xoá sau khi apply." }
+  ]
+}

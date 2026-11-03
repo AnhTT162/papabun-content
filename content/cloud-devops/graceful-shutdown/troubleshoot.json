@@ -1,0 +1,172 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Mỗi lần rolling update, vài giây lỗi 503",
+  "symptom": "Service `checkout` (Spring Boot 4.1, 12 pod) đứng sau [[envoy|Envoy]] Gateway trên Kubernetes. Mỗi lần deploy, dashboard thấy một chuỗi đốm lỗi 503, mỗi đốm vài giây, tổng khoảng 0,3% request của đợt deploy. Team đã kiểm: app bật graceful shutdown (mặc định của Boot), readiness probe trỏ vào `/actuator/health/readiness`. Đội product muốn deploy nhiều lần mỗi ngày nên lỗi này không chấp nhận được.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Dashboard đợt deploy 10:02–10:09:\n  envoy 5xx rate   : 12 đốm, mỗi đốm 3–4 giây, đỉnh 2,8%\n  pod thay thế     : 12 pod, mỗi pod một lần\n  checkout p99     : bình thường giữa các đốm\n\nEnvoy access log (mẫu):\n[10:02:14.318] \"POST /api/checkout HTTP/1.1\" 503 UF upstream=10.42.3.17:8080 \"upstream connect error or disconnect/reset before headers. reset reason: remote connection failure, transport failure reason: delayed connect error: 111\"",
+      "evidenceFormat": "monospace",
+      "question": "Bắt đầu điều tra từ đâu?",
+      "choices": [
+        {
+          "label": "Đối chiếu thời điểm từng đốm lỗi với sự kiện kết thúc của từng pod",
+          "quality": "good",
+          "feedback": "Đúng. 12 đốm cho 12 pod thay thế là gợi ý mạnh; cần biết lỗi rơi vào pod mới đang lên hay pod cũ đang tắt, và đúng giây nào.",
+          "next": "timeline"
+        },
+        {
+          "label": "Bật retry cho mọi request trong Envoy để che lỗi",
+          "quality": "ok",
+          "feedback": "Retry khi lỗi kết nối (connect-failure) là an toàn, vì request chưa tới app, và thật sự giảm lỗi. Nhưng chưa hiểu nguyên nhân thì có thể retry cả POST đã tới app; và lỗi vẫn còn đó khi retry trúng pod đang tắt khác.",
+          "next": "retry"
+        },
+        {
+          "label": "Tăng số replica lên 24 để mỗi pod chịu ít tải hơn",
+          "quality": "poor",
+          "feedback": "Không có dấu hiệu quá tải: p99 bình thường giữa các đốm. Gấp đôi pod thì gấp đôi số pod thay thế mỗi lần deploy.",
+          "next": "scale"
+        }
+      ]
+    },
+    {
+      "id": "scale",
+      "evidence": "Sau khi lên 24 pod, đợt deploy kế tiếp:\n  envoy 5xx rate : 24 đốm, mỗi đốm 3–4 giây, đỉnh 1,4%\n  tổng request lỗi trong đợt: gần như không đổi",
+      "evidenceFormat": "monospace",
+      "question": "Số đốm tăng theo số pod. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Quay lại 12 pod và đối chiếu lỗi với thời điểm pod kết thúc",
+          "quality": "good",
+          "feedback": "Đúng hướng: lỗi gắn với từng lần thay pod chứ không với tải.",
+          "next": "timeline"
+        }
+      ]
+    },
+    {
+      "id": "retry",
+      "evidence": "Sau khi bật retry 2 lần cho mọi lỗi 5xx:\n  envoy 5xx rate : giảm còn 0,05%\n  đơn hàng trùng : 3 đơn bị tạo hai lần trong tuần\n  nguyên nhân    : POST /api/checkout đã ghi đơn rồi trả 500 vì lỗi gọi dịch vụ tích điểm; Envoy retry nên đơn được tạo lần hai",
+      "evidenceFormat": "monospace",
+      "question": "Retry che bớt lỗi nhưng sinh đơn trùng. Làm gì tiếp?",
+      "choices": [
+        {
+          "label": "Chỉ giữ retry cho lỗi kết nối, rồi tìm vì sao pod đang tắt vẫn nhận request",
+          "quality": "good",
+          "feedback": "Đúng. Retry khi chưa kết nối được là an toàn; retry sau khi request đã tới app chỉ an toàn với API idempotent. Gốc vẫn là request đi vào pod đang tắt.",
+          "next": "timeline"
+        }
+      ]
+    },
+    {
+      "id": "timeline",
+      "evidence": "Pod checkout-6b9c-q7xm (IP 10.42.3.17):\n  10:02:14.102  kubelet  Killing: Stopping container checkout\n  10:02:14.205  app      Commencing graceful shutdown. Waiting for active requests to complete\n  10:02:14.318  envoy    503 UF upstream=10.42.3.17 (connect error 111)\n  ...           envoy    thêm 41 lỗi tương tự tới pod này\n  10:02:15.880  app      Graceful shutdown complete\n  10:02:17.902  envoy    lỗi cuối tới 10.42.3.17\n\n$ kubectl get deploy checkout -o yaml | grep -E 'preStop|terminationGracePeriodSeconds'\n      terminationGracePeriodSeconds: 30",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi kết nối bị từ chối (111) tới pod cũ kéo dài khoảng 3,6 giây sau SIGTERM. Giải thích nào khớp nhất?",
+      "choices": [
+        {
+          "label": "App đóng cổng nghe ngay khi nhận SIGTERM, trong khi Envoy mất vài giây mới gỡ pod khỏi danh sách upstream",
+          "quality": "good",
+          "feedback": "Đúng. Gỡ endpoint và gửi SIGTERM diễn ra song song. Spring Boot graceful shutdown ngừng nhận kết nối mới ngay lập tức, nên trong khoảng trễ cập nhật endpoint, Envoy vẫn gửi request tới một cổng đã đóng.",
+          "next": "fix"
+        },
+        {
+          "label": "Readiness probe chạy mỗi 10 giây nên Kubernetes chậm phát hiện pod không sẵn sàng",
+          "quality": "ok",
+          "feedback": "Probe không quyết định ở đây: pod đang kết thúc bị đánh dấu `ready: false` trong EndpointSlice ngay, không chờ probe. Độ trễ nằm ở chỗ Envoy nhận và áp thay đổi đó.",
+          "next": "probe"
+        },
+        {
+          "label": "App bị crash khi tắt vì một bean lỗi trong `@PreDestroy`",
+          "quality": "poor",
+          "feedback": "Log cho thấy `Graceful shutdown complete` bình thường, và lỗi là từ chối kết nối, không phải kết nối bị cắt giữa chừng. Đọc lại dòng thời gian: lỗi bắt đầu ngay sau SIGTERM và là lỗi kết nối bị từ chối.",
+          "next": "timeline"
+        }
+      ]
+    },
+    {
+      "id": "probe",
+      "evidence": "Đổi readiness periodSeconds từ 10 xuống 2, đợt deploy kế tiếp:\n  envoy 5xx rate : vẫn 12 đốm, mỗi đốm 3–4 giây\n\nEndpointSlice của checkout lúc 10:02:14.15 (ngay sau Killing):\n  - addresses: [10.42.3.17]\n    conditions: { ready: false, serving: true, terminating: true }",
+      "evidenceFormat": "monospace",
+      "question": "Endpoint đã được đánh dấu ngay mà Envoy vẫn gửi. Vậy cần gì?",
+      "choices": [
+        {
+          "label": "Giữ pod phục vụ bình thường vài giây sau khi bị đánh dấu, rồi mới tắt",
+          "quality": "good",
+          "feedback": "Đúng: không làm Envoy cập nhật nhanh hơn được trong mọi trường hợp, nên cho pod tiếp tục nhận request trong lúc chờ mọi nơi cập nhật.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "question": "Sửa thế nào?",
+      "choices": [
+        {
+          "label": "Thêm preStop sleep 10 giây và nâng terminationGracePeriodSeconds lên 50",
+          "quality": "good",
+          "feedback": "Đúng. Trong 10 giây `preStop`, app chưa nhận SIGTERM nên vẫn phục vụ, Envoy kịp gỡ pod. Grace period phải chứa `preStop` cộng thời gian xả request (tối đa 30 giây một phase) cộng đóng tài nguyên.",
+          "next": "verify"
+        },
+        {
+          "label": "Đặt `server.shutdown=immediate` để pod biến mất nhanh hơn",
+          "quality": "poor",
+          "feedback": "Pod đóng cổng nghe vẫn ngay lúc SIGTERM, nên Envoy vẫn gửi vào cổng đã đóng; thêm vào đó request đang chạy bị cắt.",
+          "next": "verify-immediate"
+        },
+        {
+          "label": "Thêm preStop sleep 30 giây, giữ grace period 30 giây",
+          "quality": "ok",
+          "feedback": "Envoy hết lỗi kết nối, nhưng grace period tính cả `preStop`: hết 30 giây là SIGKILL ngay khi app vừa nhận SIGTERM, request đang chạy bị cắt và không có shutdown hook nào chạy.",
+          "next": "verify-bad"
+        }
+      ]
+    },
+    {
+      "id": "verify-bad",
+      "evidence": "Đợt deploy kế tiếp:\n  envoy 5xx rate : vẫn có đốm lỗi, giờ là \"503 UC\" (upstream connection termination)\n  kubectl describe pod (pod cũ): Last State: Terminated, Exit Code: 137",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi đổi dạng thành kết nối bị cắt và pod chết mã 137. Chọn lại?",
+      "choices": [
+        {
+          "label": "preStop 10 giây, grace period 50 giây, giữ graceful shutdown",
+          "quality": "good",
+          "feedback": "Đúng: đủ thời gian cho cả hai giai đoạn, và app vẫn xả request dở.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify-immediate",
+      "evidence": "Đợt deploy kế tiếp với server.shutdown=immediate:\n  envoy 5xx rate : vẫn 12 đốm; ngoài \"503 UF\" (connect error 111) còn có \"503 UC\" (kết nối bị đóng giữa chừng)\n  kubectl describe pod (pod cũ): Exit Code: 143",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi kết nối vẫn còn, lại thêm request đang chạy bị cắt. Chọn lại?",
+      "choices": [
+        {
+          "label": "preStop 10 giây, grace period 50 giây, giữ graceful shutdown",
+          "quality": "good",
+          "feedback": "Đúng: preStop giải quyết khoảng trễ của Envoy, graceful shutdown giữ request dở.",
+          "next": "verify"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "evidence": "Deployment sau khi sửa:\n  lifecycle:\n    preStop:\n      sleep:\n        seconds: 10\n  terminationGracePeriodSeconds: 50\n\nĐợt deploy kế tiếp (12 pod):\n  envoy 5xx rate     : 0\n  thời gian rollout  : tăng thêm khoảng 10 giây mỗi pod cũ\n  Exit Code pod cũ   : 143",
+      "evidenceFormat": "monospace",
+      "question": "Lỗi đã hết. Kết luận nguyên nhân gốc?",
+      "choices": [
+        {
+          "label": "Xem tổng kết",
+          "quality": "good",
+          "feedback": "Ghi lại nguyên nhân và cách phòng để các service khác áp dụng cùng mẫu.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân gốc**: khi xoá pod, Kubernetes đánh dấu endpoint và gửi SIGTERM gần như cùng lúc. Spring Boot graceful shutdown đóng cổng nghe ngay khi nhận SIGTERM; Envoy (và kube-proxy, load balancer của cloud) cần vài giây để ngừng gửi tới pod, nên request trong khoảng đó bị từ chối kết nối.\n\n**Cách sửa**: `preStop` sleep đủ dài để mọi đường vào cập nhật (5–15 giây tuỳ hạ tầng), rồi graceful shutdown xả request dở; `terminationGracePeriodSeconds` ≥ `preStop` + thời gian xả của các phase có việc (mỗi phase tối đa `timeout-per-shutdown-phase`) + thời gian đóng tài nguyên.\n\n**Phòng ngừa**: test deploy dưới tải trong CI hay staging (chạy k6 liên tục trong lúc rollout, yêu cầu 0 lỗi); cảnh báo khi pod thoát mã 137 lúc deploy; retry ở gateway chỉ cho lỗi kết nối và cho request idempotent.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

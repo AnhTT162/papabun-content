@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "for-each-plan-output",
+      "kind": "output",
+      "prompt": "Queue đang được quản lý bằng `for_each` như dưới, đã apply. Bạn bỏ `\"orders-paid\"` khỏi danh sách rồi chạy `terraform plan`. Dòng tổng của plan là gì?",
+      "code": "resource \"aws_sqs_queue\" \"events\" {\n  for_each = toset([\"orders-created\", \"orders-paid\", \"orders-shipped\"])\n  name     = each.key\n}\n\n# sau khi sửa:\n#   for_each = toset([\"orders-created\", \"orders-shipped\"])",
+      "options": [
+        "Plan: 0 to add, 0 to change, 1 to destroy.",
+        "Plan: 1 to add, 0 to change, 2 to destroy.",
+        "Plan: 0 to add, 1 to change, 1 to destroy.",
+        "Plan: 2 to add, 0 to change, 3 to destroy."
+      ],
+      "answer": 0,
+      "explanation": "Với `for_each`, địa chỉ là `events[\"orders-created\"]`, `events[\"orders-paid\"]`, `events[\"orders-shipped\"]`. Bỏ một khoá chỉ làm đúng địa chỉ đó biến mất khỏi cấu hình, nên plan chỉ xoá `orders-paid`. `1 to add, 2 to destroy` là kết quả của `count`, nơi bỏ phần tử giữa làm dịch chỉ số và thay thế các queue phía sau."
+    },
+    {
+      "id": "state-lock",
+      "kind": "single",
+      "prompt": "Hai kỹ sư cùng chạy `terraform apply` từ máy mình vào cùng một môi trường, state lưu ở S3 nhưng chưa bật khoá. Rủi ro chính là gì?",
+      "options": [
+        "Hai lần apply ghi đè state của nhau, state mất dấu tài nguyên vừa tạo",
+        "S3 từ chối lần ghi thứ hai nên một người nhận lỗi và phải chạy lại",
+        "Terraform tự hợp nhất hai state nhờ versioning của bucket",
+        "Chỉ chậm hơn, vì AWS API tự tuần tự hoá các thay đổi"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lần apply đọc state, thay đổi, rồi ghi state mới. Không có khoá thì người ghi sau ghi đè lên người ghi trước: tài nguyên do người kia tạo vẫn tồn tại trên cloud nhưng không còn trong state (thành tài nguyên mồ côi), lần plan sau có thể đòi tạo trùng. S3 không từ chối ghi đè, versioning chỉ giữ bản cũ chứ không hợp nhất. Bật `use_lockfile = true`, và chỉ apply qua pipeline."
+    },
+    {
+      "id": "drift-console",
+      "kind": "single",
+      "prompt": "Đêm qua trực ca mở thêm cổng 5432 bằng console trong một security group mà mọi luật được khai báo trong khối `ingress` của `aws_security_group` để xử lý sự cố. Sáng nay pipeline apply một thay đổi khác của Terraform cho cùng module. Chuyện gì xảy ra với luật mới mở?",
+      "options": [
+        "Plan thấy lệch so với code và apply xoá luật đó, trừ khi code được cập nhật",
+        "Terraform giữ luật đó vì nó không được khai báo trong code",
+        "Apply thất bại vì state không khớp với thực tế",
+        "Terraform tự thêm luật đó vào code và state"
+      ],
+      "answer": 0,
+      "explanation": "Khi resource security group khai báo đầy đủ luật trong code, plan làm mới từ thực tế, thấy luật thừa và đưa về đúng code: luật mở tay bị xoá, có thể gây lại sự cố. Terraform không sửa code giùm và không thất bại vì drift. Sửa khẩn cấp xong thì đưa thay đổi vào code ngay; chạy plan định kỳ (`-refresh-only`) để phát hiện drift sớm."
+    },
+    {
+      "id": "gitops-pull",
+      "kind": "single",
+      "prompt": "So với pipeline CI chạy `kubectl apply` vào cluster production, mô hình GitOps với Argo CD trong cluster có lợi gì rõ nhất?",
+      "options": [
+        "CI không cần credential của cluster, và cluster tự đưa về đúng git khi có sửa tay",
+        "Deploy nhanh hơn vì Argo CD bỏ qua bước kiểm tra manifest",
+        "Không cần quản lý secret nữa vì Argo CD tự mã hoá mọi thứ",
+        "Argo CD thay được Terraform để quản lý cả VPC và RDS"
+      ],
+      "answer": 0,
+      "explanation": "Agent trong cluster kéo cấu hình từ git (pull), nên hệ thống CI không giữ quyền ghi vào cluster, giảm bề mặt tấn công; `selfHeal` hoàn tác sửa tay, và trạng thái thật luôn quy về commit trong git, rollback là revert. Argo CD không bỏ qua kiểm tra, không tự lo secret (cần External Secrets Operator hay Sealed Secrets) và không thay thế review; hạ tầng cloud như VPC, RDS vẫn thường do Terraform quản lý (hoặc Crossplane nếu muốn quản lý từ Kubernetes)."
+    }
+  ]
+}
