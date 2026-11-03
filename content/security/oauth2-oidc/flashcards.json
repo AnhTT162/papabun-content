@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "oauth-vs-oidc", "front": "OAuth 2.0 và OpenID Connect khác nhau thế nào?", "back": "OAuth 2.0 là ủy quyền: client được gọi API thay người dùng. OIDC thêm xác thực: ID token cho client biết ai vừa đăng nhập." },
+    { "id": "four-roles", "front": "Bốn vai trong OAuth 2.0 là gì?", "back": "Resource owner (người dùng), client (ứng dụng), authorization server (đăng nhập và cấp token), resource server (API nhận access token)." },
+    { "id": "pkce-mechanism", "front": "PKCE hoạt động thế nào?", "back": "Client gửi SHA-256 của một chuỗi ngẫu nhiên khi authorize, gửi chuỗi gốc khi đổi code; ai chỉ có code mà không có chuỗi gốc thì không đổi được." },
+    { "id": "state-param", "front": "Tham số `state` chống gì?", "back": "CSRF ở bước callback: kẻ tấn công gửi link chứa code của họ để nạn nhân đăng nhập vào tài khoản kẻ tấn công. Client so `state` với giá trị trong phiên." },
+    { "id": "client-credentials-use", "front": "Khi nào dùng client credentials?", "back": "Khi không có người dùng: service gọi service, job chạy nền, đối tác tích hợp. Client xác thực bằng chính nó, tốt nhất bằng private_key_jwt hoặc mTLS." },
+    { "id": "id-vs-access", "front": "ID token và access token dành cho ai?", "back": "ID token cho client (`aud` là client_id) để biết ai đăng nhập; access token cho API. Không gửi ID token tới API, client không nên đọc access token." },
+    { "id": "mobile-browser", "front": "App di động nên đăng nhập OAuth qua đâu?", "back": "Trình duyệt hệ thống (ASWebAuthenticationSession, Custom Tabs) với PKCE, không WebView nhúng và không password grant (RFC 8252)." },
+    { "id": "scope-not-permission", "front": "Có scope `orders.read` là đọc được mọi đơn hàng?", "back": "Không. Scope giới hạn client làm gì thay người dùng; API vẫn phải kiểm người dùng có quyền trên đúng đơn hàng đó." },
+    { "id": "stable-user-id", "front": "Định danh người dùng ổn định trong OIDC là gì?", "back": "Cặp `iss` + `sub`. Email đổi được và có thể chưa xác minh; nối tài khoản theo email mà không kiểm `email_verified` là lỗ hổng chiếm tài khoản." }
+  ]
+}

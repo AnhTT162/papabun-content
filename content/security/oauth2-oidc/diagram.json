@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Đăng nhập bằng authorization code + PKCE rồi gọi API",
+  "nodes": [
+    {"id": "browser", "label": "Trình duyệt", "kind": "client", "x": 0.1, "y": 0.05},
+    {"id": "client", "label": "Web backend (client)", "kind": "service", "x": 0.85, "y": 0.05},
+    {"id": "authz", "label": "Authorization server", "kind": "service", "x": 0.1, "y": 0.5},
+    {"id": "api", "label": "Orders API", "kind": "service", "x": 0.85, "y": 0.5}
+  ],
+  "edges": [
+    {"id": "browser-client", "from": "browser", "to": "client", "label": "login / callback"},
+    {"id": "browser-authz", "from": "browser", "to": "authz", "label": "/authorize"},
+    {"id": "client-authz", "from": "client", "to": "authz", "label": "code + verifier"},
+    {"id": "client-api", "from": "client", "to": "api", "label": "Bearer token"},
+    {"id": "api-authz", "from": "api", "to": "authz", "label": "JWKS"}
+  ],
+  "steps": [
+    {"caption": "Người dùng bấm Đăng nhập. Backend sinh state, nonce và code_verifier ngẫu nhiên, lưu vào session, rồi trả 302 tới authorization server kèm code_challenge = Base64URL(SHA-256(verifier)). Mũi tên trong sơ đồ chỉ chiều request.", "show": ["browser", "client", "browser-client"], "highlight": ["browser-client"]},
+    {"caption": "Trình duyệt mở /authorize với client_id, redirect_uri, scope openid orders.read, state, nonce, code_challenge. Authorization server đăng nhập người dùng (mật khẩu, MFA) và hỏi đồng ý. Backend không bao giờ thấy mật khẩu.", "show": ["authz", "browser-authz"], "highlight": ["browser-authz"]},
+    {"caption": "Authorization server chuyển trình duyệt về đúng redirect_uri đã đăng ký kèm code dùng một lần và state. Trình duyệt mang code tới callback của backend; backend so state với giá trị trong session, lệch là bỏ.", "show": [], "highlight": ["browser-authz", "browser-client"]},
+    {"caption": "Backend gửi code, code_verifier và redirect_uri tới /token qua kênh sau, xác thực bằng secret hoặc private_key_jwt. Server kiểm SHA-256(verifier) khớp challenge rồi trả ID token, access token, refresh token.", "show": ["client-authz"], "highlight": ["client-authz"]},
+    {"caption": "Backend kiểm ID token (chữ ký, iss, aud là client_id, exp, nonce), tạo session và trả cookie HttpOnly trong response của callback. Token nằm ở server, trình duyệt chỉ có cookie.", "show": [], "highlight": ["browser-client"]},
+    {"caption": "Gọi API: backend gắn access token. API kiểm chữ ký bằng khoá công khai lấy từ JWKS, kiểm iss, aud là orders-api, exp và scope, rồi tự kiểm người dùng có quyền trên đúng đơn hàng.", "show": ["api", "client-api", "api-authz"], "highlight": ["client-api", "api-authz"]}
+  ]
+}

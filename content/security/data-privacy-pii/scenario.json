@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chuỗi nha khoa: dữ liệu bệnh nhân nằm ở những đâu?",
+  "prompt": "Bạn là kỹ sư trưởng của một chuỗi nha khoa 40 phòng khám, khoảng 1,2 triệu bệnh nhân. Hệ thống:\n\n- App đặt lịch và web quản lý phòng khám dùng chung một PostgreSQL trên AWS region Singapore. Bảng `patients` có họ tên, ngày sinh, số điện thoại, số CCCD, địa chỉ; bảng `treatments` có chẩn đoán, phim X-quang (đường dẫn S3), ghi chú của bác sĩ.\n- Mỗi đêm một job chép toàn bộ hai bảng sang kho phân tích; 35 người ở marketing và vận hành có quyền đọc kho.\n- Log ứng dụng gửi tới một dịch vụ log SaaS đặt ở Mỹ, giữ 1 năm. Môi trường staging được làm mới hằng tháng bằng bản dump production.\n- Nhân viên tổng đài (60 người) tra cứu mọi bệnh nhân theo số điện thoại, thấy đầy đủ hồ sơ.\n- Backup database giữ 35 ngày, snapshot hằng tháng giữ 7 năm.\n\nYêu cầu đang tới cùng lúc:\n\n1. Marketing muốn gửi lịch sử điều trị cho một nền tảng quảng cáo để chạy chiến dịch niềng răng.\n2. Một bệnh nhân yêu cầu xoá toàn bộ dữ liệu của mình.\n3. Ban giám đốc muốn biết công ty đang vi phạm gì và cần làm gì trước, với 2 kỹ sư trong 3 tháng.\n\nHãy lập danh sách rủi ro theo mức ưu tiên, trả lời hai yêu cầu đầu, và đưa ra kế hoạch kỹ thuật.",
+  "hints": [
+    "Liệt kê mọi nơi có bản sao dữ liệu bệnh nhân. Mỗi nơi: ai đọc được, giữ bao lâu, có nằm ngoài Việt Nam không?",
+    "Dữ liệu điều trị thuộc nhóm nào theo luật? Điều đó thay đổi gì về đồng ý, về miễn trừ cho doanh nghiệp nhỏ, và về việc chia cho bên quảng cáo?",
+    "Yêu cầu xoá có đi được tới kho phân tích, log SaaS, staging và snapshot 7 năm không? Phần nào công ty bắt buộc phải giữ theo luật khác?",
+    "Với 2 kỹ sư, biện pháp nào giảm rủi ro nhiều nhất trên mỗi tuần công: thêm mã hoá, hay bớt bản sao?"
+  ],
+  "solution": "**1. Bản đồ dữ liệu và rủi ro**\n\n| Nơi | Ai đọc | Vấn đề |\n|---|---|---|\n| PostgreSQL production | App, 60 tổng đài viên | Tổng đài thấy toàn bộ hồ sơ, không ghi ai xem gì |\n| Kho phân tích | 35 người | Bản chép thô gồm chẩn đoán và CCCD, nhiều người hơn mức cần |\n| Staging | Mọi dev, tester | Dữ liệu thật ở môi trường bảo vệ kém nhất |\n| Log SaaS ở Mỹ | Dev, vận hành, nhà cung cấp | PII trong log (lỗi constraint, request log), giữ 1 năm, ra nước ngoài |\n| Snapshot 7 năm | Ai có quyền khôi phục | Không xoá được theo người |\n| AWS Singapore | Nhà cung cấp cloud (theo hợp đồng) | Đã là chuyển dữ liệu ra nước ngoài |\n\nDữ liệu sức khoẻ và ảnh X-quang là [[sensitive-personal-data|dữ liệu nhạy cảm]]; số CCCD là dữ liệu cơ bản nhưng rủi ro cao vì dùng để giả danh, còn ảnh CCCD (nếu có lưu) thuộc nhóm nhạy cảm. Vì xử lý dữ liệu nhạy cảm và hơn 100.000 người, công ty không thuộc diện miễn DPO và hồ sơ đánh giá tác động dành cho doanh nghiệp nhỏ.\n\nThứ tự ưu tiên theo khả năng lộ và số người bị ảnh hưởng: staging, kho phân tích, log SaaS, quyền tổng đài, rồi mới tới mã hoá thêm database chính.\n\n**2. Trả lời marketing**\n\nKhông gửi. Lịch sử điều trị là dữ liệu sức khoẻ, mục đích quảng cáo khác mục đích khám chữa bệnh mà bệnh nhân đã cung cấp, và chia cho bên quảng cáo là chuyển giao cho bên thứ ba. Muốn làm thì cần đồng ý riêng, rõ ràng, không đặt sẵn, lưu được bằng chứng, cho bệnh nhân rút lại; và chỉ gửi đúng phần cần (ví dụ danh sách đã đồng ý nhận tin về niềng răng), không gửi chẩn đoán. Cách ít rủi ro hơn là tự gửi tin qua kênh của công ty cho những người đã đồng ý, không đưa dữ liệu ra ngoài.\n\n**3. Yêu cầu xoá của bệnh nhân**\n\n- Hồ sơ bệnh án có thời hạn lưu bắt buộc theo luật về khám chữa bệnh, nên không xoá được phần đó. Trả lời bệnh nhân phần nào xoá, phần nào giữ và căn cứ; phần giữ lại thì khoá, chỉ dùng cho nghĩa vụ đó.\n- Xoá hoặc ẩn danh phần còn lại: tài khoản app, dữ liệu marketing, đồng ý cũ, ghi chú không thuộc bệnh án.\n- Đi tới mọi bản sao: kho phân tích (job xoá theo id), staging (sẽ hết khi bỏ dump thật), log (giữ ngắn để tự hết hạn), backup 35 ngày tự hết hạn, snapshot 7 năm: lưu id vào danh sách đã xoá và chạy lại việc xoá nếu khôi phục.\n- Thời hạn theo Nghị định 356: phản hồi trong 2 ngày làm việc, thực hiện xoá trong 20 ngày, 30 ngày nếu cần bên xử lý phối hợp. Ghi lại yêu cầu và kết quả.\n\n**4. Kế hoạch 3 tháng cho 2 kỹ sư**\n\n*Tháng 1: bớt bản sao (rẻ nhất, giảm rủi ro nhiều nhất)*\n\n- Staging dùng dữ liệu sinh ra hoặc bản [[data-masking|che tĩnh]] không đảo ngược; xoá các bản dump cũ.\n- Kho phân tích: job chép chỉ lấy cột cần ([[data-minimization|tối thiểu hoá]]); `patient_id` thay bằng [[hmac|HMAC]] có khoá; bỏ họ tên, số điện thoại, CCCD, ghi chú bác sĩ; ngày sinh thành năm sinh hoặc nhóm tuổi; chẩn đoán thành nhóm dịch vụ. Ai cần dữ liệu định danh thì có bảng riêng, quyền riêng, có audit.\n- Log: sửa handler để không log message lỗi tầng dưới, `logServerErrorDetail=false`, mask ở encoder, bỏ ghi request body; giảm thời hạn giữ log xuống 30 ngày; xoá log cũ có PII theo khả năng của nhà cung cấp.\n- Kiểm kê: bảng ghi mỗi trường cá nhân nằm ở đâu, mục đích, thời hạn, chủ sở hữu.\n\n*Tháng 2: giới hạn và ghi lại truy cập*\n\n- Tổng đài tìm theo số điện thoại nhưng chỉ thấy tên, lịch hẹn và số đã che; xem chẩn đoán phải ghi lý do, mỗi lần xem ghi [[audit-log|audit log]]. Cảnh báo khi một người xem bất thường nhiều hồ sơ.\n- Ảnh X-quang: bucket không public, truy cập qua service có kiểm quyền, URL ký sẵn sống vài phút.\n- Bật CloudTrail data events cho S3 và `pgaudit` cho truy cập trực tiếp database.\n\n*Tháng 3: mã hoá, quy trình, hồ sơ*\n\n- Mã hoá theo trường cho CCCD và ghi chú bác sĩ bằng khoá KMS; [[blind-index|blind index]] cho CCCD nếu cần tìm chính xác.\n- Luồng yêu cầu của chủ thể: nhận, xác minh danh tính, theo dõi hạn, event xoá tới các hệ thống.\n- Quy trình sự cố: ai quyết định, mẫu thông báo Bộ Công an trong 72 giờ, tập dượt một lần.\n- Cùng bộ phận pháp chế: hồ sơ đánh giá tác động xử lý và hồ sơ chuyển dữ liệu ra nước ngoài (database ở Singapore, log ở Mỹ), hợp đồng với nhà cung cấp log và cloud, chỉ định người phụ trách bảo vệ dữ liệu. Cân nhắc chuyển log về nhà cung cấp hoặc region gần hơn nếu không cần ở Mỹ.\n\n**5. Nói với ban giám đốc**\n\nRủi ro lớn nhất không nằm ở database chính mà ở ba bản sao ít ai để ý: staging, kho phân tích và log. Làm chúng nhỏ lại tốn ít công hơn mã hoá và giảm số người, số nơi có thể làm lộ dữ liệu từ hàng trăm xuống vài chục.",
+  "tradeoffs": [
+    {
+      "option": "Mã hoá theo trường mọi cột cá nhân ngay từ đầu",
+      "pros": [
+        "DBA, bản dump và replica chỉ thấy ciphertext",
+        "Xoá theo người được bằng crypto-shredding"
+      ],
+      "cons": [
+        "Mất tìm kiếm, sắp xếp, join trên cột đó; phải sửa nhiều query và báo cáo",
+        "Không giải quyết bản sao đã có ở staging, kho, log",
+        "Thêm phụ thuộc vào KMS ở đường đọc"
+      ]
+    },
+    {
+      "option": "Bớt bản sao và giả danh hoá ở kho phân tích trước",
+      "pros": [
+        "Ít công, giảm số người và số nơi có dữ liệu thật ngay",
+        "Kho vẫn dùng được cho thống kê nhờ id giả danh ổn định"
+      ],
+      "cons": [
+        "Database chính vẫn ở dạng rõ với ai có quyền SQL",
+        "Marketing mất một số báo cáo cần định danh, phải xin quyền riêng"
+      ]
+    },
+    {
+      "option": "Ẩn danh hoá hoàn toàn dữ liệu trong kho (nhóm tuổi, không id)",
+      "pros": [
+        "Dữ liệu ẩn danh thật thì không còn là dữ liệu cá nhân",
+        "Xoá theo người không còn liên quan tới kho"
+      ],
+      "cons": [
+        "Không nối được lịch sử của cùng một bệnh nhân, mất phân tích theo hành trình",
+        "Khó chứng minh đã ẩn danh thật khi còn nhiều quasi-identifier"
+      ]
+    }
+  ]
+}

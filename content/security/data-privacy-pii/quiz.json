@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pgjdbc-detail-output",
+      "kind": "output",
+      "prompt": "pgjdbc 42.7.7, URL kết nối có `logServerErrorDetail=false`. Số `0912345678` đã có trong cột `phone` (`UNIQUE`). Đoạn code in ra gì?",
+      "code": "try {\n    insertCustomer(conn, \"Trần Thị Bình\", \"0912345678\");\n} catch (PSQLException e) {\n    System.out.println(e.getMessage().contains(\"0912345678\"));\n    System.out.println(e.getServerErrorMessage().getDetail().contains(\"0912345678\"));\n}",
+      "options": [
+        "false\ntrue",
+        "false\nfalse",
+        "true\ntrue",
+        "true\nfalse"
+      ],
+      "answer": 0,
+      "explanation": "Mặc định message có thêm dòng `Detail: Key (phone)=(0912345678) already exists.` do PostgreSQL gửi về. `logServerErrorDetail=false` chỉ bỏ phần đó khỏi `getMessage()`; đối tượng `ServerErrorMessage` vẫn giữ nguyên detail (đã chạy). Vì vậy handler chỉ nên lấy SQLState và tên constraint, không log detail, kể cả khi đã bật tham số này."
+    },
+    {
+      "id": "hashed-phone-anonymous",
+      "kind": "single",
+      "prompt": "Team gửi cho đối tác phân tích bảng đơn hàng, cột `phone` được thay bằng SHA-256 của số điện thoại, không có khoá. Đánh giá nào đúng?",
+      "options": [
+        "Vẫn là dữ liệu cá nhân: dò ngược toàn bộ dải số rất nhanh",
+        "Đã ẩn danh vì SHA-256 là hàm một chiều, không đảo ngược được",
+        "Đã ẩn danh nếu thêm salt ngẫu nhiên riêng cho mỗi dòng",
+        "Vẫn là dữ liệu cá nhân chỉ khi đối tác có bảng số điện thoại"
+      ],
+      "answer": 0,
+      "explanation": "Số di động có không gian nhỏ: băm hết 100 triệu số `09xxxxxxxx` mất khoảng 1 giây trên laptop 10 lõi (đã đo, JDK 27). Không cần bảng có sẵn, tự sinh là đủ. Salt ngẫu nhiên mỗi dòng làm mất khả năng nối các đơn của cùng một người mà không đổi bản chất: mỗi dòng vẫn dò được trong khoảng một giây, nhắm một người cụ thể là xong. Muốn giả danh mà vẫn nối được thì dùng HMAC với khoá không giao cho đối tác; kết quả vẫn là dữ liệu giả danh, vẫn chịu luật."
+    },
+    {
+      "id": "rds-encryption-scope",
+      "kind": "single",
+      "prompt": "Database bật mã hoá at rest (RDS với KMS). Tấn công nào nó chặn được?",
+      "options": [
+        "Ai đó lấy được snapshot đã chia sẻ nhầm sang tài khoản khác",
+        "Ứng dụng bị SQL injection và đọc toàn bộ bảng khách hàng",
+        "Một DBA có quyền SELECT xuất bảng ra file CSV mang về nhà",
+        "Read replica dùng cho BI bị nhiều người truy vấn quá quyền"
+      ],
+      "answer": 0,
+      "explanation": "Mã hoá ở tầng lưu trữ bảo vệ đĩa, snapshot và backup khi rời khỏi phạm vi quyền của khoá: snapshot chia sẻ sang tài khoản không có quyền dùng khoá KMS thì không khôi phục được. Mọi đường đi qua engine database (ứng dụng, DBA, replica) đều thấy dữ liệu đã giải mã. Chặn các đường đó cần phân quyền, che dữ liệu, mã hoá theo trường ở tầng ứng dụng và audit."
+    },
+    {
+      "id": "erasure-backups",
+      "kind": "single",
+      "prompt": "Khách hàng yêu cầu xoá dữ liệu. Database chính đã xoá, nhưng backup hằng ngày giữ 35 ngày và không sửa được từng dòng. Cách xử lý hợp lý nhất?",
+      "options": [
+        "Để backup hết hạn, giữ id đã xoá và xoá lại sau mỗi lần khôi phục",
+        "Khôi phục từng backup, xoá dòng đó rồi tạo lại backup mới ngay",
+        "Xoá toàn bộ backup cũ để chắc không còn dữ liệu của khách hàng",
+        "Báo khách hàng rằng luật không yêu cầu xoá dữ liệu trong backup"
+      ],
+      "answer": 0,
+      "explanation": "Backup có thời hạn ngắn và được bảo vệ thì để nó tự hết hạn, đồng thời giữ danh sách id đã xoá và chạy lại việc xoá ngay khi khôi phục, để dữ liệu không quay lại hệ thống đang chạy. Sửa từng backup tốn kém và dễ hỏng backup; xoá hết backup là đánh đổi khả năng phục hồi. Backup giữ nhiều năm thì cần crypto-shredding hoặc rút ngắn thời hạn. Cách xử lý backup nên ghi trong chính sách lưu và trả lời cho khách hàng."
+    },
+    {
+      "id": "cloud-region-transfer",
+      "kind": "single",
+      "prompt": "Công ty Việt Nam đặt toàn bộ database khách hàng ở một region cloud tại Singapore. Theo Luật Bảo vệ dữ liệu cá nhân 2025, điều này là gì?",
+      "options": [
+        "Chuyển dữ liệu ra nước ngoài, cần hồ sơ đánh giá tác động",
+        "Không phải chuyển dữ liệu vì công ty vẫn là bên kiểm soát",
+        "Chỉ là chuyển dữ liệu nếu nhà cung cấp cloud đọc dữ liệu",
+        "Bị cấm, dữ liệu của người Việt phải lưu ở trong nước"
+      ],
+      "answer": 0,
+      "explanation": "Luật coi việc dùng cloud hay máy chủ ở nước ngoài để lưu hoặc xử lý là chuyển dữ liệu cá nhân xuyên biên giới, nên cần hồ sơ đánh giá tác động chuyển dữ liệu (được miễn với dữ liệu của chính người lao động và một số trường hợp khác). Luật không cấm, nhưng vi phạm quy định chuyển dữ liệu ra nước ngoài có mức phạt tối đa 5% doanh thu năm trước. Log hay dịch vụ SaaS đặt ở nước ngoài cũng tính."
+    }
+  ]
+}

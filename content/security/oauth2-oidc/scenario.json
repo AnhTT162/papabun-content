@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chuyển một hệ bán lẻ sang OAuth2/OIDC: mỗi client một luồng",
+  "prompt": "Bạn là tech lead của một chuỗi bán lẻ điện máy. Công ty vừa dựng một authorization server chuẩn OIDC (tự host) và muốn bỏ hệ đăng nhập tự viết. Hiện có:\n\n- **Web shop** (Spring MVC, render ở server) đăng nhập bằng form, session.\n- **App di động** (iOS, Android, 800.000 người dùng) gửi email và mật khẩu tới `/oauth/token` với `grant_type=password`; `client_secret` nằm trong mã app. Token sống 30 ngày, không có refresh.\n- **Trang quản trị** là SPA React, lưu token trong `localStorage`.\n- **Đối tác giao hàng** gọi `PUT /orders/{id}/status` bằng một API key dùng chung, key này cũng gọi được mọi API quản trị.\n- **Job đêm** đối soát kho dùng tài khoản `system@` với mật khẩu trong file cấu hình.\n- Năm service phía sau (orders, inventory, payment, customer, notification) tin header `X-User-Id` từ gateway.\n\nYêu cầu: chọn luồng OAuth/OIDC cho từng client, thiết kế scope và audience, kế hoạch chuyển trong 4 tháng không bắt 800.000 người dùng đăng nhập lại cùng một ngày, và nêu những lỗi cấu hình cần chặn từ đầu.",
+  "hints": [
+    "Xếp từng client vào hai nhóm: có người dùng hay không, và có giữ được secret hay không. Mỗi nhóm hợp với luồng nào?",
+    "`client_secret` trong app di động có còn là secret không? Bỏ password grant thì app đăng nhập bằng gì?",
+    "Đối tác giao hàng chỉ cần một việc. Scope và `aud` nào đủ cho việc đó, và nó xác thực bằng gì thay cho API key?",
+    "Token cũ 30 ngày đang nằm trên 800.000 máy. Có cách nào đổi chúng sang token mới mà người dùng không phải gõ lại mật khẩu không, và có nên làm vậy không?"
+  ],
+  "solution": "**1. Luồng cho từng client**\n\n| Client | Loại | Luồng | Ghi chú |\n|---|---|---|---|\n| Web shop | Confidential | Authorization code + [[pkce|PKCE]], `oauth2Login()` | Token ở server, trình duyệt giữ cookie session như cũ |\n| App di động | Public | Authorization code + PKCE qua trình duyệt hệ thống | Bỏ `client_secret` khỏi app; redirect bằng universal link / app link |\n| SPA quản trị | Public | Authorization code + PKCE qua [[bff|BFF]] | Token ở BFF, trình duyệt chỉ có cookie `HttpOnly`; bỏ `localStorage` |\n| Đối tác giao hàng | Confidential, không người dùng | [[client-credentials|Client credentials]], `private_key_jwt` | Một client riêng, scope `shipments.update` |\n| Job đêm | Confidential, không người dùng | Client credentials | Scope `inventory.reconcile`; xoá tài khoản `system@` |\n| Service gọi service | Workload | Client credentials hoặc [[token-exchange|token exchange]] | Không tin `X-User-Id` |\n\n**2. Scope và audience**\n\n- [[oauth-scope|Scope]] theo việc, không theo role: `orders.read`, `orders.write`, `shipments.update`, `inventory.reconcile`, `admin.catalog`. Role của nhân viên vẫn kiểm ở service.\n- Mỗi API là một audience (`orders-api`, `inventory-api`...). Token của đối tác chỉ có `aud=orders-api` và scope `shipments.update`; API kiểm thêm đơn đó có được giao cho đối tác này không.\n- Mọi resource server cấu hình `issuer-uri` và `audiences`, ghim thuật toán; viết test gửi token sai `aud`, ID token thay access token, token hết hạn, và chắc nhận `401`.\n- Token người dùng chỉ có `aud` của API mà client gọi trực tiếp (ở đây là gateway hoặc `orders-api`). Gateway kiểm token rồi chuyển tiếp nguyên token cho service đầu tiên, service tự kiểm. Khi `orders-api` cần gọi `payment-api` thay người dùng thì dùng token exchange lấy token `aud=payment-api`, scope hẹp; không cấp một token có `aud` gồm cả năm service, vì lộ ở service yếu nhất là dùng được ở mọi nơi. Gateway xoá `X-User-Id` nếu client tự gửi lên, và bỏ hẳn header này khi các service đã đọc `sub` từ token.\n\n**3. Kế hoạch 4 tháng**\n\n*Tháng 1: phía server, chưa đụng người dùng*\n\n- Ngay tuần đầu: thu hẹp API key của đối tác chỉ còn `PUT /orders/{id}/status`, vì hiện nó gọi được cả API quản trị. Song song cấp client credentials với khoá riêng của đối tác (họ giữ khoá riêng, mình chỉ giữ khoá công khai), hẹn ngày tắt key cũ khi đối tác đã chuyển xong.\n- Job đêm sang client credentials; xoá `system@`.\n- Các service thành resource server, kiểm `aud` và scope; gateway chuyển tiếp token.\n- Đăng ký mọi [[redirect-uri|`redirect_uri`]] chính xác, không wildcard; bật PKCE bắt buộc trên authorization server cho mọi client.\n\n*Tháng 2: web shop và trang quản trị*\n\n- Web shop dùng `oauth2Login()`. Tài khoản cũ: nhập người dùng vào authorization server kèm hash mật khẩu nếu nó hỗ trợ định dạng hash cũ ([[bcrypt|bcrypt]] thường được hỗ trợ), nên người dùng đăng nhập bằng mật khẩu cũ, không phải đặt lại.\n- SPA quản trị qua BFF; bật [[mfa|MFA]] cho nhân viên ở authorization server.\n\n*Tháng 3–4: app di động*\n\n- Bản app mới đăng nhập qua trình duyệt hệ thống với PKCE, nhận access token 15 phút và refresh token xoay vòng.\n- Chuyển êm cho người đang đăng nhập: app mới dùng token cũ một lần duy nhất để gọi endpoint chuyển đổi, server kiểm token cũ còn hạn rồi cấp cặp token mới bằng token exchange, sau đó huỷ token cũ. Không có endpoint này thì người dùng đăng nhập lại khi mở bản mới; trải ra theo tốc độ cập nhật app nên không dồn vào một ngày.\n- Sau khi phần lớn đã lên bản mới, đặt ngày tắt password grant và client cũ; bản app quá cũ được yêu cầu cập nhật. Khi tắt password grant thì vô hiệu hoá luôn client cũ và `client_secret` đã lộ của nó.\n\n**4. Lỗi cấu hình cần chặn từ đầu**\n\n- `redirect_uri` wildcard hay khớp tiền tố; custom scheme cho app thay vì universal link.\n- Không kiểm `state`, `nonce`; dùng `code_challenge_method=plain`.\n- Dùng access token làm bằng chứng đăng nhập ở web shop thay vì ID token.\n- Nối tài khoản theo email mà không kiểm `email_verified`; khoá định danh phải là `iss` + `sub`.\n- Đối tác dùng chung một client cho mọi môi trường; client credentials xin token mỗi request thay vì cache.\n- Authorization server thành điểm lỗi chung: resource server kiểm JWT tại chỗ bằng JWKS đã cache, nên IdP ngừng thì chỉ đăng nhập mới bị ảnh hưởng; đặt timeout và cảnh báo cho endpoint token.",
+  "tradeoffs": [
+    {
+      "option": "Giữ password grant cho app di động, chỉ bỏ client_secret",
+      "pros": [
+        "Không phải đổi giao diện đăng nhập của app",
+        "Ít việc trong ngắn hạn"
+      ],
+      "cons": [
+        "App vẫn nhận mật khẩu, không thêm được MFA, passkey hay đăng nhập mạng xã hội ở IdP",
+        "Bị RFC 9700 loại, bản dự thảo OAuth 2.1 bỏ hẳn; nhiều IdP không hỗ trợ",
+        "Mọi kiểm soát chống [[credential-stuffing|credential stuffing]] phải làm lại ở endpoint token"
+      ]
+    },
+    {
+      "option": "Authorization code + PKCE qua trình duyệt hệ thống",
+      "pros": [
+        "Mật khẩu chỉ nhập ở authorization server; thêm MFA, passkey không cần sửa app",
+        "Không còn secret trong app; theo đúng RFC 8252"
+      ],
+      "cons": [
+        "Người dùng thấy chuyển sang trình duyệt, cần làm giao diện đăng nhập của IdP cho đẹp",
+        "Phải cấu hình universal link / app link và xử lý khi người dùng huỷ giữa chừng"
+      ]
+    },
+    {
+      "option": "SPA giữ token trong bộ nhớ, không BFF",
+      "pros": [
+        "Không cần thêm thành phần server",
+        "Gọi API trực tiếp, không qua proxy"
+      ],
+      "cons": [
+        "[[xss|XSS]] vẫn gọi API thay người dùng khi trang đang mở, và lấy được token",
+        "Phải cấu hình [[cors|CORS]] cho từng API mà SPA gọi",
+        "Refresh token phải nằm ở trình duyệt; với trang quản trị quyền cao thì rủi ro lớn"
+      ]
+    }
+  ]
+}

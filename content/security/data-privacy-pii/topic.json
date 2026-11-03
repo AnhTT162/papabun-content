@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "data-privacy-pii",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Dữ liệu cá nhân & tuân thủ",
+  "summary": "PII, quasi-identifier và dữ liệu nhạy cảm; nguyên tắc của GDPR và Luật Bảo vệ dữ liệu cá nhân 2025 (Nghị định 356 thay Nghị định 13) ở mức kỹ sư cần biết; kiểm kê và tối thiểu hoá; giả danh hoá, tokenization và vì sao hash số điện thoại không phải ẩn danh; mã hoá at rest, in transit, theo trường và blind index; PII rò vào log qua lỗi constraint của PostgreSQL; audit log truy cập; thời hạn lưu và xoá tới mọi bản sao, kể cả backup.",
+  "level": "mid",
+  "order": 7,
+  "minutes": 15,
+  "prerequisites": ["cryptography-basics", "owasp-top10", "production-logging"],
+  "terms": ["pii", "quasi-identifier", "sensitive-personal-data", "gdpr", "purpose-limitation", "data-minimization", "data-classification", "pseudonymization", "anonymization", "tokenization", "encryption-at-rest", "field-level-encryption", "blind-index", "data-masking", "audit-log", "data-retention", "dpia", "data-controller", "data-processor", "hmac", "envelope-encryption", "crypto-shredding", "data-catalog", "audit-trail", "card-tokenization", "dto", "kms", "apm", "idor"],
+  "references": [
+    { "title": "Regulation (EU) 2016/679 (GDPR), văn bản chính thức", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" },
+    { "title": "EY Việt Nam: Nghị định 356/2025/NĐ-CP hướng dẫn Luật Bảo vệ dữ liệu cá nhân (3/2026)", "url": "https://www.ey.com/content/dam/ey-unified-site/ey-com/vi-vn/technical/tax/documents/ey-vietnam-legal-alert-march-2026-decree-no356-2025-nd-cp-providing-detailed-guidance-for-implementation-of-personal-data-protection-law-viet.pdf" },
+    { "title": "OWASP Logging Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" },
+    { "title": "pgjdbc: Connection parameters (logServerErrorDetail)", "url": "https://jdbc.postgresql.org/documentation/use/" },
+    { "title": "PostgreSQL 17: Error Reporting and Logging (log_error_verbosity)", "url": "https://www.postgresql.org/docs/17/runtime-config-logging.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Hệ thống event-driven, dữ liệu khách hàng đã nằm trong Kafka, kho phân tích và 5 service. Khách yêu cầu xoá thì làm sao?\" Trả lời theo ba lớp. Ngăn trước: event chỉ mang id, PII nằm ở service sở hữu. Lan truyền: service sở hữu phát event `CustomerErased`, mỗi bên nhận tự xoá hoặc ẩn danh phần của mình và báo lại, có đối soát để biết bên nào chưa xong trong hạn 20 ngày. Chỗ không xoá được từng dòng (topic giữ lâu, event store, backup): mã hoá trường cá nhân bằng khoá riêng mỗi người và xoá khoá (crypto-shredding), hoặc để hết hạn theo thời hạn lưu đã công bố." },
+    { "type": "callout", "style": "warning", "markdown": "Staging làm mới bằng bản dump production là nơi rò dữ liệu cá nhân phổ biến nhất mà ít ai tính: dữ liệu thật nằm ở môi trường có nhiều người truy cập nhất, ít giám sát nhất, và thường không nằm trong luồng xoá. Dùng dữ liệu sinh ra, hoặc bản che tĩnh không đảo ngược được (thay tên, số điện thoại, CCCD bằng giá trị giả nhưng giữ định dạng và quan hệ khoá ngoại)." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

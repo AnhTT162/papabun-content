@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "oauth2-oidc",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "OAuth2 & OpenID Connect",
+  "summary": "Bốn vai của OAuth 2.0 và vì sao OAuth không phải đăng nhập; authorization code + PKCE từng bước, state, nonce, redirect_uri khớp chính xác; confidential và public client, app di động qua trình duyệt hệ thống; client credentials với private_key_jwt và cache token; scope khác quyền, audience; ID token, access token, userinfo, discovery; các grant đã bị loại, device flow, token exchange, PAR, mix-up attack; mặc định của Spring Security 7.",
+  "level": "mid",
+  "order": 8,
+  "minutes": 15,
+  "prerequisites": ["authn-authz-basics", "jwt-deep", "browser-security-basics"],
+  "terms": ["oauth2", "oidc", "oauth-scope", "id-token", "authorization-code-flow", "pkce", "client-credentials", "oauth-client", "authorization-server", "resource-server", "access-token", "redirect-uri", "oauth-state", "confidential-client", "public-client", "bff", "oidc-discovery", "open-redirect", "token-exchange", "refresh-token", "jwks", "identity-provider", "csrf", "mtls", "jwt", "sso", "mfa", "bcrypt", "credential-stuffing", "xss", "cors", "opaque-token", "token-introspection", "dpop"],
+  "references": [
+    { "title": "RFC 9700: Best Current Practice for OAuth 2.0 Security", "url": "https://www.rfc-editor.org/rfc/rfc9700.html" },
+    { "title": "RFC 7636: Proof Key for Code Exchange (PKCE)", "url": "https://www.rfc-editor.org/rfc/rfc7636.html" },
+    { "title": "OpenID Connect Core 1.0", "url": "https://openid.net/specs/openid-connect-core-1_0.html" },
+    { "title": "RFC 8252: OAuth 2.0 for Native Apps", "url": "https://www.rfc-editor.org/rfc/rfc8252.html" },
+    { "title": "RFC 6749: The OAuth 2.0 Authorization Framework", "url": "https://www.rfc-editor.org/rfc/rfc6749.html" },
+    { "title": "Spring Security Reference: OAuth 2.0 Login", "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/login/index.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Service A nhận request của người dùng rồi cần gọi service B. Chuyển tiếp nguyên token, dùng client credentials của A, hay token exchange?\" Chuyển tiếp nguyên token đơn giản và B biết người dùng là ai, nhưng token phải có `aud` gồm cả B, nghĩa là token rộng hơn cần và lộ ở B là dùng được ở A. Client credentials của A thì B mất danh tính người dùng, chỉ biết A gọi, nên B phải tin A đã kiểm quyền (confused deputy nếu A sai). Token exchange (RFC 8693): A đổi token của người dùng lấy token mới `aud=B`, scope hẹp, vẫn mang `sub` của người dùng và ghi A là bên hành động; đúng nhất, đổi lại thêm một lần gọi authorization server và không phải IdP nào cũng hỗ trợ." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng tự viết luồng OAuth bằng tay khi framework đã có. Lỗi tự viết hay gặp: không kiểm `state`, so `redirect_uri` bằng `startsWith`, encode `code_challenge` có padding `=`, lấy email từ ID token làm khoá tài khoản, đọc claim từ access token ở client. Spring Security 7.0.5 `oauth2Login()` mặc định đã sinh `state`, `nonce` (khi có scope `openid`) và PKCE S256 cho cả client có secret (đã chạy), và kiểm ID token bằng `OidcIdTokenValidator`." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

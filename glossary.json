@@ -1069,7 +1069,7 @@
       "meaning": "Application Performance Monitoring: công cụ theo dõi hiệu năng ứng dụng, ghi lại trace của từng request gồm các span (lời gọi DB, HTTP, cache) kèm thời gian.",
       "example": "Trace của một request cho thấy 253 span `SELECT` tới database.",
       "related": ["n-plus-one"],
-      "topics": ["n-plus-one"]
+      "topics": ["n-plus-one", "data-privacy-pii"]
     },
     {
       "id": "partitioning",
@@ -1741,7 +1741,7 @@
       "meaning": "Bản ghi ai đã thay đổi gì, khi nào, từ giá trị nào sang giá trị nào, dùng cho kiểm toán và điều tra sự cố.",
       "example": "Bảng `salary_history` lưu mỗi lần sửa lương: người sửa, thời điểm, giá trị cũ và mới.",
       "related": ["temporal-table", "cdc", "trigger"],
-      "topics": ["data-modeling", "security-architecture"]
+      "topics": ["data-modeling", "security-architecture", "data-privacy-pii"]
     },
     {
       "id": "temporal-table",
@@ -3429,7 +3429,7 @@
       "meaning": "Trong OAuth2, service chứa API và chấp nhận access token do authorization server cấp; nó kiểm tra chữ ký và hạn của token ở mỗi request; issuer và audience chỉ được kiểm tra khi được cấu hình.",
       "example": "`http.oauth2ResourceServer(rs -> rs.jwt(...))` cùng `spring.security.oauth2.resourceserver.jwt.issuer-uri` biến service thành resource server dùng JWT.",
       "related": ["security-filter-chain"],
-      "topics": ["spring-security-architecture"]
+      "topics": ["spring-security-architecture", "oauth2-oidc"]
     },
     {
       "id": "method-security",
@@ -3445,7 +3445,7 @@
       "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF (hoặc kiểm `Origin`/`Sec-Fetch-Site`); cookie `SameSite` là lớp phụ, không thay thế.",
       "example": "Form ẩn trên trang độc hại tự submit `POST /transfer` tới ngân hàng đang đăng nhập trong cùng trình duyệt.",
       "related": ["security-filter-chain"],
-      "topics": ["spring-security-architecture", "realtime-rpc-protocols", "browser-security-basics", "owasp-top10", "jwt-deep"]
+      "topics": ["spring-security-architecture", "realtime-rpc-protocols", "browser-security-basics", "owasp-top10", "jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "api-gateway",
@@ -4109,7 +4109,7 @@
       "meaning": "Data Transfer Object: object chỉ chở dữ liệu qua một ranh giới (API, message), tách khỏi entity để hợp đồng bên ngoài không dính vào schema.",
       "example": "`record UpdateProfileRequest(String displayName, String email)` chỉ có hai field client được phép sửa.",
       "related": ["layered-architecture", "mass-assignment", "mapstruct"],
-      "topics": ["layered-architecture"]
+      "topics": ["layered-architecture", "data-privacy-pii"]
     },
     {
       "id": "package-by-feature",
@@ -4693,7 +4693,7 @@
       "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó. Trong bảo mật SPA, BFF còn là backend của frontend đứng làm OAuth client: giữ token ở server, trình duyệt chỉ có cookie session.",
       "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
       "related": ["graphql"],
-      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance", "integration-patterns", "jwt-deep"]
+      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance", "integration-patterns", "jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "headless-service",
@@ -4901,7 +4901,7 @@
       "meaning": "Mutual TLS: cả hai đầu kết nối cùng trình chứng chỉ để xác thực nhau, không chỉ server như HTTPS thường. Dùng để xác thực service với service.",
       "example": "Sidecar của `checkout` trình chứng chỉ mang danh tính service account `checkout` khi gọi `payments`.",
       "related": ["service-mesh", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "tls-https", "security-architecture"]
+      "topics": ["api-gateway-service-mesh", "tls-https", "security-architecture", "oauth2-oidc"]
     },
     {
       "id": "envoy",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy", "authn-authz-basics", "cryptography-basics", "jwt-deep"]
+      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy", "authn-authz-basics", "cryptography-basics", "jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "ingress",
@@ -5157,7 +5157,7 @@
       "meaning": "Mã hoá dữ liệu cá nhân bằng khoá riêng của từng người; khi cần xoá thì xoá khoá, dữ liệu còn đó nhưng không đọc được nữa.",
       "example": "Event lưu email đã mã hoá bằng khoá của user 42 trong kho khoá; user yêu cầu xoá thì xoá khoá đó.",
       "related": ["event-sourcing"],
-      "topics": ["cqrs-event-sourcing", "multi-tenancy", "cryptography-basics"]
+      "topics": ["cqrs-event-sourcing", "multi-tenancy", "cryptography-basics", "data-privacy-pii"]
     },
     {
       "id": "two-phase-commit",
@@ -5453,7 +5453,7 @@
       "meaning": "Insecure Direct Object Reference: lỗi bảo mật khi API trả đối tượng theo ID trong request mà không kiểm tra người gọi có quyền với đối tượng đó.",
       "example": "Đổi `/orders/1001` thành `/orders/1002` và xem được đơn của người khác.",
       "related": [],
-      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy", "authn-authz-basics", "owasp-top10"]
+      "topics": ["clocks-ids", "design-id-generator", "multi-tenancy", "authn-authz-basics", "owasp-top10", "data-privacy-pii"]
     },
     {
       "id": "leap-second",
@@ -8925,7 +8925,7 @@
       "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
       "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics"]
+      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics", "oauth2-oidc"]
     },
     {
       "id": "noisy-neighbor",
@@ -9861,7 +9861,7 @@
       "meaning": "Thay số thẻ bằng một token vô nghĩa với bên ngoài; chỉ PSP giữ số thật. Server của merchant chỉ thấy token nên phạm vi PCI DSS nhỏ đi nhiều.",
       "example": "Form nhập thẻ do PSP host trả về `pm_...`; service Payment lưu và gửi token đó, không bao giờ thấy số thẻ.",
       "related": ["pci-dss", "psp"],
-      "topics": ["design-payment"]
+      "topics": ["design-payment", "data-privacy-pii"]
     },
     {
       "id": "pci-dss",
@@ -10981,7 +10981,7 @@
       "meaning": "Danh mục bảng và chỉ số của tổ chức: nghĩa, người sở hữu, độ tươi, mức nhạy cảm, để người dùng tìm và hiểu dữ liệu.",
       "example": "Tra \"doanh thu thuần\" ra bảng gold, định nghĩa, người sở hữu và cập nhật trước 6 giờ sáng.",
       "related": ["data-lineage"],
-      "topics": ["data-architecture"]
+      "topics": ["data-architecture", "data-privacy-pii"]
     },
     {
       "id": "data-lineage",
@@ -11021,7 +11021,7 @@
       "meaning": "Identity provider: hệ thống quản lý danh tính và xác thực người dùng, phát token hoặc assertion cho ứng dụng qua OIDC hay SAML.",
       "example": "Nhân viên đăng nhập IdP một lần bằng passkey, rồi vào console cloud, CI và Grafana qua SSO.",
       "related": ["sso", "oidc", "saml"],
-      "topics": ["security-architecture", "build-vs-buy"]
+      "topics": ["security-architecture", "build-vs-buy", "oauth2-oidc"]
     },
     {
       "id": "sso",
@@ -11029,7 +11029,7 @@
       "meaning": "Single sign-on: đăng nhập một lần ở IdP để dùng nhiều ứng dụng; ứng dụng tin danh tính do IdP xác nhận thay vì tự giữ mật khẩu.",
       "example": "Khoá tài khoản ở IdP là nhân viên mất quyền vào mọi công cụ nối SSO.",
       "related": ["identity-provider", "oidc", "saml"],
-      "topics": ["security-architecture", "build-vs-buy"]
+      "topics": ["security-architecture", "build-vs-buy", "oauth2-oidc"]
     },
     {
       "id": "oidc",
@@ -11037,7 +11037,7 @@
       "meaning": "OpenID Connect: lớp danh tính trên OAuth 2.0; IdP trả ID token (JWT) cho biết người dùng là ai, cùng access token để gọi API.",
       "example": "Grafana chuyển người dùng tới IdP, nhận lại ID token và đọc claim `groups` để gán quyền.",
       "related": ["identity-provider", "jwt", "saml"],
-      "topics": ["security-architecture", "build-vs-buy", "jwt-deep"]
+      "topics": ["security-architecture", "build-vs-buy", "jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "saml",
@@ -11053,7 +11053,7 @@
       "meaning": "Multi-factor authentication: xác thực bằng từ hai yếu tố trở lên (thứ biết, thứ có, đặc điểm sinh trắc). Loại chống phishing như FIDO2, passkey gắn với tên miền nên trang giả không dùng được.",
       "example": "Quản trị viên cloud bắt buộc dùng khoá FIDO2; OTP qua SMS không được chấp nhận.",
       "related": ["identity-provider"],
-      "topics": ["security-architecture", "authn-authz-basics"]
+      "topics": ["security-architecture", "authn-authz-basics", "oauth2-oidc"]
     },
     {
       "id": "scim",
@@ -11173,7 +11173,7 @@
       "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
-      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management"]
+      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management", "data-privacy-pii"]
     },
     {
       "id": "sre",
@@ -12085,7 +12085,7 @@
       "meaning": "Hàm băm mật khẩu có tham số cost: mỗi bậc gấp đôi thời gian. Chỉ đọc 72 byte đầu của mật khẩu.",
       "example": "Cost 10 mất khoảng 50 ms một lần kiểm trên một core.",
       "related": ["password-hashing", "argon2", "salt"],
-      "topics": ["authn-authz-basics"]
+      "topics": ["authn-authz-basics", "oauth2-oidc"]
     },
     {
       "id": "argon2",
@@ -12149,7 +12149,7 @@
       "meaning": "Hash-based Message Authentication Code: hash trộn với khoá bí mật. Chỉ bên có khoá tính được, nên chứng minh message không bị sửa và đến từ bên có khoá.",
       "example": "Webhook gửi header chữ ký là HMAC-SHA256 của body với secret chung.",
       "related": ["cryptographic-hash", "digital-signature"],
-      "topics": ["cryptography-basics", "authn-authz-basics", "jwt-deep"]
+      "topics": ["cryptography-basics", "authn-authz-basics", "jwt-deep", "data-privacy-pii"]
     },
     {
       "id": "symmetric-encryption",
@@ -12213,7 +12213,7 @@
       "meaning": "Dữ liệu mã hoá bằng data key; data key được khoá chính trong KMS bọc lại và lưu cạnh dữ liệu. Khoá chính không rời KMS.",
       "example": "GenerateDataKey trả khoá rõ để mã hoá tại chỗ và khoá đã bọc để lưu.",
       "related": ["kms", "symmetric-encryption", "crypto-shredding"],
-      "topics": ["cryptography-basics"]
+      "topics": ["cryptography-basics", "data-privacy-pii"]
     },
     {
       "id": "web-origin",
@@ -12245,7 +12245,7 @@
       "meaning": "Cross-Origin Resource Sharing: cơ chế để server cho phép JavaScript của origin khác đọc response, bằng header `Access-Control-Allow-Origin` và các header liên quan. Nó nới lỏng same-origin policy, không phải lớp bảo vệ server.",
       "example": "API trả `Access-Control-Allow-Origin: https://app.shop.example.com` và `Access-Control-Allow-Credentials: true` để SPA ở origin đó đọc được dữ liệu có cookie.",
       "related": ["same-origin-policy", "cors-preflight", "csrf"],
-      "topics": ["browser-security-basics"]
+      "topics": ["browser-security-basics", "oauth2-oidc"]
     },
     {
       "id": "cors-preflight",
@@ -12277,7 +12277,7 @@
       "meaning": "Cross-site scripting: dữ liệu do kẻ tấn công kiểm soát được trình duyệt chạy như script trong trang của ứng dụng, nên script có toàn quyền của người dùng trên origin đó.",
       "example": "Bình luận chứa `<img src=x onerror=fetch(...)>` được hiển thị không escape: ai mở trang cũng bị gửi dữ liệu ra ngoài.",
       "related": ["csp", "same-origin-policy"],
-      "topics": ["browser-security-basics", "owasp-top10", "jwt-deep"]
+      "topics": ["browser-security-basics", "owasp-top10", "jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "csp",
@@ -12397,7 +12397,7 @@
       "meaning": "JSON Web Key Set: tài liệu JSON công bố các khoá công khai của issuer, mỗi khoá có `kid`; bên nhận chọn khoá theo `kid` trong header token.",
       "example": "`https://id.shop.example.com/.well-known/jwks.json` liệt kê `k1` và `k2` trong lúc xoay khoá.",
       "related": ["jwt", "digital-signature"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "access-token",
@@ -12405,7 +12405,7 @@
       "meaning": "Token client gửi kèm mỗi request để gọi API, thường sống ngắn (5–15 phút) để giảm thiệt hại khi lộ.",
       "example": "`Authorization: Bearer eyJ...` với `exp` 10 phút sau lúc cấp.",
       "related": ["refresh-token", "jwt"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "refresh-token",
@@ -12413,7 +12413,7 @@
       "meaning": "Token sống dài, lưu và kiểm ở server, chỉ dùng để đổi lấy access token mới; thu hồi được bằng cách xoá ở server.",
       "example": "App gửi refresh token tới `/oauth/token` với `grant_type=refresh_token` khi access token hết hạn.",
       "related": ["access-token", "refresh-token-rotation"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "refresh-token-rotation",
@@ -12437,7 +12437,7 @@
       "meaning": "Token chỉ là chuỗi ngẫu nhiên không mang thông tin; bên nhận phải hỏi authorization server (introspection) để biết token của ai, còn hạn không.",
       "example": "Token `9f3c...` 32 byte; thu hồi bằng cách xoá bản ghi ở server, có hiệu lực ngay.",
       "related": ["token-introspection", "jwt"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "token-introspection",
@@ -12445,7 +12445,7 @@
       "meaning": "Endpoint chuẩn (RFC 7662) để resource server hỏi authorization server một token có còn hiệu lực không và thuộc về ai.",
       "example": "`POST /oauth/introspect token=9f3c...` trả `{\"active\": true, \"sub\": \"user-42\"}`.",
       "related": ["opaque-token"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "dpop",
@@ -12453,7 +12453,7 @@
       "meaning": "Demonstrating Proof of Possession (RFC 9449): gắn access token với khoá riêng của client, mỗi request kèm một JWT bằng chứng ký bằng khoá đó, nên token bị trộm không dùng được một mình.",
       "example": "Request gửi `Authorization: DPoP eyJ...` cùng header `DPoP` ký URL, method và thời điểm.",
       "related": ["access-token", "jwt"],
-      "topics": ["jwt-deep"]
+      "topics": ["jwt-deep", "oauth2-oidc"]
     },
     {
       "id": "secret",
@@ -12534,6 +12534,278 @@
       "example": "GitHub push protection chặn push có AWS access key; gitleaks chạy trong CI trên mỗi pull request.",
       "related": ["secret"],
       "topics": ["secret-management"]
+    },
+    {
+      "id": "pii",
+      "term": "PII",
+      "meaning": "Personally Identifiable Information, dữ liệu cá nhân: mọi thông tin giúp xác định một người cụ thể, trực tiếp hoặc khi ghép với thông tin khác.",
+      "example": "Họ tên kèm số điện thoại, số CCCD, email, địa chỉ; cả id khách hàng nếu nối được về hồ sơ.",
+      "related": ["quasi-identifier", "sensitive-personal-data", "gdpr"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "quasi-identifier",
+      "term": "Quasi-identifier",
+      "meaning": "Trường không tự định danh nhưng ghép với nhau thì xác định được một người, như ngày sinh, giới tính, mã vùng.",
+      "example": "Bảng đã bỏ tên nhưng còn ngày sinh, giới tính, phường cư trú vẫn nhận ra được hầu hết mọi người.",
+      "related": ["pii", "anonymization"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "sensitive-personal-data",
+      "term": "Dữ liệu cá nhân nhạy cảm",
+      "meaning": "Nhóm dữ liệu cá nhân mà lộ ra gây hại lớn, luật đòi bảo vệ cao hơn: sức khoẻ, sinh trắc học, vị trí, tài khoản ngân hàng, lịch sử giao dịch, ảnh CCCD...",
+      "example": "Chẩn đoán và phim X-quang của bệnh nhân nha khoa là dữ liệu nhạy cảm; số điện thoại là dữ liệu cơ bản.",
+      "related": ["pii", "dpia"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "gdpr",
+      "term": "GDPR",
+      "meaning": "General Data Protection Regulation, quy định bảo vệ dữ liệu cá nhân của EU (áp dụng từ 2018), áp cả với công ty ngoài EU bán hàng cho hay theo dõi người ở EU.",
+      "example": "App Việt Nam có bản tiếng Đức và giao hàng sang EU thì phải tuân GDPR với khách ở đó.",
+      "related": ["pii", "data-controller", "purpose-limitation"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "purpose-limitation",
+      "term": "Purpose limitation",
+      "meaning": "Giới hạn mục đích: dữ liệu thu cho mục đích nào chỉ dùng cho mục đích đó; dùng cho mục đích mới cần cơ sở pháp lý mới, thường là đồng ý riêng.",
+      "example": "Lịch sử khám thu để điều trị không được đem đi chạy quảng cáo nếu bệnh nhân chưa đồng ý riêng.",
+      "related": ["data-minimization", "gdpr"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "data-minimization",
+      "term": "Data minimization",
+      "meaning": "Tối thiểu hoá dữ liệu: chỉ thu, lưu và chia sẻ đúng phần cần cho mục đích, ở mức chi tiết thấp nhất đủ dùng.",
+      "example": "Chỉ cần biết khách đủ 18 tuổi thì lưu cờ đã xác minh, không lưu ảnh CCCD.",
+      "related": ["purpose-limitation", "pii"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "data-classification",
+      "term": "Data classification",
+      "meaning": "Phân loại dữ liệu theo mức nhạy cảm (công khai, nội bộ, cá nhân, nhạy cảm) để quyết định cách lưu, mã hoá, ai được xem và giữ bao lâu.",
+      "example": "Cột `national_id` gắn nhãn nhạy cảm trong data catalog nên job chép sang kho tự bỏ cột này.",
+      "related": ["data-catalog", "pii"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "pseudonymization",
+      "term": "Pseudonymization",
+      "meaning": "Giả danh hoá: thay định danh bằng mã giả mà chỉ ai có khoá hay bảng tra mới nối ngược được; dữ liệu vẫn là dữ liệu cá nhân.",
+      "example": "Kho phân tích dùng `HMAC(key, patient_id)` làm khoá; key nằm trong KMS, nhóm phân tích không có quyền.",
+      "related": ["anonymization", "tokenization", "hmac"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "anonymization",
+      "term": "Anonymization",
+      "meaning": "Ẩn danh hoá: biến đổi dữ liệu tới mức không còn cách hợp lý nào nhận lại người; khi đó dữ liệu ra khỏi phạm vi luật bảo vệ dữ liệu cá nhân.",
+      "example": "Báo cáo số ca niềng răng theo tỉnh và nhóm tuổi 10 năm, nhóm dưới 10 người thì gộp lại.",
+      "related": ["pseudonymization", "quasi-identifier"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "tokenization",
+      "term": "Tokenization",
+      "meaning": "Thay giá trị nhạy cảm bằng token ngẫu nhiên; giá trị thật chỉ nằm trong một vault, các hệ thống khác chỉ thấy token và không suy ngược được.",
+      "example": "CRM lưu `tok_8f2a...` thay số CCCD; chỉ service KYC gọi vault để đổi lại khi cần.",
+      "related": ["card-tokenization", "pseudonymization"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "encryption-at-rest",
+      "term": "Encryption at rest",
+      "meaning": "Mã hoá dữ liệu khi lưu (đĩa, snapshot, backup), thường do storage hoặc database làm trong suốt; không chặn được ai đọc qua chính database.",
+      "example": "RDS bật mã hoá bằng khoá KMS: snapshot rò ra ngoài không đọc được, nhưng ứng dụng bị SQL injection vẫn đọc dữ liệu rõ.",
+      "related": ["field-level-encryption", "kms"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "field-level-encryption",
+      "term": "Field-level encryption",
+      "meaning": "Ứng dụng tự mã hoá từng trường nhạy cảm trước khi ghi, nên database, DBA, bản dump chỉ thấy ciphertext; đổi lại không truy vấn được trên trường đó.",
+      "example": "Cột `national_id` lưu AES-GCM với data key bọc bởi KMS; tìm theo CCCD qua cột blind index.",
+      "related": ["encryption-at-rest", "envelope-encryption", "blind-index"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "blind-index",
+      "term": "Blind index",
+      "meaning": "HMAC có khoá của giá trị đã chuẩn hoá, lưu cạnh cột đã mã hoá để tìm chính xác mà không giải mã; không dùng cho trường ít giá trị vì lộ phân bố.",
+      "example": "`WHERE national_id_bidx = hmac(key, '001203004567')` tìm được hồ sơ dù cột CCCD đã mã hoá.",
+      "related": ["field-level-encryption", "hmac"],
+      "topics": ["data-privacy-pii", "cryptography-basics"]
+    },
+    {
+      "id": "data-masking",
+      "term": "Data masking",
+      "meaning": "Che dữ liệu: hiển thị một phần (động, khi xem) hoặc thay bằng giá trị giả giữ định dạng (tĩnh, cho môi trường test) để người không cần không thấy giá trị thật.",
+      "example": "Tổng đài viên thấy `******5678`; staging dùng số điện thoại giả cùng định dạng thay số thật.",
+      "related": ["pii", "data-minimization"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "audit-log",
+      "term": "Audit log",
+      "meaning": "Nhật ký ai đã truy cập hay thao tác trên dữ liệu nào, lúc nào, từ đâu, vì lý do gì; lưu chỉ nối thêm, tách quyền với ứng dụng, để điều tra và phát hiện lạm dụng.",
+      "example": "`{actor: nv-tongdai-17, action: VIEW_DIAGNOSIS, patient: 88123, reason: TICKET-5521, at: ...}` ghi vào bucket bật Object Lock.",
+      "related": ["audit-trail", "pii"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "data-retention",
+      "term": "Data retention",
+      "meaning": "Chính sách giữ mỗi loại dữ liệu bao lâu và vì sao; hết hạn thì xoá hoặc ẩn danh hoá tự động, áp cho cả log, backup, bản sao.",
+      "example": "Log ứng dụng giữ 30 ngày; hồ sơ khách không hoạt động 5 năm thì ẩn danh hoá trừ phần luật bắt giữ.",
+      "related": ["crypto-shredding", "pii"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "dpia",
+      "term": "DPIA",
+      "meaning": "Data Protection Impact Assessment, đánh giá tác động xử lý dữ liệu cá nhân: mô tả luồng dữ liệu, mục đích, rủi ro và biện pháp bảo vệ, lập trước khi xử lý dữ liệu rủi ro cao.",
+      "example": "Trước khi ra tính năng nhận diện khuôn mặt, team lập DPIA nêu dữ liệu sinh trắc học lưu ở đâu, ai truy cập, giữ bao lâu.",
+      "related": ["sensitive-personal-data", "gdpr"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "data-controller",
+      "term": "Data controller",
+      "meaning": "Bên kiểm soát dữ liệu: tổ chức quyết định mục đích và cách xử lý dữ liệu cá nhân, chịu trách nhiệm chính trước chủ thể và cơ quan quản lý.",
+      "example": "Chuỗi phòng khám là bên kiểm soát dữ liệu bệnh nhân.",
+      "related": ["data-processor", "gdpr"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "data-processor",
+      "term": "Data processor",
+      "meaning": "Bên xử lý dữ liệu: xử lý dữ liệu cá nhân thay bên kiểm soát theo hợp đồng, không được dùng cho mục đích riêng.",
+      "example": "Nhà cung cấp SMS, dịch vụ log SaaS và cloud là bên xử lý của chuỗi phòng khám.",
+      "related": ["data-controller"],
+      "topics": ["data-privacy-pii"]
+    },
+    {
+      "id": "oauth2",
+      "term": "OAuth 2.0",
+      "meaning": "Giao thức ủy quyền (RFC 6749): người dùng cho một ứng dụng gọi API thay mình trong phạm vi giới hạn, không đưa mật khẩu cho ứng dụng; kết quả là access token.",
+      "example": "Người dùng cho app in ảnh đọc album Google Photos của mình; app nhận access token chỉ có quyền đọc ảnh.",
+      "related": ["oidc", "access-token", "authorization-server"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "oauth-scope",
+      "term": "Scope",
+      "meaning": "Trong OAuth, phạm vi việc mà client được làm thay người dùng (ví dụ `orders.read`); người dùng hoặc admin đồng ý cho scope. Không thay cho phân quyền ở API.",
+      "example": "Token có scope `orders.read` cho đọc đơn, nhưng API vẫn chỉ trả đơn của chính người dùng đó.",
+      "related": ["oauth2", "access-token"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "id-token",
+      "term": "ID token",
+      "meaning": "JWT do IdP ký trong OIDC, cho client biết ai vừa đăng nhập, lúc nào, bằng cách nào; `aud` là `client_id`. Dành cho client, không gửi tới API.",
+      "example": "Client kiểm ID token: chữ ký theo JWKS, `iss`, `aud=shop-web`, `exp`, `nonce` khớp phiên, rồi lấy `sub` làm định danh.",
+      "related": ["oidc", "access-token", "jwt"],
+      "topics": ["oauth2-oidc", "jwt-deep"]
+    },
+    {
+      "id": "authorization-code-flow",
+      "term": "Authorization code flow",
+      "meaning": "Luồng OAuth cho ứng dụng có người dùng: trình duyệt nhận một code dùng một lần qua redirect, client đổi code lấy token qua kênh sau giữa server với server.",
+      "example": "`/authorize?response_type=code&...` → `https://shop.example.com/callback?code=...&state=...` → `POST /token`.",
+      "related": ["pkce", "redirect-uri", "oauth-state"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "pkce",
+      "term": "PKCE",
+      "meaning": "Proof Key for Code Exchange (RFC 7636): client gửi SHA-256 của một chuỗi ngẫu nhiên khi authorize và gửi chuỗi gốc khi đổi code, nên ai chặn được code cũng không đổi được.",
+      "example": "`code_challenge=E9Melhoa2...&code_challenge_method=S256` lúc authorize; `code_verifier=dBjftJeZ...` lúc gọi `/token`.",
+      "related": ["authorization-code-flow", "public-client"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "client-credentials",
+      "term": "Client credentials",
+      "meaning": "Grant OAuth cho trường hợp không có người dùng: client xác thực bằng chính nó (secret, private_key_jwt, mTLS) và nhận access token cho quyền của nó.",
+      "example": "Job đối soát kho gọi `/token` với `grant_type=client_credentials&scope=inventory.reconcile`, cache token tới gần hết hạn.",
+      "related": ["oauth2", "confidential-client"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "oauth-client",
+      "term": "Client (OAuth)",
+      "meaning": "Ứng dụng xin token để gọi API thay người dùng hoặc thay chính nó; được đăng ký trước ở authorization server với `client_id` và `redirect_uri`.",
+      "example": "Web shop, app di động và job đêm là ba client riêng, mỗi client một `client_id` và tập scope.",
+      "related": ["confidential-client", "public-client"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "authorization-server",
+      "term": "Authorization server",
+      "meaning": "Thành phần OAuth đăng nhập người dùng, hỏi đồng ý và cấp token; trong OIDC thường chính là IdP.",
+      "example": "Keycloak, Okta, Microsoft Entra ID, Amazon Cognito đều đóng vai authorization server.",
+      "related": ["identity-provider", "oauth2"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "redirect-uri",
+      "term": "redirect_uri",
+      "meaning": "Địa chỉ authorization server chuyển trình duyệt về kèm code; phải đăng ký trước và so khớp chính xác, không wildcard hay tiền tố.",
+      "example": "Đăng ký đúng `https://shop.example.com/login/oauth2/code/idp`; `https://shop.example.com/go?url=...` phải bị từ chối.",
+      "related": ["authorization-code-flow", "open-redirect"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "oauth-state",
+      "term": "state",
+      "meaning": "Giá trị ngẫu nhiên client gửi khi authorize và nhận lại ở callback, so với giá trị trong phiên để chống CSRF ở bước quay về.",
+      "example": "Callback có `state` khác giá trị trong session thì client bỏ request, không đổi code.",
+      "related": ["csrf", "authorization-code-flow"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "confidential-client",
+      "term": "Confidential client",
+      "meaning": "Client chạy ở server, giữ được secret hay khoá riêng nên xác thực được với authorization server khi đổi token.",
+      "example": "Web backend Spring giữ khoá riêng cho `private_key_jwt` trong secret manager.",
+      "related": ["public-client", "oauth-client"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "public-client",
+      "term": "Public client",
+      "meaning": "Client chạy trên máy người dùng (SPA, app di động, CLI), không giữ được secret vì ai cũng giải nén được; phải dùng PKCE.",
+      "example": "App iOS không có `client_secret`; mọi bản cài đều dùng chung `client_id` và PKCE.",
+      "related": ["confidential-client", "pkce"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "oidc-discovery",
+      "term": "OIDC discovery",
+      "meaning": "Tài liệu JSON ở `/.well-known/openid-configuration` của issuer liệt kê endpoint authorize, token, userinfo, `jwks_uri` và thuật toán hỗ trợ.",
+      "example": "Spring Boot chỉ cần `issuer-uri` rồi tự đọc discovery để biết `jwks_uri`.",
+      "related": ["oidc", "jwks"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "open-redirect",
+      "term": "Open redirect",
+      "meaning": "Endpoint chuyển hướng tới URL bất kỳ lấy từ tham số; tự nó ít hại nhưng biến tên miền tin cậy thành bàn đạp cho phishing và đánh cắp code OAuth.",
+      "example": "`/go?url=https://evil.example` trên `shop.example.com`; chỉ cho chuyển tới danh sách đích đã biết.",
+      "related": ["redirect-uri"],
+      "topics": ["oauth2-oidc"]
+    },
+    {
+      "id": "token-exchange",
+      "term": "Token exchange",
+      "meaning": "RFC 8693: đổi một token lấy token khác, thường để service gọi service phía sau với `aud` đúng service đó và scope hẹp hơn mà vẫn giữ danh tính người dùng.",
+      "example": "Orders service đổi token của người dùng lấy token `aud=payment-api`, scope `payments.create`.",
+      "related": ["access-token", "token-relay"],
+      "topics": ["oauth2-oidc"]
     }
   ]
 }

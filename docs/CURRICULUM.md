@@ -286,8 +286,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 4 | `owasp-top10` | OWASP Top 10 với Java/Spring | mid | Injection, broken access control, SSRF, XSS, CSRF, deserialization | L B | ✅ |
 | 5 | `jwt-deep` | JWT chuyên sâu | mid | Cấu trúc, thuật toán ký, validate, hết hạn/refresh, thu hồi, nơi lưu | L B T | ✅ |
 | 6 | `secret-management` | Quản lý secret | mid | Vault, KMS, xoay vòng, secret lọt vào git | L T | ✅ |
-| 7 | `data-privacy-pii` | ✚ Dữ liệu cá nhân & tuân thủ | mid | PII, che dữ liệu trong log, mã hoá at rest/in transit, audit log, nguyên tắc GDPR/Nghị định 13 | L B Sc | ⬜ |
-| 8 | `oauth2-oidc` | OAuth2 & OpenID Connect | mid | Authorization code + PKCE, client credentials, scope, ID token và access token | L D Sc | ⬜ |
+| 7 | `data-privacy-pii` | ✚ Dữ liệu cá nhân & tuân thủ | mid | PII, che dữ liệu trong log, mã hoá at rest/in transit, audit log, nguyên tắc GDPR/Nghị định 13 | L B Sc | ✅ |
+| 8 | `oauth2-oidc` | OAuth2 & OpenID Connect | mid | Authorization code + PKCE, client credentials, scope, ID token và access token | L D Sc | ✅ |
 | 9 | `sso-saml` | ✚ SSO doanh nghiệp & SAML | senior | SAML và OIDC, IdP, federation, đăng xuất tập trung | L D Sc | ⬜ |
 | 10 | `authorization-models` | Mô hình phân quyền | senior | RBAC, ABAC, ReBAC, policy engine (OPA), cô lập multi-tenant, IDOR | L B Sc | ⬜ |
 | 11 | `api-security` | Bảo mật API | senior | Rate limit, mTLS giữa service, API gateway, validate input, service-to-service auth | L Sc | ⬜ |

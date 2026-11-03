@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Đã che toString mà số điện thoại vẫn nằm trong log",
+  "context": "`customer-service` (Spring Boot, JdbcTemplate, PostgreSQL 17) lưu hồ sơ khách hàng. Sau đợt rà soát dữ liệu cá nhân, team đã override `toString()` của mọi record chứa PII và thêm quy tắc review \"không log DTO thô\". Bảng `customers` có `phone` và `national_id` là `UNIQUE`, cột `age` có `CHECK (age >= 18)`. Handler lỗi chung log mọi lỗi dữ liệu ở mức WARN để đội vận hành theo dõi.",
+  "buggyCode": "record CustomerDto(String fullName, String phone, String nationalId, int age) {\n    @Override public String toString() {          // đã che theo checklist\n        return \"CustomerDto[phone=***\" + phone.substring(phone.length() - 3) + \"]\";\n    }\n}\n\n@RestControllerAdvice\nclass DataErrorHandler {\n    private static final Logger log = LoggerFactory.getLogger(DataErrorHandler.class);\n\n    @ExceptionHandler(DataIntegrityViolationException.class)\n    ProblemDetail onDataError(DataIntegrityViolationException e) {\n        log.warn(\"data error: {}\", e.getMessage());\n        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMostSpecificCause().getMessage());\n    }\n}",
+  "symptom": {
+    "description": "Job quét log tìm mẫu số điện thoại và số CCCD báo hàng trăm dòng mỗi ngày, toàn bộ từ `DataErrorHandler`. Tái hiện với PostgreSQL 17.6, pgjdbc 42.7.7, Spring 7.0.10 (đã chạy):",
+    "output": "log(dto): CustomerDto[phone=***678]\n\nWARN DataErrorHandler - data error: PreparedStatementCallback; SQL [insert into customers(full_name, phone, national_id, age) values (?,?,?,?)]; ERROR: duplicate key value violates unique constraint \"customers_phone_key\"\n  Detail: Key (phone)=(0912345678) already exists.\n\nWARN DataErrorHandler - data error: PreparedStatementCallback; SQL [...]; ERROR: new row for relation \"customers\" violates check constraint \"customers_age_check\"\n  Detail: Failing row contains (7, Lê Văn Cường, 0987654321, 001099000111, 16).\n\nHTTP 409  {\"detail\":\"ERROR: duplicate key value ... Detail: Key (phone)=(0912345678) already exists.\"}"
+  },
+  "diagnosis": {
+    "question": "SQL dùng tham số `?` và DTO đã che, vậy giá trị thật đi vào log từ đâu?",
+    "options": [
+      "PostgreSQL đưa giá trị vào Detail của lỗi, pgjdbc nối vào message",
+      "SLF4J in record bằng reflection nên bỏ qua toString đã override",
+      "pgjdbc log giá trị tham số bind ở mức WARN khi câu lệnh bị lỗi",
+      "Log của PostgreSQL server được gom chung vào logger của ứng dụng"
+    ],
+    "answer": 0,
+    "explanation": "Lỗi unique của PostgreSQL có phần `DETAIL: Key (phone)=(...) already exists`, lỗi check và not-null có `Failing row contains (...)` với cả dòng. pgjdbc mặc định nối phần này vào `getMessage()`, Spring giữ nguyên message đó trong `DuplicateKeyException`/`DataIntegrityViolationException`, và handler log rồi còn trả về cho client. Dòng `log(dto)` cho thấy `toString()` đã che vẫn được dùng. Tham số bind không xuất hiện ở đâu trong message; dòng log mang tên logger `DataErrorHandler`, không phải log của server."
+  },
+  "fix": {
+    "code": "@ExceptionHandler(DataIntegrityViolationException.class)\nProblemDetail onDataError(DataIntegrityViolationException e) {\n    Throwable cause = e.getMostSpecificCause();\n    String constraint = cause instanceof PSQLException pe\n            && pe.getServerErrorMessage() != null\n            ? pe.getServerErrorMessage().getConstraint() : null;  // tên constraint, không có giá trị\n    log.warn(\"data error: sqlState={} constraint={}\",\n            cause instanceof SQLException se ? se.getSQLState() : null, constraint);\n    return switch (constraint == null ? \"\" : constraint) {\n        case \"customers_phone_key\" -> problem(CONFLICT, \"Số điện thoại đã được đăng ký\");\n        case \"customers_age_check\" -> problem(UNPROCESSABLE_CONTENT, \"Phải đủ 18 tuổi\");\n        default -> problem(CONFLICT, \"Dữ liệu không hợp lệ\");\n    };\n}\n\n// problem(status, msg) = ProblemDetail.forStatusAndDetail(status, msg)\n\n// Lớp chặn thêm:\n// spring.datasource.url=jdbc:postgresql://db/app?logServerErrorDetail=false\n//   (đã chạy: message chỉ còn dòng ERROR, không còn Detail;\n//    getServerErrorMessage().getDetail() vẫn trả giá trị, đừng log nó)\n// postgresql.conf: log_error_verbosity = terse  (bỏ dòng DETAIL trong log của server)",
+    "explanation": "Không log và không trả về message của lỗi tầng dưới: lấy SQLState và tên constraint, ánh xạ sang thông báo nghiệp vụ. `logServerErrorDetail=false` là lớp phòng thủ thứ hai cho chỗ khác vẫn log nguyên exception (stack trace, APM). Server PostgreSQL cũng ghi `DETAIL` vào log của nó, nên đặt `log_error_verbosity = terse` hoặc coi log database là dữ liệu cá nhân. Thông báo \"đã được đăng ký\" chấp nhận được ở form đăng ký; ở đăng nhập hay quên mật khẩu thì dùng thông báo chung để không lộ số nào đã có tài khoản. Thêm test: gây trùng số điện thoại rồi kiểm log và response không chứa số đó; giữ job quét log làm lưới an toàn."
+  }
+}

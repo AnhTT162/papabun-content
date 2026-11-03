@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "pii-quasi-identifier", "front": "Bỏ tên và số điện thoại đã đủ để ẩn danh chưa?", "back": "Chưa. Tổ hợp ngày sinh, giới tính, mã vùng vẫn xác định được phần lớn mọi người; phải làm thô hoặc bỏ cả các quasi-identifier." },
+    { "id": "pseudonym-vs-anonymous", "front": "Giả danh hoá khác ẩn danh hoá thế nào về mặt luật?", "back": "Dữ liệu giả danh vẫn nối ngược được (có khoá hay bảng tra) nên vẫn là dữ liệu cá nhân. Chỉ dữ liệu không còn cách hợp lý nhận lại người mới ra khỏi phạm vi luật." },
+    { "id": "hash-phone", "front": "Vì sao không dùng SHA-256 của số điện thoại làm id giả danh?", "back": "Không gian số nhỏ: dò hết 100 triệu số mất khoảng 1 giây. Dùng HMAC với khoá giữ trong KMS." },
+    { "id": "pg-error-detail", "front": "Vì sao lỗi constraint của PostgreSQL làm lộ PII vào log?", "back": "Detail chứa giá trị (`Key (phone)=(...)`, `Failing row contains (...)`) và pgjdbc nối nó vào `getMessage()`. Handler chỉ nên log SQLState và tên constraint." },
+    { "id": "at-rest-limits", "front": "Mã hoá at rest của database không chặn được gì?", "back": "Mọi truy cập qua engine: ứng dụng bị chiếm, SQL injection, DBA, replica. Nó chỉ bảo vệ đĩa, snapshot và backup bị lấy ra ngoài." },
+    { "id": "access-audit", "front": "Audit log truy cập dữ liệu cá nhân cần ghi gì?", "back": "Người thật nào, xem hay xuất bản ghi nào, lúc nào, từ đâu, vì lý do gì; ghi id chứ không chép nội dung, lưu ở kho chỉ nối thêm và có cảnh báo." },
+    { "id": "erasure-copies", "front": "Yêu cầu xoá dữ liệu cá nhân phải đi tới đâu?", "back": "Mọi bản sao: search index, cache, kho phân tích, log, bên xử lý, staging; backup thì để hết hạn và xoá lại sau khi khôi phục, hoặc crypto-shredding." },
+    { "id": "vn-breach-72h", "front": "Rò rỉ dữ liệu cá nhân ở Việt Nam phải báo ai, trong bao lâu?", "back": "Báo Bộ Công an trong 72 giờ kể từ khi phát hiện nếu có thể gây hại; rò dữ liệu vị trí hay sinh trắc học còn phải báo chủ thể trong 72 giờ." }
+  ]
+}

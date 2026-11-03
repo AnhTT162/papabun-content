@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "pkce-challenge-output",
+      "kind": "output",
+      "prompt": "Tính `code_challenge` theo PKCE S256 với `code_verifier` là vector mẫu của RFC 7636. Dòng in ra là gì?",
+      "code": "String verifier = \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\";\nbyte[] hash = MessageDigest.getInstance(\"SHA-256\")\n        .digest(verifier.getBytes(StandardCharsets.US_ASCII));\nString challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);\nSystem.out.println(challenge.length() + \" \" + challenge.endsWith(\"=\"));",
+      "options": [
+        "43 false",
+        "44 true",
+        "64 false",
+        "32 false"
+      ],
+      "answer": 0,
+      "explanation": "SHA-256 cho 32 byte; Base64URL không padding của 32 byte là 43 ký tự (`E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM`, đã chạy). Có padding thì là 44 ký tự kết thúc bằng `=`, và PKCE yêu cầu bỏ padding. 64 là độ dài chuỗi hex, 32 là số byte trước khi encode. Sai encoding (dùng hex hoặc để `=`) là lỗi hay gặp khi tự viết client, authorization server sẽ trả `invalid_grant` ở bước đổi token."
+    },
+    {
+      "id": "pkce-what-for",
+      "kind": "single",
+      "prompt": "Web backend giữ `client_secret` an toàn trên server. Vì sao RFC 9700 vẫn khuyên bật PKCE cho nó?",
+      "options": [
+        "Chặn code injection: code đánh cắp không đổi được trong phiên khác",
+        "Mã hoá code trên URL để log của proxy không đọc được giá trị",
+        "Thay thế client_secret nên không cần xác thực client nữa",
+        "Chống XSS lấy access token đang nằm trong bộ nhớ trình duyệt"
+      ],
+      "answer": 0,
+      "explanation": "Kẻ tấn công có `code` của nạn nhân có thể nhét nó vào callback trong phiên của mình; client hợp lệ sẽ tự đổi `code` bằng secret của nó, và kẻ tấn công vào tài khoản nạn nhân. Với PKCE, `code` gắn với `code_verifier` nằm trong phiên đã bắt đầu đăng nhập, nên đổi trong phiên khác bị từ chối. PKCE không mã hoá gì trên URL, không thay xác thực client của confidential client, và không liên quan tới token nằm ở trình duyệt."
+    },
+    {
+      "id": "access-token-as-login",
+      "kind": "single",
+      "prompt": "App A cho đăng nhập bằng IdP chung. Server của A nhận access token từ client, gọi `/userinfo` thấy `sub` hợp lệ rồi tạo session. Lỗ hổng ở đâu?",
+      "options": [
+        "App B lấy được access token của người dùng sẽ đăng nhập được vào A",
+        "Userinfo trả claim cũ nên quyền mới của người dùng chưa có hiệu lực",
+        "Access token hết hạn sau 15 phút nên session của A cũng hết hạn theo",
+        "Userinfo chỉ dùng cho SAML nên không trả được sub cho client OIDC"
+      ],
+      "answer": 0,
+      "explanation": "Access token chỉ chứng minh client nào đó được phép gọi API, không cho biết nó được cấp cho A. Một app khác, hợp lệ hay độc hại, cùng dùng IdP đó có token của người dùng và gửi sang A là đăng nhập được với danh tính người đó. Đăng nhập phải dựa vào ID token mà A nhận qua luồng của chính mình: kiểm `aud` là `client_id` của A và `nonce` khớp phiên."
+    },
+    {
+      "id": "redirect-uri-prefix",
+      "kind": "single",
+      "prompt": "Authorization server cho đăng ký `redirect_uri` theo tiền tố `https://shop.example.com/` và chưa bật PKCE. Trên site có `/go?url=...` chuyển hướng tới bất kỳ đâu và giữ nguyên query string. Hậu quả?",
+      "options": [
+        "Dùng /go làm redirect_uri, code theo chuyển hướng ra ngoài",
+        "Không sao vì code chỉ đổi được khi có client_secret của web shop",
+        "Chỉ lộ state, kẻ tấn công không lấy được code hay token nào",
+        "Trình duyệt chặn vì redirect_uri khác origin với trang authorize"
+      ],
+      "answer": 0,
+      "explanation": "`https://shop.example.com/go?url=https://evil.example` khớp tiền tố nên được chấp nhận. Authorization server gửi `code` tới đó, `/go` chuyển tiếp kèm cả query sang trang của kẻ tấn công (nếu `/go` bỏ query thì `code` vẫn có thể lộ qua `Referer` khi trang trung gian tải tài nguyên ngoài). Public client không có secret nên thế là đủ đổi token; với confidential client, kẻ tấn công tiêm `code` vào phiên của mình và client tự đổi giúp. Luôn khớp chính xác và bật PKCE."
+    },
+    {
+      "id": "account-link-email",
+      "kind": "single",
+      "prompt": "Web shop cho đăng nhập bằng hai IdP. Khi ID token về, code tìm tài khoản theo claim `email` và đăng nhập vào tài khoản đó. Rủi ro chính là gì?",
+      "options": [
+        "Ai khai được email chưa xác minh ở một IdP là chiếm được tài khoản",
+        "Email trong ID token bị mã hoá nên không so được với bảng users",
+        "ID token không bao giờ có claim email nếu thiếu scope offline",
+        "Hai IdP trả sub giống nhau nên tài khoản bị trộn vào nhau"
+      ],
+      "answer": 0,
+      "explanation": "Email đổi được và có IdP cho người dùng tự đặt email chưa xác minh. Kẻ tấn công đặt email của nạn nhân ở IdP đó rồi đăng nhập, code nối vào tài khoản nạn nhân. Định danh ổn định là cặp `iss` + `sub`: lưu cả hai, chỉ nối tài khoản theo email khi `email_verified` là `true` từ IdP mình tin, tốt hơn là bắt người dùng xác nhận khi liên kết. `sub` chỉ duy nhất trong một issuer, nên hai IdP trùng `sub` không gây trộn nếu khoá là cặp `iss` + `sub`. ID token là JWS, không mã hoá; claim `email` cần scope `email`."
+    }
+  ]
+}
