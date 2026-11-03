@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "jwt-deep",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "JWT chuyên sâu",
+  "summary": "Cấu trúc JWT và vì sao payload không bí mật; HS256 so với RS256/ES256 và JWKS; validate đúng (ghim thuật toán, iss, aud, exp, typ) và những gì decoder của Spring không kiểm mặc định; algorithm confusion; access token ngắn hạn, refresh token xoay vòng và phát hiện dùng lại; thu hồi bằng denylist hay introspection; nơi lưu token trên trình duyệt và app; DPoP.",
+  "level": "mid",
+  "order": 5,
+  "minutes": 15,
+  "prerequisites": ["authn-authz-basics", "cryptography-basics", "browser-security-basics"],
+  "terms": ["jwt", "jws", "jwe", "jwks", "access-token", "refresh-token", "refresh-token-rotation", "algorithm-confusion", "opaque-token", "token-introspection", "dpop", "hmac", "digital-signature", "xss", "csrf", "bff", "injection", "single-flight", "oidc", "token-relay"],
+  "references": [
+    { "title": "RFC 8725: JSON Web Token Best Current Practices", "url": "https://www.rfc-editor.org/rfc/rfc8725.html" },
+    { "title": "RFC 9700: Best Current Practice for OAuth 2.0 Security", "url": "https://www.rfc-editor.org/rfc/rfc9700.html" },
+    { "title": "Spring Security Reference: OAuth 2.0 Resource Server JWT", "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html" },
+    { "title": "OWASP JSON Web Token Cheat Sheet for Java", "url": "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"JWT là stateless, vậy đăng xuất thế nào?\" Đăng xuất là huỷ refresh token ở server; access token vẫn dùng được tới `exp`, nên giữ nó ngắn (5–15 phút). Cần chặn ngay (tài khoản bị khoá, nghi bị chiếm) thì thêm trạng thái: denylist `jti` trong Redis với TTL bằng thời gian còn lại, hoặc mốc `tokens_valid_after` theo user rồi từ chối token có `iat` cũ hơn. Lúc đó mỗi request lại tra một kho dùng chung, tức là đã mất một phần lý do chọn JWT; nếu mọi request đều phải tra thì opaque token với introspection có cache ngắn là thiết kế thẳng hơn." },
+    { "type": "callout", "style": "warning", "markdown": "Decoder của Spring Security 7.0.5 mặc định không kiểm `aud` (đã chạy: token cấp cho `reporting-api` được `payment-api` nhận) và nhận token không có `exp`. Mọi service tin cùng một issuer thì token của service này dùng được ở service kia. Luôn cấu hình `audiences` hoặc thêm `JwtClaimValidator` cho `aud`, và viết test gửi token sai `aud` để chắc nhận `401`." },
+    { "type": "troubleshoot", "file": "troubleshoot.json" }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Bật xoay mật khẩu database tự động, nửa giờ sau orders-service sập",
+  "symptom": "Chiều thứ Ba team bảo mật bật xoay tự động cho secret `prod/orders/db` trong AWS Secrets Manager (Lambda xoay kiểu single user, lịch hằng tháng, cửa sổ xoay từ 02:00, không xoay ngay lúc bật; lần xoay đầu rơi vào đêm đó). Đêm đó, từ 02:10 tỉ lệ `503` của `orders-service` (12 pod trên EKS, Spring Boot 3.5, HikariCP pool 10) tăng dần, tới 02:34 thì gần 100%. Không có deploy nào trong đêm.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Tỉ lệ lỗi orders-service (5 phút một mốc):\n02:05   0%\n02:10   4%\n02:15  19%\n02:20  41%\n02:25  63%\n02:30  88%\n02:34  99%\n\nCPU database 12%. Connection của orders_app tới database: 120 lúc 02:05, 9 lúc 02:30.\nCác service khác dùng database khác: bình thường.",
+      "evidenceFormat": "monospace",
+      "question": "Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Đọc log lỗi của một pod đang trả 503",
+          "quality": "good",
+          "feedback": "Đúng. Connection tới database giảm mà CPU database thấp: cần biết vì sao pod không lấy được connection.",
+          "next": "applog"
+        },
+        {
+          "label": "Rollout restart toàn bộ 12 pod",
+          "quality": "poor",
+          "feedback": "Chưa biết nguyên nhân mà đã thay pod đang phục vụ được 1% bằng pod chưa chắc khởi động được.",
+          "next": "restart"
+        },
+        {
+          "label": "Tăng maximumPoolSize lên 30",
+          "quality": "poor",
+          "feedback": "Connection đang giảm chứ không cạn vì tải; pool lớn hơn không giúp khi không mở được connection mới.",
+          "next": "applog"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "evidence": "$ kubectl rollout restart deployment/orders-service\n\norders-service-7d9f-x2k4q  0/1  CrashLoopBackOff  3  2m\n\nLog pod mới:\nHikariPool-1 - Exception during pool initialization.\norg.postgresql.util.PSQLException: FATAL: password authentication failed for user \"orders_app\"\n...\nApplication run failed\n\nPod cũ vẫn bị giữ lại vì pod mới không Ready (maxUnavailable 25%): 9 pod cũ còn chạy, 3 pod mới crash.",
+      "evidenceFormat": "monospace",
+      "question": "Pod mới không khởi động được vì sai mật khẩu. Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem lịch sử xoay của secret và cách pod nhận secret",
+          "quality": "good",
+          "feedback": "Đúng. Mật khẩu sai mà không ai deploy: thứ đổi là secret.",
+          "next": "rotation"
+        },
+        {
+          "label": "Hạ initializationFailTimeout để pod khởi động dù lỗi DB",
+          "quality": "poor",
+          "feedback": "Pod Ready nhưng vẫn không có connection: che lỗi khỏi Kubernetes chứ không sửa được gì.",
+          "next": "rotation"
+        }
+      ]
+    },
+    {
+      "id": "applog",
+      "evidence": "Log orders-service-7d9f-p8m2c (Hikari mặc định, mức INFO):\n\n02:29:44.310 ERROR o.a.c.c.C.[.[.[/].[dispatcherServlet] - Servlet.service() ... threw exception\norg.springframework.transaction.CannotCreateTransactionException: Could not open JPA EntityManager for transaction\nCaused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 30000ms (total=0, active=0, idle=0, waiting=187)\nCaused by: org.postgresql.util.PSQLException: FATAL: password authentication failed for user \"orders_app\"\n\nLog PostgreSQL cùng lúc:\nFATAL:  password authentication failed for user \"orders_app\"\n(vài chục dòng mỗi phút, từ IP của các pod orders-service)\n\npg_stat_activity lúc 02:30: 9 session của orders_app còn sống, backend_start từ 02:00 đến 02:03.",
+      "evidenceFormat": "monospace",
+      "question": "Session cũ vẫn chạy, connection mới bị từ chối mật khẩu. Giả thuyết?",
+      "choices": [
+        {
+          "label": "Mật khẩu đã đổi; connection cũ sống tới maxLifetime",
+          "quality": "good",
+          "feedback": "Đúng. Đổi mật khẩu không cắt session đang mở; Hikari thay connection khi hết `maxLifetime` (mặc định 30 phút) và lúc đó mới cần mật khẩu.",
+          "next": "rotation"
+        },
+        {
+          "label": "Có người tấn công dò mật khẩu nên user bị khoá",
+          "quality": "poor",
+          "feedback": "PostgreSQL không tự khoá user khi sai mật khẩu, và các dòng FATAL đến từ chính IP của pod.",
+          "next": "rotation"
+        },
+        {
+          "label": "pg_hba.conf bị đổi nên PostgreSQL bắt xác thực lại",
+          "quality": "ok",
+          "feedback": "Hợp lý để kiểm, nhưng lỗi là sai mật khẩu chứ không phải `no pg_hba.conf entry`. Thứ đổi gần nhất là secret.",
+          "next": "rotation"
+        }
+      ]
+    },
+    {
+      "id": "rotation",
+      "evidence": "aws secretsmanager describe-secret --secret-id prod/orders/db\n  RotationEnabled: true (bật chiều nay, đây là lần xoay đầu tiên)\n  LastRotatedDate: 02:04:31\n  VersionIdsToStages: { 3b1e...: [AWSCURRENT], 9f07...: [AWSPREVIOUS] }\n\nkubectl get externalsecret orders-db -o yaml\n  spec.refreshInterval: 1h\n  status.refreshTime: 01:52:10\n  status.conditions: SecretSynced\n\nDeployment: env SPRING_DATASOURCE_PASSWORD lấy từ Secret orders-db (secretKeyRef).",
+      "evidenceFormat": "monospace",
+      "question": "Secret xoay lúc 02:04, External Secrets đồng bộ lần cuối 01:52. Khôi phục thế nào?",
+      "choices": [
+        {
+          "label": "Ép External Secrets đồng bộ ngay rồi rollout restart",
+          "quality": "good",
+          "feedback": "Đúng. Kubernetes Secret phải có mật khẩu mới trước, rồi pod khởi động lại mới đọc biến môi trường mới.",
+          "next": "fix"
+        },
+        {
+          "label": "Đặt lại mật khẩu cũ trong PostgreSQL cho khớp pod",
+          "quality": "ok",
+          "feedback": "Pod hồi ngay, nhưng `AWSCURRENT` giờ là mật khẩu không còn đúng: pod nào đọc secret mới sẽ lỗi, và mật khẩu cũ coi như không bao giờ xoay. Chỉ dùng nếu không ép đồng bộ được, và phải đưa kho về khớp ngay sau.",
+          "next": "fix"
+        },
+        {
+          "label": "Chỉ rollout restart, chờ pod mới đọc secret",
+          "quality": "poor",
+          "feedback": "Kubernetes Secret vẫn là bản 01:52 tới lần đồng bộ 02:52: pod mới lại crash như lần restart trước.",
+          "next": "restart"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "**Nguyên nhân gốc**: Lambda xoay đổi mật khẩu của `orders_app` lúc 02:04. Đổi mật khẩu không cắt session đang mở, nên mỗi pod chạy tiếp bằng connection cũ và chỉ lỗi khi Hikari thay connection hết `maxLifetime` 30 phút: lỗi tăng dần từ 02:10 và gần như toàn bộ lúc 02:34, đúng 30 phút sau khi xoay. Mật khẩu tới pod qua ba chặng: Secrets Manager → External Secrets (đồng bộ mỗi giờ) → Kubernetes Secret → biến môi trường (chỉ đọc lúc khởi động). Không chặng nào được thiết kế cho việc giá trị đổi khi pod đang chạy, nên restart pod trước khi Kubernetes Secret có bản mới cũng không cứu được: pod mới đọc bản 01:52 và crash ngay lúc khởi động.\n\n**Xử lý**: 02:46 annotate `force-sync` cho ExternalSecret, Kubernetes Secret có mật khẩu mới; rollout restart, 02:53 lỗi về 0%.\n\n**Phòng ngừa**:\n- Đổi Lambda sang alternating users (`orders_app` và `orders_app_clone`): mật khẩu cũ còn đúng tới lần xoay sau, ứng dụng cache tới vài giờ vẫn chạy.\n- Ứng dụng tự lấy lại secret khi xác thực lỗi: dùng driver JDBC bọc của AWS (Secrets Manager plugin của AWS Advanced JDBC Wrapper) hoặc đọc secret qua SDK và đổi credential cho Hikari (`HikariConfigMXBean.setPassword`).\n- Nếu vẫn qua Kubernetes Secret: mount thành file thay vì biến môi trường, có Reloader restart pod khi Secret đổi.\n- Lịch xoay đặt trong giờ làm việc, xoay thử trên staging với tải thật trước khi bật ở production, cảnh báo theo log `password authentication failed` của database.\n- Đặt log `com.zaxxer.hikari` đủ để thấy lý do tạo connection lỗi, và cảnh báo khi `hikaricp_connections_pending` tăng trong khi `hikaricp_connections` giảm, vì message mặc định chỉ nói hết thời gian chờ."
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Bật xoay vòng refresh token, người dùng bị đăng xuất hàng loạt",
+  "symptom": "App mua sắm có khoảng 1,2 triệu người dùng hoạt động mỗi ngày. Access token 10 phút, refresh token 30 ngày. Thứ Ba, `auth-service` bật xoay vòng refresh token kèm phát hiện dùng lại (dùng lại token cũ thì huỷ cả family). Từ hôm sau, chăm sóc khách hàng nhận hàng trăm phàn nàn \"cứ mở app là bắt đăng nhập lại\", phần lớn từ Android.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "Dashboard auth-service, 24 giờ sau khi bật:\n\nrefresh_requests_total                       3.050.000\nrefresh_family_revoked_total{reason=reuse}      41.200   (trước khi bật: tính năng chưa có)\nlogin_total                                    96.000   (tuần trước: 52.000/ngày)\n\nrefresh_family_revoked theo nền tảng: android 36.900, ios 4.100, web 200",
+      "evidenceFormat": "monospace",
+      "question": "41.200 family bị huỷ vì \"dùng lại\" trong một ngày. Bạn làm gì trước?",
+      "choices": [
+        {
+          "label": "Xem log các lần bị coi là dùng lại của vài family",
+          "quality": "good",
+          "feedback": "Đúng. Cần biết token cũ được dùng lại bởi ai và cách nhau bao lâu: trộm thật hay chính app.",
+          "next": "logs"
+        },
+        {
+          "label": "Tăng hạn access token lên 24 giờ để ít phải refresh",
+          "quality": "poor",
+          "feedback": "Ít refresh thì ít bị huỷ nhầm, nhưng token lộ dùng được cả ngày và khoá tài khoản mất cả ngày mới có hiệu lực. Chưa biết nguyên nhân đã đổi đặc tính bảo mật.",
+          "next": "ttl"
+        },
+        {
+          "label": "Tắt phát hiện dùng lại, giữ xoay vòng",
+          "quality": "ok",
+          "feedback": "Dừng được chảy máu, nhưng xoay vòng mà không phát hiện dùng lại thì mất lý do bật nó. Tạm được nếu chưa tìm ra nguyên nhân trong vài giờ.",
+          "next": "disable"
+        }
+      ]
+    },
+    {
+      "id": "ttl",
+      "evidence": "Review chặn thay đổi:\n\"Access token 24h: tài khoản bị khoá vẫn gọi API tới 24 giờ;\npayment-api không tra denylist. Không duyệt khi chưa rõ vì sao bị coi là dùng lại.\"",
+      "evidenceFormat": "monospace",
+      "question": "Bước tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem log các lần bị coi là dùng lại",
+          "quality": "good",
+          "feedback": "Đúng. Bằng chứng trước, cấu hình sau.",
+          "next": "logs"
+        },
+        {
+          "label": "Tăng lên 2 giờ để review dễ duyệt hơn",
+          "quality": "poor",
+          "feedback": "Vẫn là đoán. Chưa biết token bị dùng lại vì trộm hay vì app.",
+          "next": "logs"
+        }
+      ]
+    },
+    {
+      "id": "disable",
+      "evidence": "Tắt phát hiện dùng lại lúc 15:00 (bật lại được bằng cờ).\n\n15:00–18:00: refresh_family_revoked{reason=reuse} = 0, phàn nàn giảm.\nĐồng thời: refresh_token_reuse_seen_total (chỉ đếm, không huỷ) = 5.300 trong 3 giờ.",
+      "evidenceFormat": "monospace",
+      "question": "Người dùng tạm yên. Bây giờ làm gì?",
+      "choices": [
+        {
+          "label": "Đọc log của các lần dùng lại vẫn đang được đếm",
+          "quality": "good",
+          "feedback": "Đúng. Metric vẫn đếm, giờ tìm vì sao chính app dùng lại token.",
+          "next": "logs"
+        },
+        {
+          "label": "Giữ nguyên tắt, đóng sự cố",
+          "quality": "poor",
+          "feedback": "Refresh token bị trộm giờ dùng được 30 ngày mà không ai biết. Phải tìm nguyên nhân rồi bật lại.",
+          "next": "logs"
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "evidence": "Log auth-service, một family (rt_ chỉ in 4 ký tự cuối của hash):\n\n10:02:11.120 grant=refresh_token family=f_8c1 rt=..a91 device=and-77f ip=203.0.113.24 req=3f1 -> 200, cấp rt=..b07\n10:02:11.138 grant=refresh_token family=f_8c1 rt=..a91 device=and-77f ip=203.0.113.24 req=3f2 -> 400 invalid_grant REUSE, revoke family\n10:02:11.141 grant=refresh_token family=f_8c1 rt=..a91 device=and-77f ip=203.0.113.24 req=3f3 -> 400 invalid_grant family revoked\n10:02:11.402 grant=refresh_token family=f_8c1 rt=..b07 device=and-77f ip=203.0.113.24 req=3f4 -> 400 invalid_grant family revoked\n\nPhân bố khoảng cách giữa lần dùng đầu và lần dùng lại, 41.200 family:\n  < 100 ms        38.300  (93%)  cùng device, cùng IP\n  9–11 s           2.450  ( 6%)  cùng device, IP thường khác (đổi mạng)\n  > 1 phút           450  ( 1%)",
+      "evidenceFormat": "monospace",
+      "question": "Cùng thiết bị, cùng IP, cách nhau vài chục ms. Giả thuyết nào hợp nhất với nhóm 93%?",
+      "choices": [
+        {
+          "label": "App gửi nhiều request refresh song song bằng cùng token",
+          "quality": "good",
+          "feedback": "Đúng. Ba request cùng token trong 21 ms từ một thiết bị: không phải người khác cầm token, mà là nhiều luồng trong app cùng refresh.",
+          "next": "client"
+        },
+        {
+          "label": "Load balancer retry request refresh sang instance khác",
+          "quality": "ok",
+          "feedback": "Hợp lý để kiểm, nhưng mỗi dòng có `req` id khác nhau do client sinh: đây là các request riêng từ app, không phải một request bị nhân bản.",
+          "next": "client"
+        },
+        {
+          "label": "Kẻ tấn công đứng cùng mạng Wi-Fi đã lấy được token",
+          "quality": "poor",
+          "feedback": "Cùng `device` id, cùng IP, cách 18 ms, và 93% số family đều thế: không giống trộm. Nhóm `> 1 phút` mới đáng xem như khả năng trộm.",
+          "next": "client"
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "evidence": "Code Android (OkHttp):\n\nclass TokenAuthenticator : Authenticator {\n    override fun authenticate(route: Route?, response: Response): Request? {\n        val newTokens = authApi.refresh(tokenStore.refreshToken)   // gọi đồng bộ\n        tokenStore.save(newTokens)\n        return response.request.newBuilder()\n            .header(\"Authorization\", \"Bearer ${newTokens.accessToken}\").build()\n    }\n}\n\nMàn hình chính khi mở app gọi song song: /home, /cart, /notifications, /profile.\nOkHttp: callTimeout = 10 s.",
+      "evidenceFormat": "monospace",
+      "question": "Mở app sau hơn 10 phút: cả 4 request nhận 401. Nhóm 9–11 giây thì sao? Sửa ở đâu?",
+      "choices": [
+        {
+          "label": "Client refresh một luồng; server cho ân hạn ngắn cho token vừa thay",
+          "quality": "good",
+          "feedback": "Đúng. Client sửa nhóm 93%; ân hạn vài giây ở server đỡ cả bản app cũ chưa cập nhật lẫn nhóm retry sau timeout.",
+          "next": "fix"
+        },
+        {
+          "label": "Chỉ thêm ân hạn 10 phút ở server cho mọi token cũ",
+          "quality": "ok",
+          "feedback": "Hết lỗi ngay, nhưng 10 phút là đủ để token bị trộm dùng mà không bị phát hiện. Ân hạn nên vài giây tới vài chục giây, vừa đủ dài hơn timeout của client, và vẫn phải sửa client.",
+          "next": "fix"
+        },
+        {
+          "label": "Bỏ xoay vòng, quay về refresh token dùng 30 ngày",
+          "quality": "poor",
+          "feedback": "RFC 9700 yêu cầu refresh token của app di động (public client) phải xoay vòng hoặc gắn với người giữ. Quay lui là bỏ lớp phát hiện trộm.",
+          "next": "fix"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "evidence": "**Nguyên nhân gốc**: khi mở app sau khi access token hết hạn, 4 request song song cùng nhận `401` và `Authenticator` của OkHttp chạy refresh trên từng request với cùng refresh token. Request đầu được cấp token mới, request thứ hai dùng lại token cũ nên server huỷ cả family, các request sau (kể cả request mang token vừa cấp) đều bị từ chối, và người dùng bị đẩy ra màn hình đăng nhập. Nhóm 9–11 giây là request refresh mà response bị mất khi đổi mạng: server đã xoay token, app hết `callTimeout` 10 giây rồi gửi lại token cũ. Trước khi bật phát hiện dùng lại, các request thừa vẫn thành công nên không ai thấy.\n\n**Xử lý**:\n- Client: refresh qua một mutex; request nào gặp `401` thì kiểm xem token đã được làm mới bởi luồng khác chưa trước khi gọi refresh (single-flight). Làm mới chủ động trước `exp` khoảng 30 giây khi app trở lại foreground.\n- Server: khoảng ân hạn 15 giây (dài hơn `callTimeout` 10 giây) cho token vừa bị thay khi cùng `device`: trong khoảng đó token cũ vẫn đổi được và nhận một token con mới trong cùng family thay vì huỷ family; ngoài khoảng đó vẫn huỷ. Server chỉ lưu hash nên không trả lại được token đã cấp; giá phải trả là vài giây hai token con cùng sống. Bật lại phát hiện dùng lại.\n- Nhóm `> 1 phút` (450 family): đưa vào xem xét như khả năng trộm thật (backup app khôi phục sang máy khác cũng gây ra mẫu này).\n\n**Phòng ngừa**: trước khi bật một kiểm tra bảo mật mới, chạy chế độ chỉ đếm (shadow) một tuần và xem phân bố; test client với nhiều request đồng thời cùng nhận `401`; cảnh báo khi `login_total` tăng bất thường so với tuần trước."
+    }
+  ]
+}

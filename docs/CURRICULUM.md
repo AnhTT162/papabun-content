@@ -284,8 +284,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 2 | `cryptography-basics` | Mật mã cho kỹ sư | junior | Hash, mã hoá, encoding; đối xứng và bất đối xứng; chữ ký số; envelope encryption, KMS | A L D | ✅ |
 | 3 | `browser-security-basics` | ✚ Bảo mật phía trình duyệt | junior | Same-origin policy, cookie (`HttpOnly`, `Secure`, `SameSite`), CORS, CSP | A L B | ✅ |
 | 4 | `owasp-top10` | OWASP Top 10 với Java/Spring | mid | Injection, broken access control, SSRF, XSS, CSRF, deserialization | L B | ✅ |
-| 5 | `jwt-deep` | JWT chuyên sâu | mid | Cấu trúc, thuật toán ký, validate, hết hạn/refresh, thu hồi, nơi lưu | L B T | ⬜ |
-| 6 | `secret-management` | Quản lý secret | mid | Vault, KMS, xoay vòng, secret lọt vào git | L T | ⬜ |
+| 5 | `jwt-deep` | JWT chuyên sâu | mid | Cấu trúc, thuật toán ký, validate, hết hạn/refresh, thu hồi, nơi lưu | L B T | ✅ |
+| 6 | `secret-management` | Quản lý secret | mid | Vault, KMS, xoay vòng, secret lọt vào git | L T | ✅ |
 | 7 | `data-privacy-pii` | ✚ Dữ liệu cá nhân & tuân thủ | mid | PII, che dữ liệu trong log, mã hoá at rest/in transit, audit log, nguyên tắc GDPR/Nghị định 13 | L B Sc | ⬜ |
 | 8 | `oauth2-oidc` | OAuth2 & OpenID Connect | mid | Authorization code + PKCE, client credentials, scope, ID token và access token | L D Sc | ⬜ |
 | 9 | `sso-saml` | ✚ SSO doanh nghiệp & SAML | senior | SAML và OIDC, IdP, federation, đăng xuất tập trung | L D Sc | ⬜ |

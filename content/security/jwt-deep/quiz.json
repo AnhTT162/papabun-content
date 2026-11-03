@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "expired-skew-output",
+      "kind": "output",
+      "prompt": "Spring Security 7.0.5, decoder mặc định. Token ký đúng, `exp` là 30 giây trước thời điểm gọi. Dòng in ra là gì?",
+      "code": "NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(publicKey).build();\ntry {\n    Jwt jwt = decoder.decode(tokenExpired30sAgo);\n    System.out.println(\"accepted \" + jwt.getSubject());\n} catch (JwtException e) {\n    System.out.println(e.getMessage());\n}",
+      "options": [
+        "accepted user-42",
+        "rejected: Jwt expired at ...",
+        "rejected: The aud claim is not valid",
+        "rejected: Another algorithm expected"
+      ],
+      "answer": 0,
+      "explanation": "`JwtTimestampValidator` mặc định cho lệch đồng hồ 60 giây, nên token hết hạn 30 giây trước vẫn qua; 90 giây trước thì ra `Jwt expired at ...` (đã chạy). Decoder mặc định không kiểm `aud`, và thuật toán `RS256` khớp khoá công khai nên không có lỗi thuật toán. Độ lệch 60 giây là hợp lý; đừng tăng lên vài phút để che đồng hồ server lệch, hãy sửa NTP."
+    },
+    {
+      "id": "aud-cross-service",
+      "kind": "single",
+      "prompt": "`reporting-api` và `payment-api` cùng tin một identity provider, cả hai chỉ cấu hình `issuer-uri`. Một token cấp cho `reporting-api` (quyền đọc báo cáo) bị lộ. Rủi ro là gì?",
+      "options": [
+        "Token gọi được payment-api vì decoder không kiểm aud mặc định",
+        "Không có rủi ro vì chữ ký gắn token với đúng một service nhận",
+        "Token chỉ dùng được ở payment-api nếu kẻ tấn công đổi claim aud",
+        "payment-api từ chối vì scope của token khác scope nó đang cần"
+      ],
+      "answer": 0,
+      "explanation": "Chữ ký chỉ chứng minh issuer cấp token, không nói token dành cho ai. Spring kiểm `iss` khi có `issuer-uri` nhưng bỏ qua `aud` nếu không cấu hình `audiences`. Đổi `aud` thì chữ ký hỏng. Scope chỉ chặn được khi endpoint có kiểm quyền theo scope, và hai service thường dùng chung tên scope như `openid` hay `profile`; kiểm `aud` mới là ranh giới đúng."
+    },
+    {
+      "id": "reuse-family-logout",
+      "kind": "single",
+      "prompt": "Refresh token xoay vòng có phát hiện dùng lại. App gửi hai request refresh cùng lúc với cùng token `r1`. Kết quả với người dùng?",
+      "options": [
+        "Bị đăng xuất: lần thứ hai bị coi là dùng lại nên cả family bị huỷ",
+        "Không sao: server trả cùng một token mới cho cả hai request",
+        "Không sao: request thứ hai nhận lỗi nhưng token mới vẫn dùng được",
+        "Bị đăng xuất chỉ khi hai request đến từ hai địa chỉ IP khác nhau"
+      ],
+      "answer": 0,
+      "explanation": "Request đầu đổi `r1` lấy `r2`; request sau dùng `r1` đã bị thay, server không phân biệt được người thật với kẻ trộm nên huỷ cả family, kể cả `r2`. Chỉ khi server có khoảng ân hạn cho token vừa thay mới trả lại cặp token đã cấp. Phát hiện dùng lại cơ bản không xét IP. Client phải refresh một luồng duy nhất."
+    },
+    {
+      "id": "spa-token-storage",
+      "kind": "single",
+      "prompt": "SPA đang lưu access token và refresh token trong `localStorage`. Pentest tìm ra một lỗi XSS. Thay đổi nào giảm thiệt hại nhiều nhất?",
+      "options": [
+        "Chuyển sang BFF: token ở server, trình duyệt chỉ giữ cookie HttpOnly",
+        "Mã hoá token bằng AES trước khi ghi vào localStorage của trình duyệt",
+        "Chuyển cả hai token từ localStorage sang sessionStorage của trình duyệt",
+        "Rút access token còn 1 phút nhưng vẫn để refresh token trong localStorage"
+      ],
+      "answer": 0,
+      "explanation": "Khoá giải mã cũng phải nằm trong JavaScript nên script độc đọc được cả hai. `sessionStorage` vẫn đọc được bằng script cùng trang. Rút access token mà để refresh token đọc được thì kẻ tấn công tự refresh. Với BFF, XSS vẫn gọi được API khi trang đang mở, nhưng không mang token đi dùng từ nơi khác. Vẫn phải sửa XSS và bật CSP."
+    },
+    {
+      "id": "remove-old-key",
+      "kind": "single",
+      "prompt": "Identity provider ký access token 15 phút. Lúc 09:00 bắt đầu ký bằng khoá mới `k2` và cùng lúc gỡ `k1` khỏi JWKS. Điều gì xảy ra trong 15 phút tiếp theo?",
+      "options": [
+        "Token ký bằng k1 còn hạn bị từ chối tới khi người dùng refresh",
+        "Không ảnh hưởng vì JWT stateless, service không cần tải lại khoá",
+        "Token mới ký bằng k2 bị từ chối tới khi service khởi động lại",
+        "Mọi token còn hạn tự được ký lại bằng k2 ở lần refresh tiếp theo"
+      ],
+      "answer": 0,
+      "explanation": "Service tải lại JWKS khi gặp `kid` lạ, nên nhận `k2` không cần khởi động lại (với Nimbus); token `k2` đầu tiên tới là service tải lại, bản mới không còn `k1`, và token `k1` còn hạn tới 09:15 bị `401`. Stateless chỉ nghĩa là không tra kho phiên; kiểm chữ ký vẫn cần đúng khoá. Token đã phát không được ký lại. Thứ tự đúng: công bố `k2` trước, ký bằng `k2` sau khi cache đã cập nhật, gỡ `k1` sau khi token cuối do nó ký hết hạn."
+    }
+  ]
+}

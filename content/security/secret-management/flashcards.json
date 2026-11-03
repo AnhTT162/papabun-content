@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "secret-priority", "front": "Thứ tự ưu tiên khi cấp credential cho ứng dụng?", "back": "Không cần secret (workload identity, token IAM) hơn dynamic secret hơn secret tĩnh xoay tự động hơn secret tĩnh không xoay." },
+    { "id": "kms-vs-secrets-manager", "front": "KMS khác secret manager thế nào?", "back": "KMS giữ khoá và không trả khoá ra, chỉ mã hoá hộ; secret manager trả giá trị secret về cho ứng dụng dùng." },
+    { "id": "k8s-secret-base64", "front": "Kubernetes Secret có được mã hoá không?", "back": "Chỉ là Base64; etcd lưu rõ trừ khi bật encryption at rest. Ai có quyền đọc Secret hoặc tạo pod trong namespace đều lấy được." },
+    { "id": "rotation-pool", "front": "Xoay mật khẩu database thì pool connection bị gì?", "back": "Connection đang mở vẫn chạy; tới `maxLifetime` pool mở connection mới bằng mật khẩu cũ và lỗi xác thực, thường muộn tới 30 phút." },
+    { "id": "alternating-users", "front": "Alternating users rotation hơn single user ở đâu?", "back": "Mỗi lần xoay đổi mật khẩu của user đang không dùng, nên credential cũ còn đúng tới lần xoay sau; ứng dụng cache vài giờ vẫn chạy." },
+    { "id": "env-vs-file", "front": "Secret qua biến môi trường hay file?", "back": "File mount từ Secret được cập nhật khi Secret đổi (trừ `subPath`), biến môi trường chỉ đổi khi pod khởi động lại và dễ lọt sang tiến trình con." },
+    { "id": "secret-zero", "front": "Secret zero là gì?", "back": "Credential đầu tiên dùng để lấy mọi secret khác; giải bằng danh tính nền tảng cấp sẵn như service account token hoặc IAM role của pod." },
+    { "id": "vault-dynamic", "front": "Dynamic secret của Vault hoạt động thế nào?", "back": "Mỗi lần đọc Vault tạo user database mới có lease; hết lease hoặc bị thu hồi thì Vault xoá user, ứng dụng phải lấy credential mới." },
+    { "id": "git-leak-order", "front": "Secret lọt vào git, làm gì trước?", "back": "Xoay hoặc thu hồi ngay, xem log truy cập từ lúc commit, rồi mới dọn lịch sử; dọn lịch sử không xoá được bản đã clone." },
+    { "id": "image-layer", "front": "Vì sao xoá file secret ở layer sau của Dockerfile vẫn lộ?", "back": "Layer trước vẫn chứa file, đọc được bằng `docker history` hoặc giải nén image. Dùng `RUN --mount=type=secret`." }
+  ]
+}

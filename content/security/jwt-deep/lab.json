@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Token ADMIN giả qua được kiểm tra chữ ký",
+  "context": "`payment-api` (JDK 21, Nimbus JOSE+JWT) tự viết filter kiểm token. Trước đây hệ thống ký `HS256` bằng secret chung lưu ở `jwt.key`. Khi chuyển sang identity provider ký `RS256`, team đặt PEM khoá công khai của IdP vào chính `jwt.key` và giữ nhánh HMAC \"để token cũ còn chạy trong lúc chuyển\". Khoá công khai đó ai cũng tải được ở `/.well-known/jwks.json` hoặc trang tài liệu.",
+  "buggyCode": "final class TokenVerifier {\n    private final String keyPem;          // jwt.key: PEM khoá công khai của IdP\n    private final RSAPublicKey publicKey; // parse từ keyPem\n\n    boolean verify(String token) throws Exception {\n        SignedJWT jwt = SignedJWT.parse(token);\n        JWSAlgorithm alg = jwt.getHeader().getAlgorithm();\n        JWSVerifier verifier = JWSAlgorithm.Family.HMAC_SHA.contains(alg)\n                ? new MACVerifier(keyPem.getBytes(StandardCharsets.UTF_8)) // nhánh cũ\n                : new RSASSAVerifier(publicKey);\n        return jwt.verify(verifier)\n                && jwt.getJWTClaimsSet().getExpirationTime().after(new Date());\n    }\n}",
+  "symptom": {
+    "description": "Pentest gửi một token tự tạo, không có khoá riêng nào của IdP, và gọi được API hoàn tiền dành cho quản trị. Tái hiện bằng đúng class trên (đã chạy trên JDK 27, Nimbus 10.10):",
+    "output": "token thật: header {\"alg\":\"RS256\",\"kid\":\"k1\"}  verify=true\ntoken pentest: header {\"alg\":\"HS256\"}\n  payload {\"sub\":\"user-42\",\"aud\":\"payment-api\",\"roles\":[\"ADMIN\"],\"iss\":\"https://id.shop.example.com\",\"exp\":...}\n  verify=true\n\nPOST /refunds  Authorization: Bearer <token pentest>  ->  201 Created"
+  },
+  "diagnosis": {
+    "question": "Không có khoá riêng, pentest làm sao tạo được token hợp lệ?",
+    "options": [
+      "Ký HS256 bằng chính PEM khoá công khai, nhánh HMAC dùng nó làm secret",
+      "Gửi alg none không có chữ ký, Nimbus bỏ qua bước kiểm chữ ký",
+      "Lấy khoá riêng RSA từ JWKS công khai vì JWKS chứa cả hai khoá",
+      "Dùng lại token RS256 thật và chỉ sửa claim roles trong payload"
+    ],
+    "answer": 0,
+    "explanation": "Code chọn verifier theo `alg` do người gửi khai. Với `HS256`, nó dùng các byte của `keyPem` làm secret HMAC, mà `keyPem` là khoá công khai ai cũng có. Pentest chỉ cần `new MACSigner(pem.getBytes(UTF_8))` để ký token tuỳ ý, tức [[algorithm-confusion|algorithm confusion]]. Token `alg: none` không qua được: `SignedJWT.parse` ném `Invalid JWS header: Not a JWS header` (đã chạy). JWKS chỉ chứa khoá công khai. Sửa `roles` trong token thật thì chữ ký RS256 không còn khớp."
+  },
+  "fix": {
+    "code": "// Ghim thuật toán và nguồn khoá phía server; không đọc alg từ token để chọn cách kiểm\n@Bean\nJwtDecoder jwtDecoder(@Value(\"${idp.issuer}\") String issuer) {\n    NimbusJwtDecoder decoder = NimbusJwtDecoder\n            .withIssuerLocation(issuer)              // lấy jwks_uri từ metadata\n            .jwsAlgorithm(SignatureAlgorithm.RS256)  // chỉ RS256\n            .build();\n    decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(\n            JwtValidators.createDefaultWithIssuer(issuer),\n            new JwtClaimValidator<List<String>>(\"aud\",\n                    aud -> aud != null && aud.contains(\"payment-api\"))));\n    return decoder;\n}\n\n// Token pentest với decoder ghim RS256 (đã chạy, Spring Security 7.0.5):\n// BadJwtException: Signed JWT rejected: Another algorithm expected, or no matching key(s) found\n// Token HS256 cũ cần chạy song song thì dùng decoder thứ hai với secret riêng\n// (không phải PEM), chọn decoder theo iss, và gỡ khi hết thời gian chuyển.",
+    "explanation": "Thuật toán là cấu hình của bên kiểm, không phải thông tin bên gửi được chọn. Decoder của Spring Security ghim `RS256` và chỉ lấy khoá từ JWKS của issuer, nên token `HS256` bị từ chối trước khi tới phần kiểm chữ ký. Code cũ còn hai lỗi khác: không kiểm `iss` và `aud`, và `getExpirationTime()` ném `NullPointerException` khi token thiếu `exp`. Dùng decoder của framework thay vì tự viết, kiểm thêm `aud`, và viết test gửi token `HS256`, `none`, sai `aud`, hết hạn vào API để chắc chúng nhận `401`."
+  }
+}

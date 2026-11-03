@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "jwt-payload-public", "front": "Payload của JWT có bí mật không?", "back": "Không. Nó chỉ là JSON encode Base64URL; chữ ký chứng minh không bị sửa, không giấu nội dung. Cần giấu thì dùng JWE." },
+    { "id": "hs256-vs-rs256", "front": "Khi nào chọn RS256/ES256 thay vì HS256?", "back": "Khi bên kiểm khác bên cấp: HS256 dùng secret chung nên ai kiểm được cũng ký được, còn chữ ký số chỉ cần phát khoá công khai qua JWKS." },
+    { "id": "pin-alg", "front": "Vì sao không được chọn cách kiểm theo `alg` trong token?", "back": "Kẻ tấn công tự đặt `alg`: `none`, hoặc `HS256` ký bằng khoá công khai (algorithm confusion). Thuật toán phải ghim ở cấu hình server." },
+    { "id": "validate-claims", "front": "Ngoài chữ ký phải kiểm claim nào?", "back": "`iss` (ai cấp), `aud` (cấp cho service này), `exp`/`nbf` với độ lệch đồng hồ nhỏ, và `typ` để không nhận nhầm loại token." },
+    { "id": "spring-aud", "front": "Decoder JWT của Spring Security có kiểm `aud` mặc định không?", "back": "Không. Phải cấu hình `audiences` hoặc thêm `JwtClaimValidator` cho `aud`; mặc định chỉ kiểm thời hạn (lệch 60 giây) và `iss` khi khai issuer." },
+    { "id": "refresh-rotation", "front": "Phát hiện dùng lại refresh token hoạt động thế nào?", "back": "Mỗi lần refresh cấp token mới và vô hiệu token cũ; token cũ xuất hiện lại thì huỷ cả family vì không biết ai là người thật." },
+    { "id": "revoke-access", "front": "Thu hồi access token JWT trước hạn bằng cách nào?", "back": "Denylist `jti` với TTL bằng thời gian còn lại, hoặc mốc `tokens_valid_after` theo user; cả hai thêm một lần tra mỗi request." },
+    { "id": "key-rotation", "front": "Xoay khoá ký JWT theo thứ tự nào?", "back": "Công bố khoá mới trong JWKS, chờ cache cập nhật, rồi mới ký bằng khoá mới; giữ khoá cũ tới khi token cuối cùng do nó ký hết hạn." },
+    { "id": "browser-storage", "front": "Vì sao không lưu token trong `localStorage`?", "back": "Script nào trên trang cũng đọc được, nên XSS lấy token mang đi dùng ở máy khác tới khi hết hạn. BFF giữ token ở server an toàn hơn." },
+    { "id": "dpop", "front": "DPoP giải quyết gì?", "back": "Bearer token ai cầm cũng dùng được; DPoP gắn token với khoá riêng của client, mỗi request kèm bằng chứng ký nên token bị trộm không dùng được một mình." }
+  ]
+}

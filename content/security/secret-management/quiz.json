@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "record-tostring-output",
+      "kind": "output",
+      "prompt": "Ứng dụng log cấu hình lúc khởi động. Dòng in ra là gì?",
+      "code": "record DbProps(String url, String username, String password) {}\n\nvar props = new DbProps(\"jdbc:postgresql://orders-db:5432/orders\", \"orders_app\", \"Pr0d-S3cret-2026\");\nSystem.out.println(\"Loaded \" + props);",
+      "options": [
+        "Loaded DbProps[url=jdbc:postgresql://orders-db:5432/orders, username=orders_app, password=Pr0d-S3cret-2026]",
+        "Loaded DbProps[url=jdbc:postgresql://orders-db:5432/orders, username=orders_app, password=******]",
+        "Loaded DbProps{url=jdbc:postgresql://orders-db:5432/orders, username=orders_app}",
+        "Loaded DbProps[url=jdbc:postgresql://orders-db:5432/orders, username=orders_app]"
+      ],
+      "answer": 0,
+      "explanation": "`toString` tự sinh của record in mọi component theo dạng `Ten[a=..., b=...]`, không biết trường nào nhạy cảm (đã chạy trên JDK 27). Dạng `{...}` với dấu ngoặc nhọn là kiểu của Lombok hay IDE sinh ra, không phải record, và không ai tự bỏ trường `password`. Spring Boot che giá trị ở `/actuator/env`, nhưng không che chuỗi bạn tự log. Ghi đè `toString` của record, hoặc bọc mật khẩu trong một kiểu có `toString` trả `******`."
+    },
+    {
+      "id": "rotation-when-fails",
+      "kind": "single",
+      "prompt": "Ứng dụng đọc mật khẩu database một lần lúc khởi động, HikariCP `maxLifetime` 30 phút. 02:00 mật khẩu được đổi trong PostgreSQL. Khi nào ứng dụng bắt đầu lỗi?",
+      "options": [
+        "Rải rác trong khoảng 30 phút sau, khi từng connection cũ hết hạn",
+        "Ngay lúc 02:00 vì PostgreSQL cắt mọi session của user bị đổi",
+        "Chỉ khi ứng dụng khởi động lại, pool cũ dùng được mãi mãi",
+        "Sau đúng 30 phút, mọi connection hết hạn cùng một thời điểm"
+      ],
+      "answer": 0,
+      "explanation": "Đổi mật khẩu không cắt session đang mở (đã chạy với PostgreSQL 17.6). Hikari thay mỗi connection khi nó đạt `maxLifetime` trừ một khoảng ngẫu nhiên nhỏ, tính từ lúc connection đó được tạo; connection được tạo ở các thời điểm khác nhau nên hết hạn rải rác, và mỗi lần mở mới bằng mật khẩu cũ đều bị từ chối. Pool không dùng được mãi vì connection luôn bị thay theo `maxLifetime`."
+    },
+    {
+      "id": "namespace-pod-mount",
+      "kind": "single",
+      "prompt": "Dev team `orders` chỉ có quyền tạo Deployment trong namespace `shared`, không có quyền `get secrets`. Namespace đó chứa Secret `payments-db` của team khác. Dev có đọc được mật khẩu đó không?",
+      "options": [
+        "Có: tạo pod mount Secret payments-db rồi đọc file trong container",
+        "Không: thiếu quyền get secrets thì kubelet từ chối mount cho pod",
+        "Không: Secret chỉ mount được vào pod có cùng service account tạo ra",
+        "Có, nhưng chỉ dạng Base64 đã mã hoá nên vẫn không giải mã được"
+      ],
+      "answer": 0,
+      "explanation": "Kubelet mount Secret theo quyền của node, không theo quyền của người tạo pod, nên ai tạo được pod trong namespace là dùng được mọi Secret của namespace đó. Secret không gắn với service account tạo ra nó. Base64 không phải mã hoá: `base64 -d` là ra giá trị. Ranh giới đúng là namespace riêng cho từng team, cộng với chính sách admission nếu cần chặt hơn."
+    },
+    {
+      "id": "git-leak-first-step",
+      "kind": "single",
+      "prompt": "Một access key AWS bị commit vào repo public 2 giờ trước. Bước đầu tiên nên làm là gì?",
+      "options": [
+        "Vô hiệu hoá key và tạo key mới, rồi xem CloudTrail từ lúc commit",
+        "Chạy git filter-repo xoá key khỏi lịch sử rồi force push ngay",
+        "Chuyển repo sang private để không ai đọc được commit đó nữa",
+        "Thêm file .gitignore và bật hook pre-commit quét secret cho team"
+      ],
+      "answer": 0,
+      "explanation": "Repo public bị bot quét trong vài phút, nên sau 2 giờ phải coi key đã bị dùng. Vô hiệu hoá trước, rồi đọc CloudTrail xem key đã làm gì. Dọn lịch sử và chuyển private chỉ giảm lộ thêm, không lấy lại được bản đã bị sao chép. `.gitignore` và hook là phòng ngừa cho lần sau, không xử lý lần này."
+    },
+    {
+      "id": "eso-env-restart",
+      "kind": "single",
+      "prompt": "External Secrets Operator đồng bộ secret mỗi giờ vào Kubernetes Secret, pod đọc qua biến môi trường. Secret trong kho vừa được xoay. Restart pod ngay có lấy được giá trị mới không?",
+      "options": [
+        "Chưa chắc: Kubernetes Secret có thể còn bản cũ tới lần đồng bộ sau",
+        "Có: pod mới luôn đọc thẳng giá trị mới nhất từ kho bên ngoài",
+        "Không bao giờ: biến môi trường bị cố định từ lúc tạo Deployment",
+        "Có: kubelet tự đồng bộ Kubernetes Secret với kho ngay khi restart"
+      ],
+      "answer": 0,
+      "explanation": "Pod đọc Kubernetes Secret chứ không đọc kho; Kubernetes Secret chỉ đổi khi operator đồng bộ, tức có thể trễ tới `refreshInterval`. Ép đồng bộ (annotation `force-sync`) rồi mới restart. Biến môi trường được đọc mỗi lần container khởi động, nên restart sau khi Secret đã đổi là nhận giá trị mới. Kubelet không biết gì về kho bên ngoài."
+    }
+  ]
+}

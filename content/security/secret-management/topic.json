@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "secret-management",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Quản lý secret",
+  "summary": "Thứ tự ưu tiên từ không cần secret tới secret tĩnh; secret manager khác KMS ra sao; secret zero; xoay mật khẩu database single user và alternating users, và vì sao pool vẫn chạy nửa giờ rồi mới sập; Kubernetes Secret, External Secrets, Sealed Secrets; Vault (unseal, auth method, dynamic secret, lease); secret lọt qua image, log, biến môi trường, heap dump; xử lý secret lọt vào git.",
+  "level": "mid",
+  "order": 6,
+  "minutes": 15,
+  "prerequisites": ["cryptography-basics", "spring-boot-autoconfig"],
+  "terms": ["secret", "secrets-manager", "vault", "dynamic-secret", "secret-rotation", "secret-zero", "kubernetes-secret", "external-secrets-operator", "sealed-secrets", "secret-scanning", "kms", "workload-identity", "least-privilege", "heap-dump"],
+  "references": [
+    { "title": "OWASP Secrets Management Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html" },
+    { "title": "AWS Secrets Manager: Rotation strategies", "url": "https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotation-strategy.html" },
+    { "title": "Kubernetes: Good practices for Kubernetes Secrets", "url": "https://kubernetes.io/docs/concepts/security/secrets-good-practices/" },
+    { "title": "HashiCorp Vault: Database secrets engine", "url": "https://developer.hashicorp.com/vault/docs/secrets/databases" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Secret nằm trong Vault, vậy ứng dụng lấy secret bằng gì?\" Đó là bài toán secret zero: cần một credential để lấy mọi credential khác. Đừng giải bằng một token Vault tĩnh đặt trong biến môi trường, vì đó lại là secret tĩnh. Dùng danh tính mà nền tảng đã cấp và xác minh được: pod gửi service account token của Kubernetes (Vault hỏi API server xem token có thật không), hoặc IAM role của pod qua EKS Pod Identity hay IRSA. Ngoài cloud thì AppRole với secret id dùng một lần, giao qua response wrapping. Câu trả lời tốt còn nói đến phân quyền: mỗi service một policy chỉ đọc đúng đường dẫn của nó." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng xử lý secret lọt vào git bằng `git rm` hay dọn lịch sử rồi coi như xong. Đã chạy: sau `git rm` và commit mới, `git log -S` vẫn ra commit chứa mật khẩu và `git show HEAD~1:file` in nguyên giá trị. Repo public bị bot quét trong vài phút, repo private thì mọi người từng clone đều có bản sao. Xoay secret trước, xem log truy cập từ lúc commit, rồi mới dọn lịch sử." },
+    { "type": "troubleshoot", "file": "troubleshoot.json" }
+  ]
+}

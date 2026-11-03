@@ -2821,7 +2821,7 @@
       "meaning": "Gộp các lần tải đồng thời cho cùng một key thành một: một người tải, những người khác chờ và dùng chung kết quả.",
       "example": "Caffeine `cache.get(key, loader)`; Spring `@Cacheable(sync = true)` trong một JVM.",
       "related": ["cache-stampede"],
-      "topics": ["cache-failures"]
+      "topics": ["cache-failures", "jwt-deep"]
     },
     {
       "id": "logical-expiration",
@@ -3445,7 +3445,7 @@
       "meaning": "Cross-Site Request Forgery: trang lạ khiến trình duyệt gửi request kèm cookie đăng nhập tới ứng dụng mà người dùng đang đăng nhập. Chống bằng token CSRF (hoặc kiểm `Origin`/`Sec-Fetch-Site`); cookie `SameSite` là lớp phụ, không thay thế.",
       "example": "Form ẩn trên trang độc hại tự submit `POST /transfer` tới ngân hàng đang đăng nhập trong cùng trình duyệt.",
       "related": ["security-filter-chain"],
-      "topics": ["spring-security-architecture", "realtime-rpc-protocols", "browser-security-basics", "owasp-top10"]
+      "topics": ["spring-security-architecture", "realtime-rpc-protocols", "browser-security-basics", "owasp-top10", "jwt-deep"]
     },
     {
       "id": "api-gateway",
@@ -4690,10 +4690,10 @@
     {
       "id": "bff",
       "term": "BFF",
-      "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó.",
+      "meaning": "Backend for frontend: một tầng backend riêng cho từng loại client (app di động, web), gom và định dạng dữ liệu từ nhiều service theo đúng nhu cầu của client đó. Trong bảo mật SPA, BFF còn là backend của frontend đứng làm OAuth client: giữ token ở server, trình duyệt chỉ có cookie session.",
       "example": "BFF di động gọi Order, Catalog, Loyalty rồi trả một response gọn cho màn hình chi tiết đơn.",
       "related": ["graphql"],
-      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance", "integration-patterns"]
+      "topics": ["service-communication", "api-gateway-service-mesh", "client-performance", "integration-patterns", "jwt-deep"]
     },
     {
       "id": "headless-service",
@@ -4941,7 +4941,7 @@
       "meaning": "Gateway chuyển tiếp access token của người dùng xuống service phía sau để service tự kiểm tra và quyết định quyền, thay vì chỉ gửi header danh tính.",
       "example": "Spring Cloud Gateway với filter `TokenRelay` gắn `Authorization: Bearer ...` vào request tới `orders`.",
       "related": ["api-gateway", "zero-trust"],
-      "topics": ["api-gateway-service-mesh", "spring-cloud", "security-architecture"]
+      "topics": ["api-gateway-service-mesh", "spring-cloud", "security-architecture", "jwt-deep"]
     },
     {
       "id": "zero-trust",
@@ -5013,7 +5013,7 @@
       "meaning": "JSON Web Token: token gồm header, payload (các claim như người dùng, hạn, audience) và chữ ký; bên nhận kiểm tra chữ ký bằng khoá công khai mà không phải hỏi lại máy chủ cấp token.",
       "example": "Gateway kiểm tra chữ ký, `exp` và `aud` của JWT rồi mới route request tới `orders`.",
       "related": ["token-relay", "api-gateway"],
-      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy", "authn-authz-basics", "cryptography-basics"]
+      "topics": ["api-gateway-service-mesh", "design-notification", "security-architecture", "build-vs-buy", "authn-authz-basics", "cryptography-basics", "jwt-deep"]
     },
     {
       "id": "ingress",
@@ -5677,7 +5677,7 @@
       "meaning": "Ảnh chụp toàn bộ object trong heap của JVM tại một thời điểm, dùng để tìm memory leak. Ghi file làm dừng ứng dụng và file chứa dữ liệu nhạy cảm.",
       "example": "`jcmd <pid> GC.heap_dump /tmp/heap.hprof`, mở bằng Eclipse MAT.",
       "related": ["thread-dump"],
-      "topics": ["troubleshooting-mindset", "memory-growth-oom", "jvm-diagnostic-tools", "memory-leak"]
+      "topics": ["troubleshooting-mindset", "memory-growth-oom", "jvm-diagnostic-tools", "memory-leak", "secret-management"]
     },
     {
       "id": "runbook",
@@ -10469,7 +10469,7 @@
       "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
       "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
       "related": ["shared-responsibility-model", "zero-trust"],
-      "topics": ["well-architected", "security-architecture"]
+      "topics": ["well-architected", "security-architecture", "secret-management"]
     },
     {
       "id": "shared-responsibility-model",
@@ -11037,7 +11037,7 @@
       "meaning": "OpenID Connect: lớp danh tính trên OAuth 2.0; IdP trả ID token (JWT) cho biết người dùng là ai, cùng access token để gọi API.",
       "example": "Grafana chuyển người dùng tới IdP, nhận lại ID token và đọc claim `groups` để gán quyền.",
       "related": ["identity-provider", "jwt", "saml"],
-      "topics": ["security-architecture", "build-vs-buy"]
+      "topics": ["security-architecture", "build-vs-buy", "jwt-deep"]
     },
     {
       "id": "saml",
@@ -11069,7 +11069,7 @@
       "meaning": "Danh tính cấp cho service, pod hay pipeline (không phải con người), đổi lấy credential ngắn hạn thay cho key tĩnh.",
       "example": "Pod `kyc-service` nhận role IAM riêng qua EKS Pod Identity; không có access key nào trong biến môi trường.",
       "related": ["least-privilege", "spiffe"],
-      "topics": ["security-architecture"]
+      "topics": ["security-architecture", "secret-management"]
     },
     {
       "id": "spiffe",
@@ -11173,7 +11173,7 @@
       "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
-      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics"]
+      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management"]
     },
     {
       "id": "sre",
@@ -12149,7 +12149,7 @@
       "meaning": "Hash-based Message Authentication Code: hash trộn với khoá bí mật. Chỉ bên có khoá tính được, nên chứng minh message không bị sửa và đến từ bên có khoá.",
       "example": "Webhook gửi header chữ ký là HMAC-SHA256 của body với secret chung.",
       "related": ["cryptographic-hash", "digital-signature"],
-      "topics": ["cryptography-basics", "authn-authz-basics"]
+      "topics": ["cryptography-basics", "authn-authz-basics", "jwt-deep"]
     },
     {
       "id": "symmetric-encryption",
@@ -12197,7 +12197,7 @@
       "meaning": "Khoá riêng ký, khoá công khai kiểm: chứng minh ai tạo ra dữ liệu và dữ liệu không bị sửa. Không giấu nội dung.",
       "example": "JWT ký RS256: service chỉ cần khoá công khai của issuer để kiểm.",
       "related": ["asymmetric-encryption", "hmac", "jwt"],
-      "topics": ["cryptography-basics"]
+      "topics": ["cryptography-basics", "jwt-deep"]
     },
     {
       "id": "csprng",
@@ -12277,7 +12277,7 @@
       "meaning": "Cross-site scripting: dữ liệu do kẻ tấn công kiểm soát được trình duyệt chạy như script trong trang của ứng dụng, nên script có toàn quyền của người dùng trên origin đó.",
       "example": "Bình luận chứa `<img src=x onerror=fetch(...)>` được hiển thị không escape: ai mở trang cũng bị gửi dữ liệu ra ngoài.",
       "related": ["csp", "same-origin-policy"],
-      "topics": ["browser-security-basics", "owasp-top10"]
+      "topics": ["browser-security-basics", "owasp-top10", "jwt-deep"]
     },
     {
       "id": "csp",
@@ -12333,7 +12333,7 @@
       "meaning": "Nhóm lỗi khi dữ liệu do người dùng kiểm soát được ghép vào một ngôn ngữ khác (SQL, lệnh shell, biểu thức, template, HTML) và trở thành cú pháp của ngôn ngữ đó.",
       "example": "`Runtime.exec(\"sh -c convert \" + file)` với tên file `a.png; curl ... | sh`.",
       "related": ["sql-injection", "xss", "output-encoding"],
-      "topics": ["owasp-top10"]
+      "topics": ["owasp-top10", "jwt-deep"]
     },
     {
       "id": "output-encoding",
@@ -12374,6 +12374,166 @@
       "example": "`Content-Security-Policy: script-src 'nonce-q7Xb3...' 'strict-dynamic'` và `<script nonce=\"q7Xb3...\" src=\"/app.js\">`.",
       "related": ["csp", "xss"],
       "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "jws",
+      "term": "JWS",
+      "meaning": "JSON Web Signature: định dạng nội dung kèm chữ ký hoặc HMAC; JWT thường gặp chính là một JWS, payload đọc được nhưng không sửa được.",
+      "example": "Chuỗi `eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyLTQyIn0.<chữ ký>` gồm header, payload và chữ ký.",
+      "related": ["jwt", "jwe", "digital-signature"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "jwe",
+      "term": "JWE",
+      "meaning": "JSON Web Encryption: định dạng mã hoá nội dung token để chỉ người có khoá đọc được; khác JWS chỉ ký.",
+      "example": "Token chứa số CCCD gửi qua bên trung gian thì dùng JWE, hoặc tốt hơn là không đưa CCCD vào token.",
+      "related": ["jws", "jwt"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "jwks",
+      "term": "JWKS",
+      "meaning": "JSON Web Key Set: tài liệu JSON công bố các khoá công khai của issuer, mỗi khoá có `kid`; bên nhận chọn khoá theo `kid` trong header token.",
+      "example": "`https://id.shop.example.com/.well-known/jwks.json` liệt kê `k1` và `k2` trong lúc xoay khoá.",
+      "related": ["jwt", "digital-signature"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "access-token",
+      "term": "Access token",
+      "meaning": "Token client gửi kèm mỗi request để gọi API, thường sống ngắn (5–15 phút) để giảm thiệt hại khi lộ.",
+      "example": "`Authorization: Bearer eyJ...` với `exp` 10 phút sau lúc cấp.",
+      "related": ["refresh-token", "jwt"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "refresh-token",
+      "term": "Refresh token",
+      "meaning": "Token sống dài, lưu và kiểm ở server, chỉ dùng để đổi lấy access token mới; thu hồi được bằng cách xoá ở server.",
+      "example": "App gửi refresh token tới `/oauth/token` với `grant_type=refresh_token` khi access token hết hạn.",
+      "related": ["access-token", "refresh-token-rotation"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "refresh-token-rotation",
+      "term": "Refresh token rotation",
+      "meaning": "Mỗi lần dùng refresh token, server cấp token mới và vô hiệu token cũ; token cũ xuất hiện lại là dấu hiệu bị trộm nên huỷ cả chuỗi (family).",
+      "example": "Dùng lại `r1` sau khi đã đổi lấy `r2` thì server huỷ cả `r2`, người dùng phải đăng nhập lại.",
+      "related": ["refresh-token", "single-flight"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "algorithm-confusion",
+      "term": "Algorithm confusion",
+      "meaning": "Tấn công JWT khi bên kiểm chọn thuật toán theo `alg` trong token: kẻ tấn công đổi sang `HS256` và ký bằng khoá công khai, hoặc đặt `alg: none`.",
+      "example": "Verifier dùng PEM khoá công khai làm secret HMAC cho token `HS256` thì ai cũng ký được token ADMIN.",
+      "related": ["jwt", "hmac"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "opaque-token",
+      "term": "Opaque token",
+      "meaning": "Token chỉ là chuỗi ngẫu nhiên không mang thông tin; bên nhận phải hỏi authorization server (introspection) để biết token của ai, còn hạn không.",
+      "example": "Token `9f3c...` 32 byte; thu hồi bằng cách xoá bản ghi ở server, có hiệu lực ngay.",
+      "related": ["token-introspection", "jwt"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "token-introspection",
+      "term": "Token introspection",
+      "meaning": "Endpoint chuẩn (RFC 7662) để resource server hỏi authorization server một token có còn hiệu lực không và thuộc về ai.",
+      "example": "`POST /oauth/introspect token=9f3c...` trả `{\"active\": true, \"sub\": \"user-42\"}`.",
+      "related": ["opaque-token"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "dpop",
+      "term": "DPoP",
+      "meaning": "Demonstrating Proof of Possession (RFC 9449): gắn access token với khoá riêng của client, mỗi request kèm một JWT bằng chứng ký bằng khoá đó, nên token bị trộm không dùng được một mình.",
+      "example": "Request gửi `Authorization: DPoP eyJ...` cùng header `DPoP` ký URL, method và thời điểm.",
+      "related": ["access-token", "jwt"],
+      "topics": ["jwt-deep"]
+    },
+    {
+      "id": "secret",
+      "term": "Secret",
+      "meaning": "Thông tin cầm được là vào được hệ thống: mật khẩu database, API key, khoá ký, private key TLS.",
+      "example": "Mật khẩu `orders_app` của database và API key của nhà cung cấp SMS là secret của `orders-service`.",
+      "related": ["secrets-manager", "secret-rotation"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "secrets-manager",
+      "term": "Secrets Manager",
+      "meaning": "Dịch vụ lưu secret có phân quyền theo từng secret, ghi log truy cập, giữ phiên bản và hỗ trợ xoay tự động, ví dụ AWS Secrets Manager.",
+      "example": "Secret `prod/orders/db` có nhãn `AWSCURRENT` và `AWSPREVIOUS` cho hai phiên bản mật khẩu.",
+      "related": ["secret", "kms", "vault"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "vault",
+      "term": "Vault",
+      "meaning": "HashiCorp Vault: kho secret tự vận hành, có auth method theo danh tính, policy theo đường dẫn, dynamic secret và mã hoá hộ (transit).",
+      "example": "Pod đăng nhập Vault bằng service account token rồi đọc `secret/data/orders/db`.",
+      "related": ["secrets-manager", "dynamic-secret"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "dynamic-secret",
+      "term": "Dynamic secret",
+      "meaning": "Credential được tạo khi có yêu cầu, riêng cho từng ứng dụng hoặc instance, có lease và tự bị thu hồi khi hết hạn.",
+      "example": "Vault tạo user `v-orders-8f2k` trong PostgreSQL với lease 1 giờ, hết hạn thì xoá user.",
+      "related": ["vault", "secret-rotation"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "secret-rotation",
+      "term": "Secret rotation",
+      "meaning": "Thay secret bằng giá trị mới theo lịch hoặc khi nghi lộ, sao cho ứng dụng chuyển sang giá trị mới mà không gián đoạn.",
+      "example": "Lambda xoay của Secrets Manager đổi mật khẩu database mỗi 30 ngày theo kiểu alternating users.",
+      "related": ["secret", "dynamic-secret"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "secret-zero",
+      "term": "Secret zero",
+      "meaning": "Credential đầu tiên mà ứng dụng cần để lấy mọi secret khác từ kho; giải bằng danh tính nền tảng cấp sẵn thay vì một token tĩnh.",
+      "example": "Pod dùng service account token để đăng nhập Vault, không có token Vault nào trong biến môi trường.",
+      "related": ["workload-identity", "vault"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "kubernetes-secret",
+      "term": "Kubernetes Secret",
+      "meaning": "Object Kubernetes chứa dữ liệu nhạy cảm encode Base64, mount vào pod thành file hoặc biến môi trường; không mã hoá trừ khi bật encryption at rest cho etcd.",
+      "example": "`data.password: UHIwZC1TM2NyZXQtMjAyNg==` giải Base64 ra `Pr0d-S3cret-2026`.",
+      "related": ["secret", "external-secrets-operator"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "external-secrets-operator",
+      "term": "External Secrets Operator",
+      "meaning": "Operator Kubernetes đọc secret từ kho ngoài (Secrets Manager, Vault) rồi tạo hoặc cập nhật Kubernetes Secret theo chu kỳ `refreshInterval`.",
+      "example": "ExternalSecret `orders-db` đồng bộ `prod/orders/db` mỗi giờ vào Secret cùng tên.",
+      "related": ["kubernetes-secret", "secrets-manager"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "sealed-secrets",
+      "term": "Sealed Secrets",
+      "meaning": "Công cụ mã hoá Kubernetes Secret bằng khoá công khai của controller trong cluster để commit được vào git; chỉ controller giải mã được.",
+      "example": "`kubeseal` biến Secret thành SealedSecret, Argo CD áp vào cluster, controller tạo lại Secret.",
+      "related": ["kubernetes-secret"],
+      "topics": ["secret-management"]
+    },
+    {
+      "id": "secret-scanning",
+      "term": "Secret scanning",
+      "meaning": "Quét code và lịch sử git để tìm secret theo mẫu đã biết hoặc độ ngẫu nhiên; chạy ở server lúc push, trong CI và trên lịch sử cũ.",
+      "example": "GitHub push protection chặn push có AWS access key; gitleaks chạy trong CI trên mỗi pull request.",
+      "related": ["secret"],
+      "topics": ["secret-management"]
     }
   ]
 }
