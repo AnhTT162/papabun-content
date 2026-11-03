@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cloud-networking",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Network trên cloud",
+  "summary": "Quy hoạch CIDR và IP cho pod; các chặng một gói đi qua và cách lần lỗi timeout; NAT gateway, gateway và interface endpoint, PrivateLink; peering và Transit Gateway (association, propagation, tham chiếu security group); VPN, Direct Connect; DNS nội bộ với VPC Resolver; kiểm soát chiều ra.",
+  "level": "senior",
+  "order": 17,
+  "minutes": 16,
+  "prerequisites": ["network-basics", "aws-core"],
+  "terms": ["cidr", "route-table", "nat-gateway", "vpc-endpoint", "privatelink", "vpc-peering", "transit-gateway", "security-group", "dns"],
+  "references": [
+    { "title": "AWS: How Transit Gateway works", "url": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html" },
+    { "title": "AWS: Share your services through PrivateLink", "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html" },
+    { "title": "AWS: Site-to-Site VPN quotas", "url": "https://docs.aws.amazon.com/vpn/latest/s2svpn/vpn-limits.html" },
+    { "title": "Amazon Route 53 VPC Resolver", "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "troubleshoot", "file": "troubleshoot.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bạn thiết kế mạng cho một tổ chức 40 tài khoản AWS, ba region, một data center thế nào?\" Bảng phân bổ CIDR không trùng cho mọi nơi (IPAM); một tài khoản network giữ Transit Gateway mỗi region, chia sẻ qua RAM, route table tách prod/non-prod/shared; VPC egress tập trung có Network Firewall; Direct Connect hai điểm kết nối kèm VPN dự phòng; DNS nội bộ qua VPC Resolver endpoint ở VPC shared, rule chia sẻ cho mọi tài khoản; service cần chia sẻ hẹp giữa team thì PrivateLink. Nói thêm giá: Transit Gateway tính theo attachment và GB, nên lưu lượng lớn giữa hai VPC cố định có thể đi peering." },
+    { "type": "callout", "style": "warning", "markdown": "Đừng mở security group hay NACL theo `0.0.0.0/0` \"cho chắc\" khi gỡ lỗi kết nối rồi quên đóng. Dùng Reachability Analyzer để biết chính xác chặng nào chặn, sửa đúng chặng đó, và để IaC quản lý luật để thay đổi tạm thời bị phát hiện như drift." }
+  ]
+}

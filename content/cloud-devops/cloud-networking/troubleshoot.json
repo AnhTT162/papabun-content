@@ -1,0 +1,106 @@
+{
+  "$schema": "../../../schema/blocks/troubleshoot.schema.json",
+  "title": "Service mới không gọi được database ở VPC khác qua Transit Gateway",
+  "symptom": "Service `billing` vừa được dựng trong VPC mới `10.20.0.0/16` (tài khoản billing). Nó cần gọi PostgreSQL trong VPC `10.10.0.0/16` của tài khoản data. Cả hai VPC đã gắn vào cùng Transit Gateway; team mạng nói \"đã nối xong\". Từ pod billing: `java.net.SocketTimeoutException: Connect timed out` sau 5 giây khi mở kết nối tới `10.10.42.15:5432`. Các service cũ trong VPC `10.30.0.0/16` vẫn gọi database đó bình thường.",
+  "steps": [
+    {
+      "id": "start",
+      "evidence": "$ nc -vz -w 3 10.10.42.15 5432      (từ pod billing)\nnc: connect to 10.10.42.15 port 5432 (tcp) timed out: Operation now in progress\n\n$ nc -vz -w 3 10.10.42.15 5432      (từ một pod trong VPC 10.30.0.0/16)\nConnection to 10.10.42.15 5432 port [tcp/postgresql] succeeded!",
+      "evidenceFormat": "monospace",
+      "question": "Timeout, không phải refused. Bắt đầu kiểm ở đâu?",
+      "choices": [
+        {
+          "label": "Lần đường đi của gói theo từng chặng: route, NACL, security group, cả chiều đi lẫn chiều về",
+          "quality": "good",
+          "feedback": "Đúng. Timeout nghĩa là gói hoặc gói trả lời bị bỏ lặng lẽ ở đâu đó trên đường. Database vẫn phục vụ VPC khác, nên vấn đề nằm ở phần riêng của VPC mới.",
+          "next": "routes"
+        },
+        {
+          "label": "Kiểm `max_connections` và log của PostgreSQL",
+          "quality": "poor",
+          "feedback": "Pod ở VPC khác vẫn kết nối được, và database hết kết nối sẽ từ chối sau khi TCP đã thông chứ không timeout ở bước connect.",
+          "next": "routes"
+        },
+        {
+          "label": "Tăng connect timeout của JDBC lên 30 giây",
+          "quality": "poor",
+          "feedback": "Gói bị bỏ thì chờ bao lâu cũng vậy; chỉ làm request treo lâu hơn.",
+          "next": "routes"
+        }
+      ]
+    },
+    {
+      "id": "routes",
+      "evidence": "Route table subnet app của VPC billing (10.20.0.0/16):\n  10.20.0.0/16   local\n  10.0.0.0/8     tgw-0a1b2c (Transit Gateway)\n  0.0.0.0/0      nat-...\n\nTransit Gateway route table \"prod\" (association: VPC billing, VPC data, VPC 10.30):\n  10.10.0.0/16   attachment VPC data      propagated\n  10.30.0.0/16   attachment VPC 10.30     propagated\n  (không có 10.20.0.0/16)\n\nRoute table subnet database của VPC data (10.10.0.0/16):\n  10.10.0.0/16   local\n  10.30.0.0/16   tgw-0a1b2c\n  (không có 10.20.0.0/16)",
+      "evidenceFormat": "monospace",
+      "question": "Chiều đi có route. Bạn thấy gì ở chiều về?",
+      "choices": [
+        {
+          "label": "Gói trả lời không có đường về 10.20.0.0/16: thiếu propagation trên Transit Gateway và thiếu route trong subnet database",
+          "quality": "good",
+          "feedback": "Đúng. Không có route nào về 10.20.0.0/16, cả ở route table của subnet database lẫn route table của Transit Gateway: kể cả khi SYN được cho vào, SYN-ACK sẽ bị bỏ. Đây là lỗi thứ nhất; có thể còn lỗi khác bị nó che, như security group.",
+          "next": "fix-routes"
+        },
+        {
+          "label": "Chiều đi có route nên vấn đề phải là security group",
+          "quality": "ok",
+          "feedback": "Security group cũng cần kiểm, nhưng ở đây có bằng chứng rõ hơn: không có đường nào về 10.20.0.0/16. Đừng bỏ qua chiều về.",
+          "next": "sg"
+        }
+      ]
+    },
+    {
+      "id": "sg",
+      "evidence": "Security group của database (sg-db):\n  inbound 5432  from sg-app-30   (security group của các service VPC 10.30)\n  inbound 5432  from 10.30.0.0/16\n\nVPC Flow Logs của ENI database, 5 phút qua:\n  10.20.7.31 -> 10.10.42.15:5432  REJECT\n  (không có ACCEPT nào từ 10.20.x.x)",
+      "evidenceFormat": "monospace",
+      "question": "Security group của database không cho 10.20.0.0/16. Sửa luật là đủ chưa?",
+      "choices": [
+        {
+          "label": "Chưa: thêm luật xong vẫn phải kiểm route chiều về",
+          "quality": "good",
+          "feedback": "Đúng. Mở luật thì SYN vào được, nhưng SYN-ACK vẫn cần route về VPC billing.",
+          "next": "fix-routes"
+        }
+      ]
+    },
+    {
+      "id": "fix-routes",
+      "evidence": "Đã sửa:\n  - Bật propagation của attachment VPC billing vào Transit Gateway route table \"prod\"\n  - Route table subnet database: 10.20.0.0/16 -> tgw-0a1b2c\n\n$ nc -vz -w 3 10.10.42.15 5432      (từ pod billing)\nnc: connect to 10.10.42.15 port 5432 (tcp) timed out: Operation now in progress\n\nVPC Flow Logs của ENI database:\n  10.20.7.31 -> 10.10.42.15:5432  REJECT",
+      "evidenceFormat": "monospace",
+      "question": "Route đã đủ hai chiều mà vẫn timeout, flow log ghi REJECT ở database. Tiếp theo?",
+      "choices": [
+        {
+          "label": "Xem security group của database: nó chỉ cho SG của các service cũ và dải 10.30.0.0/16",
+          "quality": "good",
+          "feedback": "Đúng. REJECT ở ENI đích là security group hoặc NACL chặn.",
+          "next": "fix-sg"
+        },
+        {
+          "label": "Restart Transit Gateway attachment để áp route mới",
+          "quality": "poor",
+          "feedback": "Route áp ngay khi thay đổi, không cần restart; flow log REJECT chỉ thẳng vào lớp lọc ở đích.",
+          "next": "fix-sg"
+        }
+      ]
+    },
+    {
+      "id": "fix-sg",
+      "evidence": "Thử 1: thêm luật inbound 5432 from sg-billing (security group của VPC billing, tài khoản khác)\n  -> nc vẫn timeout, flow log vẫn REJECT\n\n$ aws ec2 describe-transit-gateways --query 'TransitGateways[0].Options.SecurityGroupReferencingSupport'\n\"disable\"\n\nThử 2: thay bằng luật inbound 5432 from 10.20.0.0/20 (subnet app của billing, chứa 10.20.7.31)\n  -> Connection to 10.10.42.15 5432 port [tcp/postgresql] succeeded!",
+      "evidenceFormat": "monospace",
+      "question": "Đã thông. Tổng kết?",
+      "choices": [
+        {
+          "label": "Xem kết luận",
+          "quality": "good",
+          "feedback": "Ghi lại để lần sau gắn VPC mới không lặp lại.",
+          "next": "root-cause"
+        }
+      ]
+    },
+    {
+      "id": "root-cause",
+      "evidence": "**Nguyên nhân**: có ba lỗ hổng chồng nhau, mỗi cái đều cho ra cùng một triệu chứng timeout: (1) attachment của VPC mới chưa propagate vào route table của Transit Gateway; (2) route table subnet database chưa có route về VPC mới; (3) security group của database không cho dải của VPC mới. Luật tham chiếu security group của VPC khác chỉ chạy khi bật security group referencing ở cả Transit Gateway lẫn attachment.\n\n**Cách điều tra hiệu quả**: Reachability Analyzer chỉ ra chặng chặn theo cấu hình mà không cần thử từng cái, nhưng chỉ một chiều: chạy cả chiều nguồn tới đích lẫn chiều ngược lại; VPC Flow Logs (`REJECT`) xác nhận gói tới đâu. Luôn kiểm cả chiều về.\n\n**Phòng ngừa**: dựng VPC và attachment bằng IaC theo module chuẩn (route, propagation, prefix list cho SG); dùng managed prefix list cho \"các dải của prod\" để thêm VPC chỉ sửa một chỗ; thêm kiểm tra kết nối tự động (Reachability Analyzer hay synthetic check) vào pipeline dựng môi trường.",
+      "evidenceFormat": "markdown"
+    }
+  ]
+}

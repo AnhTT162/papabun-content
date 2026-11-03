@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Dọn quyền AWS cho một công ty ví điện tử trước đợt kiểm toán",
+  "prompt": "Công ty ví điện tử 120 kỹ sư, mọi thứ chạy trong **một** tài khoản AWS từ năm đầu: prod, staging, dev chung một tài khoản, phân biệt bằng tag. Hiện trạng: 64 IAM user có access key (nhiều key hơn 2 năm), nhóm `developers` có `AdministratorAccess`, CI dùng access key của user `ci-bot` lưu trong secret của CI, root user có MFA nhưng mật khẩu nằm trong một file chung, CloudTrail bật nhưng log nằm trong bucket cùng tài khoản. Dữ liệu nhạy cảm: dữ liệu thẻ thanh toán (đã token hoá một phần) trong hệ thống thanh toán, và thông tin định danh khách hàng (eKYC) trong S3 và RDS. Kiểm toán PCI DSS cho phần dữ liệu thẻ và đánh giá tuân thủ bảo vệ dữ liệu cá nhân cho eKYC diễn ra sau 4 tháng. Đề xuất kiến trúc tài khoản, quyền và các bước chuyển đổi.",
+  "hints": [
+    "Ranh giới nào đủ mạnh để một lỗi quyền ở dev không chạm được dữ liệu eKYC của prod?",
+    "Con người, CI và service mỗi bên nên lấy credential từ đâu để không còn access key dài hạn?",
+    "Ai trong công ty có thể xoá dấu vết CloudTrail hiện nay, và làm sao để không ai làm được?",
+    "Không thể chuyển 120 người và mọi hệ thống trong một tuần: thứ tự nào giảm rủi ro nhanh nhất?"
+  ],
+  "solution": "**Kiến trúc tài khoản** (AWS Organizations, có thể dựng bằng Control Tower): tài khoản quản trị tổ chức không chạy workload; OU Security gồm tài khoản Log Archive (CloudTrail cả tổ chức, Config, S3 bật Object Lock) và Audit (GuardDuty, Security Hub, Access Analyzer quản trị tập trung); OU Infrastructure gồm tài khoản Network (Transit Gateway, egress) và Shared Services (CI runner, registry); OU Workloads chia Prod (tài khoản riêng cho môi trường dữ liệu thẻ để phạm vi PCI DSS hẹp nhất có thể, tài khoản riêng cho eKYC, tài khoản cho phần còn lại của ví), Non-prod (staging, dev); OU Sandbox cho thử nghiệm có ngân sách.\n\n**Guardrail bằng SCP**: không rời tổ chức; không tắt hay sửa CloudTrail, GuardDuty, Config; chỉ các region được phép; cấm tạo IAM user và access key ở OU Workloads; cấm dùng root của tài khoản thành viên. **RCP** cho data perimeter: S3, KMS, Secrets Manager của OU Prod chỉ cho principal trong tổ chức (`aws:PrincipalOrgID`), kèm ngoại lệ cho service principal của AWS (`aws:PrincipalIsAWSService`, giới hạn bằng `aws:SourceOrgID`) và cho các role mà đối tác được assume; RCP chỉ hỗ trợ một số dịch vụ.\n\n**Người**: IAM Identity Center nối IdP của công ty; permission set theo vai trò (ReadOnly ở prod cho dev, Operator cho on-call, Admin chỉ qua just-in-time có duyệt và có hạn); không còn IAM user. Root user của mỗi tài khoản có MFA phần cứng, mật khẩu trong két, cảnh báo mỗi lần đăng nhập; vài tài khoản break-glass có giám sát.\n\n**CI**: OIDC từ hệ thống CI, trust policy giới hạn `sub` theo repo và nhánh được bảo vệ, role deploy riêng cho từng tài khoản; xoá user `ci-bot` và key của nó.\n\n**Service**: mỗi service một role (task role, EKS Pod Identity), quyền tới đúng bucket, prefix, khoá KMS; dữ liệu thẻ và eKYC mã hoá bằng khoá KMS do khách hàng quản lý, key policy chỉ cho đúng role của service eKYC và qua đúng dịch vụ (`kms:ViaService`), tách quyền quản trị khoá khỏi quyền dùng khoá.\n\n**Lộ trình 4 tháng**: tuần 1–2 việc rẻ mà giảm rủi ro lớn ngay trong tài khoản hiện có: đổi mật khẩu root và bỏ file chung, thu hồi key không dùng hơn 90 ngày (Access Analyzer, credential report), thay `AdministratorAccess` của nhóm developers bằng policy có điều kiện chặn tài nguyên mang tag prod (tạm thời, trước khi tách tài khoản), chuyển CloudTrail sang bucket có Object Lock mà developers không có quyền. Tuần 3–4: dựng Organizations, tài khoản Log Archive và Audit, chuyển sang org trail; Identity Center và SSO cho người dùng. Tháng 2: bật SCP guardrail cho OU mới (trước tiên ở OU Sandbox và Non-prod để thử), tách môi trường dữ liệu thẻ và eKYC sang tài khoản riêng trước vì là phạm vi kiểm toán, CI sang OIDC. Tháng 3: tách phần còn lại của prod, bật SCP cấm IAM user và access key ở OU Prod để có ít nhất vài tuần bằng chứng vận hành. Tháng 4: Access Analyzer tìm quyền không dùng và chia sẻ ra ngoài, chuẩn bị bằng chứng cho kiểm toán.",
+  "tradeoffs": [
+    {
+      "option": "Nhiều tài khoản với Organizations và SCP",
+      "pros": [
+        "Ranh giới cứng giữa prod, non-prod và dữ liệu nhạy cảm",
+        "Thu hẹp phạm vi kiểm toán PCI DSS về tài khoản dữ liệu thẻ"
+      ],
+      "cons": [
+        "Chuyển tài nguyên đang chạy sang tài khoản mới tốn công",
+        "Cần mạng và DNS nối các tài khoản, thêm chi phí vận hành"
+      ]
+    },
+    {
+      "option": "Giữ một tài khoản, phân quyền theo tag (ABAC)",
+      "pros": [
+        "Không phải di chuyển hệ thống",
+        "Ít hạ tầng phải dựng thêm"
+      ],
+      "cons": [
+        "Một policy sai hay một tag sai là vượt ranh giới prod",
+        "Khó chứng minh cách ly với kiểm toán viên, quota và giới hạn dùng chung"
+      ]
+    }
+  ]
+}

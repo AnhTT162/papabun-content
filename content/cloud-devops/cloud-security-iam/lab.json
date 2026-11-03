@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Liệt kê được file mà không tải được file nào",
+  "context": "Dữ liệu giao dịch nằm trong bucket `txn-exports` ở tài khoản Data (`111122223333`), mã hoá SSE-KMS bằng khoá do khách hàng quản lý `alias/txn-exports`. Service báo cáo chạy trên ECS ở tài khoản Analytics (`444455556666`) với task role `reporting-task`. Đội data đã thêm bucket policy cho role đó; đội analytics đã thêm quyền S3 vào role.",
+  "buggyCode": "// Bucket policy của txn-exports (tài khoản Data)\n{\n  \"Effect\": \"Allow\",\n  \"Principal\": { \"AWS\": \"arn:aws:iam::444455556666:role/reporting-task\" },\n  \"Action\": [\"s3:ListBucket\", \"s3:GetObject\"],\n  \"Resource\": [\"arn:aws:s3:::txn-exports\", \"arn:aws:s3:::txn-exports/*\"]\n}\n\n// Permission policy của role reporting-task (tài khoản Analytics)\n{\n  \"Effect\": \"Allow\",\n  \"Action\": [\"s3:ListBucket\", \"s3:GetObject\"],\n  \"Resource\": [\"arn:aws:s3:::txn-exports\", \"arn:aws:s3:::txn-exports/*\"]\n}\n\n// Key policy của alias/txn-exports (tài khoản Data), chỉ có statement mặc định\n{\n  \"Sid\": \"Enable IAM User Permissions\",\n  \"Effect\": \"Allow\",\n  \"Principal\": { \"AWS\": \"arn:aws:iam::111122223333:root\" },\n  \"Action\": \"kms:*\",\n  \"Resource\": \"*\"\n}",
+  "symptom": {
+    "description": "Service liệt kê được danh sách file nhưng mọi lần tải file đều bị từ chối. Đội data kiểm lại bucket policy thấy đúng; đội analytics kiểm lại role thấy đúng. Log của service và CloudTrail của tài khoản Data:",
+    "output": "ListObjectsV2 txn-exports prefix=2026/11/   -> 200, 31 objects\nGetObject   txn-exports/2026/11/03.parquet -> 403 AccessDenied\n\nCloudTrail (tài khoản Data), eventSource kms.amazonaws.com:\n  eventName:    Decrypt\n  userIdentity: arn:aws:sts::444455556666:assumed-role/reporting-task/1f2e...\n  errorCode:    AccessDenied\n  errorMessage: User: arn:aws:sts::444455556666:assumed-role/reporting-task/1f2e... is not authorized to perform: kms:Decrypt on resource: arn:aws:kms:ap-southeast-1:111122223333:key/7c1a... because no resource-based policy allows the kms:Decrypt action"
+  },
+  "diagnosis": {
+    "question": "Vì sao `ListObjects` chạy mà `GetObject` bị từ chối?",
+    "options": [
+      "Đọc object SSE-KMS cần `kms:Decrypt`, mà khoá chưa cho role khác tài khoản",
+      "SCP của tài khoản Analytics chặn mọi lời gọi KMS sang tài khoản khác",
+      "Request khác tài khoản chỉ xét bucket policy, nên phải thêm `kms:*` vào đó",
+      "SSE-KMS không hỗ trợ đọc từ tài khoản khác, phải chuyển sang SSE-S3"
+    ],
+    "answer": 0,
+    "explanation": "`ListObjects` chỉ đọc metadata của bucket nên không cần khoá. `GetObject` với object SSE-KMS khiến S3 gọi `kms:Decrypt` thay mặt role, và lời gọi đó được đánh giá như một request khác tài khoản tới khoá ở tài khoản Data: key policy phải cho phép role (hay tài khoản Analytics), và identity policy của role phải cho `kms:Decrypt`. Statement mặc định của key policy chỉ cho principal trong tài khoản Data, nên CloudTrail ghi \"no resource-based policy allows\". Không có SCP nào trong đề, và CloudTrail nói rõ lý do là thiếu resource-based policy; bucket policy không cấp được quyền trên khoá KMS. SSE-KMS chia sẻ khác tài khoản được với khoá do khách hàng quản lý (khoá `aws/s3` do AWS quản lý thì không)."
+  },
+  "fix": {
+    "code": "// Thêm vào key policy của alias/txn-exports (tài khoản Data)\n{\n  \"Sid\": \"AllowReportingDecryptViaS3\",\n  \"Effect\": \"Allow\",\n  \"Principal\": { \"AWS\": \"arn:aws:iam::444455556666:role/reporting-task\" },\n  \"Action\": \"kms:Decrypt\",\n  \"Resource\": \"*\",\n  \"Condition\": {\n    \"StringEquals\": { \"kms:ViaService\": \"s3.ap-southeast-1.amazonaws.com\" }\n  }\n}\n\n// Thêm vào permission policy của role reporting-task (tài khoản Analytics)\n{\n  \"Effect\": \"Allow\",\n  \"Action\": \"kms:Decrypt\",\n  \"Resource\": \"arn:aws:kms:ap-southeast-1:111122223333:key/7c1a...\",\n  \"Condition\": {\n    \"StringEquals\": { \"kms:ViaService\": \"s3.ap-southeast-1.amazonaws.com\" }\n  }\n}\n\n// Và thu hẹp quyền S3 của role về đúng prefix cần đọc\n// \"Resource\": \"arn:aws:s3:::txn-exports/2026/*\"",
+    "explanation": "Khác tài khoản thì cả hai phía phải cho phép: key policy ở tài khoản sở hữu khoá cho role bên kia, và identity policy của role cho `kms:Decrypt` trên đúng ARN khoá (alias không dùng được trong `Resource` cho quyền khác tài khoản). Điều kiện `kms:ViaService` giới hạn role chỉ giải mã được qua S3, không gọi thẳng KMS để giải mã thứ khác bằng khoá này. Chỉ cấp `kms:Decrypt`, không `kms:*`. Lần sau, dùng IAM Access Analyzer kiểm policy trước khi áp, và tra CloudTrail của tài khoản sở hữu khoá: lời từ chối kèm thông tin về key policy hiện ở đó."
+  }
+}

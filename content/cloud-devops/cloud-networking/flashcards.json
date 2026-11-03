@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "two-way", "front": "Vì sao kết nối giữa hai VPC timeout dù route chiều đi đã có?", "back": "Gói trả lời cũng cần route về; thiếu route chiều về ở subnet đích hay Transit Gateway thì SYN-ACK bị bỏ, phía gọi thấy timeout." },
+    { "id": "gateway-endpoint", "front": "Gateway endpoint khác interface endpoint thế nào?", "back": "Gateway endpoint (S3, DynamoDB) là một route, miễn phí. Interface endpoint là ENI có IP private, tính theo giờ và GB, cho các dịch vụ khác và PrivateLink." },
+    { "id": "privatelink", "front": "PrivateLink hợp khi nào?", "back": "Khi chỉ cần gọi một service của VPC khác (hay của SaaS): một chiều, một cổng, chịu được CIDR trùng; phía cung cấp đặt service sau NLB." },
+    { "id": "peering", "front": "Ba giới hạn của VPC peering?", "back": "Một-một và không bắc cầu, không được trùng CIDR, tham chiếu security group chỉ trong cùng region." },
+    { "id": "tgw-tables", "front": "Association và propagation trên Transit Gateway là gì?", "back": "Association: attachment dùng route table nào để tìm đường. Propagation: CIDR của attachment được đẩy vào route table nào." },
+    { "id": "tgw-sg", "front": "Luật security group tham chiếu SG của VPC khác qua Transit Gateway chạy khi nào?", "back": "Chỉ khi bật security group referencing ở cả Transit Gateway lẫn attachment, và chỉ cho luật inbound." },
+    { "id": "vpn-vs-dx", "front": "Site-to-Site VPN khác Direct Connect thế nào?", "back": "VPN dựng nhanh, qua Internet, tunnel chuẩn tới 1,25 Gbps, có mã hoá IPsec. Direct Connect là đường riêng, ổn định, mất hàng tuần để có, không tự mã hoá." },
+    { "id": "resolver", "front": "On-premises phân giải tên trong private hosted zone thế nào?", "back": "Qua inbound endpoint của VPC Resolver; chiều ngược lại dùng outbound endpoint với forwarding rule." },
+    { "id": "pod-ip", "front": "EKS hết IP trong subnet thì làm gì?", "back": "Prefix delegation (mỗi ô IP của ENI thành một khối /28) hoặc thêm CIDR phụ trong dải 100.64.0.0/10 cho pod." },
+    { "id": "debug-tools", "front": "Hai công cụ AWS để tìm chặng chặn kết nối?", "back": "Reachability Analyzer phân tích đường đi theo cấu hình; VPC Flow Logs ghi ACCEPT/REJECT thật ở từng ENI." }
+  ]
+}

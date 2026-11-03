@@ -1,0 +1,141 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Nhiều VPC, một data center: các cửa giữa các mạng",
+  "nodes": [
+    {
+      "id": "app",
+      "label": "VPC app (prod)",
+      "kind": "service",
+      "x": 0.1,
+      "y": 0.05
+    },
+    {
+      "id": "tgw",
+      "label": "Transit Gateway",
+      "kind": "generic",
+      "x": 0.85,
+      "y": 0.05
+    },
+    {
+      "id": "shared",
+      "label": "VPC shared (DNS, egress)",
+      "kind": "service",
+      "x": 0.85,
+      "y": 0.5
+    },
+    {
+      "id": "aws",
+      "label": "S3, Secrets Manager",
+      "kind": "external",
+      "x": 0.1,
+      "y": 0.5
+    },
+    {
+      "id": "partner",
+      "label": "SaaS đối tác",
+      "kind": "external",
+      "x": 0.1,
+      "y": 0.95
+    },
+    {
+      "id": "onprem",
+      "label": "Data center",
+      "kind": "database",
+      "x": 0.85,
+      "y": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "id": "app-tgw",
+      "from": "app",
+      "to": "tgw",
+      "label": "attachment"
+    },
+    {
+      "id": "tgw-shared",
+      "from": "tgw",
+      "to": "shared",
+      "label": "route table shared"
+    },
+    {
+      "id": "app-aws",
+      "from": "app",
+      "to": "aws",
+      "label": "VPC endpoint"
+    },
+    {
+      "id": "app-partner",
+      "from": "app",
+      "to": "partner",
+      "label": "PrivateLink"
+    },
+    {
+      "id": "tgw-onprem",
+      "from": "tgw",
+      "to": "onprem",
+      "label": "Direct Connect + VPN"
+    }
+  ],
+  "steps": [
+    {
+      "caption": "VPC app gắn vào Transit Gateway. Route table của subnet trỏ dải CIDR nội bộ về Transit Gateway; route table của Transit Gateway quyết định VPC này đi được tới đâu.",
+      "show": [
+        "app",
+        "tgw",
+        "app-tgw"
+      ],
+      "highlight": [
+        "app-tgw"
+      ]
+    },
+    {
+      "caption": "VPC shared chứa resolver endpoint và egress kiểm soát. Prod và dev dùng hai route table khác nhau trên Transit Gateway nên không nhìn thấy nhau.",
+      "show": [
+        "shared",
+        "tgw-shared"
+      ],
+      "highlight": [
+        "tgw-shared"
+      ]
+    },
+    {
+      "caption": "Gọi S3 qua gateway endpoint (miễn phí), Secrets Manager qua interface endpoint: traffic không ra Internet, không trả phí xử lý của NAT.",
+      "show": [
+        "aws",
+        "app-aws"
+      ],
+      "highlight": [
+        "app-aws"
+      ]
+    },
+    {
+      "caption": "SaaS của đối tác đứng sau NLB của họ; app tạo interface endpoint tới endpoint service đó. Chỉ một chiều, một cổng, CIDR trùng cũng không sao.",
+      "show": [
+        "partner",
+        "app-partner"
+      ],
+      "highlight": [
+        "app-partner"
+      ]
+    },
+    {
+      "caption": "Data center nối qua Direct Connect, VPN làm đường dự phòng, BGP chọn đường. Direct Connect không tự mã hoá: dùng MACsec, VPN trên Direct Connect hoặc TLS.",
+      "show": [
+        "onprem",
+        "tgw-onprem"
+      ],
+      "highlight": [
+        "tgw-onprem"
+      ]
+    },
+    {
+      "caption": "Một kết nối từ app tới data center cần route đúng ở cả hai chiều: route table của subnet, route table của Transit Gateway, và route quảng bá về phía data center.",
+      "show": [],
+      "highlight": [
+        "app-tgw",
+        "tgw-onprem"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "cloud-security-iam",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "cloud-devops",
+  "title": "Bảo mật trên cloud & IAM",
+  "summary": "Cách IAM đánh giá request (Deny tường minh, SCP và RCP, identity và resource policy, boundary), quyền khác tài khoản cần cả hai phía, key policy của KMS, trust policy và External ID, tách tài khoản bằng Organizations, danh tính cho người, CI và service không còn access key, phát hiện bằng CloudTrail, GuardDuty, Access Analyzer.",
+  "level": "senior",
+  "order": 18,
+  "minutes": 16,
+  "prerequisites": ["aws-core", "security-architecture"],
+  "terms": ["least-privilege", "identity-based-policy", "resource-based-policy", "service-control-policy", "resource-control-policy", "key-policy", "trust-policy", "permissions-boundary", "confused-deputy", "iam-role", "kms"],
+  "references": [
+    { "title": "AWS IAM: Policy evaluation logic", "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html" },
+    { "title": "AWS IAM: Cross-account policy evaluation logic", "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html" },
+    { "title": "AWS Organizations: Resource control policies", "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html" },
+    { "title": "AWS KMS: Key policies", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Access key của một kỹ sư bị lộ trên GitHub, bạn làm gì?\" Theo thứ tự: vô hiệu hoá key ngay và gắn policy cách ly (deny-all) cho user đó (không chờ điều tra); tra CloudTrail theo access key ID để biết nó đã gọi gì, từ IP nào, từ khi nào; thu hồi phiên đang chạy của role nếu kẻ tấn công đã assume role khác (revoke sessions); kiểm tài nguyên lạ (EC2 đào coin, IAM user hay key mới, policy bị sửa); xoay mọi secret mà key đó đọc được. Sau sự cố: vì sao còn access key dài hạn, chuyển người dùng sang SSO, bật secret scanning chặn push, và SCP cấm tạo access key." },
+    { "type": "callout", "style": "warning", "markdown": "Viết `\"Principal\": \"*\"` trong bucket policy hay key policy kèm một điều kiện \"cho an toàn\" là chỗ dễ mở toang dữ liệu: điều kiện sai tên hoặc dùng sai toán tử (`StringLike` thay vì `StringEquals`, hay `ForAllValues` mà không kèm kiểm tra key có tồn tại: key vắng thì điều kiện vẫn đúng) là policy cho cả Internet. Dùng Access Analyzer để kiểm policy trước khi áp và để tìm tài nguyên chia sẻ ra ngoài tổ chức, và chặn ở tầng tổ chức bằng Block Public Access và RCP." }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "eval-order", "front": "IAM đánh giá request theo thứ tự nào?", "back": "Từ chối ngầm định; có Deny tường minh ở đâu là từ chối; RCP và SCP phải cho phép; cần Allow ở identity hoặc resource policy; không bị permissions boundary, session policy chặn." },
+    { "id": "cross-account", "front": "Request khác tài khoản được phép khi nào?", "back": "Khi cả hai tài khoản cho phép: identity policy ở tài khoản gọi và resource policy ở tài khoản sở hữu tài nguyên." },
+    { "id": "scp-vs-rcp", "front": "SCP và RCP khác nhau thế nào?", "back": "SCP giới hạn principal trong tài khoản thành viên làm được gì. RCP giới hạn tài nguyên của tài khoản thành viên bị làm gì, kể cả bởi principal bên ngoài. Cả hai không cấp quyền." },
+    { "id": "kms-key-policy", "front": "Vì sao IAM policy cho `kms:*` vẫn có thể không dùng được khoá KMS?", "back": "Key policy là nguồn quyền chính; IAM policy chỉ có hiệu lực khi key policy cho phép tài khoản dùng IAM." },
+    { "id": "s3-arn", "front": "ARN nào cho `s3:ListBucket` và cho `s3:GetObject`?", "back": "`ListBucket` trên ARN bucket (`arn:aws:s3:::name`); `GetObject` trên ARN object (`arn:aws:s3:::name/*`)." },
+    { "id": "trust-policy", "front": "Role có những policy nào?", "back": "Trust policy (ai được assume role) và permission policy (assume xong làm được gì)." },
+    { "id": "external-id", "front": "External ID trong trust policy chống gì?", "back": "Confused deputy: khách hàng khác của một bên thứ ba lừa bên đó assume role của bạn." },
+    { "id": "boundary", "front": "Permissions boundary dùng khi nào?", "back": "Khi cho đội khác tự tạo role mà không được leo quyền vượt trần; role họ tạo phải mang boundary." },
+    { "id": "management-account", "front": "Vì sao không chạy workload trong tài khoản quản trị của Organizations?", "back": "SCP và RCP không áp vào tài khoản đó, nên guardrail của tổ chức không bảo vệ được nó." },
+    { "id": "no-iam-users", "front": "Người, CI và service nên lấy credential AWS từ đâu?", "back": "Người: Identity Center qua SSO. CI: OIDC nhận role tạm thời. Service: role qua instance profile, task role hay EKS Pod Identity. Không access key dài hạn." }
+  ]
+}

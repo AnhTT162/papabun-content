@@ -39,7 +39,7 @@
       "meaning": "Hệ thống phân giải tên miền thành địa chỉ IP. Kết quả được cache ở nhiều tầng theo TTL của bản ghi.",
       "example": "Tra `shop.example.com` nhận về bản ghi A `203.0.113.10` với TTL 300 giây.",
       "related": ["rtt", "load-balancer"],
-      "topics": ["http-request-lifecycle", "slow-api", "network-basics", "dns-cdn", "design-web-crawler"]
+      "topics": ["http-request-lifecycle", "slow-api", "network-basics", "dns-cdn", "design-web-crawler", "cloud-networking"]
     },
     {
       "id": "rtt",
@@ -6205,7 +6205,7 @@
       "meaning": "Cách viết một dải IP bằng địa chỉ đầu và độ dài prefix: `/n` nghĩa là n bit đầu cố định, nên dải có 2^(32−n) địa chỉ IPv4.",
       "example": "`10.0.16.0/20` có 4.096 địa chỉ, từ `10.0.16.0` tới `10.0.31.255`.",
       "related": ["subnet", "ip-address"],
-      "topics": ["network-basics"]
+      "topics": ["network-basics", "cloud-networking"]
     },
     {
       "id": "private-ip",
@@ -6237,7 +6237,7 @@
       "meaning": "Bảng router dùng để chọn đường cho gói tin theo IP đích. Khi nhiều route cùng khớp, route có prefix dài nhất thắng; `0.0.0.0/0` là route mặc định.",
       "example": "Route `10.0.0.0/16 local` cho gói trong VPC, `0.0.0.0/0 → NAT gateway` cho gói ra Internet.",
       "related": ["subnet", "nat"],
-      "topics": ["network-basics"]
+      "topics": ["network-basics", "cloud-networking"]
     },
     {
       "id": "nat",
@@ -6253,7 +6253,7 @@
       "meaning": "Firewall ảo gắn vào interface mạng trên AWS, chỉ có luật cho phép. Nó stateful: cho chiều vào thì response tự được đi ra. Gói không khớp luật bị bỏ lặng lẽ nên phía gọi thấy timeout.",
       "example": "Security group của database cho phép TCP 5432 từ dải `10.0.1.0/24`.",
       "related": ["route-table", "subnet"],
-      "topics": ["network-basics", "security-architecture", "aws-core"]
+      "topics": ["network-basics", "security-architecture", "aws-core", "cloud-networking"]
     },
     {
       "id": "mtu",
@@ -10469,7 +10469,7 @@
       "meaning": "Nguyên tắc chỉ cấp đúng quyền cần cho việc cần làm, trong thời gian cần, không hơn.",
       "example": "Task role của ứng dụng chỉ đọc được một bucket và một secret; kỹ sư vào production bằng role có thời hạn thay vì user admin dùng chung.",
       "related": ["shared-responsibility-model", "zero-trust"],
-      "topics": ["well-architected", "security-architecture", "secret-management", "secure-sdlc", "aws-core"]
+      "topics": ["well-architected", "security-architecture", "secret-management", "secure-sdlc", "aws-core", "cloud-security-iam"]
     },
     {
       "id": "shared-responsibility-model",
@@ -11117,7 +11117,7 @@
       "meaning": "Đường kết nối riêng từ VPC tới dịch vụ AWS (S3, KMS, Secrets Manager) mà không đi qua internet. Bucket policy có thể chỉ nhận request qua một endpoint cụ thể.",
       "example": "Bucket KYC từ chối mọi request có `aws:SourceVpce` khác endpoint của VPC production.",
       "related": ["network-segmentation"],
-      "topics": ["security-architecture", "cost-finops"]
+      "topics": ["security-architecture", "cost-finops", "cloud-networking"]
     },
     {
       "id": "policy-enforcement-point",
@@ -11173,7 +11173,7 @@
       "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
-      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management", "data-privacy-pii"]
+      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management", "data-privacy-pii", "cloud-security-iam"]
     },
     {
       "id": "sre",
@@ -11389,7 +11389,7 @@
       "meaning": "Dịch vụ NAT quản lý của AWS cho máy trong subnet private ra ngoài. Tính phí theo giờ và theo mỗi GB xử lý, kể cả khi đích là dịch vụ AWS cùng region.",
       "example": "32 TB đi qua NAT mỗi tháng tốn khoảng 1.475 USD phí xử lý; chuyển phần đi S3 sang gateway endpoint thì gần như hết.",
       "related": ["nat", "vpc-endpoint"],
-      "topics": ["cost-finops", "cloud-fundamentals", "aws-core"]
+      "topics": ["cost-finops", "cloud-fundamentals", "aws-core", "cloud-networking"]
     },
     {
       "id": "cost-allocation-tag",
@@ -12989,7 +12989,7 @@
       "meaning": "Thành phần có quyền cao bị lừa làm việc thay một bên có quyền thấp, vì nó dùng quyền của chính nó thay vì quyền của người yêu cầu.",
       "example": "Service báo cáo dùng tài khoản service đọc mọi tenant, nên ai gọi nó với tenant_id khác cũng lấy được dữ liệu.",
       "related": ["token-exchange", "least-privilege"],
-      "topics": ["authorization-models", "api-security"]
+      "topics": ["authorization-models", "api-security", "cloud-security-iam"]
     },
     {
       "id": "owasp-api-top-10",
@@ -14109,7 +14109,7 @@
       "meaning": "Danh tính IAM không có mật khẩu hay key dài hạn; ai được phép \"đảm nhận\" role thì nhận credential tạm thời có quyền của role đó.",
       "example": "Task ECS của orders đảm nhận role `orders-task` chỉ được đọc bucket hoá đơn và một secret.",
       "related": ["instance-profile", "least-privilege"],
-      "topics": ["aws-core"]
+      "topics": ["aws-core", "cloud-security-iam"]
     },
     {
       "id": "instance-profile",
@@ -14382,6 +14382,86 @@
       "example": "`maxUnavailable: 1` cho Deployment 6 replica: drain chỉ lấy đi từng pod một.",
       "related": ["hpa", "cluster-autoscaler"],
       "topics": ["kubernetes-operations"]
+    },
+    {
+      "id": "privatelink",
+      "term": "PrivateLink",
+      "meaning": "Cách AWS cho một VPC gọi service đặt sau NLB ở VPC hay tài khoản khác qua interface endpoint có IP private; một chiều, chỉ cổng của service, chịu được CIDR trùng.",
+      "example": "SaaS observability nhận dữ liệu từ VPC khách hàng qua PrivateLink, không đi Internet.",
+      "related": ["vpc-endpoint", "transit-gateway"],
+      "topics": ["cloud-networking"]
+    },
+    {
+      "id": "vpc-peering",
+      "term": "VPC peering",
+      "meaning": "Kết nối mạng một-một giữa hai VPC, không bắc cầu, không cho CIDR trùng; cần route ở cả hai phía.",
+      "example": "VPC app peering với VPC data để đọc database, không phí theo giờ.",
+      "related": ["transit-gateway", "route-table"],
+      "topics": ["cloud-networking"]
+    },
+    {
+      "id": "transit-gateway",
+      "term": "Transit Gateway",
+      "meaning": "Router cấp region của AWS nối nhiều VPC, VPN và Direct Connect theo mô hình hub; route table riêng quyết định attachment nào đi được tới đâu.",
+      "example": "Prod và dev gắn cùng Transit Gateway nhưng dùng hai route table nên không thấy nhau.",
+      "related": ["vpc-peering", "privatelink"],
+      "topics": ["cloud-networking"]
+    },
+    {
+      "id": "identity-based-policy",
+      "term": "Identity-based policy",
+      "meaning": "Policy IAM gắn vào user, group hay role, nói principal đó được làm gì trên tài nguyên nào.",
+      "example": "Permission policy của role `orders-task` cho `s3:GetObject` trên `arn:aws:s3:::invoices/*`.",
+      "related": ["resource-based-policy", "iam-role"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "resource-based-policy",
+      "term": "Resource-based policy",
+      "meaning": "Policy gắn vào chính tài nguyên (bucket policy, key policy, queue policy), nói principal nào được làm gì với tài nguyên đó; cách chuẩn để chia sẻ khác tài khoản.",
+      "example": "Bucket policy của `txn-exports` cho role của tài khoản Analytics đọc object.",
+      "related": ["identity-based-policy", "key-policy"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "service-control-policy",
+      "term": "Service control policy (SCP)",
+      "meaning": "Policy của AWS Organizations giới hạn tối đa những gì principal trong tài khoản thành viên được làm; không cấp quyền, không áp vào tài khoản quản trị tổ chức.",
+      "example": "SCP cấm `cloudtrail:StopLogging` và mọi region ngoài ap-southeast-1.",
+      "related": ["resource-control-policy", "least-privilege"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "resource-control-policy",
+      "term": "Resource control policy (RCP)",
+      "meaning": "Policy của AWS Organizations giới hạn những gì có thể làm với tài nguyên của tài khoản thành viên, kể cả bởi principal bên ngoài; nền của data perimeter.",
+      "example": "RCP chỉ cho principal trong tổ chức (`aws:PrincipalOrgID`) truy cập S3 của OU Prod.",
+      "related": ["service-control-policy"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "key-policy",
+      "term": "Key policy (KMS)",
+      "meaning": "Resource policy bắt buộc của mỗi khoá KMS, là nguồn quyền chính; IAM policy chỉ có hiệu lực với khoá khi key policy cho phép tài khoản dùng IAM.",
+      "example": "Key policy chỉ cho role `payments-app` dùng khoá qua S3 (`kms:ViaService`).",
+      "related": ["kms", "resource-based-policy"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "trust-policy",
+      "term": "Trust policy",
+      "meaning": "Resource policy của một IAM role, nói principal nào được assume role đó (và với điều kiện gì).",
+      "example": "Trust policy cho OIDC của CI assume role deploy khi `sub` là repo `orders`, nhánh `main`.",
+      "related": ["iam-role", "confused-deputy"],
+      "topics": ["cloud-security-iam"]
+    },
+    {
+      "id": "permissions-boundary",
+      "term": "Permissions boundary",
+      "meaning": "Trần quyền gắn vào user hay role: quyền cấp qua identity policy (và resource policy cấp cho ARN của role) chỉ có hiệu lực trong phạm vi boundary.",
+      "example": "Đội dự án được tạo role, nhưng role nào cũng phải gắn boundary cấm IAM và KMS quản trị.",
+      "related": ["identity-based-policy", "least-privilege"],
+      "topics": ["cloud-security-iam"]
     }
   ]
 }

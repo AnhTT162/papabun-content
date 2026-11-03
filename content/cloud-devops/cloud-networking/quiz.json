@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "cidr-match-output",
+      "kind": "output",
+      "prompt": "Route table của subnet có ba route. Đoạn code chọn route theo prefix dài nhất cho ba IP đích. Chương trình in ra gì?",
+      "code": "record Route(String cidr, String target) {}\n\nstatic long ip(String s) {\n    long v = 0;\n    for (String p : s.split(\"\\\\.\")) v = v << 8 | Integer.parseInt(p);\n    return v;\n}\n\nstatic String pick(List<Route> table, String dst) {\n    Route best = null; int bestLen = -1;\n    for (Route r : table) {\n        String[] parts = r.cidr().split(\"/\");\n        int len = Integer.parseInt(parts[1]);\n        long mask = len == 0 ? 0 : (0xFFFFFFFFL << (32 - len)) & 0xFFFFFFFFL;\n        if ((ip(dst) & mask) == (ip(parts[0]) & mask) && len > bestLen) { best = r; bestLen = len; }\n    }\n    return best.target();\n}\n\npublic static void main(String[] args) {\n    List<Route> table = List.of(\n        new Route(\"10.20.0.0/16\", \"local\"),\n        new Route(\"10.0.0.0/8\", \"tgw\"),\n        new Route(\"0.0.0.0/0\", \"nat\"));\n    for (String dst : List.of(\"10.20.5.9\", \"10.10.42.15\", \"52.95.110.1\"))\n        System.out.print(pick(table, dst) + \" \");\n}",
+      "options": [
+        "local tgw nat",
+        "local local nat",
+        "tgw tgw nat",
+        "local tgw tgw"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi IP khớp nhiều route, router chọn prefix dài nhất. `10.20.5.9` khớp cả `/16`, `/8`, `/0`: chọn `/16` local. `10.10.42.15` không thuộc `10.20.0.0/16` nhưng thuộc `10.0.0.0/8`: đi Transit Gateway. `52.95.110.1` chỉ khớp `0.0.0.0/0`: ra NAT (đã chạy với JDK 27). Nếu đó là IP của S3 thì traffic này trả phí xử lý của NAT; gateway endpoint thêm route theo prefix list của S3, cụ thể hơn `/0`, nên được chọn trước."
+    },
+    {
+      "id": "peering-transitive",
+      "kind": "single",
+      "prompt": "VPC A peering với VPC B, VPC B peering với VPC C, route đã thêm đầy đủ cho từng cặp. Service trong A gọi database trong C. Kết quả?",
+      "options": [
+        "Không gọi được: peering không bắc cầu qua B",
+        "Gọi được vì B có route tới cả A và C",
+        "Gọi được nếu bật DNS resolution trên cả hai peering",
+        "Gọi được nếu security group của C cho phép CIDR của A"
+      ],
+      "answer": 0,
+      "explanation": "Peering là quan hệ một-một: A chỉ đi tới được VPC nó peering trực tiếp. B có route tới cả hai không làm B thành router cho A. Muốn A tới C thì peering A–C trực tiếp, hoặc dùng Transit Gateway làm hub. Luật security group hay DNS không mở được đường không tồn tại."
+    },
+    {
+      "id": "privatelink-vs-peering",
+      "kind": "single",
+      "prompt": "Đối tác chạy một API trong VPC của họ, CIDR trùng với VPC của bạn. Bạn chỉ cần gọi API đó, không cần truy cập gì khác. Cách nối phù hợp nhất?",
+      "options": [
+        "PrivateLink: API sau NLB của họ, bạn tạo interface endpoint",
+        "VPC peering rồi thêm route tới CIDR của đối tác ở hai phía",
+        "Transit Gateway chia sẻ giữa hai tài khoản qua AWS RAM",
+        "Site-to-Site VPN giữa hai VPC với hai tunnel dự phòng"
+      ],
+      "answer": 0,
+      "explanation": "PrivateLink không định tuyến giữa hai mạng: bạn có một IP private trong VPC của mình trỏ tới đúng service của họ, nên CIDR trùng không sao và chỉ một cổng được mở, một chiều. Peering và Transit Gateway cần CIDR không trùng và mở đường giữa hai mạng rộng hơn nhu cầu; VPN cũng định tuyến giữa mạng và gặp đúng vấn đề trùng CIDR."
+    },
+    {
+      "id": "s3-via-nat",
+      "kind": "single",
+      "prompt": "Hoá đơn tháng có 18.000 USD phí xử lý NAT gateway. Phần lớn lưu lượng là pod đọc ghi S3 cùng region. Cách giảm hiệu quả nhất?",
+      "options": [
+        "Thêm gateway endpoint cho S3 vào route table của subnet private",
+        "Đặt NAT gateway ở cùng AZ với các pod gọi S3",
+        "Thay NAT gateway bằng interface endpoint cho mọi dịch vụ Internet",
+        "Bật nén dữ liệu trên NAT gateway"
+      ],
+      "answer": 0,
+      "explanation": "Gateway endpoint cho S3 (và DynamoDB) miễn phí, thêm route theo prefix list của S3 nên traffic tới S3 không qua NAT nữa. Đặt NAT cùng AZ chỉ tránh phí truyền giữa AZ, phí xử lý mỗi GB của NAT vẫn còn; interface endpoint chỉ dành cho dịch vụ AWS hay PrivateLink, không thay được đường ra Internet chung; NAT gateway không có tính năng nén. Kiểm thêm ECR (layer image cũng nằm trên S3) và các dịch vụ AWS khác hay được gọi."
+    }
+  ]
+}

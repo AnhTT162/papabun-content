@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "explicit-deny",
+      "kind": "single",
+      "prompt": "Role có identity policy `Allow s3:*` trên `arn:aws:s3:::reports/*`. SCP của OU có statement `Deny s3:DeleteObject` cho mọi tài nguyên. Bucket policy của `reports` có `Allow s3:DeleteObject` cho chính role đó. Role gọi `DeleteObject`. Kết quả?",
+      "options": [
+        "Bị từ chối: Deny tường minh ở SCP thắng mọi Allow",
+        "Được phép: bucket policy cho phép trực tiếp chính role đó",
+        "Được phép: identity policy và bucket policy đều cho phép",
+        "Được phép: SCP chỉ giới hạn user, không áp dụng cho role"
+      ],
+      "answer": 0,
+      "explanation": "Bước đầu của đánh giá là tìm `Deny` tường minh trong mọi policy áp vào request, gồm cả SCP; tìm thấy là từ chối, bất kể có bao nhiêu `Allow`. `s3:*` là hợp lệ và bao gồm `DeleteObject`, nhưng không cứu được trước một Deny. SCP áp cho cả user lẫn role trong tài khoản thành viên (trừ service-linked role)."
+    },
+    {
+      "id": "cross-account-both",
+      "kind": "single",
+      "prompt": "Role `etl` ở tài khoản A cần đọc bucket ở tài khoản B. Bucket policy ở B đã cho phép `arn:aws:iam::A:role/etl` đọc. Role `etl` chưa có policy nào nói về bucket đó. Kết quả khi đọc?",
+      "options": [
+        "Bị từ chối: tài khoản A cũng phải cho phép role bằng identity policy",
+        "Được phép: bucket policy cho phép trực tiếp đúng role đó",
+        "Được phép vì hai tài khoản cùng một AWS Organization",
+        "Bị từ chối: S3 không cho truy cập khác tài khoản bằng bucket policy"
+      ],
+      "answer": 0,
+      "explanation": "Request khác tài khoản được đánh giá ở cả hai tài khoản và chỉ được phép khi cả hai cho phép: B cho qua bucket policy, A phải cho qua identity policy của role. Trong cùng một tài khoản, chỉ bucket policy cho đúng principal là đủ, đó là chỗ hay nhầm. Bucket policy là cách chuẩn để chia sẻ khác tài khoản. Cùng Organization không tự cấp quyền gì."
+    },
+    {
+      "id": "kms-key-policy",
+      "kind": "single",
+      "prompt": "Một admin trong tài khoản có `AdministratorAccess`. Key policy của một khoá KMS chỉ cho role `payments-app` dùng khoá và cho role `key-admin` quản trị, không có statement cho phép tài khoản (`:root`). Admin gọi `kms:Decrypt` bằng khoá đó. Kết quả?",
+      "options": [
+        "Bị từ chối: key policy không cho tài khoản dùng IAM",
+        "Được phép: `AdministratorAccess` cho mọi hành động",
+        "Được phép vì admin cùng tài khoản với khoá đó",
+        "Bị từ chối vì `Decrypt` chỉ gọi được qua dịch vụ S3"
+      ],
+      "answer": 0,
+      "explanation": "Với KMS, key policy là nguồn quyền chính: IAM policy chỉ có hiệu lực khi key policy cho phép tài khoản dùng IAM (statement cho principal `:root`). Thiếu statement đó thì `AdministratorAccess` không có tác dụng với khoá này; ngay cả root cũng không có quyền nếu không được cho phép. `kms:ViaService` mới giới hạn theo dịch vụ, ở đây không có. Đây là cách cô lập khoá cho dữ liệu nhạy cảm, nhưng cũng là cách tự khoá mình ngoài khoá nếu viết sai."
+    },
+    {
+      "id": "external-id",
+      "kind": "single",
+      "prompt": "Một SaaS giám sát yêu cầu bạn tạo role cho tài khoản AWS của họ assume để đọc metric. Họ hướng dẫn thêm điều kiện `sts:ExternalId` với một giá trị riêng họ cấp cho bạn. Điều kiện này chống gì?",
+      "options": [
+        "Khách hàng khác của SaaS lừa SaaS dùng role của bạn",
+        "Kẻ tấn công đánh cắp access key của tài khoản SaaS",
+        "Nhân viên của bạn tự assume role từ tài khoản của bạn",
+        "SaaS đọc metric nhiều hơn mức quyền role cho phép"
+      ],
+      "answer": 0,
+      "explanation": "SaaS phục vụ nhiều khách hàng bằng cùng một tài khoản AWS. Nếu khách hàng khác khai ARN role của bạn vào cấu hình của họ, SaaS sẽ assume role của bạn thay họ: đó là confused deputy. External ID riêng cho từng khách hàng, do SaaS kiểm soát, làm lời assume đó thất bại. Nó không thay được việc bảo vệ credential của SaaS, không liên quan tới nhân viên của bạn, và không giới hạn quyền của role."
+    }
+  ]
+}
