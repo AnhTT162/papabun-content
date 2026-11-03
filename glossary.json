@@ -13186,7 +13186,7 @@
     {
       "id": "slsa",
       "term": "SLSA",
-      "meaning": "Supply-chain Levels for Software Artifacts: khung các mức bảo đảm cho quy trình build (bản 1.0: L1 có provenance, L2 provenance do nền tảng build được host ký, L3 nền tảng build cứng hoá và cách ly).",
+      "meaning": "Supply-chain Levels for Software Artifacts: khung các mức bảo đảm cho chuỗi cung ứng phần mềm. Build track (từ v1.0): L1 có provenance, L2 provenance do nền tảng build được host ký, L3 nền tảng build cứng hoá và cách ly. v1.2 (11/2025) thêm source track (L1–L4, L4 là review hai người).",
       "example": "Pipeline sinh provenance có chữ ký bằng nền tảng CI được host, đạt SLSA Build L2.",
       "related": ["build-provenance", "sigstore"],
       "topics": ["secure-sdlc"]

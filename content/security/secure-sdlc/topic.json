@@ -15,6 +15,7 @@
     { "title": "NIST SP 800-218: Secure Software Development Framework (SSDF) Version 1.1", "url": "https://csrc.nist.gov/pubs/sp/800/218/final" },
     { "title": "OWASP Threat Modeling Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" },
     { "title": "SLSA specification v1.0: Security levels", "url": "https://slsa.dev/spec/v1.0/levels" },
+    { "title": "SLSA specification v1.2: Source track requirements", "url": "https://slsa.dev/spec/v1.2/source-requirements" },
     { "title": "CycloneDX Maven Plugin", "url": "https://github.com/CycloneDX/cyclonedx-maven-plugin" },
     { "title": "GitHub Docs: Security hardening for GitHub Actions", "url": "https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions" },
     { "title": "Sigstore: Verifying signatures with cosign", "url": "https://docs.sigstore.dev/cosign/verifying/verify/" }
