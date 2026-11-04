@@ -36,7 +36,7 @@ Spring Security là một **chuỗi [[servlet-filter|servlet filter]]** đứng 
   - Actuator nên có chain riêng với `EndpointRequest.toAnyEndpoint()`.
 - **Ánh xạ role từ JWT**: dùng `JwtAuthenticationConverter` với `JwtGrantedAuthoritiesConverter`, đặt `authoritiesClaimName` (ví dụ `roles`) và `authorityPrefix` là `ROLE_`. Role nằm trong claim lồng nhau (như `realm_access.roles` của Keycloak) thì phải viết converter riêng.
 - **Kiểm tra token**:
-  - Mặc định không kiểm tra `aud`. Token cấp cho service khác cùng issuer cũng được chấp nhận nếu không khai báo `spring.security.oauth2.resourceserver.jwt.audiences` (Boot 2.7+) hoặc validator riêng.
+  - Mặc định không kiểm tra `aud`. Token cấp cho service khác cùng issuer cũng được chấp nhận nếu không khai báo `spring.security.oauth2.resourceserver.jwt.audiences` (Boot 2.7+) hoặc validator riêng. Thông báo lỗi khi `aud` sai và việc kiểm `typ` (decoder mặc định từ chối `at+jwt` của RFC 9068): bài JWT chuyên sâu.
   - `NimbusJwtDecoder` cache JWK set và tải lại khi gặp `kid` lạ, nên identity provider xoay khoá không làm service lỗi.
   - Token còn hạn thì vẫn được chấp nhận sau khi người dùng bị khoá; thu hồi tức thời cần token ngắn hạn hoặc introspection (bài JWT chuyên sâu).
 - **Method security chi tiết**:

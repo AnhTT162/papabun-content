@@ -17,7 +17,9 @@
     { "title": "gRPC over HTTP2 (PROTOCOL-HTTP2.md)", "url": "https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md" },
     { "title": "gRPC: Keepalive", "url": "https://grpc.io/docs/guides/keepalive/" },
     { "title": "Spring Framework Reference: WebSockets", "url": "https://docs.spring.io/spring-framework/reference/web/websocket.html" },
-    { "title": "RFC 8441: Bootstrapping WebSockets with HTTP/2", "url": "https://www.rfc-editor.org/rfc/rfc8441.html" }
+    { "title": "RFC 8441: Bootstrapping WebSockets with HTTP/2", "url": "https://www.rfc-editor.org/rfc/rfc8441.html" },
+    { "title": "eventsource (npm): Setting HTTP request headers", "url": "https://github.com/EventSource/eventsource#setting-http-request-headers" },
+    { "title": "Azure/fetch-event-source", "url": "https://github.com/Azure/fetch-event-source" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },
