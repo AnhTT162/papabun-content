@@ -405,6 +405,7 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 18 | `design-flash-sale` | Thiết kế flash sale / bán vé | architect | Chống bán vượt tồn kho, hàng đợi, giữ chỗ có thời hạn | L D Sc | ✅ |
 | 19 | `design-ride-hailing` | Thiết kế ứng dụng gọi xe | architect | Geo index (geohash, quadtree), ghép cặp, cập nhật vị trí | L D Sc | ✅ |
 | 20 | `design-metrics-logging` | Thiết kế hệ thống metric/log | architect | Time-series, ingestion, downsampling, chi phí lưu trữ | L D Sc | ✅ |
+| 21 | `design-fraud-detection` | ✚ Thiết kế hệ thống phát hiện gian lận | architect | Điểm quyết định và ngân sách latency, rule + model, velocity feature (đồng bộ và qua stream), training-serving skew và point-in-time, nhãn trễ và thiên lệch do chặn, ngưỡng theo chi phí, hàng chờ review, card testing, vòng gian lận theo đồ thị | L D Sc | ✅ |
 
 ### 15. Solution Architect (`solution-architect`)
 
@@ -450,6 +451,6 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Design | 3 | 5 | 4 | 0 | 12 |
 | Distributed Systems | 2 | 5 | 13 | 0 | 20 |
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
-| System Design | 3 | 3 | 14 | 0 | 20 |
+| System Design | 3 | 3 | 15 | 0 | 21 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **95** | **110** | **30** | **256** |
+| **Tổng** | **51** | **95** | **111** | **30** | **257** |

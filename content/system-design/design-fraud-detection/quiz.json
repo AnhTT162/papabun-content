@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "precision-imbalance",
+      "kind": "output",
+      "prompt": "1 triệu giao dịch, 0,1% là gian lận. Model bắt được 80% gian lận và chặn nhầm 0,5% giao dịch thật. Đoạn code in ra gì?",
+      "code": "long total = 1_000_000, fraud = total / 1000, legit = total - fraud;\nlong caught = Math.round(fraud * 0.80);       // recall 80%\nlong wrongful = Math.round(legit * 0.005);    // chặn nhầm 0,5% khách thật\nSystem.out.printf(\"%d %d %.1f%%%n\", caught, wrongful, 100.0 * caught / (caught + wrongful));",
+      "options": [
+        "800 4995 13.8%",
+        "800 4995 86.2%",
+        "800 5000 80.0%",
+        "800 4995 0.1%"
+      ],
+      "answer": 0,
+      "explanation": "1.000 giao dịch gian lận, bắt 800. 999.000 giao dịch thật, chặn nhầm 0,5% là 4.995. Precision = 800 / (800 + 4.995) = 13,8%: cứ 7 giao dịch bị chặn thì chỉ khoảng 1 là gian lận thật. 86,2% = 4.995 / 5.795 là tỉ lệ nhầm trong số bị chặn, tức 1 − precision; 80% là nhầm precision với recall; 0,1% là tỉ lệ gian lận nền. Khi lớp dương hiếm, một tỉ lệ chặn nhầm nhỏ trên khối giao dịch thật khổng lồ lấn át số bắt đúng."
+    },
+    {
+      "id": "cost-threshold",
+      "kind": "single",
+      "prompt": "Điểm model đã hiệu chỉnh thành xác suất gian lận p. Chặn nhầm khách thật mất lợi nhuận 10% giá trị đơn; cho qua gian lận mất trọn giá trị đơn. Bỏ qua phí chargeback, nên chặn từ ngưỡng nào?",
+      "options": [
+        "p trên khoảng 9%",
+        "p trên 50%",
+        "p trên 90%",
+        "p trên 10%"
+      ],
+      "answer": 0,
+      "explanation": "Chặn khi thiệt hại kỳ vọng nếu cho qua lớn hơn lợi nhuận kỳ vọng mất đi nếu chặn: p × L > (1 − p) × M, tức p > M / (M + L) = 0,1 / 1,1 ≈ 9,1%. 50% chỉ đúng khi hai loại sai tốn như nhau. 10% là quên phần (1 − p): khách có p = 9,5% vẫn đáng chặn. Ngưỡng này chỉ có nghĩa khi điểm thật sự là xác suất; điểm thô của model phải hiệu chỉnh trước."
+    },
+    {
+      "id": "too-good-auc",
+      "kind": "single",
+      "prompt": "Model mới đạt AUC 0,99 trên tập validation tách theo thời gian nhưng ở production gần như không bắt thêm gì. Feature mới nhất là `account_chargeback_count`, join từ bảng tài khoản hiện tại vào dữ liệu train 6 tháng. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Feature chứa chargeback của chính giao dịch được học",
+        "Dữ liệu train quá ít nên model bị overfit",
+        "Model production đọc feature từ Redis chậm hơn",
+        "Tỉ lệ gian lận quá thấp nên AUC không ý nghĩa"
+      ],
+      "answer": 0,
+      "explanation": "Giá trị hiện tại của số chargeback đã gồm chargeback phát sinh sau giao dịch, kể cả chargeback của chính nó. Offline model đọc được kết quả; lúc serve giao dịch mới chưa có chargeback nào nên feature gần như luôn là 0. Đây là rò rỉ do thiếu point-in-time join. Overfit thường cho khoảng cách train và validation chứ không 0,99 trên validation; AUC vẫn dùng được khi lớp mất cân bằng, chỉ không nói gì về precision ở ngưỡng."
+    },
+    {
+      "id": "fresh-labels",
+      "kind": "single",
+      "prompt": "Đội ML train lại mỗi tuần trên 14 ngày gần nhất \"để model bắt kịp thủ đoạn mới\". Nhãn gian lận là chargeback đã về. Điều gì xảy ra?",
+      "options": [
+        "Phần lớn gian lận 14 ngày qua mang nhãn sạch",
+        "Model bắt kịp thủ đoạn mới nhờ dữ liệu mới",
+        "Không sao vì chargeback về trong vòng 48 giờ",
+        "Model bị overfit vì 14 ngày quá ít mẫu"
+      ],
+      "answer": 0,
+      "explanation": "Chargeback về sau hàng tuần, phần lớn trong 120 ngày, nên trong 14 ngày gần nhất phần lớn gian lận chưa có nhãn. Model học rằng chính các mẫu gian lận mới là giao dịch sạch và chặn ít đi. Ít mẫu không phải vấn đề chính: dù có hàng triệu giao dịch, nhãn của chúng vẫn sai. Muốn phản ứng nhanh với thủ đoạn mới thì dùng nhãn sớm (kết quả review, khách báo mất tài khoản) và rule khẩn, còn train trên giao dịch đã chín."
+    },
+    {
+      "id": "model-down",
+      "kind": "single",
+      "prompt": "Model service không trả lời trong ngân sách 30 ms. Dịch vụ quyết định nên làm gì?",
+      "options": [
+        "Quyết định bằng rule theo bậc số tiền",
+        "Chặn mọi giao dịch cho tới khi model hồi phục",
+        "Cho mọi giao dịch qua để không mất doanh thu",
+        "Chờ tới 2 giây rồi mới quyết định theo rule"
+      ],
+      "answer": 0,
+      "explanation": "Chặn hết biến sự cố của model thành sự cố doanh thu; cho hết qua thì kẻ gian chỉ cần chờ lúc model chết. Rule theo bậc số tiền giữ phần lớn doanh thu (đơn nhỏ cho qua) và vẫn xác thực thêm hay đưa vào review đơn lớn. Chờ 2 giây làm checkout chậm và giữ hàng trăm request treo; circuit breaker ngắt sớm để không chờ timeout ở từng request."
+    }
+  ]
+}

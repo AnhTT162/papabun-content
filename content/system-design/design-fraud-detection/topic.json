@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "design-fraud-detection",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "system-design",
+  "title": "Thiết kế hệ thống phát hiện gian lận",
+  "summary": "Dịch vụ quyết định đồng bộ ở các điểm rủi ro (ALLOW/CHALLENGE/REVIEW/BLOCK) trong 50–100 ms, rule là dữ liệu có phiên bản cộng model chấm điểm, fallback theo bậc số tiền khi model chết; velocity feature tăng đồng bộ cho bộ đếm nóng và qua stream cho phần nặng (bucket phút lệch một bucket ở mép, đã chạy); training-serving skew, ghi feature lúc serve, point-in-time join; nhãn chargeback trễ, phần lớn trong 120 ngày và thiên lệch do giao dịch bị chặn không có nhãn; ngưỡng theo chi phí p > M/(M+L) (~9%, không phải 50%); precision 13,8% khi gian lận chỉ 0,1%; dải REVIEW theo sức đội review; vòng gian lận bằng union-find và nút bậc cao; card testing, chiếm tài khoản.",
+  "level": "architect",
+  "order": 21,
+  "minutes": 20,
+  "prerequisites": ["design-payment", "rate-limiting", "advanced-data-structures", "kafka-architecture"],
+  "terms": ["velocity-feature", "feature-store", "chargeback", "three-d-secure", "precision-recall", "training-serving-skew", "point-in-time-correctness", "label-delay", "account-takeover", "card-testing", "fail-open", "circuit-breaker", "shadow-mode", "champion-challenger", "sliding-window", "hyperloglog", "concept-drift", "device-fingerprint", "credential-stuffing"],
+  "references": [
+    { "title": "Google for Developers: Rules of Machine Learning (training-serving skew, Rule #29)", "url": "https://developers.google.com/machine-learning/guides/rules-of-ml" },
+    { "title": "Stripe: A primer on machine learning for fraud detection", "url": "https://stripe.com/guides/primer-on-machine-learning-for-fraud-protection" },
+    { "title": "Stripe Docs: Card testing", "url": "https://docs.stripe.com/card-testing" },
+    { "title": "Feast: Point-in-time joins", "url": "https://docs.feast.dev/getting-started/concepts/point-in-time-joins" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "diagram", "file": "diagram.json" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Model mới có AUC cao hơn, sao biết nó tốt hơn ở production?\" Offline chỉ là điều kiện cần. Tôi chạy nó song song với model đang chạy trên cùng giao dịch, so ở đúng ngưỡng sẽ dùng: thêm bao nhiêu giao dịch bị chặn, chặn thêm có trúng gian lận không (chờ nhãn chín hoặc dùng kết quả review), tỉ lệ duyệt theo từng phân khúc. Rồi mới chuyển dần lưu lượng. Và tôi nói rõ: giao dịch cả hai model đều chặn thì không bao giờ có nhãn, nên cần một nhóm đối chứng nhỏ để biết recall thật." },
+    { "type": "scenario", "file": "scenario.json" },
+    { "type": "callout", "style": "warning", "markdown": "Feature có giá trị \"hiện tại\" (số chargeback của tài khoản, tài khoản đã bị khoá chưa) mà join thẳng vào dữ liệu train là đưa tương lai vào quá khứ. Model offline đạt điểm gần như hoàn hảo là dấu hiệu nên nghi trước tiên, không phải để ăn mừng." },
+    { "type": "callout", "style": "tip", "markdown": "Khi trình bày, đọc to một quyết định cụ thể: \"thẻ mới thêm 3 phút trước, thiết bị đã thấy 6 thẻ trong 24 giờ, đơn 4 triệu, điểm 0,21, vượt ngưỡng chi phí 9% nhưng dưới ngưỡng chặn thẳng 40%, nên REVIEW, giữ capture\". Người phỏng vấn thấy ngay feature, ngưỡng và kết cục nối với nhau thế nào." }
+  ]
+}

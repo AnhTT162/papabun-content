@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "four-outcomes", "front": "Bốn kết cục của một quyết định chống gian lận?", "back": "ALLOW, CHALLENGE (3-D Secure, OTP), REVIEW (người xem, giữ capture hay giao hàng) và BLOCK. CHALLENGE rẻ hơn BLOCK vì khách thật vẫn qua được." },
+    { "id": "rules-vs-model", "front": "Rule và model mỗi bên làm gì?", "back": "Rule cho chính sách cứng và phản ứng trong vài phút với đợt tấn công mới; model học tổ hợp tín hiệu mà rule không viết hết. Rule là dữ liệu có phiên bản, chạy lại trên dữ liệu cũ trước khi bật." },
+    { "id": "train-like-serve", "front": "Cách chắc nhất để tránh training-serving skew?", "back": "Ghi vector feature đã dùng lúc quyết định vào log và train trên chính log đó, thay vì tính lại feature bằng một đường code khác." },
+    { "id": "point-in-time", "front": "Point-in-time join là gì, thiếu nó thì sao?", "back": "Với mỗi giao dịch, lấy giá trị feature có hiệu lực ngay trước thời điểm giao dịch. Join bảng hiện tại là đưa kết quả tương lai vào dữ liệu train: offline đẹp, production vô dụng." },
+    { "id": "label-delay", "front": "Vì sao không train trên vài tuần gần nhất?", "back": "Chargeback về sau hàng tuần, phần lớn trong 120 ngày, nên gian lận gần đây còn mang nhãn sạch. Train trên giao dịch đã chín, cộng nhãn sớm từ review." },
+    { "id": "blocked-no-label", "front": "Giao dịch bị chặn ảnh hưởng tới dữ liệu train thế nào?", "back": "Không bao giờ có nhãn. Coi là gian lận thì model tự khẳng định chính nó; cần một nhóm đối chứng nhỏ cho qua ngẫu nhiên để đo recall thật." },
+    { "id": "cost-threshold", "front": "Chọn ngưỡng chặn theo chi phí thế nào?", "back": "Chặn khi p > M / (M + L), M là lợi nhuận mất khi chặn nhầm, L là thiệt hại khi cho qua gian lận. Lợi nhuận 10% thì ngưỡng khoảng 9%, với điểm đã hiệu chỉnh thành xác suất." },
+    { "id": "sync-velocity", "front": "Vì sao vài bộ đếm velocity phải tăng đồng bộ?", "back": "Stream processor trễ vài giây; đợt card testing hàng chục lần thử trong vài giây đi qua trước khi bộ đếm kịp tăng." },
+    { "id": "review-capacity", "front": "Dải điểm REVIEW rộng bao nhiêu là đủ?", "back": "Theo sức đội review: số ca vào mỗi ngày phải nhỏ hơn số ca họ xử lý được, nếu không authorization hết hạn và khách thật bỏ đi. Ưu tiên theo p × số tiền." },
+    { "id": "high-degree-node", "front": "Gom vòng gian lận theo đồ thị, cần bỏ nút nào?", "back": "Nút bậc quá cao như IP của nhà mạng dùng CGNAT, Wi-Fi công cộng, địa chỉ kho giao hàng; giữ chúng thì hàng nghìn khách thật dính vào một vòng." }
+  ]
+}

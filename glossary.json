@@ -3485,7 +3485,7 @@
       "meaning": "Cơ chế đếm lỗi của lời gọi ra ngoài; khi tỉ lệ lỗi vượt ngưỡng thì \"mở\", trả lỗi ngay không gọi nữa trong một khoảng thời gian, rồi cho vài lời gọi thử để quyết định đóng lại.",
       "example": "Payment lỗi 60% trong 20 lời gọi gần nhất, breaker mở 30 giây; Order Service trả \"chờ thanh toán\" thay vì treo.",
       "related": ["retry-backoff", "bulkhead"],
-      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset", "design-rate-limiter", "architecture-review"]
+      "topics": ["spring-cloud", "service-communication", "distributed-fundamentals", "resilience-patterns", "microservices-tradeoffs", "troubleshooting-mindset", "design-rate-limiter", "architecture-review", "design-fraud-detection"]
     },
     {
       "id": "chunk-processing",
@@ -5309,7 +5309,7 @@
       "meaning": "Đếm request trong khoảng thời gian trượt kết thúc ở hiện tại: lưu từng timestamp (chính xác) hoặc ước lượng từ hai cửa sổ cố định có trọng số.",
       "example": "Cửa sổ trước 100 request, đã qua 25% cửa sổ hiện tại có 30: ước lượng 100 × 0,75 + 30 = 105.",
       "related": ["fixed-window", "rate-limiting"],
-      "topics": ["rate-limiting"]
+      "topics": ["rate-limiting", "design-fraud-detection"]
     },
     {
       "id": "gcra",
@@ -7109,7 +7109,7 @@
       "meaning": "Cấu trúc xác suất ước lượng số phần tử khác nhau: băm từng phần tử, ghi độ dài chuỗi bit 0 dẫn đầu lớn nhất vào m thanh ghi, sai số chuẩn 1,04/√m. Gộp được bằng cách lấy max từng thanh ghi.",
       "example": "Redis `PFADD visitors:2026-10-27 user:881`, `PFCOUNT`, rồi `PFMERGE` bảy ngày thành một tuần; mỗi khoá tối đa 12 KB.",
       "related": ["probabilistic-data-structure"],
-      "topics": ["advanced-data-structures", "design-url-shortener", "olap-doris", "design-search-autocomplete"]
+      "topics": ["advanced-data-structures", "design-url-shortener", "olap-doris", "design-search-autocomplete", "design-fraud-detection"]
     },
     {
       "id": "count-min-sketch",
@@ -8901,7 +8901,7 @@
       "meaning": "Chạy một luật hay một phiên bản mới song song nhưng không tác động thật: chỉ ghi lại nó sẽ làm gì, để so sánh trước khi bật.",
       "example": "Luật rate limit mới ghi metric would_reject trong một tuần để xem khách nào sẽ bị chặn, rồi mới chuyển sang chặn thật.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter", "authorization-models"]
+      "topics": ["design-rate-limiter", "authorization-models", "design-fraud-detection"]
     },
     {
       "id": "fail-open",
@@ -8909,7 +8909,7 @@
       "meaning": "Khi thành phần kiểm tra (kho bộ đếm, dịch vụ phân quyền) lỗi thì cho request đi qua thay vì chặn. Ngược lại là fail closed: lỗi thì chặn.",
       "example": "Redis của rate limiter chết: gateway fail open sang token bucket cục bộ để API vẫn chạy, kèm cảnh báo.",
       "related": ["rate-limiting", "circuit-breaker"],
-      "topics": ["design-rate-limiter", "owasp-top10", "authorization-models"]
+      "topics": ["design-rate-limiter", "owasp-top10", "authorization-models", "design-fraud-detection"]
     },
     {
       "id": "api-quota",
@@ -8925,7 +8925,7 @@
       "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
       "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics", "oauth2-oidc", "password-storage"]
+      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics", "oauth2-oidc", "password-storage", "design-fraud-detection"]
     },
     {
       "id": "noisy-neighbor",
@@ -9853,7 +9853,7 @@
       "meaning": "Chủ thẻ khiếu nại với ngân hàng phát hành và tiền bị kéo ngược khỏi merchant, thường hàng tuần tới vài tháng sau giao dịch.",
       "example": "Một đơn đã payout cho người bán bị chargeback: platform ghi bút toán tranh chấp, số dư người bán âm và được trừ vào kỳ payout sau.",
       "related": ["payout", "settlement"],
-      "topics": ["design-payment"]
+      "topics": ["design-payment", "design-fraud-detection"]
     },
     {
       "id": "card-tokenization",
@@ -9877,7 +9877,7 @@
       "meaning": "Bước xác thực thêm của ngân hàng phát hành (OTP, app ngân hàng) khi thanh toán thẻ online. Thanh toán phải chờ người dùng xác nhận nên kết quả đến bất đồng bộ.",
       "example": "Attempt sang `REQUIRES_ACTION`, trình duyệt chuyển tới trang ngân hàng, kết quả cuối về qua webhook.",
       "related": ["payment-authorization", "psp"],
-      "topics": ["design-payment"]
+      "topics": ["design-payment", "design-fraud-detection"]
     },
     {
       "id": "flash-sale",
@@ -14654,6 +14654,94 @@
       "example": "Khoá của AWS KMS nằm trong HSM của AWS; CloudHSM cho bạn một HSM riêng.",
       "related": ["kms"],
       "topics": ["kms-envelope-encryption", "password-storage"]
+    },
+    {
+      "id": "velocity-feature",
+      "term": "Velocity feature",
+      "meaning": "Feature đếm số lần một hành vi xảy ra theo một khoá trong một cửa sổ thời gian, như số lần thử của một thẻ trong 10 phút. Là tín hiệu mạnh nhất để bắt tấn công dồn dập.",
+      "example": "Thiết bị đã thêm 6 thẻ khác nhau trong 24 giờ; thẻ bị thử 40 lần trong 10 phút.",
+      "related": ["feature-store", "sliding-window", "card-testing"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "feature-store",
+      "term": "Feature store",
+      "meaning": "Kho lưu feature cho model, gồm phần online (đọc nhanh lúc quyết định, thường là Redis hay key-value store) và phần offline (lịch sử để train), cùng một định nghĩa feature cho cả hai.",
+      "example": "Dịch vụ chống gian lận đọc 30 feature của tài khoản và thiết bị bằng một lệnh `MGET` trong vài ms.",
+      "related": ["velocity-feature", "training-serving-skew", "point-in-time-correctness"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "precision-recall",
+      "term": "Precision và recall",
+      "meaning": "Precision: trong số bị gắn là dương (bị chặn), bao nhiêu là dương thật. Recall: trong số dương thật, bắt được bao nhiêu. Khi lớp dương hiếm, accuracy vô nghĩa và hai số này mới nói lên chất lượng.",
+      "example": "Gian lận 0,1%, bắt 80% và chặn nhầm 0,5% khách thật: recall 80% nhưng precision chỉ 13,8%.",
+      "related": ["label-delay", "recall-at-k"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "training-serving-skew",
+      "term": "Training-serving skew",
+      "meaning": "Model chạy ở production kém hơn lúc train vì dữ liệu hay cách tính feature giữa hai bên khác nhau. Cách chắc nhất là ghi lại feature đã dùng lúc serve và train trên chính chúng.",
+      "example": "Lúc serve, bộ đếm đã gồm giao dịch hiện tại; lúc train, SQL chỉ đếm giao dịch trước đó. Lệch một đơn vị làm model học sai ngưỡng.",
+      "related": ["feature-store", "point-in-time-correctness"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "point-in-time-correctness",
+      "term": "Point-in-time join",
+      "meaning": "Khi dựng dữ liệu train, lấy giá trị feature có hiệu lực ngay trước thời điểm của từng sự kiện, không lấy giá trị hiện tại. Thiếu nó là rò rỉ dữ liệu tương lai vào quá khứ.",
+      "example": "Giao dịch ngày 3/5 dùng số chargeback của tài khoản tính tới 3/5, không phải con số hôm nay đã gồm chargeback của chính giao dịch đó.",
+      "related": ["training-serving-skew", "feature-store", "label-delay"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "label-delay",
+      "term": "Nhãn trễ (label delay)",
+      "meaning": "Kết quả thật của một mẫu chỉ biết sau một khoảng thời gian dài. Với gian lận thẻ, chargeback về sau hàng tuần, phần lớn trong 120 ngày, nên dữ liệu gần đây mang nhãn chưa đầy đủ.",
+      "example": "Train trên 14 ngày gần nhất thì phần lớn giao dịch gian lận vẫn mang nhãn sạch.",
+      "related": ["chargeback", "precision-recall", "point-in-time-correctness"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "account-takeover",
+      "term": "Account takeover (ATO)",
+      "meaning": "Kẻ gian chiếm tài khoản của người thật, thường bằng mật khẩu lộ hay lừa lấy OTP, rồi dùng số dư, thẻ đã lưu hay đổi tài khoản nhận tiền.",
+      "example": "Đăng nhập từ thiết bị mới ở quốc gia khác, đổi mật khẩu rồi đổi tài khoản nhận tiền trong 5 phút.",
+      "related": ["credential-stuffing", "mfa", "device-fingerprint"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "card-testing",
+      "term": "Card testing",
+      "meaning": "Kẻ gian dùng một trang thanh toán để thử hàng loạt thẻ đánh cắp bằng giao dịch nhỏ, tìm thẻ còn dùng được. Dấu hiệu là tỉ lệ bị từ chối tăng vọt và nhiều thẻ trên cùng thiết bị hay IP.",
+      "example": "42.000 lần thêm thẻ rồi authorize 10.000 VND trong 40 phút từ 300 IP, 70% bị từ chối.",
+      "related": ["velocity-feature", "rate-limiting", "three-d-secure"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "champion-challenger",
+      "term": "Champion/challenger",
+      "meaning": "Cách thay model hay chiến lược: model đang chạy (champion) tiếp tục quyết định, model mới (challenger) chấm song song hoặc nhận một phần lưu lượng, so trên cùng dữ liệu rồi mới thay.",
+      "example": "Model mới chấm điểm song song 2 tuần; ở cùng ngưỡng nó chặn thêm 0,1% giao dịch, đối chiếu với kết quả review trước khi nhận 10% lưu lượng.",
+      "related": ["shadow-mode", "canary-release"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "concept-drift",
+      "term": "Concept drift",
+      "meaning": "Quan hệ giữa feature và kết quả thay đổi theo thời gian, nên model cũ dần sai. Trong chống gian lận nó đến nhanh vì kẻ gian đổi thủ đoạn khi bị chặn.",
+      "example": "Phân bố điểm của giao dịch ví trôi dần lên sau khi kẻ gian chuyển từ thẻ sang ví; tỉ lệ duyệt theo phân khúc đó giảm.",
+      "related": ["label-delay", "champion-challenger"],
+      "topics": ["design-fraud-detection"]
+    },
+    {
+      "id": "device-fingerprint",
+      "term": "Device fingerprint",
+      "meaning": "Mã nhận diện thiết bị suy từ nhiều đặc điểm (model máy, hệ điều hành, cấu hình, ID của app) để nhận ra cùng một thiết bị qua nhiều tài khoản. Giả được, nên chỉ là một tín hiệu.",
+      "example": "Sáu tài khoản mới nhận thưởng khuyến mãi cùng một fingerprint trong một ngày.",
+      "related": ["account-takeover", "velocity-feature"],
+      "topics": ["design-fraud-detection"]
     }
   ]
 }

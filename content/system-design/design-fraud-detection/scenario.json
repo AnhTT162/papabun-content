@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../schema/blocks/scenario.schema.json",
+  "title": "Chống gian lận cho ví điện tử kiêm sàn bán hàng",
+  "prompt": "Một ví điện tử kiêm sàn bán hàng nhận thẻ quốc tế và số dư ví, đỉnh 1.500 thanh toán/s. Tỉ lệ fraud và dispute của giao dịch thẻ tăng dần lên 1,3%, gần ngưỡng 1,5% của tổ chức thẻ. Đêm qua từ 02:00 tới 02:40 có 42.000 lần thêm thẻ rồi authorize 10.000 VND từ khoảng 300 IP, 70% bị ngân hàng từ chối. Chương trình tặng 100.000 VND cho người dùng mới có 6.000 tài khoản mới trong 3 ngày, nhiều tài khoản dùng chung thiết bị.\n\nBản hiện tại: rule viết bằng `if` trong code checkout, muốn đổi phải chờ đợt deploy hai tuần một lần. Checkout gọi model đồng bộ với timeout 2 giây, lỗi hay timeout thì `BLOCK`; tuần trước model service bị OOM 35 phút và mọi thanh toán thẻ bị chặn. Feature cho model tính bằng job SQL mỗi đêm. Model train mỗi tháng trên 30 ngày gần nhất, nhãn gian lận gồm chargeback đã về và mọi giao dịch từng bị chặn; AUC offline 0,99. Năm người review xử lý theo thứ tự đến. Thiết kế lại.",
+  "hints": [
+    "Lúc 02:10 đã có khoảng 10.000 lần thử, mà velocity model đọc được là của ngày hôm qua. Model thấy gì?",
+    "Chargeback phần lớn về trong 120 ngày, mà model học trên 30 ngày gần nhất và coi mọi giao dịch bị chặn là gian lận. Nó học được điều gì?",
+    "AUC 0,99 cho một bài toán khó như vậy: có feature nào được tính sau khi kết quả đã biết?",
+    "Khi model chết, chặn hết hay cho hết qua đều tốn kém. Còn cách nào nằm giữa, và tại sao timeout 2 giây là quá dài?"
+  ],
+  "solution": "**Vì sao đang hỏng**\n\nVelocity tính mỗi đêm nên đợt card testing 40 phút vô hình với model, và rule cần deploy hai tuần mới đổi được. Nhãn sai cả hai chiều: 30 ngày gần nhất phần lớn chargeback chưa về, nên nhiều gian lận mang nhãn sạch; còn mọi giao dịch bị chặn được coi là gian lận, nên model học lại đúng quyết định cũ của chính nó. AUC 0,99 gần như chắc là rò rỉ: kiểm các feature lấy theo giá trị hiện tại như \"tài khoản đã bị khoá\" hay \"số chargeback\", vì chúng đã chứa kết quả của chính giao dịch đang học. Timeout 2 giây cộng chặn hết khi lỗi biến một sự cố của model thành 35 phút mất doanh thu thẻ.\n\n**Chặn đợt card testing ngay**\n\nTrước dịch vụ quyết định: CAPTCHA khi thêm thẻ, rate limit tạo tài khoản và thêm thẻ theo IP và thiết bị, giới hạn số thẻ mỗi tài khoản. Trong dịch vụ quyết định: bộ đếm đồng bộ cho lần thử theo thẻ, IP, thiết bị và tỉ lệ bị từ chối theo IP, tăng ngay lúc quyết định, không chờ stream. Rule là dữ liệu có phiên bản, đội rủi ro bật một rule khẩn trong vài phút sau khi chạy lại trên dữ liệu một giờ qua để xem sẽ chặn bao nhiêu.\n\n**Dịch vụ quyết định**\n\nPayment gọi Fraud trước authorize với ngân sách 80 ms. Feature đọc một lượt bằng `MGET`, model nạp trong bộ nhớ với timeout 30 ms sau circuit breaker. Model không trả lời thì rule theo bậc số tiền: dưới 500.000 VND cho qua, trên đó `CHALLENGE` (3-D Secure với thẻ, OTP với ví), trên 10 triệu `REVIEW`. Quyết định lưu theo id attempt cùng feature, phiên bản rule và model; retry trả lại quyết định cũ.\n\n**Feature**\n\nBa tầng: đồng bộ cho vài bộ đếm nóng; stream (Kafka và stream processor) cho cửa sổ 24 giờ và 30 ngày, trễ vài giây; batch cho đồ thị tài khoản. Mỗi quyết định ghi lại vector feature đã dùng; train trên log này để không có training-serving skew. Feature mới cần dữ liệu quá khứ thì tính bằng point-in-time join, không join bảng hiện tại.\n\n**Nhãn và train**\n\nChỉ train trên giao dịch đã chín (cũ hơn 90 ngày) cộng nhãn sớm từ review và khách báo mất tài khoản. Bỏ việc coi giao dịch bị chặn là gian lận. Giữ một nhóm đối chứng nhỏ: một tỉ lệ ngẫu nhiên giao dịch số tiền thấp lẽ ra bị chặn được cho qua, để đo recall thật và có nhãn cho vùng rủi ro. Model mới chạy song song với model cũ, so trên cùng giao dịch ở đúng ngưỡng, rồi mới chuyển dần lưu lượng.\n\n**Ngưỡng và review**\n\nNgưỡng theo chi phí `p > M / (M + L)`: lợi nhuận 10% thì khoảng 9%, cần điểm đã hiệu chỉnh thành xác suất. Năm người, mỗi người 40 ca/giờ trong 8 giờ là 1.600 ca/ngày: dải `REVIEW` chọn sao cho số ca vào ít hơn thế, phần còn lại dùng `CHALLENGE`. Hàng chờ ưu tiên theo `p × số tiền`, kèm lý do và lịch sử liên quan để người review quyết nhanh.\n\n**Khuyến mãi**\n\nGom tài khoản theo thiết bị, số điện thoại, thẻ, địa chỉ nhận bằng union-find chạy mỗi giờ, bỏ nút bậc cao như IP nhà mạng. Thưởng chỉ trả sau đơn đầu tiên giao thành công, giới hạn theo thiết bị và số điện thoại, vòng lớn bị giữ thưởng chờ xem.\n\n**Đo**\n\nTỉ lệ duyệt, tỉ lệ chặn và phân bố điểm theo phương thức, quốc gia thẻ, người bán; cảnh báo khi tỉ lệ duyệt tụt. Theo dõi tỉ lệ fraud và dispute của thẻ hằng tuần so với ngưỡng 1,5%, vì vượt ngưỡng là bị phạt theo từng giao dịch.",
+  "tradeoffs": [
+    {
+      "option": "Model chết thì quyết định bằng rule theo bậc tiền",
+      "pros": ["Không mất doanh thu khi model sự cố", "Giao dịch lớn vẫn được xác thực thêm"],
+      "cons": ["Kẻ gian có thể lợi dụng lúc chỉ còn rule", "Thêm một đường quyết định phải test riêng"]
+    },
+    {
+      "option": "Giữ nhóm đối chứng cho qua ngẫu nhiên",
+      "pros": ["Đo được recall thật của hệ thống", "Có nhãn cho đúng vùng rủi ro cao nhất"],
+      "cons": ["Chấp nhận mất tiền một phần nhỏ có chủ đích", "Cần giới hạn số tiền và giải thích với kinh doanh"]
+    },
+    {
+      "option": "Dùng điểm rủi ro của PSP thay vì tự xây model",
+      "pros": ["Học từ dữ liệu nhiều merchant, có ngay", "Ít hạ tầng ML phải vận hành"],
+      "cons": ["Không thấy hành vi trong app như khuyến mãi", "Khó giải thích và khó chỉnh theo nghiệp vụ"]
+    },
+    {
+      "option": "Tính velocity đồng bộ trong dịch vụ quyết định",
+      "pros": ["Không trễ, bắt được đợt tấn công vài giây", "Giá trị dùng để quyết định cũng là giá trị log"],
+      "cons": ["Thêm một lượt ghi Redis trên đường nóng", "Chỉ hợp với bộ đếm đơn giản, ít khoá"]
+    }
+  ]
+}

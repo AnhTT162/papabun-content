@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/blocks/diagram.schema.json",
+  "title": "Một quyết định chống gian lận và vòng học lại",
+  "nodes": [
+    { "id": "pay", "label": "Payment", "kind": "service", "x": 0.1, "y": 0.05 },
+    { "id": "fraud", "label": "Fraud decision", "kind": "service", "x": 0.85, "y": 0.05 },
+    { "id": "stream", "label": "Kafka + stream", "kind": "queue", "x": 0.1, "y": 0.5 },
+    { "id": "store", "label": "Feature store (Redis)", "kind": "database", "x": 0.85, "y": 0.5 },
+    { "id": "train", "label": "Nhãn + train", "kind": "service", "x": 0.1, "y": 0.95 },
+    { "id": "review", "label": "Hàng chờ review", "kind": "service", "x": 0.85, "y": 0.95 }
+  ],
+  "edges": [
+    { "id": "pay-fraud", "from": "pay", "to": "fraud", "label": "decide(attempt)" },
+    { "id": "fraud-store", "from": "fraud", "to": "store", "label": "MGET feature" },
+    { "id": "pay-stream", "from": "pay", "to": "stream", "label": "event giao dịch" },
+    { "id": "stream-store", "from": "stream", "to": "store", "label": "velocity nặng" },
+    { "id": "fraud-review", "from": "fraud", "to": "review", "label": "REVIEW" },
+    { "id": "review-train", "from": "review", "to": "train", "label": "nhãn sớm" },
+    { "id": "train-fraud", "from": "train", "to": "fraud", "label": "model mới" }
+  ],
+  "steps": [
+    {
+      "caption": "Payment gọi Fraud trước khi authorize, kèm id attempt. Quyết định lưu theo id đó nên retry nhận đúng quyết định cũ.",
+      "show": ["pay", "fraud", "pay-fraud"],
+      "highlight": ["pay-fraud"]
+    },
+    {
+      "caption": "Fraud đọc feature theo lô trong một lượt, tăng đồng bộ vài bộ đếm nóng, chạy rule rồi model. Model không kịp trả lời thì quyết định bằng rule theo bậc số tiền.",
+      "show": ["store", "fraud-store"],
+      "highlight": ["fraud-store"]
+    },
+    {
+      "caption": "Mọi event đi qua Kafka vào stream processor tính velocity nặng (24 giờ, 30 ngày) và ghi vào feature store. Phần này trễ vài giây.",
+      "show": ["stream", "pay-stream", "stream-store"],
+      "highlight": ["pay-stream", "stream-store"]
+    },
+    {
+      "caption": "Điểm rơi vào dải giữa thì vào hàng chờ review, ưu tiên theo xác suất × số tiền. Dải này rộng hẹp theo sức đội review.",
+      "show": ["review", "fraud-review"],
+      "highlight": ["fraud-review"]
+    },
+    {
+      "caption": "Kết quả review là nhãn sớm; chargeback về sau hàng tuần, phần lớn trong 120 ngày. Train trên log feature đã dùng lúc quyết định, rồi chạy model mới song song trước khi thay.",
+      "show": ["train", "review-train", "train-fraud"],
+      "highlight": ["review-train", "train-fraud"]
+    }
+  ]
+}
