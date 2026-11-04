@@ -16,7 +16,7 @@ Probe, resource request/limit, [[hpa|HPA]] và các lỗi như CrashLoopBackOff 
 
 ## Deep
 
-- **Khai báo và đối soát**: mỗi controller watch object qua API server và chạy vòng lặp "đọc mong muốn, đọc thực tế, sửa phần lệch". Không có bước nào "chạy lệnh deploy" theo kiểu tuần tự; vì vậy xoá tay một pod của Deployment chỉ làm ReplicaSet tạo pod khác. Chỉ API server nói chuyện với etcd; mất etcd là mất trạng thái cluster, nên control plane tự vận hành phải backup etcd.
+- **Khai báo và đối soát**: mỗi controller watch object qua API server và chạy vòng lặp "đọc mong muốn, đọc thực tế, sửa phần lệch". Không có bước nào "chạy lệnh deploy" theo kiểu tuần tự; vì vậy xoá tay một pod của Deployment chỉ làm ReplicaSet tạo pod khác. Chỉ API server nói chuyện với etcd; mất etcd là mất trạng thái cluster, nên [[control-plane|control plane]] tự vận hành phải backup etcd.
 - **Thành phần trên node**: kubelet nhận PodSpec, gọi container runtime qua CRI (containerd, CRI-O), chạy probe, báo trạng thái. Mạng pod do plugin CNI dựng (VPC CNI trên EKS cấp IP thật của VPC cho pod, Calico, Cilium). kube-proxy chạy ở chế độ iptables (mặc định) hoặc nftables; chế độ IPVS bị deprecated từ 1.35, tắt mặc định từ 1.40 và bị xoá ở 1.43. Một số CNI như Cilium thay kube-proxy bằng eBPF.
 - **Pod**:
   - Các container trong pod gọi nhau qua `localhost`, chung volume, cùng được lên lịch vào một node.

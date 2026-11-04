@@ -52,6 +52,32 @@
       ],
       "answer": 0,
       "explanation": "SaaS phục vụ nhiều khách hàng bằng cùng một tài khoản AWS. Nếu khách hàng khác khai ARN role của bạn vào cấu hình của họ, SaaS sẽ assume role của bạn thay họ: đó là confused deputy. External ID riêng cho từng khách hàng, do SaaS kiểm soát, làm lời assume đó thất bại. Nó không thay được việc bảo vệ credential của SaaS, không liên quan tới nhân viên của bạn, và không giới hạn quyền của role."
+    },
+    {
+      "id": "oidc-sub-wildcard",
+      "kind": "single",
+      "prompt": "Role `deploy-prod` cho GitHub Actions có trust policy: `aud` bằng `sts.amazonaws.com` và `StringLike` trên `token.actions.githubusercontent.com:sub` bằng `repo:shop-org/*`. Ý định là chỉ nhánh `main` của repo `checkout` được deploy prod. Thực tế ai assume được role này?",
+      "options": [
+        "Mọi workflow ở mọi repo và nhánh của `shop-org`",
+        "Chỉ nhánh mặc định của các repo trong `shop-org`",
+        "Mọi repo trên GitHub, vì `sub` không được ký",
+        "Chỉ job dùng environment có bảo vệ của `shop-org`"
+      ],
+      "answer": 0,
+      "explanation": "`sub` có dạng `repo:shop-org/checkout:ref:refs/heads/main`, hoặc `...:pull_request`, `...:environment:production`; dấu `*` khớp với mọi phần sau `shop-org/`, nên ai đẩy được một nhánh vào bất kỳ repo nào của tổ chức cũng nhận được role prod. `sub` nằm trong token đã ký, AWS kiểm chữ ký với OIDC provider. Sửa: `StringEquals` với đúng repo và nhánh, hoặc với environment `production` có người duyệt (khi job dùng environment thì `sub` mang environment thay cho ref)."
+    },
+    {
+      "id": "boundary-admin",
+      "kind": "single",
+      "prompt": "Đội dự án được phép `iam:CreateRole` và `iam:AttachRolePolicy` với điều kiện `iam:PermissionsBoundary` bằng ARN của policy `project-boundary`, policy này chỉ cho `s3:*` và `dynamodb:*` trên tài nguyên có tiền tố `proj-`. Họ tạo role mới và gắn `AdministratorAccess`. Role đó làm được gì?",
+      "options": [
+        "Chỉ S3 và DynamoDB trên tài nguyên `proj-`",
+        "Mọi việc, vì identity policy thắng boundary",
+        "Không gì cả, gắn `AdministratorAccess` bị từ chối",
+        "Toàn bộ boundary, dù không gắn policy nào"
+      ],
+      "answer": 0,
+      "explanation": "Quyền thực tế là phần giao giữa identity policy và boundary: `AdministratorAccess` cho mọi thứ, boundary chỉ cho S3 và DynamoDB trên `proj-`, nên role chỉ làm được phần đó. Điều kiện chỉ yêu cầu role mới mang boundary, không cấm gắn policy nào. Boundary không tự cấp quyền: role không có identity policy thì không làm được gì. Để boundary không bị gỡ, policy của đội còn phải `Deny` `iam:DeleteRolePermissionsBoundary`, `iam:PutRolePermissionsBoundary` không kèm điều kiện boundary, và `iam:CreatePolicyVersion` trên chính `project-boundary`."
     }
   ]
 }

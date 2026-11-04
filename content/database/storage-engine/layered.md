@@ -17,7 +17,7 @@ Nhờ vậy, commit chỉ cần một lần ghi tuần tự, còn hàng nghìn l
 
 **B+tree và LSM-tree**:
 - **B+tree** sửa page tại chỗ: đọc một key mất vài lần đọc page; ghi là ghi ngẫu nhiên, page có thể bị tách.
-- **LSM-tree** ghi vào bảng trong RAM (memtable) cùng một log, đầy thì ghi ra file đã sắp xếp không bao giờ sửa (SSTable). Các file được gộp dần ở nền ([[compaction]]). Ghi rất nhanh và tuần tự, nhưng đọc một key có thể phải xem nhiều file; [[bloom-filter|Bloom filter]] giúp bỏ qua file chắc chắn không chứa key.
+- **LSM-tree** ghi vào bảng trong RAM (memtable) cùng một log, đầy thì ghi ra file đã sắp xếp không bao giờ sửa ([[sstable|SSTable]]). Các file được gộp dần ở nền ([[compaction]]). Ghi rất nhanh và tuần tự, nhưng đọc một key có thể phải xem nhiều file; [[bloom-filter|Bloom filter]] giúp bỏ qua file chắc chắn không chứa key.
 
 Đánh đổi được đo bằng ba loại amplification: ghi ([[write-amplification|write amplification]], một byte dữ liệu thành bao nhiêu byte ghi xuống đĩa), đọc, và dung lượng. B+tree tối ưu đọc, LSM tối ưu ghi.
 

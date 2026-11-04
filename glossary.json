@@ -4914,18 +4914,18 @@
     {
       "id": "data-plane",
       "term": "Data plane",
-      "meaning": "Phần nằm trên đường đi của request và thật sự chuyển tiếp lưu lượng, như các proxy của service mesh.",
-      "example": "Các Envoy sidecar trong từng pod là data plane của Istio.",
+      "meaning": "Phần nằm trên đường đi của request và thật sự xử lý hay chuyển tiếp lưu lượng, chạy theo cấu hình mà control plane đã đẩy xuống. Thao tác chỉ dựa vào data plane thường bền hơn khi có sự cố.",
+      "example": "Node và pod đang chạy, instance EC2 đang phục vụ, health check của Route 53, các Envoy sidecar của Istio đều là data plane.",
       "related": ["control-plane", "service-mesh"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "reliability-sre", "high-availability-dr"]
     },
     {
       "id": "control-plane",
       "term": "Control plane",
-      "meaning": "Phần cấu hình và quản lý data plane (cấp chứng chỉ, đẩy route, chính sách) nhưng không xử lý request. Nó chết thì data plane chạy tiếp với cấu hình cũ cho tới khi chứng chỉ hết hạn; pod mới không nhận được cấu hình.",
-      "example": "`istiod` cấp chứng chỉ và đẩy cấu hình route xuống mọi proxy.",
+      "meaning": "Phần tạo, cấu hình và quản lý tài nguyên (API tạo hay sửa, lập lịch, cấp chứng chỉ, đẩy cấu hình) nhưng không nằm trên đường đi của request. Thường phức tạp và kém sẵn sàng hơn data plane; thiết kế tốt thì khi control plane chết, data plane chạy tiếp với cấu hình cũ, chỉ không tạo hay sửa được gì mới.",
+      "example": "API server và scheduler của Kubernetes, API tạo instance của EC2, `istiod` của Istio đều là control plane. Mất `istiod` thì proxy vẫn chạy cho tới khi chứng chỉ hết hạn, nhưng pod mới không nhận được cấu hình.",
       "related": ["data-plane", "service-mesh"],
-      "topics": ["api-gateway-service-mesh"]
+      "topics": ["api-gateway-service-mesh", "kubernetes-core", "reliability-sre", "high-availability-dr"]
     },
     {
       "id": "correlation-id",
@@ -9741,7 +9741,7 @@
       "meaning": "Bảng đã sắp xếp trong RAM của LSM-tree, nhận mọi lần ghi (sau commit log); đầy thì được xả ra đĩa thành SSTable.",
       "example": "Memtable của bảng `cart_items` đầy 128 MB thì được flush thành một SSTable mới.",
       "related": ["lsm-tree", "sstable"],
-      "topics": ["design-key-value-store"]
+      "topics": ["design-key-value-store", "advanced-data-structures"]
     },
     {
       "id": "sstable",
@@ -9749,7 +9749,7 @@
       "meaning": "Sorted String Table: file trên đĩa chứa key đã sắp xếp, ghi một lần và không bao giờ sửa; compaction gộp nhiều SSTable thành file mới.",
       "example": "Đọc một key có thể phải xem vài SSTable; Bloom filter của từng file giúp bỏ qua file chắc chắn không chứa key.",
       "related": ["lsm-tree", "memtable", "compaction"],
-      "topics": ["design-key-value-store"]
+      "topics": ["design-key-value-store", "storage-engine", "advanced-data-structures"]
     },
     {
       "id": "log-segment",
@@ -14494,6 +14494,14 @@
       "example": "Một AZ mạng chập chờn làm p99 tăng gấp 10: zonal shift 2 giờ trong lúc điều tra.",
       "related": ["availability-zone", "static-stability"],
       "topics": ["high-availability-dr"]
+    },
+    {
+      "id": "kqueue",
+      "term": "kqueue",
+      "meaning": "Cơ chế I/O multiplexing của BSD và macOS, tương tự epoll trên Linux: đăng ký sự kiện một lần, kernel chỉ trả về những file descriptor đã sẵn sàng.",
+      "example": "`Selector` của Java NIO trên macOS là `KQueueSelectorImpl`, trên Linux là `EPollSelectorImpl`.",
+      "related": ["epoll", "io-multiplexing"],
+      "topics": ["io-models"]
     }
   ]
 }

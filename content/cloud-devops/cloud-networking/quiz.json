@@ -53,6 +53,32 @@
       ],
       "answer": 0,
       "explanation": "Gateway endpoint cho S3 (và DynamoDB) miễn phí, thêm route theo prefix list của S3 nên traffic tới S3 không qua NAT nữa. Đặt NAT cùng AZ chỉ tránh phí truyền giữa AZ, phí xử lý mỗi GB của NAT vẫn còn; interface endpoint chỉ dành cho dịch vụ AWS hay PrivateLink, không thay được đường ra Internet chung; NAT gateway không có tính năng nén. Kiểm thêm ECR (layer image cũng nằm trên S3) và các dịch vụ AWS khác hay được gọi."
+    },
+    {
+      "id": "tgw-association",
+      "kind": "single",
+      "prompt": "Transit Gateway có ba route table. Attachment `prod` gắn (association) với `rt-prod`, `dev` với `rt-dev`, `shared` với `rt-shared`. Attachment `shared` propagate vào `rt-prod` và `rt-dev`; chỉ attachment `dev` propagate vào `rt-shared`. Route table của cả ba VPC đều trỏ `10.0.0.0/8` về Transit Gateway. Dev và shared gọi nhau bình thường, nhưng prod và shared không gọi được nhau theo cả hai chiều, mọi kết nối đều timeout. Sửa ở đâu?",
+      "options": [
+        "Propagate attachment `prod` vào `rt-shared`",
+        "Propagate attachment `shared` vào `rt-prod`",
+        "Gắn attachment `shared` thêm với `rt-prod`",
+        "Bật appliance mode cho attachment `shared`"
+      ],
+      "answer": 0,
+      "explanation": "Association quyết định route table nào được tra cho gói đi vào từ attachment đó; propagation đưa CIDR của attachment vào một route table. Request từ prod sang shared tra `rt-prod`, có CIDR của shared nên tới nơi, nhưng response từ shared tra `rt-shared`, bảng này chỉ có CIDR của dev nên gói bị bỏ. Request từ shared sang prod bị bỏ ngay ở `rt-shared`. Propagate `shared` vào `rt-prod` đã có sẵn. Mỗi attachment chỉ gắn với đúng một route table. Appliance mode chỉ giữ hai chiều của một luồng đi cùng AZ khi có firewall ở giữa."
+    },
+    {
+      "id": "resolver-on-prem",
+      "kind": "single",
+      "prompt": "Máy chủ on-premises cần phân giải `orders-db.internal.shop.example.com`, tên trong một private hosted zone gắn với VPC `10.0.0.0/16`. Team cấu hình DNS on-premises chuyển tiếp tên miền này tới `10.0.0.2` qua Direct Connect, nhưng mọi truy vấn đều hết thời gian chờ. Cách sửa đúng?",
+      "options": [
+        "Tạo inbound endpoint, chuyển tiếp tới IP của nó",
+        "Tạo outbound endpoint kèm forwarding rule",
+        "Mở UDP và TCP cổng 53 tới `10.0.0.2`",
+        "Gắn private hosted zone với Direct Connect"
+      ],
+      "answer": 0,
+      "explanation": "VPC Resolver ở VPC+2 chỉ trả lời truy vấn từ bên trong VPC, mạng on-premises không gọi tới được dù có đường Direct Connect, và không có security group nào để mở. Inbound endpoint tạo ENI có IP trong subnet của bạn, nhận truy vấn từ on-premises rồi trả lời theo private hosted zone gắn với VPC. Outbound endpoint làm chiều ngược lại: VPC hỏi DNS on-premises. Private hosted zone chỉ gắn được với VPC. Inbound endpoint cần IP ở ít nhất hai AZ, và security group của nó phải mở TCP và UDP cổng 53 từ dải on-premises."
     }
   ]
 }

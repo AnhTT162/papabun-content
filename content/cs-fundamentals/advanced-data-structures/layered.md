@@ -4,9 +4,9 @@ Hệ thống lớn dựa vào vài cấu trúc mà sách nhập môn ít nói: [
 
 ## Interview
 
-**Skip list**: linked list có thứ tự, thêm các tầng "đường cao tốc"; mỗi node được lên tầng trên với xác suất 1/2 (hay 1/4), nên tìm kiếm nhảy xa ở tầng cao rồi đi xuống, trung bình O(log n). Không phải xoay cây nên dễ làm lock-free (`ConcurrentSkipListMap`, memtable của RocksDB); Redis dùng cho sorted set vì đơn giản, duyệt khoảng dễ.
+**Skip list**: linked list có thứ tự, thêm các tầng "đường cao tốc"; mỗi node được lên tầng trên với xác suất 1/2 (hay 1/4), nên tìm kiếm nhảy xa ở tầng cao rồi đi xuống, trung bình O(log n). Không phải xoay cây nên dễ làm lock-free (`ConcurrentSkipListMap`, [[memtable]] của RocksDB); Redis dùng cho sorted set vì đơn giản, duyệt khoảng dễ.
 
-**LSM tree**: ghi vào memtable trong RAM cùng write-ahead log, đầy thì đổ ra file đã sắp xếp bất biến (SSTable), [[compaction]] gộp file ở nền. Ghi nhanh, đọc có thể phải xem nhiều file (bài Storage engine: B+tree, LSM, WAL).
+**LSM tree**: ghi vào memtable trong RAM cùng write-ahead log, đầy thì đổ ra file đã sắp xếp bất biến ([[sstable|SSTable]]), [[compaction]] gộp file ở nền. Ghi nhanh, đọc có thể phải xem nhiều file (bài Storage engine: B+tree, LSM, WAL).
 
 **Bloom filter**: mảng m bit và k hàm hash. Thêm: bật k bit. Hỏi: cả k bit đều bật thì "có thể có", một bit tắt thì "chắc chắn không". Chỉ có [[false-positive|false positive]], không có false negative. Khoảng 9,6 bit mỗi phần tử cho 1% sai. LSM dùng nó cho mỗi SSTable để bỏ qua file chắc chắn không chứa key; cache dùng để chặn truy vấn id không tồn tại (bài Stampede, penetration, avalanche, hot key).
 

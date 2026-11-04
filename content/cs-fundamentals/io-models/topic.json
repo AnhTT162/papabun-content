@@ -10,7 +10,7 @@
   "order": 17,
   "minutes": 15,
   "prerequisites": ["os-process-memory", "tcp-deep"],
-  "terms": ["blocking-io", "io-multiplexing", "epoll", "reactor-pattern", "event-loop", "io-uring", "c10k", "virtual-thread", "zero-copy", "backpressure", "blockhound", "page-cache", "context-switch"],
+  "terms": ["blocking-io", "io-multiplexing", "epoll", "reactor-pattern", "event-loop", "io-uring", "c10k", "virtual-thread", "zero-copy", "backpressure", "blockhound", "page-cache", "context-switch", "kqueue"],
   "references": [
     { "title": "Linux man-pages: epoll(7)", "url": "https://man7.org/linux/man-pages/man7/epoll.7.html" },
     { "title": "Java SE API: java.nio.channels.Selector", "url": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/channels/Selector.html" },

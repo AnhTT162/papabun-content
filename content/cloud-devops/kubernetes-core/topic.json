@@ -10,7 +10,7 @@
   "order": 5,
   "minutes": 15,
   "prerequisites": ["docker", "network-basics"],
-  "terms": ["kubernetes-control-plane", "kubelet", "kube-proxy", "kubernetes-pod", "kubernetes-deployment", "replicaset", "kubernetes-service", "endpointslice", "readiness-probe", "ingress", "gateway-api", "configmap", "kubernetes-namespace", "headless-service", "statefulset", "rolling-deployment", "kubernetes-secret", "rbac", "hpa"],
+  "terms": ["kubernetes-control-plane", "kubelet", "kube-proxy", "kubernetes-pod", "kubernetes-deployment", "replicaset", "kubernetes-service", "endpointslice", "readiness-probe", "ingress", "gateway-api", "configmap", "kubernetes-namespace", "headless-service", "statefulset", "rolling-deployment", "kubernetes-secret", "rbac", "hpa", "control-plane"],
   "references": [
     { "title": "Kubernetes: Deployments", "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/" },
     { "title": "Kubernetes: Service", "url": "https://kubernetes.io/docs/concepts/services-networking/service/" },

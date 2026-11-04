@@ -1,6 +1,6 @@
 ## Quick
 
-Có ba cách một chương trình chờ I/O. [[blocking-io|Blocking]]: thread gọi `read` và ngủ tới khi có dữ liệu, nên mỗi kết nối cần một thread. [[io-multiplexing|I/O multiplexing]] ([[epoll]] trên Linux, kqueue trên macOS): socket để non-blocking, một thread hỏi kernel "socket nào đang sẵn sàng" rồi chỉ xử lý những cái đó; đây là nền của [[reactor-pattern|reactor]] (Netty, Nginx, Node.js, Redis). Async thật ([[io-uring|io_uring]], IOCP): gửi yêu cầu cho kernel làm rồi nhận kết quả khi xong. **Multiplexing cho vài thread giữ hàng chục nghìn kết nối, đổi lại không được chặn [[event-loop|event loop]] dù chỉ vài chục mili giây; virtual thread của Java đem lợi ích đó cho code blocking bình thường.**
+Có ba cách một chương trình chờ I/O. [[blocking-io|Blocking]]: thread gọi `read` và ngủ tới khi có dữ liệu, nên mỗi kết nối cần một thread. [[io-multiplexing|I/O multiplexing]] ([[epoll]] trên Linux, [[kqueue]] trên macOS): socket để non-blocking, một thread hỏi kernel "socket nào đang sẵn sàng" rồi chỉ xử lý những cái đó; đây là nền của [[reactor-pattern|reactor]] (Netty, Nginx, Node.js, Redis). Async thật ([[io-uring|io_uring]], IOCP): gửi yêu cầu cho kernel làm rồi nhận kết quả khi xong. **Multiplexing cho vài thread giữ hàng chục nghìn kết nối, đổi lại không được chặn [[event-loop|event loop]] dù chỉ vài chục mili giây; virtual thread của Java đem lợi ích đó cho code blocking bình thường.**
 
 ## Interview
 

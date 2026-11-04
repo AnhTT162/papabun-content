@@ -10,7 +10,7 @@
   "order": 12,
   "minutes": 16,
   "prerequisites": ["acid-transactions-basics", "index-execution-plan"],
-  "terms": ["page", "buffer-pool", "wal", "fsync", "checkpoint", "b-tree", "lsm-tree", "compaction", "write-amplification", "bloom-filter", "group-commit", "full-page-write", "clustered-index", "mvcc", "undo-log"],
+  "terms": ["page", "buffer-pool", "wal", "fsync", "checkpoint", "b-tree", "lsm-tree", "compaction", "write-amplification", "bloom-filter", "group-commit", "full-page-write", "clustered-index", "mvcc", "undo-log", "sstable"],
   "references": [
     { "title": "PostgreSQL Documentation: Reliability and the Write-Ahead Log", "url": "https://www.postgresql.org/docs/current/wal.html" },
     { "title": "MySQL 8.0: InnoDB On-Disk Structures and Buffer Pool", "url": "https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html" },

@@ -10,7 +10,7 @@
   "order": 16,
   "minutes": 15,
   "prerequisites": ["data-structures", "storage-engine"],
-  "terms": ["skip-list", "lsm-tree", "trie", "radix-tree", "probabilistic-data-structure", "bloom-filter", "false-positive", "hyperloglog", "count-min-sketch", "heavy-hitter", "merkle-tree"],
+  "terms": ["skip-list", "lsm-tree", "trie", "radix-tree", "probabilistic-data-structure", "bloom-filter", "false-positive", "hyperloglog", "count-min-sketch", "heavy-hitter", "merkle-tree", "sstable", "memtable"],
   "references": [
     { "title": "Guava: BloomFilter", "url": "https://guava.dev/releases/snapshot-jre/api/docs/com/google/common/hash/BloomFilter.html" },
     { "title": "Redis: HyperLogLog", "url": "https://redis.io/docs/latest/develop/data-types/probabilistic/hyperloglogs/" },

@@ -10,7 +10,7 @@
   "order": 19,
   "minutes": 16,
   "prerequisites": ["cloud-fundamentals", "aws-core", "backup-restore"],
-  "terms": ["rpo-rto", "failover", "static-stability", "availability-zone", "cloud-region", "backup-and-restore", "pilot-light", "warm-standby", "zonal-shift"],
+  "terms": ["rpo-rto", "failover", "static-stability", "availability-zone", "cloud-region", "backup-and-restore", "pilot-light", "warm-standby", "zonal-shift", "control-plane", "data-plane"],
   "references": [
     { "title": "AWS Whitepaper: Disaster Recovery of Workloads on AWS", "url": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html" },
     { "title": "Amazon Aurora: switchover or failover in Aurora Global Database", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html" },
