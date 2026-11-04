@@ -16,7 +16,10 @@
     { "title": "Principles of Chaos Engineering", "url": "https://principlesofchaos.org/" },
     { "title": "Amazon Builders' Library: Static stability using Availability Zones", "url": "https://aws.amazon.com/builders-library/static-stability-using-availability-zones/" },
     { "title": "Amazon Builders' Library: Workload isolation using shuffle-sharding", "url": "https://aws.amazon.com/builders-library/workload-isolation-using-shuffle-sharding/" },
-    { "title": "Amazon Builders' Library: Avoiding fallback in distributed systems", "url": "https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems/" }
+    { "title": "Amazon Builders' Library: Avoiding fallback in distributed systems", "url": "https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems/" },
+    { "title": "Google: Site Reliability Engineering (SRE Book)", "url": "https://sre.google/sre-book/table-of-contents/" },
+    { "title": "AWS FIS: Stop conditions", "url": "https://docs.aws.amazon.com/fis/latest/userguide/stop-conditions.html" },
+    { "title": "Bronson và cộng sự: Metastable Failures in Distributed Systems (HotOS 2021)", "url": "https://sigops.org/s/conferences/hotos/2021/papers/hotos21-s11-bronson.pdf" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

@@ -17,7 +17,10 @@
     { "title": "OpenID Connect Core 1.0", "url": "https://openid.net/specs/openid-connect-core-1_0.html" },
     { "title": "RFC 8252: OAuth 2.0 for Native Apps", "url": "https://www.rfc-editor.org/rfc/rfc8252.html" },
     { "title": "RFC 6749: The OAuth 2.0 Authorization Framework", "url": "https://www.rfc-editor.org/rfc/rfc6749.html" },
-    { "title": "Spring Security Reference: OAuth 2.0 Login", "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/login/index.html" }
+    { "title": "Spring Security Reference: OAuth 2.0 Login", "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/login/index.html" },
+    { "title": "RFC 8693: OAuth 2.0 Token Exchange", "url": "https://www.rfc-editor.org/rfc/rfc8693.html" },
+    { "title": "RFC 9207: OAuth 2.0 Authorization Server Issuer Identification", "url": "https://www.rfc-editor.org/rfc/rfc9207.html" },
+    { "title": "RFC 9126: OAuth 2.0 Pushed Authorization Requests", "url": "https://www.rfc-editor.org/rfc/rfc9126.html" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

@@ -16,7 +16,9 @@
     { "title": "Martin Fowler: Strangler Fig Application", "url": "https://martinfowler.com/bliki/StranglerFigApplication.html" },
     { "title": "Ian Cartwright, Rob Horn, James Lewis: Patterns of Legacy Displacement", "url": "https://martinfowler.com/articles/patterns-legacy-displacement/" },
     { "title": "AWS DMS: Best practices", "url": "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html" },
-    { "title": "Amazon RDS: Importing data into Oracle on Amazon RDS", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html" }
+    { "title": "Amazon RDS: Importing data into Oracle on Amazon RDS", "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html" },
+    { "title": "orafce: Oracle compatibility functions for PostgreSQL", "url": "https://github.com/orafce/orafce" },
+    { "title": "pgJDBC: Connection parameters (autosave)", "url": "https://jdbc.postgresql.org/documentation/use/" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

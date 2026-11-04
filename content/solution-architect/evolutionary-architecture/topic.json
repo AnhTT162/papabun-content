@@ -14,7 +14,8 @@
   "references": [
     { "title": "Building Evolutionary Architectures (trang của sách)", "url": "https://evolutionaryarchitecture.com/" },
     { "title": "ArchUnit User Guide: Freezing Arch Rules", "url": "https://www.archunit.org/userguide/html/000_Index.html#_freezing_arch_rules" },
-    { "title": "Martin Fowler: Sacrificial Architecture", "url": "https://martinfowler.com/bliki/SacrificialArchitecture.html" }
+    { "title": "Martin Fowler: Sacrificial Architecture", "url": "https://martinfowler.com/bliki/SacrificialArchitecture.html" },
+    { "title": "Joel Spolsky: Things You Should Never Do, Part I", "url": "https://www.joelonsoftware.com/2000/04/06/things-you-should-never-do-part-i/" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

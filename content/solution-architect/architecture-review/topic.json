@@ -13,7 +13,9 @@
   "terms": ["atam", "risk-storming", "quality-attribute", "design-doc", "non-functional-requirement", "utility-tree", "rpo-rto", "sensitivity-point", "tradeoff-point", "non-risk", "risk-theme", "well-architected-framework", "production-readiness-review", "quality-attribute-scenario", "pre-mortem", "bus-factor", "one-way-door", "two-way-door", "circuit-breaker", "single-point-of-failure", "idempotency-key", "risk-register", "adr", "retry-storm", "outbox", "waiting-room", "jitter", "slo", "architecture-board", "postmortem", "error-budget", "hotspot", "proof-of-concept", "c4-model", "stakeholder", "sla", "pitr"],
   "references": [
     { "title": "SEI: ATAM: Method for Architecture Evaluation", "url": "https://insights.sei.cmu.edu/library/atam-method-for-architecture-evaluation/" },
-    { "title": "Simon Brown: Risk-storming", "url": "https://riskstorming.com/" }
+    { "title": "Simon Brown: Risk-storming", "url": "https://riskstorming.com/" },
+    { "title": "SEI: Active Reviews for Intermediate Designs (ARID)", "url": "https://insights.sei.cmu.edu/library/active-reviews-for-intermediate-designs/" },
+    { "title": "SEI: Making Architecture Design Decisions: An Economic Approach (CBAM)", "url": "https://insights.sei.cmu.edu/library/making-architecture-design-decisions-an-economic-approach/" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },
