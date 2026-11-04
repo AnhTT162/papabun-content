@@ -16,7 +16,7 @@ Bẫy hay gặp: đòi [[feature-parity|tính năng ngang bằng]] với hệ th
 
 ## Deep
 
-- **7 R của AWS** (từ 5 R của Gartner năm 2010, AWS mở rộng thành 6 rồi 7):
+- **7 R của AWS** (từ 5 R của Gartner năm 2011, AWS mở rộng thành 6 rồi 7):
   - Retire: tắt. Ứng dụng không ai đăng nhập 90 ngày, báo cáo không ai mở. Đây là phần tiết kiệm rẻ nhất.
   - Retain: giữ lại chỗ cũ, vì chưa đáng chuyển, vướng pháp lý, hay sắp thay.
   - Rehost (lift and shift): chuyển máy ảo nguyên trạng. Nhanh, không sửa code; bỏ được chi phí datacenter và chọn lại cỡ máy, nhưng công vận hành chính ứng dụng không đổi.

@@ -16,7 +16,8 @@
     { "title": "EY Việt Nam: Nghị định 356/2025/NĐ-CP hướng dẫn Luật Bảo vệ dữ liệu cá nhân (3/2026)", "url": "https://www.ey.com/content/dam/ey-unified-site/ey-com/vi-vn/technical/tax/documents/ey-vietnam-legal-alert-march-2026-decree-no356-2025-nd-cp-providing-detailed-guidance-for-implementation-of-personal-data-protection-law-viet.pdf" },
     { "title": "OWASP Logging Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" },
     { "title": "pgjdbc: Connection parameters (logServerErrorDetail)", "url": "https://jdbc.postgresql.org/documentation/use/" },
-    { "title": "PostgreSQL 17: Error Reporting and Logging (log_error_verbosity)", "url": "https://www.postgresql.org/docs/17/runtime-config-logging.html" }
+    { "title": "PostgreSQL 17: Error Reporting and Logging (log_error_verbosity)", "url": "https://www.postgresql.org/docs/17/runtime-config-logging.html" },
+    { "title": "Sở Tư pháp Tuyên Quang: Đề cương giới thiệu Luật Bảo vệ dữ liệu cá nhân 2025 (Điều 8 mức phạt, Điều 38 hiệu lực)", "url": "https://khodulieu.sohoa.tuyenquang.gov.vn/congthongtin/media/a3a0a543e41f76745db2acd0fd744175.pdf" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

@@ -16,7 +16,8 @@
     { "title": "Thoughtworks Technology Radar: FAQ", "url": "https://www.thoughtworks.com/radar/faq" },
     { "title": "Andrew Harmel-Law: Scaling the Practice of Architecture, Conversationally", "url": "https://martinfowler.com/articles/scaling-architecture-conversationally.html" },
     { "title": "John Zachman: A framework for information systems architecture (1987)", "url": "https://doi.org/10.1147/sj.263.0276" },
-    { "title": "Sowa và Zachman: Extending and formalizing the framework for information systems architecture (1992)", "url": "https://doi.org/10.1147/sj.313.0590" }
+    { "title": "Sowa và Zachman: Extending and formalizing the framework for information systems architecture (1992)", "url": "https://doi.org/10.1147/sj.313.0590" },
+    { "title": "LeanIX: Gartner TIME framework, Invest (loạt bài về bốn ô Tolerate, Invest, Migrate, Eliminate)", "url": "https://www.leanix.net/en/blog/gartner-time-invest" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

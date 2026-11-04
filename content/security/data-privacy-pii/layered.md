@@ -23,7 +23,7 @@
 ## Deep
 
 - **Khung pháp lý cần biết ở mức kỹ sư** (không thay tư vấn pháp lý):
-  - Việt Nam: Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 có hiệu lực 1/1/2026; Nghị định 356/2025/NĐ-CP hướng dẫn và thay Nghị định 13/2023. Mức phạt tối đa với tổ chức: mua bán dữ liệu cá nhân 10 lần khoản thu bất hợp pháp; vi phạm chuyển dữ liệu ra nước ngoài 5% doanh thu năm trước (hai mức này áp dụng khi cao hơn 3 tỷ đồng); vi phạm khác tới 3 tỷ đồng.
+  - Việt Nam: Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 có hiệu lực 1/1/2026; Nghị định 356/2025/NĐ-CP hướng dẫn và thay Nghị định 13/2023. Mức phạt tối đa với tổ chức: mua bán dữ liệu cá nhân 10 lần khoản thu bất hợp pháp; vi phạm chuyển dữ liệu ra nước ngoài 5% doanh thu năm trước (hai mức này áp dụng khi cao hơn 3 tỷ đồng); vi phạm khác tới 3 tỷ đồng. Cá nhân vi phạm cùng hành vi chịu tối đa một nửa mức của tổ chức.
   - Nghị định 356 mở rộng nhóm nhạy cảm: thêm tình trạng sức khoẻ nói chung, thông tin tài khoản và thẻ ngân hàng, lịch sử giao dịch tài chính, ảnh CCCD, tên đăng nhập và mật khẩu tài khoản định danh điện tử, dữ liệu theo dõi hành vi trên mạng.
   - Đồng ý phải rõ ràng, lưu lại và kiểm chứng được nội dung và thời điểm; không được đặt sẵn ô đồng ý. Luật có ngoại lệ không cần đồng ý (thực hiện thoả thuận với chủ thể, nghĩa vụ pháp luật, tình huống khẩn cấp...).
   - Quyền của chủ thể (xem, sửa, xoá, rút đồng ý, phản đối) theo Nghị định 356: phản hồi trong 2 ngày làm việc; xoá trong 20 ngày, 30 ngày nếu phải phối hợp bên xử lý hay bên thứ ba, gia hạn một lần tối đa 20 ngày. GDPR: một tháng, gia hạn thêm tối đa hai tháng.

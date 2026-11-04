@@ -14,7 +14,8 @@
   "references": [
     { "title": "Melvin Conway: How Do Committees Invent? (1968)", "url": "https://www.melconway.com/Home/Committees_Paper.html" },
     { "title": "Team Topologies: Key concepts", "url": "https://teamtopologies.com/key-concepts" },
-    { "title": "Martin Fowler: Conway's Law", "url": "https://martinfowler.com/bliki/ConwaysLaw.html" }
+    { "title": "Martin Fowler: Conway's Law", "url": "https://martinfowler.com/bliki/ConwaysLaw.html" },
+    { "title": "MacCormack, Baldwin, Rusnak: Exploring the duality between product and organizational architectures (Research Policy, 2012)", "url": "https://doi.org/10.1016/j.respol.2012.04.011" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },
