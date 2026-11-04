@@ -53,6 +53,32 @@
       ],
       "answer": 0,
       "explanation": "View chạy với quyền của chủ view, nên RLS áp theo chủ view chứ không theo người gọi; chủ bảng chưa FORCE thì không chịu RLS. `security_invoker = true` (PostgreSQL 15+) làm view kiểm quyền và RLS theo người gọi: lab ra `1:3` thay vì `2:2,1:3`. Gắn cứng tenant vào view không dùng được cho tenant khác. Cấp quyền trên bảng không đổi cách view chạy. Chỉ materialized view mới REFRESH được."
+    },
+    {
+      "id": "fair-queue",
+      "kind": "single",
+      "prompt": "Hàng đợi import dùng chung, 20 worker, mỗi job 2 giây. Tenant A đẩy 100.000 job lúc 0 giây; tenant B đẩy 1 job lúc 10 giây. Hàng đợi là FIFO chung. Job của B chờ bao lâu trước khi chạy?",
+      "options": [
+        "Gần 2,8 giờ, vì nó nằm sau gần hết 100.000 job của A",
+        "Tối đa 2 giây, vì worker nào xong job đang chạy sẽ lấy nó",
+        "Khoảng 100 giây, vì 20 worker chia đều cho hai tenant",
+        "Không chờ, vì hàng đợi ưu tiên job đến từ tenant nhỏ hơn"
+      ],
+      "answer": 0,
+      "explanation": "FIFO không biết tenant: trước B còn khoảng 99.900 job, 20 worker xử lý 10 job mỗi giây, nên B chờ khoảng 9.990 giây (đã mô phỏng). Tối đa 2 giây là kết quả khi mỗi tenant có hàng đợi riêng và worker lấy xoay vòng giữa các hàng còn job; khi đó B chạy ở worker rảnh kế tiếp. Hàng đợi chung không tự chia worker theo tenant hay ưu tiên ai: phải thiết kế hàng đợi công bằng và giới hạn số job song song mỗi tenant."
+    },
+    {
+      "id": "restore-tenant",
+      "kind": "single",
+      "prompt": "Database pool chung cho 500 tenant, bật point-in-time recovery. Lúc 10:00 admin của một tenant xoá nhầm toàn bộ đơn hàng của họ; 15:00 mới phát hiện. Cách khôi phục đúng?",
+      "options": [
+        "Restore PITR về 09:59 ra instance phụ, chép riêng dòng của tenant đó về",
+        "Restore database chính về 09:59 để lấy lại đúng trạng thái trước lúc xoá",
+        "Restore snapshot đêm qua đè lên database chính rồi nhờ các tenant nhập lại",
+        "Bảo tenant tự nhập lại dữ liệu vì backup pool không tách được theo tenant"
+      ],
+      "answer": 0,
+      "explanation": "Restore database chính về 09:59 xoá năm giờ ghi của 499 tenant còn lại; snapshot đêm qua còn mất nhiều hơn. Backup pool tách được theo tenant, chỉ là không ở mức cả database: restore ra instance phụ, lọc theo `tenant_id`, chép về theo thứ tự khoá ngoại và đối soát với dòng tenant đã ghi sau 10:00. Điểm restore lấy từ audit log hoặc WAL (ngay trước transaction xoá), không đoán tròn phút. Việc này nên có script sẵn và được diễn tập; silo thì restore được cả database của tenant đó."
     }
   ]
 }
