@@ -10,6 +10,8 @@
     { "id": "host-prefix", "front": "Prefix `__Host-` của cookie đảm bảo gì?", "back": "Cookie phải `Secure`, `Path=/`, không có `Domain`, nên chỉ thuộc đúng host và tên miền con không ghi đè được." },
     { "id": "spring-csrf-default", "front": "Spring Security chống CSRF mặc định thế nào?", "back": "Synchronizer token lưu trong session, request ghi phải gửi lại token (form `_csrf` hoặc header), thiếu thì `403`." },
     { "id": "csp-nonce", "front": "CSP dùng nonce hoạt động thế nào?", "back": "Mỗi response sinh một nonce ngẫu nhiên, đặt trong header và thẻ `<script nonce>` hợp lệ; script chèn vào không có nonce nên không chạy." },
-    { "id": "frame-ancestors", "front": "Chống clickjacking bằng gì?", "back": "`X-Frame-Options: DENY` hoặc CSP `frame-ancestors` (cho phép liệt kê origin được nhúng, không dùng được trong thẻ `<meta>`)." }
+    { "id": "frame-ancestors", "front": "Chống clickjacking bằng gì?", "back": "`X-Frame-Options: DENY` hoặc CSP `frame-ancestors` (cho phép liệt kê origin được nhúng, không dùng được trong thẻ `<meta>`)." },
+    { "id": "referrer-default", "front": "Trình duyệt gửi `Referer` thế nào khi không có Referrer-Policy?", "back": "`strict-origin-when-cross-origin`: cùng origin gửi URL đầy đủ, khác origin chỉ gửi origin, HTTPS xuống HTTP không gửi." },
+    { "id": "coop-purpose", "front": "COOP `same-origin` chặn được gì?", "back": "Cửa sổ khác origin không giữ tham chiếu tới trang của bạn (`window.opener` thành null), trang lạ không dò được trạng thái của trang bạn (XS-Leaks)." }
   ]
 }

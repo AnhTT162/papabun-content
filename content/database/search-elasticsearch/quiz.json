@@ -53,6 +53,19 @@
       ],
       "answer": 2,
       "explanation": "Index trigram tách chuỗi thành các cụm 3 ký tự, nên `LIKE`/`ILIKE` có `%` ở đầu vẫn dùng được index, và hỗ trợ cả tìm gần đúng bằng `similarity`. B-tree chỉ giúp khi biết phần đầu chuỗi. Partition theo chữ cái đầu cũng vậy, và chuỗi cần tìm nằm giữa tên. Elasticsearch làm được nhưng thêm cả một hệ thống cho một màn hình nội bộ. Với tên tiếng Việt, `ILIKE '%nguyen%'` không khớp \"Nguyễn\": tạo index trigram trên biểu thức bỏ dấu, ví dụ một hàm `IMMUTABLE` bọc `unaccent`."
+    },
+    {
+      "id": "tenant-routing-miss",
+      "kind": "single",
+      "prompt": "Index chung cho mọi tenant, truy vấn gửi kèm `routing=tenant_42`. Một job nhập dữ liệu ghi tài liệu của tenant 42 nhưng quên `routing`. Tìm kiếm của tenant 42 thấy gì?",
+      "options": [
+        "Có thể không thấy, tài liệu nằm ở shard khác",
+        "Thấy bình thường, filter tenant_id vẫn quét mọi shard",
+        "Thấy sau lần merge segment kế tiếp, khi shard tự cân bằng",
+        "Thấy, Elasticsearch tự định tuyến theo trường tenant_id"
+      ],
+      "answer": 0,
+      "explanation": "Không có `routing` thì shard được chọn theo `_id`, còn truy vấn có `routing` chỉ hỏi shard của `tenant_42`; filter chỉ lọc trong các shard được hỏi. Merge không chuyển tài liệu giữa shard, và Elasticsearch không tự đọc `tenant_id` để định tuyến. Bật `_routing: { required: true }` để lần ghi thiếu routing bị từ chối."
     }
   ]
 }

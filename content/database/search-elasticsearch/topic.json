@@ -5,16 +5,19 @@
   "minAppVersion": "0.1",
   "track": "database",
   "title": "Search engine & Elasticsearch",
-  "summary": "Vì sao `LIKE '%từ khoá%'` chậm, inverted index và analyzer (kể cả tiếng Việt có dấu và không dấu), xếp hạng BM25, shard, segment và near real-time, đồng bộ dữ liệu từ database bằng CDC, reindex không downtime qua alias, phân trang sâu, và khi nào full-text search của PostgreSQL là đủ.",
+  "summary": "Vì sao `LIKE '%từ khoá%'` chậm, inverted index và analyzer (kể cả tiếng Việt có dấu và không dấu), xếp hạng BM25, shard, segment và near real-time, đồng bộ dữ liệu từ database bằng CDC, reindex không downtime qua alias, phân trang sâu, nhiều tenant (index riêng, routing, filtered alias), và khi nào full-text search của PostgreSQL là đủ.",
   "level": "senior",
   "order": 23,
-  "minutes": 20,
+  "minutes": 21,
   "prerequisites": ["index-execution-plan", "replication-ha"],
   "terms": ["inverted-index", "analyzer", "bm25", "near-real-time", "lucene-segment", "index-alias", "search-after", "gin-index", "trigram-index", "cdc", "outbox", "dual-write", "keyset-pagination", "sargable"],
   "references": [
     { "title": "Elasticsearch Guide: Text analysis", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis.html" },
     { "title": "Elasticsearch Guide: Near real-time search", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/near-real-time.html" },
-    { "title": "PostgreSQL Documentation: Full Text Search", "url": "https://www.postgresql.org/docs/current/textsearch.html" }
+    { "title": "PostgreSQL Documentation: Full Text Search", "url": "https://www.postgresql.org/docs/current/textsearch.html" },
+    { "title": "Elasticsearch Guide: _routing field", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-routing-field.html" },
+    { "title": "Elasticsearch Guide: Size your shards", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/size-your-shards.html" },
+    { "title": "Elasticsearch Guide: Aliases", "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/aliases.html" }
   ],
   "blocks": [
     { "type": "layered", "file": "layered.md" },

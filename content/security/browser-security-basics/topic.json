@@ -5,19 +5,21 @@
   "minAppVersion": "0.1",
   "track": "security",
   "title": "Bảo mật phía trình duyệt",
-  "summary": "Origin và site khác nhau thế nào; same-origin policy chặn đọc chứ không chặn gửi; CORS, simple request và preflight, các cấu hình CORS làm lộ dữ liệu; cờ cookie `HttpOnly`, `Secure`, `SameSite` và prefix `__Host-`; CSRF và cách Spring Security chống; CSP với nonce, clickjacking, header bảo mật mặc định; số đo thật với Chrome 156.",
+  "summary": "Origin và site khác nhau thế nào; same-origin policy chặn đọc chứ không chặn gửi; CORS, simple request và preflight, các cấu hình CORS làm lộ dữ liệu; cờ cookie `HttpOnly`, `Secure`, `SameSite` và prefix `__Host-`; CSRF và cách Spring Security chống; CSP với nonce, clickjacking, header bảo mật mặc định; số đo thật với Chrome 156; Referrer-Policy và COOP (popup đăng nhập hỏng khi đặt `same-origin`).",
   "level": "junior",
   "order": 3,
-  "minutes": 13,
+  "minutes": 14,
   "prerequisites": ["http-request-lifecycle", "authn-authz-basics"],
-  "terms": ["web-origin", "site", "same-origin-policy", "cors", "cors-preflight", "samesite", "cookie-prefix", "csrf", "xss", "csp", "clickjacking", "fetch-metadata", "third-party-cookie", "http-session", "hsts", "simple-request", "cookie-tossing", "csp-nonce"],
+  "terms": ["web-origin", "site", "same-origin-policy", "cors", "cors-preflight", "samesite", "cookie-prefix", "csrf", "xss", "csp", "clickjacking", "fetch-metadata", "third-party-cookie", "http-session", "hsts", "simple-request", "cookie-tossing", "csp-nonce", "referrer-policy", "coop"],
   "references": [
     { "title": "MDN: Cross-Origin Resource Sharing (CORS)", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS" },
     { "title": "MDN: Set-Cookie", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie" },
     { "title": "OWASP Cross-Site Request Forgery Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" },
     { "title": "Spring Security Reference: Cross Site Request Forgery (Servlet)", "url": "https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html" },
     { "title": "Spring Security Reference: Security HTTP Response Headers", "url": "https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html" },
-    { "title": "MDN: Content-Security-Policy script-src", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src" }
+    { "title": "MDN: Content-Security-Policy script-src", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src" },
+    { "title": "MDN: Cross-Origin-Opener-Policy", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Opener-Policy" },
+    { "title": "MDN: Referrer-Policy", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy" }
   ],
   "blocks": [
     { "type": "analogy", "file": "analogy.md" },

@@ -34,7 +34,7 @@ Bẫy hay gặp: app kết nối database bằng chính role sở hữu bảng n
 - **Tenant context xuyên suốt**:
   - Lấy từ claim trong token đã xác thực (hoặc từ tên miền con đã ánh xạ ở server), không tin header do client gửi. Kiểm user có thuộc tenant đó không; mô hình quyền ở bài Mô hình phân quyền.
   - Giữ trong `ThreadLocal` hay `ScopedValue` và dọn trong `finally` (bài ThreadLocal & ScopedValue); đưa vào [[mdc|MDC]] để log có tenant; truyền qua header của lời gọi nội bộ và trong mọi message Kafka, job nền, để consumer đặt lại context.
-  - Cache key, khoá idempotency, tên file trên S3 (`tenants/{id}/...`), index tìm kiếm đều phải có tenant. Với S3, có thể giới hạn quyền theo prefix bằng session tag của tenant trong IAM policy, để code lỗi cũng không đọc được prefix khác.
+  - Cache key, khoá idempotency, tên file trên S3 (`tenants/{id}/...`), index tìm kiếm đều phải có tenant (index riêng hay index chung có routing, filtered alias: bài Elasticsearch). Với S3, có thể giới hạn quyền theo prefix bằng session tag của tenant trong IAM policy, để code lỗi cũng không đọc được prefix khác.
 - **Noisy neighbor**:
   - Rate limit theo tenant và theo gói (thuật toán ở bài Rate limiting); thêm giới hạn số request đang chạy cho endpoint đắt như báo cáo, xuất dữ liệu.
   - Việc nặng (import, xuất file, gửi thông báo hàng loạt) vào hàng đợi với phân phối công bằng: hàng đợi hay partition theo tenant, worker lấy xoay vòng có trọng số theo gói, mỗi tenant tối đa vài job song song. Một hàng đợi FIFO chung thì một tenant đẩy 100.000 job sẽ làm mọi tenant khác chờ.

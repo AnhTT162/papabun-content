@@ -66,6 +66,19 @@
       ],
       "answer": 0,
       "explanation": "Script chạy trong chính origin của ứng dụng, nên same-origin policy không chặn nó: script gọi API (cookie tự đi kèm), đọc response, đọc cả CSRF token trên trang, rồi gửi dữ liệu ra ngoài. `HttpOnly` chỉ ngăn lấy cookie mang đi dùng ở máy khác. Phải chặn XSS từ gốc bằng escape đầu ra và CSP."
+    },
+    {
+      "id": "coop-popup-login",
+      "kind": "single",
+      "prompt": "Sau khi thêm `Cross-Origin-Opener-Policy: same-origin` cho mọi trang của app, nút \"Đăng nhập bằng Google\" (mở popup, chờ `postMessage` gửi về) ngừng hoạt động. Vì sao?",
+      "options": [
+        "Popup khác origin mất `window.opener`, không gửi kết quả về được",
+        "COOP chặn mọi `postMessage` giữa các origin, cả trong iframe",
+        "COOP làm trình duyệt chặn cookie của Google trong popup đó",
+        "COOP bắt popup phải trả CORS header cho origin của app"
+      ],
+      "answer": 0,
+      "explanation": "COOP `same-origin` đưa cửa sổ khác origin sang nhóm riêng, nên popup khác origin có `window.opener` là `null` (đã đo trên Chrome 156 với hai origin localhost). COOP không đụng tới iframe, cookie hay CORS. Sửa bằng `same-origin-allow-popups` trên trang mở popup, hoặc dùng luồng redirect."
     }
   ]
 }

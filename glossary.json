@@ -14526,6 +14526,22 @@
       "example": "Cookie `remember-me` sống 14 ngày; mở lại trình duyệt sau khi session đã hết vẫn vào thẳng trang chính mà không nhập mật khẩu.",
       "related": ["http-session", "authentication"],
       "topics": ["authn-authz-basics"]
+    },
+    {
+      "id": "referrer-policy",
+      "term": "Referrer-Policy",
+      "meaning": "Header quyết định trình duyệt gửi bao nhiêu của URL trang hiện tại trong header `Referer` khi đi sang trang khác. Mặc định hiện nay là `strict-origin-when-cross-origin`.",
+      "example": "Trang đặt lại mật khẩu có token trong URL trả `Referrer-Policy: no-referrer` để token không lọt sang trang khác.",
+      "related": ["coop", "csp"],
+      "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "coop",
+      "term": "COOP",
+      "meaning": "Cross-Origin-Opener-Policy: header tách cửa sổ của bạn khỏi cửa sổ khác origin đã mở nó hoặc do nó mở, nên hai bên mất tham chiếu `window.opener`.",
+      "example": "Đặt `same-origin` cho app thì popup đăng nhập khác origin không `postMessage` về được; dùng `same-origin-allow-popups` để giữ.",
+      "related": ["referrer-policy", "same-origin-policy"],
+      "topics": ["browser-security-basics"]
     }
   ]
 }

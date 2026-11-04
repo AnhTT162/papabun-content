@@ -50,6 +50,14 @@ Thêm boost theo trường (tên sản phẩm quan trọng hơn mô tả) và th
   - Số primary shard cố định khi tạo; muốn đổi thì `_split`, `_shrink` hoặc reindex.
   - Hướng dẫn của Elastic: mỗi shard khoảng 10–50GB, và tránh rất nhiều shard nhỏ vì mỗi shard tốn heap và tài nguyên của cluster.
   - Mỗi shard tính IDF trên dữ liệu của riêng nó, nên với dữ liệu ít, điểm có thể lệch giữa các shard; `search_type=dfs_query_then_fetch` tính lại thống kê chung, đổi lại thêm một vòng gọi.
+- **Nhiều tenant** (mô hình chung: bài Multi-tenancy):
+  - Index riêng mỗi tenant: tách sạch, xoá tenant là xoá index. Nhưng mỗi index ít nhất một primary shard; thêm một replica thì 5.000 tenant nhỏ là 10.000 shard. Cái giá thật là heap và cluster state mà master phải giữ; `cluster.max_shards_per_node` (mặc định 1.000 shard mỗi node, không tính frozen) chỉ là ngưỡng chặn tạo index mới. Bù lại, mỗi tenant có thống kê xếp hạng riêng.
+  - Index chung, mọi tài liệu có `tenant_id`: mọi truy vấn có `term` trên `tenant_id` đặt trong `filter` (không tính điểm, cache được). Thêm routing (giá trị quyết định tài liệu vào shard nào, mặc định là `_id`) theo `tenant_id` để tài liệu của một tenant nằm trên một shard: truy vấn kèm `routing` chỉ chạm một shard thay vì mọi shard.
+  - Routing phải có ở mọi lần ghi: một lần ghi quên routing là tài liệu nằm ở shard khác và truy vấn có routing không thấy nó. Bật `_routing: { required: true }` trong mapping để ghi thiếu bị từ chối; khi đó get, update, delete theo id cũng phải kèm routing. `_id` chỉ duy nhất trong một shard: ghi cùng `_id` với hai routing khác nhau là ra hai bản.
+  - Tenant lớn làm một shard phình; `index.routing_partition_size` (đặt lúc tạo index, lớn hơn 1 và nhỏ hơn số shard, đi kèm `_routing.required: true`) rải mỗi tenant ra vài shard.
+  - [[index-alias|Alias]] có filter cho mỗi tenant (filter `tenant_id` cộng routing) cho ứng dụng đọc như một index riêng. Filter chỉ áp cho search và count, không áp cho get theo id. Alias là tiện lợi, không phải ranh giới bảo mật: ai gọi thẳng index chung vẫn thấy mọi tenant, nên chỉ cho backend gọi Elasticsearch và kiểm tenant ở backend.
+  - BM25 lấy thống kê của cả shard, nên ở index chung, dữ liệu của tenant khác làm đổi thứ hạng của tenant này; `dfs_query_then_fetch` cũng không sửa được vì thống kê vẫn tính trên cả index.
+  - Thường làm lai: tenant nhỏ chung index, tenant lớn có index riêng, giống mô hình bridge.
 - **Phân trang sâu**: `from + size` bị chặn ở `index.max_result_window` (10.000), vì mỗi shard phải trả `from + size` kết quả để node điều phối trộn, giống scatter-gather của bài Sharding. Dùng [[search-after|`search_after`]] với point in time (PIT), giống [[keyset-pagination|keyset pagination]] của SQL, để duyệt sâu hoặc xuất dữ liệu; `scroll` không còn được khuyên cho phân trang sâu.
 - **Reindex không downtime**:
   1. Tạo `products_v2` với mapping mới; khi nạp đặt `refresh_interval: -1` và `number_of_replicas: 0`, xong thì bật lại.
