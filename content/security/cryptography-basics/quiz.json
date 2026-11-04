@@ -66,6 +66,19 @@
       ],
       "answer": 0,
       "explanation": "Payload JWT chỉ là JSON encode Base64URL; chữ ký RS256 chứng minh token không bị sửa và do issuer cấp, không giấu gì. Khoá công khai chỉ cần để kiểm chữ ký, không cần để đọc. Vì vậy không đặt dữ liệu nhạy cảm vào JWT; cần giấu thì dùng JWE hoặc token ngẫu nhiên tra ở server (bài JWT chuyên sâu)."
+    },
+    {
+      "id": "key-from-password",
+      "kind": "single",
+      "prompt": "Ứng dụng cho người dùng mã hoá file xuất ra bằng mật khẩu họ tự nhập. Lấy khoá AES-256 từ mật khẩu thế nào?",
+      "options": [
+        "PBKDF2 hoặc Argon2id với salt ngẫu nhiên lưu cạnh file",
+        "HKDF-SHA256 với mật khẩu làm IKM, info là tên file",
+        "Lấy SHA-256 của mật khẩu, đủ 32 byte cho AES-256",
+        "SecureRandom gọi setSeed bằng mật khẩu rồi sinh khoá"
+      ],
+      "answer": 0,
+      "explanation": "Mật khẩu ít entropy, nên hàm dẫn xuất phải chậm có chủ đích và có salt: PBKDF2 600.000 vòng mất khoảng 99 ms mỗi lần thử, Argon2id còn tốn bộ nhớ. HKDF và SHA-256 đều nhanh, kẻ có file dò được hàng triệu mật khẩu mỗi giây. `setSeed` của `SecureRandom` mặc định chỉ trộn thêm vào nguồn ngẫu nhiên của hệ điều hành, nên lần sau không sinh lại được cùng khoá và file không mở được nữa."
     }
   ]
 }

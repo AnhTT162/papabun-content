@@ -66,6 +66,19 @@
       ],
       "answer": 0,
       "explanation": "Với TOTP và SMS, người dùng gõ mã vào trang giả, trang giả chuyển ngay sang trang thật trong 30 giây: mã vẫn còn hạn. Push bị dùng bằng cách đăng nhập thật song song và người dùng bấm duyệt. Passkey (WebAuthn) ký thử thách kèm origin; trình duyệt chỉ dùng khoá của đúng tên miền đã đăng ký, nên trang giả không lấy được chữ ký hợp lệ."
+    },
+    {
+      "id": "remember-me-theft",
+      "kind": "single",
+      "prompt": "Ứng dụng dùng `PersistentTokenBasedRememberMeServices`. Cookie remember-me bị trộm và kẻ trộm dùng trước. Hôm sau nạn nhân mở trang bằng cookie cũ. Chuyện gì xảy ra?",
+      "options": [
+        "Spring xoá mọi token remember-me của user, ném CookieTheftException",
+        "Cả hai cùng đăng nhập được vì cookie vẫn cùng một series",
+        "Nạn nhân vào được, token mà kẻ trộm đang giữ bị vô hiệu",
+        "Cookie cũ bị bỏ qua, nạn nhân đăng nhập lại, token khác còn nguyên"
+      ],
+      "answer": 0,
+      "explanation": "Mỗi lần tự đăng nhập, token đổi còn series giữ nguyên. Kẻ trộm dùng trước nên token trong database đã đổi; cookie của nạn nhân có series đúng mà token sai, dấu hiệu cookie bị chép. Spring xoá mọi token remember-me của user rồi ném `CookieTheftException` (đã chạy với Spring Security 7.0.5), nên kẻ trộm không tự đăng nhập lại bằng cookie được nữa. Session kẻ trộm đã mở thì vẫn sống, nên ứng dụng nên bắt exception này và huỷ thêm các session của user. Dạng `TokenBasedRememberMeServices` không lưu gì ở server nên không phát hiện được chuyện này."
     }
   ]
 }

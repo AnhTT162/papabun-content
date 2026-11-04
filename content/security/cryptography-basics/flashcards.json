@@ -9,6 +9,8 @@
     { "id": "rsa-size-limit", "front": "RSA-2048 với OAEP SHA-256 mã hoá được bao nhiêu byte?", "back": "Tối đa 190 byte. Vì vậy dùng RSA để bọc khoá AES, còn dữ liệu mã hoá bằng AES." },
     { "id": "signature-direction", "front": "Chữ ký số dùng khoá nào để ký và để kiểm?", "back": "Khoá riêng để ký, khoá công khai để kiểm. Chữ ký không giấu nội dung." },
     { "id": "envelope-why", "front": "Vì sao không mã hoá dữ liệu trực tiếp bằng KMS?", "back": "KMS Encrypt chỉ nhận tối đa 4 KB, mỗi lần là một request có quota; nên KMS chỉ bọc data key, dữ liệu mã hoá tại chỗ." },
-    { "id": "constant-time", "front": "So sánh HMAC hay token bằng gì?", "back": "MessageDigest.isEqual: so trọn, thời gian không phụ thuộc chỗ sai." }
+    { "id": "constant-time", "front": "So sánh HMAC hay token bằng gì?", "back": "MessageDigest.isEqual: so trọn, thời gian không phụ thuộc chỗ sai." },
+    { "id": "hkdf-vs-pbkdf2", "front": "HKDF và PBKDF2 dùng khi nào?", "back": "HKDF tách nhiều khoá con từ một khoá đã mạnh (nhanh). PBKDF2 hay Argon2id lấy khoá từ mật khẩu (chậm có chủ đích, có salt)." },
+    { "id": "hpke-what", "front": "HPKE là gì?", "back": "Mã hoá lai chuẩn hoá (RFC 9180): KEM + KDF + AEAD gói sẵn để mã hoá cho người giữ khoá công khai; JDK 26 có `Cipher.getInstance(\"HPKE\")`." }
   ]
 }

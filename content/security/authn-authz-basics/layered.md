@@ -11,6 +11,7 @@
 **Nhớ đăng nhập**:
 - Session: server sinh id ngẫu nhiên, lưu trạng thái ở server, gửi id qua cookie. Thu hồi tức thì bằng cách xoá session. Nhiều instance thì cần kho dùng chung như Redis.
 - Token tự chứa (JWT): server ký thông tin vào token, service nào có khoá đều tự kiểm được, không cần tra kho. Giá phải trả: không thu hồi được trước khi hết hạn, nên access token sống ngắn và có refresh token.
+- Remember-me: cookie sống vài tuần để tự đăng nhập lại khi session đã hết; thao tác nhạy cảm vẫn bắt nhập lại mật khẩu.
 
 **Bẫy hay gặp**: không đổi session id sau đăng nhập ([[session-fixation|session fixation]]); thông báo lỗi khác nhau cho "sai email" và "sai mật khẩu" làm lộ tài khoản tồn tại; không giới hạn số lần đăng nhập sai nên bị [[credential-stuffing|credential stuffing]]; chỉ ẩn nút trên giao diện thay vì kiểm quyền ở API; kiểm role mà quên kiểm quyền trên đúng bản ghi ([[idor|IDOR]]).
 
@@ -39,8 +40,17 @@
 - **MFA không ngang nhau**:
   - SMS OTP: bị chiếm qua đổi SIM, và bị lừa nhập vào trang giả.
   - [[totp|TOTP]] (app Authenticator, RFC 6238): mã 6 số đổi mỗi 30 giây, sinh từ [[hmac|HMAC]] của secret chung và thời gian. Không phụ thuộc nhà mạng nhưng vẫn bị lừa nhập vào trang giả.
-  - [[passkey|Passkey]] (WebAuthn/FIDO2): khoá riêng nằm trên thiết bị, chữ ký gắn với tên miền thật nên trang giả không dùng được. Đây là loại chống [[phishing]].
+  - [[passkey|Passkey]] (WebAuthn/FIDO2): khoá riêng nằm trong authenticator (thiết bị, hoặc kho passkey đồng bộ ở dưới), chữ ký gắn với tên miền thật nên trang giả không dùng được. Đây là loại chống [[phishing]].
   - Push "bấm Duyệt": bị spam tới khi người dùng bấm nhầm; nên bắt nhập số hiện trên màn hình đăng nhập.
+- **[[remember-me|Remember-me]]** (đã chạy Spring Security 7.0.5):
+  - `TokenBasedRememberMeServices`: cookie `remember-me` sống 14 ngày (1.209.600 giây), `HttpOnly`, là Base64 của `username:hạn:SHA256:chữ ký`. Chữ ký tính từ username, hạn, hash mật khẩu và một key bí mật. Server không lưu gì; đổi mật khẩu thì cookie cũ hết hiệu lực (đã thử), nhưng không thu hồi riêng một thiết bị được; logout chỉ xoá cookie ở trình duyệt đó, bản bị chép vẫn dùng được tới hết hạn.
+  - Cờ `Secure` mặc định theo `request.isSecure()`: sau load balancer kết thúc TLS mà ứng dụng không đọc forwarded header thì cookie thiếu `Secure`.
+  - `PersistentTokenBasedRememberMeServices`: cookie chứa series và token ngẫu nhiên, lưu ở bảng `persistent_logins`; mỗi lần tự đăng nhập đổi token, giữ series. Đã thử: kẻ trộm dùng cookie trước thì vào được; nạn nhân dùng cookie cũ thì Spring xoá mọi token remember-me của user và ném `CookieTheftException` ra khỏi `RememberMeAuthenticationFilter`, không bắt thì người dùng thấy trang lỗi. Nên bắt nó, báo "phiên đăng nhập của bạn có thể đã bị lấy" và huỷ luôn các session của user: session kẻ trộm đã mở không chết theo token. Đây là cùng ý với phát hiện dùng lại refresh token (bài JWT chuyên sâu).
+  - Phiên đến từ remember-me không phải đăng nhập đầy đủ: đổi email, mật khẩu, thanh toán thì bắt nhập lại mật khẩu: `fullyAuthenticated()` trong `authorizeHttpRequests` chỉ nhận người đã đăng nhập trong phiên này, không nhận anonymous hay phiên đến từ remember-me.
+- **Passkey: đồng bộ và khôi phục**:
+  - Synced passkey (iCloud Keychain, Google Password Manager, trình quản lý mật khẩu) chép khoá riêng sang mọi thiết bị của cùng tài khoản: mất điện thoại không mất passkey, nhưng passkey giờ chỉ an toàn bằng tài khoản đồng bộ đó. Passkey gắn thiết bị (khoá bảo mật phần cứng) không chép ra được, mất là mất.
+  - Khôi phục là chỗ yếu nhất: nếu "mất passkey" rơi về OTP qua email hay SMS thì kẻ tấn công đi đường đó, và chống phishing chỉ còn trên giấy. Cho đăng ký nhiều passkey, giữ một đường khôi phục mạnh (passkey thứ hai, mã khôi phục dùng một lần), báo cho người dùng mỗi khi có passkey mới.
+  - Spring Security 6.4 trở lên có `http.webAuthn(...)`; phải cấu hình đúng `rpId` (tên miền) và origin được phép, vì chữ ký gắn với origin.
 - **Giới hạn đăng nhập sai**: khoá cứng tài khoản sau 5 lần cho kẻ xấu cách khoá người khác. Tốt hơn là trễ tăng dần theo tài khoản, rate limit theo IP và thiết bị, CAPTCHA khi bất thường (bài Thiết kế rate limiter có tầng luật đăng nhập).
 - **Đặt lại mật khẩu**: token ngẫu nhiên ≥ 128 bit, dùng một lần, hết hạn ngắn (15–60 phút), lưu dạng hash trong database. Đổi mật khẩu xong thì huỷ mọi session và refresh token khác của user.
 - **AuthZ**: kiểm ở server, gần dữ liệu, theo nguyên tắc từ chối mặc định. Role chỉ trả lời "loại người dùng nào", còn "đơn hàng 1001 có phải của user này" là kiểm trên bản ghi. RBAC, ABAC, ReBAC và cô lập tenant: bài Mô hình phân quyền; cài đặt trong Spring: bài Kiến trúc Spring Security.

@@ -9,6 +9,8 @@
     { "id": "session-vs-token", "front": "Session và JWT đánh đổi gì?", "back": "Session phải tra kho nhưng thu hồi tức thì; JWT tự kiểm được ở mọi service nhưng còn hiệu lực tới khi hết hạn." },
     { "id": "session-fixation", "front": "Chống session fixation thế nào?", "back": "Đổi session id ngay khi đăng nhập thành công; Spring Security mặc định làm bằng changeSessionId." },
     { "id": "nist-password", "front": "NIST SP 800-63B bản 4 nói gì về chính sách mật khẩu?", "back": "Ưu tiên độ dài và chặn mật khẩu đã lộ, thay vì bắt trộn ký tự hay đổi định kỳ." },
-    { "id": "passkey-phishing", "front": "Vì sao passkey chống phishing còn OTP thì không?", "back": "Chữ ký của passkey gắn với tên miền thật, trang giả không dùng được; mã OTP thì người dùng có thể gõ vào trang giả." }
+    { "id": "passkey-phishing", "front": "Vì sao passkey chống phishing còn OTP thì không?", "back": "Chữ ký của passkey gắn với tên miền thật, trang giả không dùng được; mã OTP thì người dùng có thể gõ vào trang giả." },
+    { "id": "synced-passkey-tradeoff", "front": "Synced passkey đánh đổi gì?", "back": "Mất thiết bị không mất passkey, nhưng passkey chỉ an toàn bằng tài khoản đồng bộ (iCloud, Google) giữ nó." },
+    { "id": "passkey-recovery", "front": "Vì sao đường khôi phục quyết định độ an toàn của passkey?", "back": "Nếu quên passkey thì rơi về OTP email hay SMS, kẻ tấn công sẽ đi đường đó; cần passkey thứ hai hoặc mã khôi phục." }
   ]
 }

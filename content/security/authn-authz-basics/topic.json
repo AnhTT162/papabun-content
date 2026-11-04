@@ -5,19 +5,21 @@
   "minAppVersion": "0.1",
   "track": "security",
   "title": "AuthN & AuthZ cơ bản",
-  "summary": "Authentication và authorization khác nhau thế nào; vì sao mật khẩu phải băm bằng hàm chậm có salt (bcrypt, Argon2id) chứ không SHA-256, số đo thật và giới hạn 72 byte của bcrypt; nâng thuật toán hash dần; session và token tự chứa; session fixation, dò tài khoản, credential stuffing; chính sách mật khẩu NIST mới; các loại MFA và vì sao passkey chống được phishing.",
+  "summary": "Authentication và authorization khác nhau thế nào; vì sao mật khẩu phải băm bằng hàm chậm có salt (bcrypt, Argon2id) chứ không SHA-256, số đo thật và giới hạn 72 byte của bcrypt; nâng thuật toán hash dần; session và token tự chứa; session fixation, dò tài khoản, credential stuffing; chính sách mật khẩu NIST mới; các loại MFA và vì sao passkey chống được phishing, passkey đồng bộ và đường khôi phục; remember-me dạng hash và dạng lưu token.",
   "level": "foundation",
   "order": 1,
-  "minutes": 12,
+  "minutes": 14,
   "prerequisites": ["http-request-lifecycle"],
-  "terms": ["authentication", "authorization", "http-session", "jwt", "password-hashing", "salt", "bcrypt", "argon2", "rainbow-table", "mfa", "session-fixation", "credential-stuffing", "idor", "sticky-session", "totp", "passkey", "phishing", "kms", "hmac"],
+  "terms": ["authentication", "authorization", "http-session", "jwt", "password-hashing", "salt", "bcrypt", "argon2", "rainbow-table", "mfa", "session-fixation", "credential-stuffing", "idor", "sticky-session", "totp", "passkey", "phishing", "kms", "hmac", "remember-me"],
   "references": [
     { "title": "OWASP Password Storage Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" },
     { "title": "NIST SP 800-63B-4: Authentication and Authenticator Management", "url": "https://pages.nist.gov/800-63-4/sp800-63b.html" },
     { "title": "Spring Security Reference: Password Storage", "url": "https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html" },
     { "title": "OWASP Session Management Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" },
     { "title": "Spring Security advisory: CVE-2025-22228", "url": "https://spring.io/security/cve-2025-22228" },
-    { "title": "RFC 6238: TOTP", "url": "https://www.rfc-editor.org/rfc/rfc6238" }
+    { "title": "RFC 6238: TOTP", "url": "https://www.rfc-editor.org/rfc/rfc6238" },
+    { "title": "Spring Security Reference: Remember-Me Authentication", "url": "https://docs.spring.io/spring-security/reference/servlet/authentication/rememberme.html" },
+    { "title": "Spring Security Reference: Passkeys", "url": "https://docs.spring.io/spring-security/reference/servlet/authentication/passkeys.html" }
   ],
   "blocks": [
     { "type": "analogy", "file": "analogy.md" },

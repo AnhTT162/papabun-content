@@ -5,19 +5,22 @@
   "minAppVersion": "0.1",
   "track": "security",
   "title": "Mật mã cho kỹ sư",
-  "summary": "Phân biệt encoding, hash, HMAC, mã hoá và chữ ký số; AES-GCM, nonce và vì sao lặp nonce là lộ dữ liệu; bẫy `Cipher.getInstance(\"AES\")` ra ECB và `\"RSA\"` ra PKCS#1 v1.5; mã hoá bất đối xứng, giới hạn kích thước và mã hoá lai; chữ ký ECDSA, Ed25519; SecureRandom và so sánh thời gian hằng; envelope encryption với KMS, xoay khoá, crypto-shredding; mật mã hậu lượng tử trong JDK.",
+  "summary": "Phân biệt encoding, hash, HMAC, mã hoá và chữ ký số; AES-GCM, nonce và vì sao lặp nonce là lộ dữ liệu; bẫy `Cipher.getInstance(\"AES\")` ra ECB và `\"RSA\"` ra PKCS#1 v1.5; mã hoá bất đối xứng, giới hạn kích thước và mã hoá lai; chữ ký ECDSA, Ed25519; dẫn xuất khoá bằng HKDF và PBKDF2, chọn cỡ khoá, HPKE; SecureRandom và so sánh thời gian hằng; envelope encryption với KMS, xoay khoá, crypto-shredding; mật mã hậu lượng tử trong JDK.",
   "level": "junior",
   "order": 2,
-  "minutes": 13,
+  "minutes": 15,
   "prerequisites": ["authn-authz-basics"],
-  "terms": ["encoding", "cryptographic-hash", "hmac", "symmetric-encryption", "asymmetric-encryption", "aes-gcm", "nonce", "aad", "digital-signature", "csprng", "envelope-encryption", "kms", "crypto-shredding", "jwt", "salt"],
+  "terms": ["encoding", "cryptographic-hash", "hmac", "symmetric-encryption", "asymmetric-encryption", "aes-gcm", "nonce", "aad", "digital-signature", "csprng", "envelope-encryption", "kms", "crypto-shredding", "jwt", "salt", "hkdf", "hpke"],
   "references": [
     { "title": "Java SE: Java Cryptography Architecture (JCA) Reference Guide", "url": "https://docs.oracle.com/en/java/javase/21/security/java-cryptography-architecture-jca-reference-guide.html" },
     { "title": "NIST SP 800-38D: Galois/Counter Mode (GCM)", "url": "https://csrc.nist.gov/pubs/sp/800/38/d/final" },
     { "title": "AWS KMS: Envelope encryption", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/kms-cryptography.html#enveloping" },
     { "title": "OWASP Cryptographic Storage Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html" },
     { "title": "JEP 496: Quantum-Resistant Module-Lattice-Based Key Encapsulation Mechanism", "url": "https://openjdk.org/jeps/496" },
-    { "title": "AWS KMS: Rotate AWS KMS keys", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html" }
+    { "title": "AWS KMS: Rotate AWS KMS keys", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html" },
+    { "title": "RFC 5869: HKDF", "url": "https://www.rfc-editor.org/rfc/rfc5869" },
+    { "title": "RFC 9180: Hybrid Public Key Encryption", "url": "https://www.rfc-editor.org/rfc/rfc9180" },
+    { "title": "JEP 510: Key Derivation Function API", "url": "https://openjdk.org/jeps/510" }
   ],
   "blocks": [
     { "type": "analogy", "file": "analogy.md" },

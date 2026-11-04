@@ -14502,6 +14502,30 @@
       "example": "`Selector` của Java NIO trên macOS là `KQueueSelectorImpl`, trên Linux là `EPollSelectorImpl`.",
       "related": ["epoll", "io-multiplexing"],
       "topics": ["io-models"]
+    },
+    {
+      "id": "hkdf",
+      "term": "HKDF",
+      "meaning": "HMAC-based Key Derivation Function (RFC 5869): dẫn xuất một hay nhiều khoá con từ một khoá đã đủ mạnh, mỗi khoá cho một mục đích nhờ tham số `info`. Nhanh, nên không dùng để lấy khoá từ mật khẩu.",
+      "example": "Từ một master key dẫn xuất khoá `enc:orders` cho AES và `mac:orders` cho HMAC bằng `KDF.getInstance(\"HKDF-SHA256\")` (JDK 25+).",
+      "related": ["hmac", "kms", "hpke"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "hpke",
+      "term": "HPKE",
+      "meaning": "Hybrid Public Key Encryption (RFC 9180): mã hoá lai chuẩn hoá, gói KEM để trao khoá, KDF và AEAD thành một API để mã hoá cho người giữ khoá công khai.",
+      "example": "Client mã hoá số thẻ bằng khoá công khai X25519 của backend với `Cipher.getInstance(\"HPKE\")` (JDK 26+), gửi kèm 32 byte encapsulation.",
+      "related": ["asymmetric-encryption", "aes-gcm", "hkdf"],
+      "topics": ["cryptography-basics"]
+    },
+    {
+      "id": "remember-me",
+      "term": "Remember-me",
+      "meaning": "Cookie sống lâu giúp người dùng tự đăng nhập lại sau khi session hết hạn. Spring Security có dạng hash ký (không lưu ở server) và dạng series/token lưu trong database (phát hiện được cookie bị trộm).",
+      "example": "Cookie `remember-me` sống 14 ngày; mở lại trình duyệt sau khi session đã hết vẫn vào thẳng trang chính mà không nhập mật khẩu.",
+      "related": ["http-session", "authentication"],
+      "topics": ["authn-authz-basics"]
     }
   ]
 }
