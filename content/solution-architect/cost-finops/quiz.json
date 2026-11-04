@@ -65,6 +65,32 @@
       ],
       "answer": 0,
       "explanation": "Bỏ lãng phí và rightsize giảm tiền mà không đổi SLO hay RTO. Bỏ Multi-AZ làm mất failover tự động, RTO thành hàng giờ. Mua cam kết theo mức dùng hiện tại, trước khi rightsize, là cam kết cho cả phần đang thừa: sau khi rightsize phần đó thành cam kết không dùng, mất mỗi giờ. Spot có thể bị thu hồi với 2 phút báo trước, nên không đặt phần capacity mà SLO cần lên đó."
+    },
+    {
+      "id": "tag-not-in-report",
+      "kind": "single",
+      "prompt": "Từ đầu tháng, team gắn tag `team=payments` cho mọi tài nguyên của mình. Cuối tháng, Cost Explorer vẫn không lọc được chi phí theo tag này. Nguyên nhân khả dĩ nhất?",
+      "options": [
+        "Tag chưa được kích hoạt làm cost allocation tag trong Billing",
+        "Cost Explorer chỉ hiện tag sau khi đã gắn đủ 12 tháng liền",
+        "Tag chỉ áp cho EC2, dịch vụ quản lý như RDS bỏ qua tag",
+        "Tag phải đặt ở cấp tài khoản, không phải ở từng tài nguyên"
+      ],
+      "answer": 0,
+      "explanation": "Tag do người dùng tạo chỉ vào báo cáo chi phí sau khi được kích hoạt làm cost allocation tag trong Billing; có thể yêu cầu áp ngược tối đa 12 tháng, nên dữ liệu tháng này vẫn lấy lại được. RDS, S3 và đa số dịch vụ quản lý đều nhận tag. Tag ở tài khoản là cách khác, không phải điều kiện bắt buộc."
+    },
+    {
+      "id": "s3-ia-small-objects",
+      "kind": "single",
+      "prompt": "Bucket có 50 triệu object, trung bình 40 KB (khoảng 2.000 GB), ít khi đọc. Có người đề xuất lifecycle chuyển hết sang Standard-IA (0,0125 USD/GB, rẻ hơn Standard 0,023), thêm filter kích thước để object nhỏ cũng được chuyển. Kết quả?",
+      "options": [
+        "Đắt hơn: IA tính mỗi object ít nhất 128 KB, kèm phí chuyển 500 USD",
+        "Rẻ hơn khoảng 46%, vì giá lưu trữ của IA chỉ bằng nửa Standard",
+        "Rẻ hơn sau 30 ngày, khi qua hết thời gian tính tối thiểu của IA",
+        "Ngang nhau: phí đọc của IA bù đúng phần lưu trữ tiết kiệm được"
+      ],
+      "answer": 0,
+      "explanation": "Standard: 2.000 GB × 0,023 = 46 USD/tháng. IA tính mỗi object ít nhất 128 KB, nên bị tính như 6.400 GB × 0,0125 = 80 USD/tháng. Lifecycle còn thu 0,01 USD mỗi 1.000 lần chuyển: 50 triệu object là 500 USD một lần. Thời gian tối thiểu 30 ngày chỉ phạt khi xoá sớm, không làm IA rẻ đi. Object nhỏ thì giữ ở Standard, hoặc gộp lại thành file lớn trước khi chuyển. Chính vì vậy, từ 9/2024 lifecycle mặc định bỏ qua object dưới 128 KB; filter kích thước trong đề bài đã gỡ lớp bảo vệ đó."
     }
   ]
 }

@@ -14542,6 +14542,14 @@
       "example": "Đặt `same-origin` cho app thì popup đăng nhập khác origin không `postMessage` về được; dùng `same-origin-allow-popups` để giữ.",
       "related": ["referrer-policy", "same-origin-policy"],
       "topics": ["browser-security-basics"]
+    },
+    {
+      "id": "extended-support",
+      "term": "Extended Support",
+      "meaning": "Phí AWS thu thêm khi chạy phiên bản phần mềm (version Kubernetes của EKS, major version của RDS) đã hết thời gian hỗ trợ chuẩn, để có thêm thời gian trước khi buộc nâng cấp.",
+      "example": "Cluster EKS ở version đã hết 14 tháng hỗ trợ chuẩn trả 0,60 USD/giờ thay vì 0,10.",
+      "related": ["finops"],
+      "topics": ["cost-finops"]
     }
   ]
 }
