@@ -48,6 +48,7 @@ Thay **mọi** chữ TODO. Quy tắc theo block:
   - Quick: 1–3 câu, nêu bản chất và quy tắc quan trọng nhất (in đậm).
   - Interview: câu trả lời mẫu nói được trong ~2 phút (200–350 từ): định nghĩa → cơ chế → khi nào dùng / bẫy hay gặp → cách làm đúng.
   - Deep: gạch đầu dòng, mỗi ý một edge case, chi tiết bên trong JDK/framework, hoặc lưu ý hiệu năng.
+  - Bảng GFM (`| a | b |` + `|---|---|`, đứng sau một dòng trống) chỉ dùng cho so sánh thật sự theo cột; tối đa 3 cột, ô ngắn. App hiện bảng hơn 3 cột thành cuộn ngang, và ở cỡ chữ trợ năng thì mỗi dòng thành một khối "cột: giá trị"; app cũ hiện thành đoạn văn có dấu `|`.
 - **lab.json (breakLab)**: code lỗi chạy được, triệu chứng có output thật, 4 lựa chọn chẩn đoán với 1 đáp án đúng và các lựa chọn sai hợp lý, cách sửa có code.
 - **scenario.json**: đề bài thực tế có ràng buộc (quy mô, SLA), 2–4 gợi ý từ rộng đến hẹp, lời giải, `tradeoffs` khi có nhiều phương án.
 - **troubleshoot.json**: bước đầu là triệu chứng; mỗi bước có 3–4 lựa chọn với `quality` good/ok/poor và feedback giải thích vì sao; evidence là dữ liệu như thật (thread dump, log, metric) dùng `evidenceFormat: monospace`; kết thúc bằng step không có choices nêu nguyên nhân gốc và cách phòng ngừa.
