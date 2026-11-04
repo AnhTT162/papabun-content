@@ -310,7 +310,7 @@
       "meaning": "Pattern chia tài nguyên (thread, kết nối) thành ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không kéo sập cả hệ thống, giống vách ngăn chống chìm của tàu.",
       "example": "Pool 25 thread chỉ dành cho API phí vận chuyển; API đó treo thì checkout vẫn xử lý được thanh toán.",
       "related": ["thread-pool"],
-      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns", "reliability-sre", "multi-tenancy"]
+      "topics": ["executor-thread-pool", "connection-pool", "cache-failures", "synchronizers", "service-communication", "distributed-fundamentals", "resilience-patterns", "api-gateway-service-mesh", "troubleshooting-mindset", "server-tuning", "thread-pool-exhaustion", "design-flash-sale", "integration-patterns", "reliability-sre", "multi-tenancy", "password-storage"]
     },
     {
       "id": "hash-spreading",
@@ -957,7 +957,7 @@
       "meaning": "Chạy lại thao tác bị lỗi tạm thời sau một khoảng chờ tăng dần (thường có thêm chút ngẫu nhiên), giới hạn số lần, để không dồn tải khi hệ thống đang tranh chấp.",
       "example": "Lỗi `40001`: thử lại sau 50ms, 100ms, 200ms, tối đa 3 lần.",
       "related": ["serialization-failure", "deadlock"],
-      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns", "design-notification", "design-job-scheduler"]
+      "topics": ["transaction-isolation", "optimistic-pessimistic-locking", "locking-deadlock-db", "messaging-fundamentals", "distributed-fundamentals", "resilience-patterns", "design-notification", "design-job-scheduler", "kms-envelope-encryption"]
     },
     {
       "id": "idempotency-key",
@@ -1869,7 +1869,7 @@
       "meaning": "Point-In-Time Recovery: khôi phục database về một thời điểm bất kỳ bằng cách restore base backup rồi phát lại log thay đổi (WAL, binlog) tới thời điểm đó.",
       "example": "Khôi phục về 14:05:11, ngay trước câu `DELETE` sai lúc 14:05:12.",
       "related": ["wal", "binlog", "physical-backup", "logical-backup"],
-      "topics": ["backup-restore", "well-architected"]
+      "topics": ["backup-restore", "well-architected", "kms-envelope-encryption"]
     },
     {
       "id": "binlog",
@@ -2373,7 +2373,7 @@
       "meaning": "Time to live: thời gian một mục được giữ trong cache trước khi bị coi là hết hạn và phải lấy lại từ nguồn.",
       "example": "Redis `SET product:42 ... EX 300`: mục tự hết hạn sau 5 phút.",
       "related": ["cache", "cache-eviction"],
-      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview", "dns-cdn", "sd-building-blocks"]
+      "topics": ["caching-basics", "cache-patterns", "local-cache", "redis-internals", "cache-failures", "redis-use-cases", "lld-ood-interview", "dns-cdn", "sd-building-blocks", "kms-envelope-encryption"]
     },
     {
       "id": "cache-eviction",
@@ -2853,7 +2853,7 @@
       "meaning": "Giới hạn số request mỗi client (hoặc mỗi tài nguyên) được phép trong một khoảng thời gian; vượt thì từ chối hoặc chờ.",
       "example": "Mỗi IP tối đa 50 request mỗi giây vào API tra sản phẩm, vượt thì trả 429.",
       "related": ["bulkhead"],
-      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler", "multi-tenancy", "api-security"]
+      "topics": ["cache-failures", "redis-use-cases", "synchronizers", "api-gateway-service-mesh", "rate-limiting", "db-performance", "capacity-planning", "design-url-shortener", "design-rate-limiter", "design-job-scheduler", "multi-tenancy", "api-security", "password-storage"]
     },
     {
       "id": "redis-sentinel",
@@ -5157,7 +5157,7 @@
       "meaning": "Mã hoá dữ liệu cá nhân bằng khoá riêng của từng người; khi cần xoá thì xoá khoá, dữ liệu còn đó nhưng không đọc được nữa.",
       "example": "Event lưu email đã mã hoá bằng khoá của user 42 trong kho khoá; user yêu cầu xoá thì xoá khoá đó.",
       "related": ["event-sourcing"],
-      "topics": ["cqrs-event-sourcing", "multi-tenancy", "cryptography-basics", "data-privacy-pii"]
+      "topics": ["cqrs-event-sourcing", "multi-tenancy", "cryptography-basics", "data-privacy-pii", "kms-envelope-encryption"]
     },
     {
       "id": "two-phase-commit",
@@ -6549,7 +6549,7 @@
       "meaning": "Đưa chuỗi về một dạng chuẩn vì cùng một chữ có thể viết bằng các chuỗi code point khác nhau. NFC dùng ký tự dựng sẵn, NFD tách chữ và dấu.",
       "example": "`ễ` NFC là U+1EC5; NFD là `e` + U+0302 + U+0303. `Normalizer.normalize(s, Normalizer.Form.NFC)` đưa về một dạng trước khi so sánh.",
       "related": ["code-point", "collation"],
-      "topics": ["time-encoding"]
+      "topics": ["time-encoding", "password-storage"]
     },
     {
       "id": "mojibake",
@@ -8925,7 +8925,7 @@
       "meaning": "Tấn công dùng danh sách username và mật khẩu lộ từ trang khác để thử đăng nhập hàng loạt, thường rải qua rất nhiều IP.",
       "example": "Mỗi IP chỉ thử 3 lần nhưng có 10.000 IP, nên giới hạn theo IP không bắt được; cần thêm giới hạn theo username.",
       "related": ["rate-limiting"],
-      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics", "oauth2-oidc"]
+      "topics": ["design-rate-limiter", "build-vs-buy", "authn-authz-basics", "oauth2-oidc", "password-storage"]
     },
     {
       "id": "noisy-neighbor",
@@ -11053,7 +11053,7 @@
       "meaning": "Multi-factor authentication: xác thực bằng từ hai yếu tố trở lên (thứ biết, thứ có, đặc điểm sinh trắc). Loại chống phishing như FIDO2, passkey gắn với tên miền nên trang giả không dùng được.",
       "example": "Quản trị viên cloud bắt buộc dùng khoá FIDO2; OTP qua SMS không được chấp nhận.",
       "related": ["identity-provider"],
-      "topics": ["security-architecture", "authn-authz-basics", "oauth2-oidc", "sso-saml"]
+      "topics": ["security-architecture", "authn-authz-basics", "oauth2-oidc", "sso-saml", "password-storage"]
     },
     {
       "id": "scim",
@@ -11173,7 +11173,7 @@
       "meaning": "Key management service: dịch vụ giữ khoá mã hoá, cho mã hoá và giải mã qua API theo key policy, ghi log mỗi lần dùng khoá. Khoá gốc không rời khỏi dịch vụ.",
       "example": "Chỉ role `kyc-service` có quyền `kms:Decrypt` trên khoá của bucket KYC.",
       "related": ["least-privilege"],
-      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management", "data-privacy-pii", "cloud-security-iam"]
+      "topics": ["security-architecture", "cryptography-basics", "authn-authz-basics", "secret-management", "data-privacy-pii", "cloud-security-iam", "password-storage", "kms-envelope-encryption"]
     },
     {
       "id": "sre",
@@ -12069,7 +12069,7 @@
       "meaning": "Lưu mật khẩu bằng hàm băm chậm có chủ đích, có salt riêng mỗi user, để lộ database cũng khó dò ra mật khẩu gốc.",
       "example": "Lưu `{bcrypt}$2a$10$...` thay vì mật khẩu gốc hay SHA-256 của nó.",
       "related": ["salt", "bcrypt", "argon2"],
-      "topics": ["authn-authz-basics"]
+      "topics": ["authn-authz-basics", "password-storage"]
     },
     {
       "id": "salt",
@@ -12077,7 +12077,7 @@
       "meaning": "Giá trị ngẫu nhiên riêng cho mỗi mật khẩu, trộn vào trước khi băm. Không cần bí mật; làm cùng mật khẩu ra hash khác nhau.",
       "example": "Trong chuỗi bcrypt, 22 ký tự sau `$2a$10$` là salt.",
       "related": ["password-hashing", "rainbow-table"],
-      "topics": ["authn-authz-basics", "cryptography-basics"]
+      "topics": ["authn-authz-basics", "cryptography-basics", "password-storage"]
     },
     {
       "id": "bcrypt",
@@ -12085,7 +12085,7 @@
       "meaning": "Hàm băm mật khẩu có tham số cost: mỗi bậc gấp đôi thời gian. Chỉ đọc 72 byte đầu của mật khẩu.",
       "example": "Cost 10 mất khoảng 50 ms một lần kiểm trên một core.",
       "related": ["password-hashing", "argon2", "salt"],
-      "topics": ["authn-authz-basics", "oauth2-oidc"]
+      "topics": ["authn-authz-basics", "oauth2-oidc", "password-storage"]
     },
     {
       "id": "argon2",
@@ -12093,7 +12093,7 @@
       "meaning": "Hàm băm mật khẩu thắng Password Hashing Competition 2015, tốn cả CPU lẫn bộ nhớ nên GPU khó dò song song. OWASP khuyên dùng đầu tiên.",
       "example": "OWASP khuyên tham số m=19 MiB, t=2, p=1.",
       "related": ["bcrypt", "password-hashing"],
-      "topics": ["authn-authz-basics"]
+      "topics": ["authn-authz-basics", "password-storage"]
     },
     {
       "id": "rainbow-table",
@@ -12101,7 +12101,7 @@
       "meaning": "Bảng tính sẵn từ hash ngược ra mật khẩu cho một hàm băm không salt. Salt làm nó vô dụng.",
       "example": "Tra hash SHA-1 không salt của mật khẩu phổ biến ra ngay chuỗi gốc.",
       "related": ["salt", "password-hashing"],
-      "topics": ["authn-authz-basics"]
+      "topics": ["authn-authz-basics", "password-storage"]
     },
     {
       "id": "session-fixation",
@@ -12149,7 +12149,7 @@
       "meaning": "Hash-based Message Authentication Code: hash trộn với khoá bí mật. Chỉ bên có khoá tính được, nên chứng minh message không bị sửa và đến từ bên có khoá.",
       "example": "Webhook gửi header chữ ký là HMAC-SHA256 của body với secret chung.",
       "related": ["cryptographic-hash", "digital-signature"],
-      "topics": ["cryptography-basics", "authn-authz-basics", "jwt-deep", "data-privacy-pii"]
+      "topics": ["cryptography-basics", "authn-authz-basics", "jwt-deep", "data-privacy-pii", "password-storage"]
     },
     {
       "id": "symmetric-encryption",
@@ -12173,7 +12173,7 @@
       "meaning": "AES ở chế độ Galois/Counter: vừa mã hoá vừa sinh tag 16 byte để phát hiện bị sửa (authenticated encryption). Cần nonce không lặp với cùng khoá.",
       "example": "`Cipher.getInstance(\"AES/GCM/NoPadding\")` với nonce 12 byte từ SecureRandom.",
       "related": ["nonce", "aad", "symmetric-encryption"],
-      "topics": ["cryptography-basics"]
+      "topics": ["cryptography-basics", "kms-envelope-encryption"]
     },
     {
       "id": "nonce",
@@ -12181,7 +12181,7 @@
       "meaning": "Number used once: giá trị chỉ được dùng một lần với một khoá. Không cần bí mật, chỉ cần không lặp.",
       "example": "AES-GCM lặp nonce với cùng khoá thì XOR hai bản mã ra XOR hai bản rõ.",
       "related": ["aes-gcm"],
-      "topics": ["cryptography-basics"]
+      "topics": ["cryptography-basics", "kms-envelope-encryption"]
     },
     {
       "id": "aad",
@@ -12189,7 +12189,7 @@
       "meaning": "Additional Authenticated Data: dữ liệu không mã hoá nhưng được tag của AES-GCM bảo vệ; sai AAD thì giải mã thất bại.",
       "example": "Dùng id bản ghi làm AAD để không chép được bản mã của dòng này sang dòng khác.",
       "related": ["aes-gcm"],
-      "topics": ["cryptography-basics"]
+      "topics": ["cryptography-basics", "kms-envelope-encryption"]
     },
     {
       "id": "digital-signature",
@@ -12213,7 +12213,7 @@
       "meaning": "Dữ liệu mã hoá bằng data key; data key được khoá chính trong KMS bọc lại và lưu cạnh dữ liệu. Khoá chính không rời KMS.",
       "example": "GenerateDataKey trả khoá rõ để mã hoá tại chỗ và khoá đã bọc để lưu.",
       "related": ["kms", "symmetric-encryption", "crypto-shredding"],
-      "topics": ["cryptography-basics", "data-privacy-pii"]
+      "topics": ["cryptography-basics", "data-privacy-pii", "kms-envelope-encryption"]
     },
     {
       "id": "web-origin",
@@ -12637,7 +12637,7 @@
       "meaning": "HMAC có khoá của giá trị đã chuẩn hoá, lưu cạnh cột đã mã hoá để tìm chính xác mà không giải mã; không dùng cho trường ít giá trị vì lộ phân bố.",
       "example": "`WHERE national_id_bidx = hmac(key, '001203004567')` tìm được hồ sơ dù cột CCCD đã mã hoá.",
       "related": ["field-level-encryption", "hmac"],
-      "topics": ["data-privacy-pii", "cryptography-basics"]
+      "topics": ["data-privacy-pii", "cryptography-basics", "kms-envelope-encryption"]
     },
     {
       "id": "data-masking",
@@ -14445,7 +14445,7 @@
       "meaning": "Resource policy bắt buộc của mỗi khoá KMS, là nguồn quyền chính; IAM policy chỉ có hiệu lực với khoá khi key policy cho phép tài khoản dùng IAM.",
       "example": "Key policy chỉ cho role `payments-app` dùng khoá qua S3 (`kms:ViaService`).",
       "related": ["kms", "resource-based-policy"],
-      "topics": ["cloud-security-iam"]
+      "topics": ["cloud-security-iam", "kms-envelope-encryption"]
     },
     {
       "id": "trust-policy",
@@ -14550,6 +14550,110 @@
       "example": "Cluster EKS ở version đã hết 14 tháng hỗ trợ chuẩn trả 0,60 USD/giờ thay vì 0,10.",
       "related": ["finops"],
       "topics": ["cost-finops"]
+    },
+    {
+      "id": "work-factor",
+      "term": "Work factor",
+      "meaning": "Tham số làm hàm băm mật khẩu chậm đi có chủ đích (cost của bcrypt, số vòng của PBKDF2, m và t của Argon2). Tăng nó là tăng giá mỗi lần dò.",
+      "example": "bcrypt cost 10 chạy 1.024 vòng, chậm hơn cost 5 khoảng 32 lần.",
+      "related": ["password-hashing", "bcrypt", "argon2"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "memory-hard-function",
+      "term": "Memory-hard function",
+      "meaning": "Hàm băm buộc mỗi lần tính phải giữ một lượng bộ nhớ lớn, nên GPU nhiều lõi nhưng ít bộ nhớ mỗi lõi không chạy song song được nhiều.",
+      "example": "Argon2id `m=19 MiB` cần 19 MiB cho mỗi lần băm.",
+      "related": ["argon2", "password-hashing"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "user-enumeration",
+      "term": "User enumeration",
+      "meaning": "Lỗi để kẻ tấn công biết một email hay username có tài khoản, qua thông báo lỗi, mã trạng thái hoặc thời gian phản hồi khác nhau.",
+      "example": "Login trả lời sau 6 ms với email không tồn tại và 63 ms với email có thật.",
+      "related": ["credential-stuffing"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "phc-string-format",
+      "term": "PHC string format",
+      "meaning": "Định dạng chuỗi lưu hash mật khẩu kèm tên thuật toán, phiên bản, tham số và salt, để kiểm và nâng cấp được mà không cần cột riêng.",
+      "example": "`$argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>`",
+      "related": ["argon2", "password-hashing"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "hash-shucking",
+      "term": "Hash shucking",
+      "meaning": "Tấn công vào hash bọc nhiều lớp: thử thẳng các hash lớp trong đã lộ ở nơi khác vào lớp ngoài, bỏ qua bước dò mật khẩu.",
+      "example": "Với `argon2id(md5(password))`, lấy MD5 lộ từ vụ khác thử vào lớp Argon2id.",
+      "related": ["password-hashing", "pepper"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "pepper",
+      "term": "Pepper",
+      "meaning": "Khoá bí mật chung cho mọi mật khẩu, cất ngoài database, áp bằng HMAC trước hoặc sau bước băm. Lộ database mà không lộ pepper thì không dò được.",
+      "example": "Lưu `argon2id(hmac_sha256(pepper, password))`, pepper trong secret manager.",
+      "related": ["salt", "hmac", "password-hashing"],
+      "topics": ["password-storage"]
+    },
+    {
+      "id": "encryption-context",
+      "term": "Encryption context",
+      "meaning": "Cặp khoá và giá trị không bí mật gửi kèm request mã hoá của AWS KMS, đóng vai trò AAD; giải mã phải gửi đúng context đó. Được ghi rõ trong CloudTrail.",
+      "example": "`{\"tenant_id\": \"t-42\", \"table\": \"customers\"}` khi gọi `GenerateDataKey`.",
+      "related": ["aad", "kms"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "key-hierarchy",
+      "term": "Key hierarchy",
+      "meaning": "Phân tầng khoá: khoá gốc trong KMS bọc khoá trung gian, khoá trung gian sinh hoặc bọc data key. Mỗi tầng xoay và thu hồi độc lập, và số lần gọi KMS không tăng theo lưu lượng.",
+      "example": "Khoá KMS → branch key của tenant → data key của từng bản ghi.",
+      "related": ["kms", "envelope-encryption"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "hierarchical-keyring",
+      "term": "Hierarchical keyring",
+      "meaning": "Keyring của AWS Encryption SDK lưu branch key trong DynamoDB, bọc bằng khoá KMS và cache trong ứng dụng, để gọi KMS một lần mỗi branch key mỗi TTL.",
+      "example": "Mỗi tenant một branch key, cache 600 giây trên mỗi pod.",
+      "related": ["key-hierarchy", "kms"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "key-commitment",
+      "term": "Key commitment",
+      "meaning": "Tính chất bảo đảm một bản mã chỉ giải được bằng đúng một khoá. AES-GCM không có sẵn tính chất này; AWS Encryption SDK bật mặc định từ 2.0.",
+      "example": "Không có commitment, một message có thể giải ra `false` với người nhận này và `true` với người nhận khác.",
+      "related": ["aes-gcm", "envelope-encryption"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "multi-region-key",
+      "term": "Multi-Region key",
+      "meaning": "Khoá AWS KMS có cùng id và vật liệu khoá ở nhiều region, nên bản mã tạo ở region này giải được ở region kia. Key policy và alias riêng từng region.",
+      "example": "Khoá chính ở ap-southeast-1, bản sao ở ap-northeast-1 cho DR.",
+      "related": ["kms"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "branch-key",
+      "term": "Branch key",
+      "meaning": "Khoá trung gian của Hierarchical keyring trong AWS Encryption SDK: lưu trong DynamoDB ở dạng đã được khoá KMS bọc, cache trong ứng dụng, dùng để dẫn xuất khoá bọc data key của từng message.",
+      "example": "Mỗi tenant một branch key; xoá mọi phiên bản của nó là crypto-shredding tenant đó.",
+      "related": ["hierarchical-keyring", "key-hierarchy"],
+      "topics": ["kms-envelope-encryption"]
+    },
+    {
+      "id": "hsm",
+      "term": "HSM",
+      "meaning": "Hardware security module: thiết bị phần cứng chuyên giữ khoá và thực hiện phép mã hoá bên trong, không cho xuất khoá ra ngoài.",
+      "example": "Khoá của AWS KMS nằm trong HSM của AWS; CloudHSM cho bạn một HSM riêng.",
+      "related": ["kms"],
+      "topics": ["kms-envelope-encryption", "password-storage"]
     }
   ]
 }

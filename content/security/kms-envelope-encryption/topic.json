@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "kms-envelope-encryption",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "KMS & envelope encryption ở quy mô lớn",
+  "summary": "Quota chung của AWS KMS theo tài khoản và region (tính cả S3, EBS, RDS), giá request và phép tính 15.000 `Decrypt` mỗi giây; phân tầng khoá, Hierarchical keyring và caching CMM của AWS Encryption SDK, cái giá của cache; định dạng bản mã có phiên bản khoá; AAD gắn bản mã với vị trí (lab: chép bản mã sang dòng khác, đã chạy trên JDK 27); encryption context, điều kiện theo tenant và CloudTrail; key commitment; xoay khoá không thay data key đã lộ; multi-Region key và DR; thu hồi, crypto-shredding và backup; khoá do khách hàng nắm, BYOK, XKS; thiết kế cho SaaS 800 tenant (scenario).",
+  "level": "senior",
+  "order": 14,
+  "minutes": 17,
+  "prerequisites": ["cryptography-basics", "secret-management", "cloud-security-iam"],
+  "terms": ["envelope-encryption", "kms", "aad", "encryption-context", "key-hierarchy", "hierarchical-keyring", "key-commitment", "multi-region-key", "crypto-shredding", "key-policy", "blind-index", "aes-gcm", "nonce", "branch-key", "hsm", "ttl", "pitr", "retry-backoff"],
+  "references": [
+    { "title": "AWS KMS Developer Guide: Request quotas", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/requests-per-second.html" },
+    { "title": "AWS Encryption SDK: AWS KMS Hierarchical keyrings", "url": "https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/use-hierarchical-keyring.html" },
+    { "title": "AWS Encryption SDK: Key commitment", "url": "https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/concepts.html#key-commitment" },
+    { "title": "AWS KMS Developer Guide: Encryption context", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/encrypt_context.html" },
+    { "title": "AWS KMS Developer Guide: Rotate AWS KMS keys", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html" },
+    { "title": "AWS KMS Developer Guide: Multi-Region keys", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview.html" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Đã mã hoá RDS bằng KMS rồi, sao còn phải mã hoá từng trường?\" Mã hoá của RDS bảo vệ đĩa, snapshot và backup bị mất; mọi ai kết nối được database (DBA, ứng dụng, bản dump logic, replica đọc) vẫn thấy dữ liệu rõ. Mã hoá ở tầng ứng dụng giấu dữ liệu với cả họ, đổi lại mất `WHERE`, `ORDER BY` trên cột đó và phải tự lo quota, cache khoá, xoay khoá. Hỏi tiếp \"vậy cache khoá có làm yếu đi không\": có, khoá rõ nằm trong bộ nhớ lâu hơn và thu hồi chậm tới một TTL; chọn TTL theo thời gian thu hồi chấp nhận được, không theo giá." },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "warning", "markdown": "Thêm AAD vào hệ đang chạy làm mọi bản mã cũ giải mã thất bại nếu đọc bằng AAD mới. Ghi phiên bản định dạng vào header, đọc bản cũ không AAD và bản mới có AAD song song, chạy job mã hoá lại, rồi mới bỏ nhánh cũ." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

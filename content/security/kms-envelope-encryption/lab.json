@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "CCCD đã mã hoá AES-GCM, khách vẫn thấy số của người khác",
+  "context": "Ứng dụng bảo hiểm mã hoá cột `national_id` (số CCCD) ở tầng ứng dụng bằng envelope encryption: mỗi tenant một data key từ AWS KMS, AES-256-GCM, nonce 12 byte ngẫu nhiên lưu đầu bản mã. Lộ database mà không có quyền KMS thì không đọc được. Đội vận hành có một script sửa dữ liệu chạy `UPDATE` trực tiếp trên bảng `customers`.",
+  "buggyCode": "byte[] encrypt(SecretKey dataKey, String plain) throws GeneralSecurityException {\n    byte[] nonce = new byte[12];\n    RANDOM.nextBytes(nonce);\n    Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");\n    cipher.init(Cipher.ENCRYPT_MODE, dataKey, new GCMParameterSpec(128, nonce));\n    byte[] ct = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));\n    return ByteBuffer.allocate(12 + ct.length).put(nonce).put(ct).array();\n}\n\nString decrypt(SecretKey dataKey, byte[] blob) throws GeneralSecurityException {\n    Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");\n    cipher.init(Cipher.DECRYPT_MODE, dataKey, new GCMParameterSpec(128, blob, 0, 12));\n    return new String(cipher.doFinal(blob, 12, blob.length - 12), StandardCharsets.UTF_8);\n}\n\n// Đọc hồ sơ\nCustomer c = customerRepository.findById(customerId).orElseThrow();\nString nationalId = decrypt(tenantDataKey(c.tenantId()), c.nationalIdCiphertext());",
+  "symptom": {
+    "description": "Khách 1001 gọi tổng đài: màn hình hồ sơ hiện số CCCD không phải của mình. Log ứng dụng không có lỗi giải mã nào. Kiểm tra cho thấy sau một lần chạy script gộp hồ sơ trùng, bản mã ở dòng 1001 giống hệt từng byte bản mã ở dòng 1002. Tái hiện trên JDK 27:",
+    "output": "insert 1001 -> encrypt(\"001090012345\")\ninsert 1002 -> encrypt(\"079185067890\")\nUPDATE customers SET national_id = (SELECT national_id FROM customers WHERE id = 1002) WHERE id = 1001\nGET /customers/1001 -> national_id = 079185067890   (không có exception)"
+  },
+  "diagnosis": {
+    "question": "Vì sao bản mã của dòng khác vẫn giải mã thành công ở dòng 1001?",
+    "options": [
+      "Không có AAD, tag GCM chỉ chứng minh bản mã nguyên vẹn, không chứng minh nó thuộc dòng nào",
+      "Nonce lưu cùng bản mã nên ai đọc được database cũng giải mã được, không cần data key",
+      "Hai dòng dùng chung một data key nên AES-GCM ra cùng bản mã cho hai số CCCD khác nhau",
+      "Tag 128 bit quá ngắn, nên tag của dòng 1002 trùng ngẫu nhiên với tag mong đợi ở dòng 1001"
+    ],
+    "answer": 0,
+    "explanation": "Bản mã của 1002 là bản mã hợp lệ dưới cùng data key của tenant, nên tag khớp và giải mã ra đúng nội dung của 1002. Không có gì trong phép tính cho biết bản mã phải thuộc dòng 1001. Nonce không phải bí mật, giữ nó cạnh bản mã là đúng thiết kế. Cùng data key không làm hai bản mã giống nhau, vì mỗi lần mã hoá có nonce ngẫu nhiên riêng; hai dòng giống nhau vì script đã chép byte. Tag 128 bit không trùng ngẫu nhiên ở mức thực tế."
+  },
+  "fix": {
+    "code": "// AAD: các giá trị không đổi xác định vị trí của bản mã\nstatic byte[] aad(String tenantId, long customerId) {\n    return (\"v1|\" + tenantId + \"|customers.national_id|\" + customerId).getBytes(StandardCharsets.UTF_8);\n}\n\nbyte[] encrypt(SecretKey dataKey, String plain, byte[] aad) throws GeneralSecurityException {\n    byte[] nonce = new byte[12];\n    RANDOM.nextBytes(nonce);\n    Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");\n    cipher.init(Cipher.ENCRYPT_MODE, dataKey, new GCMParameterSpec(128, nonce));\n    cipher.updateAAD(aad);                     // không mã hoá, nhưng nằm trong tag\n    byte[] ct = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));\n    return ByteBuffer.allocate(12 + ct.length).put(nonce).put(ct).array();\n}\n\nString decrypt(SecretKey dataKey, byte[] blob, byte[] aad) throws GeneralSecurityException {\n    Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");\n    cipher.init(Cipher.DECRYPT_MODE, dataKey, new GCMParameterSpec(128, blob, 0, 12));\n    cipher.updateAAD(aad);\n    return new String(cipher.doFinal(blob, 12, blob.length - 12), StandardCharsets.UTF_8);\n}\n\n// Bản mã bị chép sang dòng khác:\n// javax.crypto.AEADBadTagException: Tag mismatch",
+    "explanation": "AAD gắn bản mã với tenant, bảng, cột và khoá chính, nên chép sang dòng khác, cột khác hay tenant khác đều làm tag sai và ứng dụng ném `AEADBadTagException` thay vì hiện dữ liệu của người khác (đã chạy trên JDK 27). Dữ liệu cũ không có AAD cần một job mã hoá lại. AAD không được lưu nên không cho biết dòng nào đã chuyển: thêm một byte phiên bản định dạng ở đầu blob (ví dụ `0x01` cho bản có AAD), bản cũ không có byte đó. Gọi `kms:Decrypt` trực tiếp thì encryption context làm việc tương tự cho data key; với AWS Encryption SDK, context nằm trong message nên ứng dụng phải tự so context trả về với dòng đang đọc. Script gộp hồ sơ giờ phải giải mã rồi mã hoá lại với AAD của dòng đích, đúng như mọi thao tác chuyển dữ liệu mã hoá."
+  }
+}

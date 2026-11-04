@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "gcm-blob-size",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27. Lưu nonce 12 byte cạnh kết quả của AES-GCM (tag 128 bit), có AAD là chuỗi 26 byte. Mã hoá một số CCCD 12 chữ số thì in ra gì?",
+      "code": "byte[] nonce = new byte[12];\nRANDOM.nextBytes(nonce);\nCipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\nc.init(Cipher.ENCRYPT_MODE, dataKey, new GCMParameterSpec(128, nonce));\nc.updateAAD(\"customers.national_id:1001\".getBytes(StandardCharsets.UTF_8));\nbyte[] ct = c.doFinal(\"001090012345\".getBytes(StandardCharsets.UTF_8));\nSystem.out.println(12 + ct.length);",
+      "options": [
+        "40",
+        "66",
+        "44",
+        "56"
+      ],
+      "answer": 0,
+      "explanation": "GCM là chế độ dòng: bản mã dài đúng bằng bản rõ (12 byte), cộng tag 16 byte, ra 28; thêm nonce 12 byte là 40. AAD không mã hoá và không nằm trong output, nó chỉ góp vào tag, nên không làm bản mã dài thêm (66 là cộng nhầm cả AAD); lúc giải mã phải tự dựng lại đúng AAD đó. GCM không có padding, nên cũng không làm tròn lên 16 byte."
+    },
+    {
+      "id": "quota-includes-s3",
+      "kind": "single",
+      "prompt": "API giải mã hồ sơ bằng một lần `Decrypt` mỗi trường, bình thường 4.000 request KMS mỗi giây ở ap-southeast-1 (quota 20.000). Đêm qua API bị `ThrottlingException` hàng loạt dù lưu lượng API không đổi. Nghi phạm hợp lý nhất?",
+      "options": [
+        "Một job đọc hàng triệu object S3 SSE-KMS cùng tài khoản",
+        "Khoá KMS vừa xoay tự động, bản mã cũ giải chậm hơn",
+        "Quota tính theo từng khoá, khoá này vừa bị hạ quota",
+        "Pod mới dùng khoá bất đối xứng có quota 1.000 riêng"
+      ],
+      "answer": 0,
+      "explanation": "Quota thao tác mã hoá đối xứng là chung cho cả tài khoản và region, và tính cả request mà S3, EBS, RDS gửi thay bạn. Một job đọc S3 SSE-KMS không bật Bucket Key có thể ăn hết phần còn lại. Xoay khoá không đổi id, không làm giải mã chậm và không đổi quota. Quota không tính theo từng khoá. Khoá bất đối xứng có quota riêng nên không làm thao tác đối xứng bị throttle."
+    },
+    {
+      "id": "rotation-not-reencrypt",
+      "kind": "single",
+      "prompt": "Một heap dump chứa data key rõ của tenant A bị gửi nhầm ra ngoài. Đội bật xoay theo yêu cầu cho khoá KMS bọc data key đó. Dữ liệu của tenant A đã an toàn chưa?",
+      "options": [
+        "Chưa: dữ liệu vẫn mã hoá bằng data key đã lộ",
+        "Rồi: sau khi xoay, data key cũ hết hiệu lực",
+        "Rồi, sau 7 ngày khi vật liệu khoá cũ bị xoá",
+        "Chưa: phải gọi `ReEncrypt` cho mọi data key"
+      ],
+      "answer": 0,
+      "explanation": "Xoay khoá KMS chỉ thêm vật liệu khoá mới cho các lần bọc sau; data key đã lộ vẫn giải được mọi bản mã nó đã tạo, không cần gọi KMS. Phải giải mã và mã hoá lại dữ liệu bằng data key mới, rồi bỏ bản bọc cũ. `ReEncrypt` chỉ bọc lại chính data key đó bằng khoá khác, nên không giúp gì khi bản rõ của data key đã lộ. Xoay không xoá vật liệu khoá cũ: KMS giữ nó để giải các bản bọc cũ."
+    },
+    {
+      "id": "cross-region-ciphertext",
+      "kind": "single",
+      "prompt": "Ứng dụng tự mã hoá bằng data key từ khoá KMS một region ở ap-southeast-1, lưu bản mã kèm data key đã bọc trong DynamoDB global table. Singapore mất hẳn, failover sang ap-northeast-1 thì sao?",
+      "options": [
+        "Đọc được bản mã nhưng không giải được data key ở Tokyo",
+        "Giải mã bình thường, vì khoá KMS là tài nguyên global",
+        "Giải mã được nếu Tokyo có một khoá KMS cùng alias",
+        "Giải mã được vì global table đã mã hoá lại bằng khoá Tokyo"
+      ],
+      "answer": 0,
+      "explanation": "Bản bọc của khoá một region chỉ khoá đó giải được, và khoá đó chỉ sống ở region của nó; ARN có tên region, nên khi Singapore còn sống thì Tokyo vẫn gọi sang được, nhưng Singapore mất là hết đường. Global table chép byte, không biết đó là bản mã KMS nên không mã hoá lại. Alias giống nhau ở hai region là hai khoá khác nhau. Cần multi-Region key (cùng id và vật liệu khoá ở cả hai region), hoặc bọc data key bằng hai khoá ở hai region ngay từ lúc mã hoá."
+    },
+    {
+      "id": "context-in-cloudtrail",
+      "kind": "single",
+      "prompt": "Đội muốn gắn data key với khách hàng nên đặt encryption context `{\"customer_email\": \"lan.nguyen@example.com\"}` cho mỗi lần `GenerateDataKey`. Vấn đề là gì?",
+      "options": [
+        "Context hiện rõ trong CloudTrail, nên email lọt vào log",
+        "Context bị mã hoá vào data key nên làm data key yếu đi",
+        "KMS chỉ nhận context có khoá `tenant_id`, nên bị từ chối",
+        "Context làm data key dài thêm, vượt giới hạn 4.096 byte"
+      ],
+      "answer": 0,
+      "explanation": "Encryption context không bí mật: nó được ghi nguyên văn trong CloudTrail, nên mọi người đọc được log là thấy email. Ngoài ra email có thể đổi, mà context phải gửi đúng như lúc mã hoá thì mới giải mã được. Dùng id tenant, tên bảng, id bản ghi. Dùng id không đổi thay vào. Context không được mã hoá vào data key mà chỉ được xác thực cùng nó; KMS nhận cặp khoá và giá trị tuỳ ý; context không làm data key dài thêm."
+    }
+  ]
+}

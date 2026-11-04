@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/topic.schema.json",
+  "id": "password-storage",
+  "schemaVersion": 1,
+  "minAppVersion": "0.1",
+  "track": "security",
+  "title": "Lưu mật khẩu chuyên sâu",
+  "summary": "Mô hình đe doạ dò offline và con số GPU (hashcat trên RTX 4090/5090), chọn Argon2id/scrypt/bcrypt/PBKDF2 theo OWASP, `upgradeEncoding` của Argon2 bỏ qua `p`; hàm băm chậm là bề mặt DoS (đo: OOM khi 50 thread cùng băm, bulkhead bằng `Semaphore`); dò email qua thời gian phản hồi (lab, đã chạy với Spring Security 7.1.2) và cách `DaoAuthenticationProvider` chặn; chuẩn hoá NFC; pre-hash cho bcrypt và hash shucking; pepper và xoay pepper; bọc hash MD5 cũ (scenario); token ngẫu nhiên chỉ cần SHA-256; xử lý khi lộ bảng user.",
+  "level": "mid",
+  "order": 13,
+  "minutes": 15,
+  "prerequisites": ["authn-authz-basics", "cryptography-basics"],
+  "terms": ["password-hashing", "salt", "bcrypt", "argon2", "work-factor", "memory-hard-function", "user-enumeration", "phc-string-format", "bulkhead", "credential-stuffing", "hash-shucking", "pepper", "kms", "unicode-normalization", "rainbow-table", "mfa", "rate-limiting", "hmac", "hsm"],
+  "references": [
+    { "title": "OWASP Password Storage Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" },
+    { "title": "NIST SP 800-63B-4: Authentication and Authenticator Management (Password Verifiers)", "url": "https://pages.nist.gov/800-63-4/sp800-63b.html" },
+    { "title": "Spring Security Reference: Password Storage", "url": "https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html" },
+    { "title": "RFC 9106: Argon2 Memory-Hard Function", "url": "https://www.rfc-editor.org/rfc/rfc9106" },
+    { "title": "Hashcat v6.2.6 benchmark on the Nvidia RTX 4090 (Chick3nman)", "url": "https://gist.github.com/Chick3nman/32e662a5bb63bc4f51b847bb422222fd" }
+  ],
+  "blocks": [
+    { "type": "layered", "file": "layered.md" },
+    { "type": "callout", "style": "interview", "markdown": "Câu hỏi nối tiếp hay gặp: \"Bcrypt hay Argon2id, cost bao nhiêu?\" Đừng chỉ đọc con số. Nói cách chọn: đo trên đúng loại máy chạy production, chọn mức một lần kiểm mất vài chục ms, rồi tính ngược ra số lõi cần cho lượng login cao điểm (300 login/giây × 20 ms là 6 lõi chỉ để băm). Argon2id tốt hơn trước GPU vì tốn bộ nhớ, nhưng bộ nhớ đó cũng là heap của bạn, nên phải giới hạn số lượt băm đồng thời. Hỏi tiếp \"năm sau máy nhanh hơn thì sao\": lưu tham số cùng hash, tăng cấu hình, và hash cũ được băm lại ở lần đăng nhập đúng tiếp theo." },
+    { "type": "breakLab", "file": "lab.json" },
+    { "type": "callout", "style": "warning", "markdown": "Hash giả để cân thời gian phải tạo bằng chính encoder đang dùng. Đổi từ bcrypt sang Argon2id mà hash giả vẫn là bcrypt thì email không tồn tại lại trả lời nhanh hoặc chậm hơn email có thật, và lỗi dò tài khoản quay lại mà không test nào đỏ." },
+    { "type": "scenario", "file": "scenario.json" }
+  ]
+}

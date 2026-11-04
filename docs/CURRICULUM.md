@@ -292,6 +292,8 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | 10 | `authorization-models` | Mô hình phân quyền | senior | RBAC, ABAC, ReBAC, policy engine (OPA), cô lập multi-tenant, IDOR | L B Sc | ✅ |
 | 11 | `api-security` | Bảo mật API | senior | Rate limit, mTLS giữa service, API gateway, validate input, service-to-service auth | L Sc | ✅ |
 | 12 | `secure-sdlc` | Bảo mật trong quy trình phát triển | senior | Threat modeling (STRIDE), SAST/DAST/SCA, supply chain, SBOM | L Sc | ✅ |
+| 13 | `password-storage` | ✚ Lưu mật khẩu chuyên sâu | mid | Dò offline và con số GPU, tham số Argon2id/bcrypt, DoS của hàm băm chậm, dò email qua thời gian, NFC, pepper, bọc hash cũ | L B Sc | ✅ |
+| 14 | `kms-envelope-encryption` | ✚ KMS & envelope encryption ở quy mô lớn | senior | Quota KMS, phân tầng khoá và cache, AAD và encryption context, key commitment, xoay khoá, multi-Region key, crypto-shredding | L B Sc | ✅ |
 
 ### 10. Performance & Troubleshooting (`performance`)
 
@@ -443,11 +445,11 @@ Cột **Block**: A analogy · L layered · D diagram · S simulation · B breakL
 | Testing | 2 | 6 | 1 | 0 | 9 |
 | Database | 4 | 12 | 10 | 18 | 26 |
 | Caching & Messaging | 2 | 5 | 6 | 0 | 13 |
-| Security | 3 | 5 | 4 | 0 | 12 |
+| Security | 3 | 6 | 5 | 0 | 14 |
 | Performance & Troubleshooting | 2 | 4 | 9 | 1 | 15 |
 | Design | 3 | 5 | 4 | 0 | 12 |
 | Distributed Systems | 2 | 5 | 13 | 0 | 20 |
 | Cloud & DevOps | 4 | 11 | 4 | 0 | 19 |
 | System Design | 3 | 3 | 14 | 0 | 20 |
 | Solution Architect | 2 | 3 | 17 | 0 | 22 |
-| **Tổng** | **51** | **94** | **109** | **30** | **254** |
+| **Tổng** | **51** | **95** | **110** | **30** | **256** |

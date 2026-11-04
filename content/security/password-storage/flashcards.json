@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "threat-offline", "front": "Password hashing chống kịch bản nào?", "back": "Bảng user bị lộ và kẻ tấn công dò offline trên GPU, không bị rate limit. Tấn công online thì do rate limit và MFA chặn." },
+    { "id": "gpu-rates", "front": "RTX 4090 tính được bao nhiêu SHA-256 và bcrypt mỗi giây?", "back": "Khoảng 22 tỷ SHA-256, nhưng chỉ khoảng 184.000 bcrypt cost 5, tức chừng 5.750 bcrypt cost 10 (hashcat 6.2.6)." },
+    { "id": "owasp-argon2-params", "front": "Tham số Argon2id tối thiểu theo OWASP?", "back": "`m=19 MiB, t=2, p=1`, hoặc cặp tương đương như `m=46 MiB, t=1`. Đo trên máy đích; mỗi lần dưới một giây." },
+    { "id": "timing-enumeration", "front": "Vì sao login cần băm cả khi email không tồn tại?", "back": "Không băm thì request trả về nhanh hơn vài chục ms, đo thời gian là biết email nào có tài khoản. `DaoAuthenticationProvider` băm một hash giả." },
+    { "id": "hash-bulkhead", "front": "Vì sao phải giới hạn số lượt băm đồng thời?", "back": "Mỗi lượt Argon2id giữ m MiB bộ nhớ và một lõi CPU. Credential stuffing với 200 thread cùng băm làm hết heap; Semaphore bằng số lõi giữ được thông lượng." },
+    { "id": "nfc-before-hash", "front": "Vì sao chuẩn hoá NFC trước khi băm mật khẩu?", "back": "Cùng chữ tiếng Việt có thể ở dạng NFC hoặc NFD, khác byte, nên bcrypt ra hash khác và user bị báo sai mật khẩu." },
+    { "id": "pepper-rotation", "front": "Đổi pepper thì hash cũ ra sao?", "back": "Không kiểm được nữa. Phải bắt đặt lại mật khẩu, hoặc lưu phiên bản pepper trong mỗi dòng và băm lại khi user đăng nhập." },
+    { "id": "wrap-legacy", "front": "Nâng hash MD5 cũ mà không có mật khẩu gốc thế nào?", "back": "Bọc ngay `argon2id(hmac(pepper, md5))`, băm lại từ mật khẩu gốc khi user đăng nhập. Pepper chặn việc thử thẳng MD5 lộ ở nơi khác." },
+    { "id": "token-fast-hash", "front": "Vì sao token đặt lại mật khẩu băm SHA-256 là đủ?", "back": "Token 128 bit ngẫu nhiên trở lên không có từ điển để dò. Hash nhanh, không salt còn tra được bằng index." }
+  ]
+}

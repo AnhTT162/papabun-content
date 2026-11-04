@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schema/flashcards.schema.json",
+  "cards": [
+    { "id": "kms-quota-shared", "front": "Quota request của AWS KMS tính thế nào?", "back": "Chung cho mọi thao tác đối xứng trong một tài khoản và region (mặc định 10.000/giây, 20.000 ở Singapore), tính cả request S3, EBS, RDS gửi thay bạn." },
+    { "id": "kms-cost-per-field", "front": "Mỗi trường mã hoá một lần `Decrypt` ở 15.000 request/giây tốn bao nhiêu?", "back": "Khoảng 117.000 USD mỗi tháng với giá 0,03 USD mỗi 10.000 request, và gần chạm quota." },
+    { "id": "key-hierarchy-why", "front": "Phân tầng khoá giải quyết gì?", "back": "Khoá KMS bọc khoá trung gian theo tenant, khoá trung gian cache vài phút và sinh data key cho từng bản ghi, nên số lần gọi KMS không tăng theo lưu lượng." },
+    { "id": "hierarchical-keyring", "front": "Hierarchical keyring của AWS Encryption SDK làm gì?", "back": "Lưu branch key trong DynamoDB, bọc bằng khoá KMS, gọi KMS một lần mỗi branch key mỗi TTL; mỗi message vẫn có data key riêng." },
+    { "id": "aad-binds-location", "front": "Không có AAD thì chép bản mã sang dòng khác sẽ ra sao?", "back": "Giải mã bình thường và hiện dữ liệu của người khác. AAD gồm tenant, bảng, cột, khoá chính làm việc chép đó thất bại." },
+    { "id": "context-not-secret", "front": "Có nên đặt dữ liệu cá nhân vào encryption context không?", "back": "Không. Context được ghi rõ trong CloudTrail. Dùng id không đổi như tenant, bảng, id bản ghi." },
+    { "id": "rotation-scope", "front": "Xoay khoá KMS có thay data key đã lộ không?", "back": "Không. Xoay chỉ đổi khoá bọc cho lần sau; data key lộ thì phải mã hoá lại dữ liệu." },
+    { "id": "key-commitment", "front": "Key commitment chống gì?", "back": "AES-GCM có thể dựng một bản mã giải được bằng hai khoá ra hai nội dung khác nhau. Commitment buộc bản mã chỉ giải được bằng đúng data key đã tạo nó." },
+    { "id": "multi-region-key", "front": "Multi-Region key khác khoá thường ở điểm nào?", "back": "Cùng id và vật liệu khoá ở nhiều region nên bản mã mang qua region khác giải được; key policy và alias vẫn riêng từng region." },
+    { "id": "shredding-backups", "front": "Xoá branch key của tenant đã đủ crypto-shredding chưa?", "back": "Chỉ khi mọi bản sao cũng hết: point-in-time recovery của DynamoDB (tới 35 ngày), global table ở region khác, backup." }
+  ]
+}

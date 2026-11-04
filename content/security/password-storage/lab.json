@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/blocks/lab.schema.json",
+  "title": "Cùng một câu báo lỗi, pentest vẫn dò ra email nào có tài khoản",
+  "context": "API cho app di động tự viết endpoint đăng nhập trả JWT, không đi qua `AuthenticationManager` của Spring Security. Mật khẩu lưu bằng `BCryptPasswordEncoder` cost 10. Đội đã cẩn thận trả cùng một câu `Email hoặc mật khẩu không đúng` cho mọi trường hợp sai. Báo cáo pentest vẫn xếp mức Medium: liệt kê được tài khoản.",
+  "buggyCode": "@PostMapping(\"/auth/login\")\nResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {\n    Optional<UserAccount> user = userRepository.findByEmail(request.email());\n    if (user.isEmpty() || !passwordEncoder.matches(request.password(), user.get().passwordHash())) {\n        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, \"Email hoặc mật khẩu không đúng\");\n    }\n    return ResponseEntity.ok(tokenService.issue(user.get()));\n}",
+  "symptom": {
+    "description": "Script của pentester gửi mỗi email 21 lần với mật khẩu sai, lấy trung vị thời gian phản hồi. Mọi response đều là `401` với cùng một body:",
+    "output": "email                          status  median_ms\nlan.nguyen@example.com         401     63.1\nkhong.ton.tai@example.com      401     6.2\nminh.tran@example.com          401     62.7\nadmin@example.com              401     62.9\ntest123@example.com            401     6.0\n\n# Đo riêng phần xử lý trên JDK 27, bcrypt cost 10:\n# email có thật   57.3 ms\n# email không có   0.000 ms"
+  },
+  "diagnosis": {
+    "question": "Vì sao thời gian lộ ra email nào có tài khoản?",
+    "options": [
+      "Email không tồn tại thì `||` dừng ở `user.isEmpty()`, nên bcrypt không chạy",
+      "`passwordEncoder.matches` so hash từng ký tự rồi dừng ở ký tự sai đầu tiên",
+      "Cột `email` thiếu index, nên tìm email có thật phải quét cả bảng user",
+      "Bcrypt với email có thật chạy lâu vì phải sinh salt mới trước khi so"
+    ],
+    "answer": 0,
+    "explanation": "Khoảng 57 ms chênh lệch chính là thời gian của một lần bcrypt cost 10. Với email không tồn tại, `||` dừng ở vế trái nên không có lần băm nào, request trả về sau 6 ms. Câu báo lỗi giống nhau không giúp gì khi thời gian khác nhau. So sánh hash có rò rỉ theo thời gian thì cũng chỉ vài nano giây, và kẻ tấn công không điều khiển được hash mình so với vì có salt. Thiếu index thì email không tồn tại cũng phải quét cả bảng, không nhanh hơn. `matches` không sinh salt mới: nó đọc salt từ chuỗi hash đã lưu."
+  },
+  "fix": {
+    "code": "private final PasswordEncoder passwordEncoder;\nprivate final String dummyHash;\n\nLoginController(PasswordEncoder passwordEncoder /* , ... */) {\n    this.passwordEncoder = passwordEncoder;\n    // Hash giả tạo một lần bằng chính encoder đang dùng, để cùng thuật toán và cost\n    this.dummyHash = passwordEncoder.encode(\"dummy-password-for-timing\");\n}\n\n@PostMapping(\"/auth/login\")\nResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {\n    Optional<UserAccount> user = userRepository.findByEmail(request.email());\n    String hash = user.map(UserAccount::passwordHash).orElse(dummyHash);\n    boolean passwordOk = passwordEncoder.matches(request.password(), hash); // luôn băm đúng một lần\n    if (user.isEmpty() || !passwordOk) {\n        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, \"Email hoặc mật khẩu không đúng\");\n    }\n    return ResponseEntity.ok(tokenService.issue(user.get()));\n}\n\n// Tốt hơn: dùng AuthenticationManager với DaoAuthenticationProvider.\n// Nó đã làm đúng việc này (userNotFoundEncodedPassword), che UsernameNotFoundException\n// thành BadCredentialsException, và mặc định vẫn kiểm mật khẩu khi tài khoản bị khoá.",
+    "explanation": "Mọi nhánh giờ đều chạy đúng một lần bcrypt: đo lại trên JDK 27 được 57,9 ms cho email có thật và 57,2 ms cho email không có. Hash giả phải tạo bằng chính encoder hiện tại; nếu sau này đổi sang Argon2id mà hash giả vẫn là bcrypt thì thời gian lại lệch. Kiểm tiếp các chỗ khác cũng lộ tài khoản: form đăng ký báo email đã dùng, quên mật khẩu gửi thư đồng bộ. Rate limit theo IP và theo email vẫn cần, vì kẻ tấn công thử được mật khẩu online dù không dò được email."
+  }
+}

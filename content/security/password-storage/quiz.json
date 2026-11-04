@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schema/quiz.schema.json",
+  "questions": [
+    {
+      "id": "nfc-nfd-match",
+      "kind": "output",
+      "prompt": "Chạy trên JDK 27 với Spring Security 7.1.2. User đặt mật khẩu trên một máy (chuỗi NFC), rồi đăng nhập từ máy gửi chuỗi NFD. Dòng in ra là gì?",
+      "code": "var encoder = new BCryptPasswordEncoder();\nString nfc = Normalizer.normalize(\"Mật-khẩu-Phở-2026\", Normalizer.Form.NFC);\nString nfd = Normalizer.normalize(nfc, Normalizer.Form.NFD);\nString hash = encoder.encode(nfc);\nSystem.out.println(nfc.length() + \" \" + nfd.length() + \" \" + encoder.matches(nfd, hash));",
+      "options": [
+        "17 23 false",
+        "17 17 true",
+        "17 23 true",
+        "23 23 false"
+      ],
+      "answer": 0,
+      "explanation": "NFC gộp chữ có dấu thành một code point (`ậ` là U+1EAD); NFD tách thành chữ gốc cộng các dấu kết hợp, nên `ậ` thành ba ký tự và chuỗi dài 23. Hai chuỗi trông giống hệt nhau nhưng ra byte UTF-8 khác nhau, mà bcrypt băm byte, nên `matches` trả `false`. NIST SP 800-63B khuyên chuẩn hoá NFC trước khi băm, cả lúc đặt lẫn lúc kiểm mật khẩu."
+    },
+    {
+      "id": "reset-token-hash",
+      "kind": "single",
+      "prompt": "Token đặt lại mật khẩu là 32 byte từ `SecureRandom`, gửi qua email, hết hạn sau 30 phút. Lưu gì trong database để lộ bảng cũng không dùng được token, mà vẫn tra được token gửi lên?",
+      "options": [
+        "SHA-256 của token, đánh index và tra `WHERE token_hash = ?`",
+        "bcrypt cost 10 của token, tra `WHERE token_hash = ?`",
+        "Token mã hoá AES-GCM, giải mã từng dòng khi cần so",
+        "Token rõ, vì 30 phút là quá ngắn để kẻ tấn công kịp dùng"
+      ],
+      "answer": 0,
+      "explanation": "Token có 256 bit ngẫu nhiên nên không có từ điển nào để dò; SHA-256 nhanh vẫn an toàn, và vì không có salt nên cùng token luôn ra cùng hash, tra bằng index được. bcrypt sinh salt ngẫu nhiên mỗi lần, nên không thể `WHERE token_hash = ?`; muốn kiểm phải tìm theo id khác rồi so từng dòng. Mã hoá đảo ngược được thì lộ khoá là lộ token. Token rõ: lộ bảng trong 30 phút là chiếm được tài khoản đang đặt lại mật khẩu."
+    },
+    {
+      "id": "argon2-parallelism-upgrade",
+      "kind": "single",
+      "prompt": "Ứng dụng dùng `DelegatingPasswordEncoder` có `UserDetailsPasswordService`. Đội đổi cấu hình Argon2id từ `m=19456, t=2, p=1` sang `m=19456, t=2, p=4` theo một bài blog. Một tháng sau, hash của những user chỉ đăng nhập (không đổi mật khẩu) trông thế nào?",
+      "options": [
+        "Vẫn `p=1`, vì `upgradeEncoding` chỉ so memory và iterations",
+        "Đã thành `p=4`, vì Spring băm lại khi tham số khác cấu hình",
+        "Hash `p=1` không kiểm được nữa, user báo sai mật khẩu",
+        "Đã thành `p=4`, vì PHC string được ghi lại mỗi lần kiểm"
+      ],
+      "answer": 0,
+      "explanation": "`Argon2PasswordEncoder.upgradeEncoding` trả `true` khi memory hoặc iterations của hash cũ thấp hơn cấu hình hiện tại; nó không nhìn `p` (đã chạy với 7.1.2: `false`). Hash cũ vẫn kiểm được vì tham số nằm ngay trong chuỗi PHC, nên user không bị lỗi. Chỉ user đổi mật khẩu mới có hash `p=4`; encoder không ghi lại hash khi kiểm. Muốn mọi hash theo tham số mới thì phải tự viết điều kiện nâng, hoặc tăng memory hay iterations cùng lúc. Lưu ý thêm: BouncyCastle tính các lane tuần tự, nên `p=4` cũng không nhanh hơn."
+    },
+    {
+      "id": "argon2-heap-oom",
+      "kind": "single",
+      "prompt": "Sau khi chuyển sang Argon2id 19 MiB, mỗi đợt credential stuffing làm pod (Tomcat 200 thread, heap 512 MB, 2 vCPU) văng `OutOfMemoryError` và login của người dùng thật cũng hỏng. Sửa gì trước?",
+      "options": [
+        "Giới hạn lượt băm đồng thời theo số lõi, rate limit trước",
+        "Tăng heap lên 4 GB cho đủ 200 thread cùng băm một lúc",
+        "Quay về bcrypt cost 10, vì bcrypt gần như không tốn heap",
+        "Giảm Argon2id xuống `m=1 MiB` cho tới khi không còn OOM"
+      ],
+      "answer": 0,
+      "explanation": "Hai lõi chỉ băm được khoảng hai lượt cùng lúc; 200 thread cùng xin 19 MiB không làm nhanh hơn mà chỉ làm hết heap (đo: 50 thread trên heap 512 MB thì một nửa số lượt OOM, thêm `Semaphore` bằng số lõi thì không lượt nào lỗi). Rate limit theo IP và tài khoản cắt phần lớn request của kẻ tấn công trước khi tốn CPU. Tăng heap chỉ dời ngưỡng, CPU vẫn bão hoà. bcrypt hết OOM nhưng CPU vẫn bị đốt như cũ. `m=1 MiB` bỏ mất lý do chọn Argon2id."
+    },
+    {
+      "id": "wrap-needs-pepper",
+      "kind": "single",
+      "prompt": "Bạn bọc hash MD5 cũ thành `argon2id(md5(password))`. Vì sao OWASP cảnh báo cách bọc này có thể dễ dò hơn băm thẳng `argon2id(password)`?",
+      "options": [
+        "Thử thẳng các MD5 đã lộ ở vụ khác vào lớp Argon2id ngoài",
+        "MD5 chỉ ra 128 bit nên Argon2id chỉ còn bảo vệ 128 bit",
+        "Đầu vào là chuỗi hex 32 ký tự nên salt Argon2id bị bỏ qua",
+        "Hai lớp băm chậm gấp đôi, nên buộc phải giảm tham số Argon2id"
+      ],
+      "answer": 0,
+      "explanation": "Đầu vào của lớp ngoài là MD5 không salt, thứ có sẵn hàng tỷ bản từ các vụ lộ khác. Kẻ tấn công lấy MD5 của cùng email ở vụ khác và chỉ cần một lần Argon2id để biết nó có khớp không (hash shucking); đã chạy và khớp. Chèn HMAC với pepper cất ngoài database giữa hai lớp thì đầu vào đó không còn đoán được. Salt của Argon2id vẫn được dùng bình thường; 128 bit đầu vào không phải điểm yếu ở đây; lớp MD5 gần như không tốn thời gian."
+    }
+  ]
+}
