@@ -13250,7 +13250,7 @@
     {
       "id": "rekor",
       "term": "Rekor",
-      "meaning": "Transparency log công khai của Sigstore: ghi lại chữ ký, chứng chỉ và thời điểm ký, chỉ thêm không sửa, để ai cũng kiểm được chữ ký đã tồn tại khi chứng chỉ ngắn hạn còn hiệu lực.",
+      "meaning": "Transparency log công khai của Sigstore: ghi lại chữ ký và chứng chỉ, chỉ thêm không sửa, để ai cũng kiểm được chữ ký đã tồn tại khi chứng chỉ ngắn hạn còn hiệu lực. Thời điểm ký do log xác nhận ở Rekor v1, do timestamp authority riêng ở Rekor v2.",
       "example": "`cosign verify` tìm bản ghi Rekor của chữ ký image để biết nó được ký trong 10 phút chứng chỉ còn hạn.",
       "related": ["sigstore"],
       "topics": ["secure-sdlc"]

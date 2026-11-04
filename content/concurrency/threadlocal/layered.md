@@ -30,7 +30,7 @@ try {
 - **Cấu trúc bên trong và rò bộ nhớ**:
   - Entry của `ThreadLocalMap` giữ key bằng [[weak-reference|weak reference]] và value bằng tham chiếu mạnh. Object `ThreadLocal` hết được dùng thì key bị GC, nhưng value còn nằm đó tới khi map tình cờ dọn entry cũ trong lúc `get`/`set` khác.
   - Trong thread pool sống suốt đời ứng dụng, value lớn (danh sách, buffer) ở lại mãi.
-  - App server chạy nhiều ứng dụng (Tomcat bản cài riêng): value là object của ứng dụng giữ luôn classloader của nó sau khi undeploy. Tomcat log cảnh báo kiểu "created a ThreadLocal ... but failed to remove it when the web application was stopped".
+  - App server chạy nhiều ứng dụng (Tomcat bản cài riêng): value là object của ứng dụng giữ luôn classloader của nó sau khi undeploy. Tomcat log cảnh báo kiểu "created a ThreadLocal ... but failed to remove it when the web application was stopped". `static ThreadLocal` trong class của plugin còn tệ hơn: value trỏ tới class của plugin, class trỏ tới loader, loader giữ class chứa field `static` trỏ tới key, nên key không bao giờ bị GC và cơ chế dọn entry cũ của map không chạy; chỉ `remove()` gỡ được. Lab rò metaspace khi reload ở bài ClassLoader.
 - **`remove()` khác `set(null)`**: `set(null)` để lại entry trong map; `remove()` xoá hẳn, và lần `get()` sau gọi lại `initialValue()` (của `ThreadLocal.withInitial`).
 - **Khai báo**: `private static final ThreadLocal<...>`. Tạo `ThreadLocal` mới cho mỗi object hay mỗi lần gọi làm map đầy entry rác và mất ý nghĩa dùng chung.
 - **Ai đang dùng `ThreadLocal` trong Spring**:
