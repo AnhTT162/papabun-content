@@ -7,7 +7,7 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # ubuntu-latest (26.04) không còn Python 3.9 = bản python3 của macOS
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
